@@ -5,6 +5,20 @@ Miscellaneous utilities and data structures used throughout the `rain` compiler
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;
 
+/// Quickly implement `Display` using a given function
+#[macro_export]
+macro_rules! quick_display {
+    ($t:ty, $s:ident, $fmt:ident => $e:expr) => {
+        impl std::fmt::Display for $t {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+                let $s = self;
+                let $fmt = fmt;
+                $e
+            }
+        }
+    }
+}
+
 /// Implement `Debug` for a type which implements `Display`
 #[macro_export]
 macro_rules! debug_from_display {
