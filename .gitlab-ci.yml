@@ -75,7 +75,7 @@ before_script:
     - .gitlab/ci/sccache.sh && export RUSTC_WRAPPER=$PWD/.gitlab/sccache
     - .gitlab/ci/tarpaulin.sh
     - export PATH=$PWD/.gitlab:$PATH
-    - cargo tarpaulin --no-run --offline --exclude-files vendor --ignore-panics --all --verbose
+    - cargo tarpaulin --no-run --offline --exclude-files vendor --ignore-panics --run-types Tests Doctests --all --verbose
     - ".gitlab/sccache --show-stats || :"
 
 .cargo_tarpaulin_test: &cargo_tarpaulin_test
