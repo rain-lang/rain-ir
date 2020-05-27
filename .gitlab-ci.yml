@@ -1,0 +1,289 @@
+# NOTE: this script was modified from the CI script in https://gitlab.kitware.com/utils/rust-git-workarea/
+# (permalink: https://gitlab.kitware.com/utils/rust-git-workarea/-/blob/e91132ca965318beb31a573c728c081e448fe94f/.gitlab-ci.yml)
+# which is a project under the MIT license. The original license is reproduced below:
+#
+# Copyright (c) 2016 Kitware, Inc.
+#
+# Permission is hereby granted, free of charge, to any
+# person obtaining a copy of this software and associated
+# documentation files (the "Software"), to deal in the
+# Software without restriction, including without
+# limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software
+# is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice
+# shall be included in all copies or substantial portions
+# of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+# ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+# TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+# IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+
+before_script:
+    - apt-get update -yqq
+    - export CARGO_HOME=.cargo-cache
+    - rustc --version
+    - cargo --version
+
+.only_settings: &only_settings
+  - master@tekne/rain #TODO: think about this
+
+.cargo_update: &cargo_update
+    # XXX(minver<1.41.0): No backwards compatibility is provided. Instead, it
+    # uses the format of the existing `Cargo.lock` file to determine the format
+    # of the to-be-written file. See
+    # https://github.com/rust-lang/cargo/pull/7579#pullrequestreview-323640264
+    - touch Cargo.lock
+    - cargo update $GENERATE_LOCKFILE_ARGS
+    - cargo fetch --locked
+    - mkdir .cargo
+    - cargo vendor > .cargo/config
+
+.cargo_clippy: &cargo_clippy
+    # Only use it if it's available; no need to fail the build due to something
+    # gone wrong here.
+    - .gitlab/ci/sccache.sh && export RUSTC_WRAPPER=$PWD/.gitlab/sccache
+    - rustup component add clippy
+    - cargo clippy --offline --tests --all --verbose -- -D warnings
+    - ".gitlab/sccache --show-stats || :"
+
+.cargo_build: &cargo_build
+    # Only use it if it's available; no need to fail the build due to something
+    # gone wrong here.
+    - .gitlab/ci/sccache.sh && export RUSTC_WRAPPER=$PWD/.gitlab/sccache
+    - cargo build $CARGO_BUILD_FROZEN --all --verbose
+    - cargo test --offline --all --no-run --verbose
+    - ".gitlab/sccache --show-stats || :"
+
+.cargo_test: &cargo_test
+    - apt-get install -yqq --no-install-recommends git
+    - git config --global user.name "Ghostflow Testing"
+    - git config --global user.email "ghostflow@example.invalid"
+    - cargo test --offline --all --verbose
+
+.cargo_tarpaulin_build: &cargo_tarpaulin_build
+    - .gitlab/ci/sccache.sh && export RUSTC_WRAPPER=$PWD/.gitlab/sccache
+    - .gitlab/ci/tarpaulin.sh
+    - export PATH=$PWD/.gitlab:$PATH
+    - cargo tarpaulin --no-run --offline --exclude-files vendor --ignore-panics --all --verbose
+    - ".gitlab/sccache --show-stats || :"
+
+.cargo_tarpaulin_test: &cargo_tarpaulin_test
+    - .gitlab/ci/tarpaulin.sh
+    - export PATH=$PWD/.gitlab:$PATH
+    - apt-get install -yqq --no-install-recommends git
+    - git config --global user.name "Ghostflow Testing"
+    - git config --global user.email "ghostflow@example.invalid"
+    - cargo tarpaulin --offline --exclude-files vendor --ignore-panics --all --verbose --out Xml
+
+.rust_stable: &rust_stable
+    image: "rust:latest"
+
+    variables:
+        CARGO_BUILD_FROZEN: --offline
+        CARGO_UPDATE_POLICY: newest
+        GIT_CLONE_PATH: $CI_BUILDS_DIR/rust
+
+.rust_nightly: &rust_nightly
+    extends: .rust_stable
+
+    image: "rustlang/rust:nightly"
+
+.cargo_fetch_job: &cargo_fetch_job
+    stage: prepare
+    only: *only_settings
+
+    script: *cargo_update
+    artifacts:
+        expire_in: 60m
+        paths:
+            - vendor
+            - .cargo
+            - Cargo.lock
+    cache:
+        key: cargo-cache-$CARGO_UPDATE_POLICY
+        paths:
+            - .cargo-cache
+    interruptible: true
+
+.cargo_clippy_job: &cargo_clippy_job
+    stage: build
+    only: *only_settings
+    script: *cargo_clippy
+    interruptible: true
+
+.cargo_build_job: &cargo_build_job
+    stage: build
+    only: *only_settings
+    script: *cargo_build
+    artifacts:
+        expire_in: 60m
+        paths:
+            - vendor
+            - .cargo
+            - Cargo.lock
+            - target
+    interruptible: true
+
+.cargo_test_job: &cargo_test_job
+    stage: test
+    only: *only_settings
+    script: *cargo_test
+    interruptible: true
+
+.cargo_tarpaulin_build_job: &cargo_tarpaulin_build_job
+    stage: build
+    only: *only_settings
+    script: *cargo_tarpaulin_build
+    artifacts:
+        expire_in: 60m
+        paths:
+            - vendor
+            - .cargo
+            - Cargo.lock
+            - target
+    interruptible: true
+
+.cargo_tarpaulin_test_job: &cargo_tarpaulin_test_job
+    stage: test
+    only: *only_settings
+    artifacts:
+        expose_as: "Coverage report"
+        expire_in: 1 week
+        paths:
+          - cobertura.xml
+        reports:
+          cobertura: cobertura.xml
+    script: 
+      - *cargo_tarpaulin_test
+      - bash <(curl -s https://codecov.io/bash)
+    coverage: '/\d+.\d+% coverage, \d+\/\d+ lines covered/'
+    interruptible: true
+
+stages:
+    - prepare
+    - build
+    - test
+
+prepare:cargo-cache-newest:
+    <<:
+        - *cargo_fetch_job
+        - *rust_stable
+
+prepare:cargo-cache-mindeps:
+    <<:
+        - *cargo_fetch_job
+        - *rust_nightly
+    variables:
+        GENERATE_LOCKFILE_ARGS: "-Z minimal-versions"
+        CARGO_UPDATE_POLICY: mindeps
+
+.cargo_cache_newest: &cargo_cache_newest
+    dependencies:
+        - prepare:cargo-cache-newest
+    needs:
+        - prepare:cargo-cache-newest
+
+build:cargo-clippy:
+    <<:
+        - *cargo_clippy_job
+        - *rust_stable
+        - *cargo_cache_newest
+
+build:cargo-stable:
+    <<:
+        - *cargo_build_job
+        - *rust_stable
+        - *cargo_cache_newest
+
+test:cargo-stable:
+    <<:
+        - *cargo_test_job
+        - *rust_stable
+    dependencies:
+        - build:cargo-stable
+    needs:
+        - build:cargo-stable
+
+build:cargo-tarpaulin:
+    <<:
+        - *cargo_tarpaulin_build_job
+        - *rust_stable
+        - *cargo_cache_newest
+
+test:cargo-tarpaulin:
+    <<:
+        - *cargo_tarpaulin_test_job
+        - *rust_stable
+    dependencies:
+        - build:cargo-tarpaulin
+    needs:
+        - build:cargo-tarpaulin
+
+build:cargo-nightly:
+    <<:
+        - *cargo_build_job
+        - *rust_nightly
+        - *cargo_cache_newest
+
+test:cargo-nightly:
+    <<:
+        - *cargo_test_job
+        - *rust_nightly
+    dependencies:
+        - build:cargo-nightly
+    needs:
+        - build:cargo-nightly
+
+prepare:git:
+    image: "rust:latest"
+
+    stage: prepare
+    only: *only_settings
+    script:
+        - .gitlab/ci/sccache.sh
+        - export PATH=$PWD/.gitlab:$PATH
+        - export GIT_ROOT=$PWD/git/root
+        - "[ -d git/src ] || git clone https://github.com/git/git.git git/src"
+        - pushd git/src
+        - git reset --hard
+        - git pull
+        - make CC="sccache gcc" prefix=$GIT_ROOT NO_GETTEXT=1 NO_TCLTK=1 NO_INSTALL_HARDLINKS=1 -j`nproc` install
+        - popd
+        - sccache --show-stats
+    variables:
+        GIT_CLONE_PATH: $CI_BUILDS_DIR/rust
+    artifacts:
+        expire_in: 60m
+        paths:
+            - git/root
+    cache:
+        key: git-master
+        paths:
+            - git/src
+    interruptible: true
+
+test:git-master:
+    <<:
+        - *cargo_test_job
+        - *rust_stable
+    script:
+        - git config --global user.name "Ghostflow Testing"
+        - git config --global user.email "ghostflow@example.invalid"
+        - PATH=$PWD/git/root/bin:$PATH cargo test --offline --all --verbose
+    dependencies:
+        - prepare:git
+        - build:cargo-stable
+    needs:
+        - prepare:git
+        - build:cargo-stable
