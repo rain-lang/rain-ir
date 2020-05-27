@@ -17,7 +17,7 @@ indexmap = { version = "^1.3.2", optional = true }
 pretty_assertions = "^0.6"
 
 [features]
-default = ["parser", "prettyprint"]
+default = ["parser", "prettyprinter"]
 parser = ["nom", "symbol_table"]
-prettyprint = ["symbol_table"]
+prettyprinter = ["symbol_table"]
 symbol_table = ["indexmap"]
