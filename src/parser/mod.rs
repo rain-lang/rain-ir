@@ -9,7 +9,7 @@ use nom::{
     combinator::{map, opt},
     multi::separated_nonempty_list,
     sequence::{delimited, preceded},
-    IResult,
+    IResult, Err
 };
 use smallvec::SmallVec;
 
@@ -36,10 +36,13 @@ pub const MULTI_COMMENT_START: &str = "/*";
 pub const MULTI_COMMENT_END: &str = "*/";
 
 /**
-Parse a single-line `rain` comment, which begins with "//" and runs until a line ending, which may be `\n` or `\r\n`.
-Comments may contain any character. The content of the comment, not including the newline, is returned as an `&str`.
-If the comment is not terminated by a newline, `Incomplete` is returned.
-```
+Parse a single-line `rain` comment, returning the content as an `&str`.MULTI_COMMENT_END
+
+Single-line comments begin with "//" and run until a line ending, which may be `\n` or `\r\n`, and may contain any character.
+This is a streaming parser, so incomplete comments (i.e. cones without an ending newline) will return `Incomplete` instead of `Err`.
+
+# Example
+```rust
 use rain_lang::parser::parse_single_comment;
 assert_eq!(
     parse_single_comment("//This is a comment\nThis is not").unwrap(),
@@ -58,9 +61,15 @@ pub fn parse_single_comment(input: &str) -> IResult<&str, &str> {
 }
 
 /**
-Parse a multi-line `rain` comment, which begins with "/*" and ends with "*/". Comments may contain any character.
-The content of the comment, including newlines, is returned as an `&str`.
-```
+Parse a multi-line `rain` comment, returning the content as an `&str`.
+
+Multi-line comments begin with `/*`, end with `*/`, and may contain any character. This is a streaming
+parser, so incomplete comments (i.e. ones without the ending `*\/`) will return `Incomplete` instead of `Err`.
+
+For now, nested comments are not supported, but this may change.
+
+# Example
+```rust
 use rain_lang::parser::parse_multi_comment;
 assert_eq!(
     parse_multi_comment("/*This is a multiline\ncomment*/\nThis is not").unwrap(),
@@ -70,23 +79,29 @@ assert_eq!(
     parse_multi_comment("/*This is a CRLF\r\nmultiline comment\n*/This still isn't").unwrap(),
     ("This still isn't", "This is a CRLF\r\nmultiline comment\n")
 );
-assert!(parse_multi_comment("/\*This is an incomplete comment").is_err());
+assert!(parse_multi_comment(concat!("/", "*This is an incomplete comment")).is_err());
 assert!(parse_multi_comment("This is not a comment").is_err());
 ```
 */
 pub fn parse_multi_comment(input: &str) -> IResult<&str, &str> {
-    preceded(tag(MULTI_COMMENT_START), take_until(MULTI_COMMENT_END))(input)
+    delimited(tag(MULTI_COMMENT_START), take_until(MULTI_COMMENT_END), tag(MULTI_COMMENT_END))(input)
 }
 
 /**
-Parse whitespace, including single-line and multi-line comments. Returns nothing.
-```
+Parse whitespace (including comments). Returns nothing.
+
+The empty string is *not* accepted: use `opt(ws)` for that. This is a *streaming* parser: if the end of input is
+reached and no non-whitespace character has been parsed, `Incomplete` will be returned instead of success. `Incomplete`
+is also returned for unfinished multi-line and single-line comments.
+
+# Example
+```rust
 use rain_lang::parser::ws;
 
 // Whitespace parses as you would expect
-assert!(ws("    \t\r      \n\r\n \t   hello   \t").unwrap(), ("hello   \t", ()));
+assert_eq!(ws("    \t\r      \n\r\n \t   hello   \t").unwrap(), ("hello   \t", ()));
 // Comments inside whitespace disappear
-assert!(ws(r"
+assert_eq!(ws(r"
     // Hello, I'm a single line comment
 
     /*
@@ -95,7 +110,7 @@ assert!(ws(r"
 
     // Look, another single line comment
 
-    some.variable // Another single line comment"),
+    some.variable // Another single line comment").unwrap(),
     ("some.variable // Another single line comment", ())
 );
 
@@ -103,39 +118,47 @@ assert!(ws(r"
 assert!(ws("This is not a comment").is_err());
 assert!(ws("").is_err());
 
-// Multiline comments work as before
+// Multiline comments work as before, but notice now that newlines after them are consumed
 assert_eq!(
     ws("/*This is a multiline\ncomment*/\nThis is not").unwrap(),
-    ("\nThis is not", ())
+    ("This is not", ())
 );
 assert_eq!(
     ws("/*This is a CRLF\r\nmultiline comment\n*/This still isn't").unwrap(),
     ("This still isn't", ())
 );
-assert!(ws("/\*This is an incomplete comment").is_err());
+assert!(ws(concat!("/", "*This is an incomplete comment")).is_err());
 
-// As do single line comments
+// The same holds for single line comments
 assert_eq!(
     ws("//This is a comment\nThis is not").unwrap(),
-    ("This is not", "This is a comment")
+    ("This is not", ())
 );
 assert_eq!(
     ws("//This is a CRLF comment\r\nThis still isn't").unwrap(),
-    ("This still isn't", "This is a CRLF comment")
+    ("This still isn't", ())
 );
 assert!(ws("//This is an incomplete comment").is_err());
 ```
 */
 pub fn ws(mut input: &str) -> IResult<&str, ()> {
+    input = alt((parse_single_comment, parse_multi_comment, is_a(WHITESPACE)))(input)?.0;
     loop {
-        input = alt((parse_single_comment, parse_multi_comment, is_a(WHITESPACE)))(input)?.0
+        input = match alt((parse_single_comment, parse_multi_comment, is_a(WHITESPACE)))(input) {
+            Ok((rest, _)) => rest,
+            Err(Err::Incomplete(n)) => return Err(Err::Incomplete(n)),
+            _ => return Ok((input, ()))
+        }
     }
 }
 
 /**
 Parse a `rain` identifier, which is composed of a string of non-special, non-whitespace characters.
+
 Numbers are parsed as `Ident`s as well, and only later resolved to their special numeric types.
-```
+
+# Example
+```rust
 use rain_lang::parser::{parse_ident, ast::Ident};
 use nom::IResult;
 let process = |res: IResult<&'static str, Ident<'static>>| -> (&'static str, &'static str) {
@@ -173,11 +196,14 @@ pub fn parse_ident(input: &str) -> IResult<&str, Ident> {
 
 /**
 Parse a `rain` path, which is composed of a string of `Ident`s separated by periods.
+
 A preceding period is optional and do not affect the resulting object. An empty path is one period:
 an empty string is *not* a path, and a trailing period is forbidden.
 
 TODO: make a trailing period with nothing after it return `Incomplete` for REPL purposes.
-```
+
+# Example
+```rust
 use rain_lang::parser::{parse_path, ast::{Ident, Path}};
 use smallvec::smallvec;
 use std::convert::TryFrom;
@@ -196,7 +222,8 @@ assert_eq!(parse_path("hello.world..").unwrap(), ("..", my_path));
 // Single periods represent the empty path
 assert_eq!(parse_path(".   ").unwrap(), ("   ", Path::empty()));
 
-// Groups of periods are not a valid path, but instead just parse the first period as an empty path.
+// Groups of periods are not a valid path.
+// Instead, the first period is just parsed as an empty path.
 assert_eq!(parse_path("..").unwrap(), (".", Path::empty()));
 // Neither are special characters
 assert!(parse_path("#").is_err());

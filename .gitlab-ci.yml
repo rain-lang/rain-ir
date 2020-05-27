@@ -196,7 +196,7 @@ prepare:cargo-cache-mindeps:
 
 build:cargo-clippy:
     <<:
-        - *cargo_clippy_job
+        #- *cargo_clippy_job
         - *rust_stable
         - *cargo_cache_newest
 
