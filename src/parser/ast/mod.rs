@@ -2,13 +2,25 @@
 An AST for `rain` programs
 */
 use crate::{debug_from_display, quick_display};
+use super::parse_ident;
 use smallvec::SmallVec;
 use std::fmt::{self, Display, Formatter};
 use std::ops::{Deref, DerefMut};
+use std::convert::TryFrom;
 
 /// An identifier
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Ident<'a>(pub(super) &'a str);
+
+impl<'a> TryFrom<&'a str> for Ident<'a> {
+    type Error = (); //TODO: think about this
+    fn try_from(s: &'a str) -> Result<Ident<'a>, ()> {
+        match parse_ident(s) {
+            Ok(("", s)) => Ok(s),
+            _ => Err(())
+        }
+    }
+}
 
 quick_display!(Ident<'_>, id, fmt => Display::fmt(id.0, fmt));
 debug_from_display!(Ident<'_>);
@@ -36,7 +48,13 @@ pub const SMALL_PATH: usize = 1;
 pub type IdentVec<'a> = SmallVec<[Ident<'a>; SMALL_PATH]>;
 
 /// A path
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Path<'a>(pub IdentVec<'a>);
+
+impl<'a> Path<'a> {
+    /// Create a new empty path
+    pub fn empty() -> Path<'a> { Path(IdentVec::new()) }
+}
 
 impl Display for Path<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
