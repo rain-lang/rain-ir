@@ -2,7 +2,7 @@
 An AST for `rain` programs
 */
 use crate::{debug_from_display, quick_display};
-use super::parse_ident;
+use super::{PATH_SEP, parse_ident};
 use smallvec::SmallVec;
 use std::fmt::{self, Display, Formatter};
 use std::ops::{Deref, DerefMut};
@@ -60,11 +60,11 @@ impl Display for Path<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         if self.len() == 0 {
             // Edge case
-            return write!(fmt, ".");
+            return write!(fmt, "{}", PATH_SEP);
         }
         let mut first = true;
         for ident in self.iter() {
-            write!(fmt, "{}{}", if first { "" } else { "." }, ident)?;
+            write!(fmt, "{}{}", if first { "" } else { PATH_SEP }, ident)?;
             first = false;
         }
         Ok(())

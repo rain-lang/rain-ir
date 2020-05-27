@@ -4,9 +4,10 @@ A simple parser, and AST for a textual representation of `rain` programs
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
+    character::streaming::{line_ending, not_line_ending},
     combinator::{map, opt},
     multi::separated_nonempty_list,
-    sequence::preceded,
+    sequence::{delimited, preceded},
     IResult,
 };
 use smallvec::SmallVec;
@@ -16,7 +17,35 @@ use ast::*;
 pub mod builder;
 
 /// The `rain` special characters
-const SPECIAL_CHARACTERS: &str = " \t\r\n#()[]|\"\':.;";
+const SPECIAL_CHARACTERS: &str = " \t\r\n#()[]|\"\':.;/";
+
+/// The `rain` path separator charactor
+const PATH_SEP: &str = ".";
+
+/// The delimiter for single-line `rain` comments
+const SINGLE_COMMENT_START: &str = "//";
+
+/**
+Parse a single-line `rain` comment, which begins with "//" and runs until a line ending, which may be `\n` or `\r\n`. 
+Comments may contain any character. The content of the comment, not including the newline, is returned as an `&str`.
+If the comment is not terminated by a newline, `Incomplete` is returned.
+```
+use rain_lang::parser::parse_single_comment;
+assert_eq!(
+    parse_single_comment("//This is a comment\nThis is not").unwrap(), 
+    ("This is not", "This is a comment")
+);
+assert_eq!(
+    parse_single_comment("//This is a CRLF comment\r\nThis still isn't").unwrap(), 
+    ("This still isn't", "This is a CRLF comment")
+);
+assert!(parse_single_comment("//This is an incomplete comment").is_err());
+assert!(parse_single_comment("This is not a comment").is_err());
+```
+*/
+pub fn parse_single_comment(input: &str) -> IResult<&str, &str> {
+    delimited(tag(SINGLE_COMMENT_START), not_line_ending, line_ending)(input)
+}
 
 /**
 Parse a `rain` identifier, which is composed of a string of non-special, non-whitespace characters.
@@ -100,11 +129,11 @@ pub fn parse_path(input: &str) -> IResult<&str, Path> {
     alt((
         map(
             preceded(
-                opt(tag(".")),
-                separated_nonempty_list(tag("."), parse_ident),
+                opt(tag(PATH_SEP)),
+                separated_nonempty_list(tag(PATH_SEP), parse_ident),
             ),
             |v| Path(SmallVec::from_vec(v)),
         ),
-        map(tag("."), |_| Path::empty()),
+        map(tag(PATH_SEP), |_| Path::empty()),
     ))(input)
 }
