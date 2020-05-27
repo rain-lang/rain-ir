@@ -15,11 +15,11 @@ Contributions, ideas and collaboration proposals are welcome: please make an iss
 */
 #![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
 
-mod util;
-mod value;
+pub mod util;
+pub mod value;
 
 #[cfg(feature = "parser")]
-mod parser;
+pub mod parser;
 
 #[cfg(feature = "prettyprinter")]
-mod prettyprinter;
+pub mod prettyprinter;

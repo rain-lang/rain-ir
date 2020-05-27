@@ -2,3 +2,4 @@
 /builds
 /cache
 Cargo.lock
+tarpaulin-report.html
