@@ -1,7 +1,7 @@
 /*!
 An AST for `rain` programs
 */
-use super::{parse_ident, PATH_SEP};
+use super::{ident, PATH_SEP};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -15,7 +15,7 @@ pub struct Ident<'a>(pub(super) &'a str);
 impl<'a> TryFrom<&'a str> for Ident<'a> {
     type Error = (); //TODO: think about this
     fn try_from(s: &'a str) -> Result<Ident<'a>, ()> {
-        match parse_ident(s) {
+        match ident(s) {
             Ok(("", s)) => Ok(s),
             _ => Err(()),
         }
