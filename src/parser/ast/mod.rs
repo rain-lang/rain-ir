@@ -1,12 +1,12 @@
 /*!
 An AST for `rain` programs
 */
+use super::{parse_ident, PATH_SEP};
 use crate::{debug_from_display, quick_display};
-use super::{PATH_SEP, parse_ident};
 use smallvec::SmallVec;
+use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::ops::{Deref, DerefMut};
-use std::convert::TryFrom;
 
 /// An identifier
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -17,7 +17,7 @@ impl<'a> TryFrom<&'a str> for Ident<'a> {
     fn try_from(s: &'a str) -> Result<Ident<'a>, ()> {
         match parse_ident(s) {
             Ok(("", s)) => Ok(s),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
@@ -53,7 +53,9 @@ pub struct Path<'a>(pub IdentVec<'a>);
 
 impl<'a> Path<'a> {
     /// Create a new empty path
-    pub fn empty() -> Path<'a> { Path(IdentVec::new()) }
+    pub fn empty() -> Path<'a> {
+        Path(IdentVec::new())
+    }
 }
 
 impl Display for Path<'_> {
@@ -93,9 +95,10 @@ pub struct Sexpr<'a>(pub Vec<Expr<'a>>);
 
 impl<'a> Sexpr<'a> {
     /// Create a new empty S-expression
-    pub fn unit() -> Sexpr<'a> { Sexpr(Vec::new()) }
+    pub fn unit() -> Sexpr<'a> {
+        Sexpr(Vec::new())
+    }
 }
-
 
 impl<'a> Deref for Sexpr<'a> {
     type Target = Vec<Expr<'a>>;
@@ -131,14 +134,14 @@ pub enum Expr<'a> {
     /// A path denoting a given `rain` value
     Path(Path<'a>),
     /// An S-expression
-    Sexpr(Sexpr<'a>)
+    Sexpr(Sexpr<'a>),
 }
 
 impl Display for Expr<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
             Expr::Path(p) => Display::fmt(p, fmt),
-            Expr::Sexpr(s) => Display::fmt(s, fmt)
+            Expr::Sexpr(s) => Display::fmt(s, fmt),
         }
     }
 }
