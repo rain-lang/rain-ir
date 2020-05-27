@@ -1,7 +1,7 @@
 /*!
 An AST for `rain` programs
 */
-use super::{ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN};
+use super::{parse_ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -15,7 +15,7 @@ pub struct Ident<'a>(pub(super) &'a str);
 impl<'a> TryFrom<&'a str> for Ident<'a> {
     type Error = (); //TODO: think about this
     fn try_from(s: &'a str) -> Result<Ident<'a>, ()> {
-        match ident(s) {
+        match parse_ident(s) {
             Ok(("", s)) => Ok(s),
             _ => Err(()),
         }
@@ -61,13 +61,11 @@ impl<'a> Path<'a> {
 impl Display for Path<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         if self.len() == 0 {
-            // Edge case
-            return write!(fmt, "{}", PATH_SEP);
+            // Edge case (temporary)
+            return Ok(())
         }
-        let mut first = true;
         for ident in self.iter() {
-            write!(fmt, "{}{}", if first { "" } else { PATH_SEP }, ident)?;
-            first = false;
+            write!(fmt, "{}{}", PATH_SEP, ident)?;
         }
         Ok(())
     }
@@ -89,6 +87,23 @@ impl<'a> DerefMut for Path<'a> {
         &mut self.0
     }
 }
+
+/// A member access expression
+#[derive(PartialEq, Eq, Hash)]
+pub struct Member<'a> {
+    /// The value whose member is being accessed
+    pub base: Box<Expr<'a>>,
+    /// The path to the member being accessed
+    pub path: Path<'a>
+}
+
+impl Display for Member<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}{}", self.base, self.path)
+    }
+}
+
+debug_from_display!(Member<'_>);
 
 /// An S-expression
 #[derive(Eq, PartialEq, Hash, Default)]
@@ -173,20 +188,23 @@ debug_from_display!(Tuple<'_>);
 /// A `rain` expression
 #[derive(PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
-    /// A path denoting a given `rain` value
-    Path(Path<'a>),
+    /// An identifier
+    Ident(Ident<'a>),
     /// An S-expression
     Sexpr(Sexpr<'a>),
     /// A tuple
     Tuple(Tuple<'a>),
+    /// A member access
+    Member(Member<'a>)
 }
 
 impl Display for Expr<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
-            Expr::Path(p) => Display::fmt(p, fmt),
+            Expr::Ident(i) => Display::fmt(i, fmt),
             Expr::Sexpr(s) => Display::fmt(s, fmt),
             Expr::Tuple(t) => Display::fmt(t, fmt),
+            Expr::Member(m) => Display::fmt(m, fmt)
         }
     }
 }

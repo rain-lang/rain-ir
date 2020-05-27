@@ -7,8 +7,8 @@ use nom::{
     bytes::streaming::{is_a as is_a_s, take_until},
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, opt},
-    multi::separated_nonempty_list,
-    sequence::{delimited, preceded},
+    multi::{many1, separated_nonempty_list},
+    sequence::{delimited, preceded, tuple},
     Err, IResult,
 };
 use smallvec::SmallVec;
@@ -35,16 +35,16 @@ pub const MULTI_COMMENT_OPEN: &str = "/*";
 /// The closing delimiter for a multi-line `rain` comment
 pub const MULTI_COMMENT_CLOSE: &str = "*/";
 
-/// The opening delimiter for a sexpr
+/// The opening delimiter for a parse_sexpr
 pub const SEXPR_OPEN: &str = "(";
 
-/// The closing delimiter for a sexpr
+/// The closing delimiter for a parse_sexpr
 pub const SEXPR_CLOSE: &str = ")";
 
-/// The opening delimiter for a tuple
+/// The opening delimiter for a parse_tuple
 pub const TUPLE_OPEN: &str = "[";
 
-/// The closing delimiter for a tuple
+/// The closing delimiter for a parse_tuple
 pub const TUPLE_CLOSE: &str = "]";
 
 /// The opening delimiter for a scope
@@ -206,7 +206,7 @@ Numbers are parsed as `Ident`s as well, and only later resolved to their special
 
 # Example
 ```rust
-use rain_lang::parser::{ident, ast::Ident};
+use rain_lang::parser::{parse_ident, ast::Ident};
 use nom::IResult;
 let process = |res: IResult<&'static str, Ident<'static>>| -> (&'static str, &'static str) {
     let (rest, id) = res.unwrap();
@@ -214,44 +214,41 @@ let process = |res: IResult<&'static str, Ident<'static>>| -> (&'static str, &'s
 };
 
 // Both special characters and whitespace separate idents
-assert_eq!(process(ident("hello world")), (" world", "hello"));
-assert_eq!(process(ident("hello.world")), (".world", "hello"));
+assert_eq!(process(parse_ident("hello world")), (" world", "hello"));
+assert_eq!(process(parse_ident("hello.world")), (".world", "hello"));
 
 // Numbers are allowed within an ident
-assert_eq!(process(ident("h3110.w0r1d")), (".w0r1d", "h3110"));
-assert_eq!(process(ident("1337")), ("", "1337"));
+assert_eq!(process(parse_ident("h3110.w0r1d")), (".w0r1d", "h3110"));
+assert_eq!(process(parse_ident("1337")), ("", "1337"));
 
 // Unicode is fine too, as are most mathematical operators
-assert_eq!(process(ident("C++")), ("", "C++"));
-let arabic = process(ident("الحروف العربية"));
+assert_eq!(process(parse_ident("C++")), ("", "C++"));
+let arabic = process(parse_ident("الحروف العربية"));
 let desired_arabic = (" العربية" ,"الحروف");
 assert_eq!(arabic, desired_arabic);
-assert_eq!(process(ident("汉字:")), (":", "汉字"));
+assert_eq!(process(parse_ident("汉字:")), (":", "汉字"));
 
 // The empty string is not an ident
-assert!(ident("").is_err());
+assert!(parse_ident("").is_err());
 // Whitespace is not an ident
-assert!(ident(" ").is_err());
+assert!(parse_ident(" ").is_err());
 // Nor are special characters
-assert!(ident(".").is_err());
-assert!(ident("#").is_err());
+assert!(parse_ident(".").is_err());
+assert!(parse_ident("#").is_err());
 ```
  */
-pub fn ident(input: &str) -> IResult<&str, Ident> {
+pub fn parse_ident(input: &str) -> IResult<&str, Ident> {
     map(is_not(SPECIAL_CHARACTERS), Ident)(input)
 }
 
 /**
-Parse a `rain` path, which is composed of a string of `Ident`s separated by periods.
+Parse a `rain` path, which is composed of a string of `Ident`s preceded by periods.
 
-A preceding period is optional and do not affect the resulting object. An empty path is one period:
-an empty string is *not* a path, and a trailing period is forbidden.
-
-TODO: make a trailing period with nothing after it return `Incomplete` for REPL purposes.
+TODO: make a trailing period with nothing after it return `Incomplete` for REPL purposes?
 
 # Example
 ```rust
-use rain_lang::parser::{path, ast::{Ident, Path}};
+use rain_lang::parser::{parse_path, ast::{Ident, Path}};
 use smallvec::smallvec;
 use std::convert::TryFrom;
 let my_path = Path(smallvec![
@@ -260,72 +257,61 @@ let my_path = Path(smallvec![
 ]);
 
 // Single periods before a valid path are ignored
-assert_eq!(path("hello.world: T").unwrap(), (": T", my_path.clone()));
-assert_eq!(path(".hello.world#").unwrap(), ("#", my_path.clone()));
+assert_eq!(parse_path(".hello.world#").unwrap(), ("#", my_path.clone()));
 // Periods after a valid path are *not* considered part of the path
-assert_eq!(path(".hello.world.\"\"").unwrap(), (".\"\"", my_path.clone()));
-assert_eq!(path("hello.world..").unwrap(), ("..", my_path));
+assert_eq!(parse_path(".hello.world.\"\"").unwrap(), (".\"\"", my_path.clone()));
+assert_eq!(parse_path(".hello.world..").unwrap(), ("..", my_path));
 
-// Single periods represent the empty path
-assert_eq!(path(".   ").unwrap(), ("   ", Path::empty()));
-
-// Groups of periods are not a valid path.
-// Instead, the first period is just parsed as an empty path.
-assert_eq!(path("..").unwrap(), (".", Path::empty()));
+// Periods alone are not a valid path. (TODO: consider)
+assert!(parse_path(".").is_err());
+assert!(parse_path("..").is_err());
 // Neither are special characters
-assert!(path("#").is_err());
+assert!(parse_path("#").is_err());
 // Or the empty string, or whitespace
-assert!(path("   ").is_err());
-assert!(path("").is_err());
+assert!(parse_path("   ").is_err());
+assert!(parse_path("").is_err());
 ```
 
 # Grammar
 The grammar for a path can be represented by the following EBNF fragment:
 ```ebnf
-Path ::= "." | "."? Ident ("." Ident)*
+Path ::= ("." Ident)*
 ```
 */
-pub fn path(input: &str) -> IResult<&str, Path> {
-    alt((
-        map(
-            preceded(
-                opt(tag(PATH_SEP)),
-                separated_nonempty_list(tag(PATH_SEP), ident),
-            ),
-            |v| Path(SmallVec::from_vec(v)),
-        ),
-        map(tag(PATH_SEP), |_| Path::empty()),
-    ))(input)
+pub fn parse_path(input: &str) -> IResult<&str, Path> {
+    map(many1(preceded(tag(PATH_SEP), parse_ident)), |v| {
+        Path(SmallVec::from_vec(v))
+    })(input)
 }
 
 /**
-Parse a list of `rain` atoms
+Parse a list of compound `rain` expressions
 
 If `complete` is `false`, the parser will return `Incomplete` in the case of trailing whitespace.
 If `complete` is `true`, the parser will not do so, though it will still return `Incomplete` in the case of,  e.g., unfinished comments.
 In either case, the parser returns `Incomplete` if given only whitespace or an empty string.
 
 # Grammar
-The grammar for a list of atoms can be represented by the following EBNF fragment:
+The grammar for a list of compound expressions can be represented by the following EBNF fragment:
 ```ebnf
-Atoms ::= (WS Atom)+
+Compound ::= (WS Compound)+
 ```
 */
-pub fn parse_atoms(complete: bool, input: &str) -> IResult<&str, Vec<Expr>> {
+pub fn parse_expr_list(complete: bool, input: &str) -> IResult<&str, Vec<Expr>> {
     preceded(
         ws,
-        separated_nonempty_list(|input| parse_ws(complete, input), atom),
+        separated_nonempty_list(|input| parse_ws(complete, input), parse_compound),
     )(input)
 }
 
 /**
 Parse an S-expression
 */
-pub fn sexpr(input: &str) -> IResult<&str, Sexpr> {
+pub fn parse_sexpr(input: &str) -> IResult<&str, Sexpr> {
     map(
         delimited(
             tag(SEXPR_OPEN),
-            opt(|input| parse_atoms(false, input)),
+            opt(|input| parse_expr_list(false, input)),
             preceded(opt(ws), tag(SEXPR_CLOSE)),
         ),
         |s| s.map(Sexpr).unwrap_or_default(),
@@ -333,13 +319,13 @@ pub fn sexpr(input: &str) -> IResult<&str, Sexpr> {
 }
 
 /**
-Parse a tuple
+Parse a parse_tuple
 */
-pub fn tuple(input: &str) -> IResult<&str, Tuple> {
+pub fn parse_tuple(input: &str) -> IResult<&str, Tuple> {
     map(
         delimited(
             tag(TUPLE_OPEN),
-            opt(|input| parse_atoms(false, input)),
+            opt(|input| parse_expr_list(false, input)),
             preceded(opt(ws), tag(TUPLE_CLOSE)),
         ),
         |s| s.map(Tuple).unwrap_or_default(),
@@ -348,11 +334,33 @@ pub fn tuple(input: &str) -> IResult<&str, Tuple> {
 
 /**
 Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
+
+These expressions can have paths attached
 */
-pub fn atom(input: &str) -> IResult<&str, Expr> {
-    alt((
-        map(path, Expr::Path),   // Atom ::= Path
-        map(sexpr, Expr::Sexpr), // Atom ::= Sexpr
-        map(tuple, Expr::Tuple), // Atom ::= Tuple
-    ))(input)
+pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
+    map(
+        tuple((
+            alt((
+                map(parse_sexpr, Expr::Sexpr),
+                map(parse_tuple, Expr::Tuple),
+                map(parse_ident, Expr::Ident),
+            )),
+            opt(parse_path),
+        )),
+        |(atom, path): (Expr, Option<Path>)| {
+            if let Some(path) = path {
+                let base = Box::new(atom);
+                Expr::Member(Member { base, path })
+            } else {
+                atom
+            }
+        },
+    )(input)
+}
+
+/**
+Parse a compound `rain` expression. Does *not* consume whitespace before the expression!
+*/
+pub fn parse_compound(input: &str) -> IResult<&str, Expr> {
+    parse_atom(input) //TODO: this
 }
