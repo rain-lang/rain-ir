@@ -1,8 +1,8 @@
 /*!
 A prettyprinter for `rain` programs
 */
-use std::fmt::{self, Formatter};
 use std::default::Default;
+use std::fmt::{self, Formatter};
 
 /// A prettyprinter for `rain` values
 #[derive(Debug, Clone, Eq, PartialEq)]

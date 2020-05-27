@@ -1,6 +1,6 @@
 [package]
-name = "rain"
-version = "0.1.0"
+name = "rain-lang"
+version = "0.0.0"
 authors = ["Jad Ghalayini <jad.ghalayini@hotmail.com>"]
 edition = "2018"
 

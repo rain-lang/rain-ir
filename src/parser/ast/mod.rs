@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 
 /// An identifier
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Ident<'a>(&'a str);
+pub struct Ident<'a>(pub(super) &'a str);
 
 quick_display!(Ident<'_>, id, fmt => Display::fmt(id.0, fmt));
 debug_from_display!(Ident<'_>);
@@ -79,7 +79,7 @@ pub enum Expr<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
-            Expr::Path(p) => Display::fmt(p, fmt)
+            Expr::Path(p) => Display::fmt(p, fmt),
         }
     }
 }

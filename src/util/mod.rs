@@ -16,7 +16,7 @@ macro_rules! quick_display {
                 $e
             }
         }
-    }
+    };
 }
 
 /// Implement `Debug` for a type which implements `Display`
