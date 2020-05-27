@@ -1,7 +1,7 @@
 /*!
 An AST for `rain` programs
 */
-use super::{ident, PATH_SEP};
+use super::{ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -118,17 +118,57 @@ impl<'a> DerefMut for Sexpr<'a> {
 
 impl Display for Sexpr<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "(")?;
+        write!(fmt, "{}", SEXPR_OPEN)?;
         let mut first = true;
         for expr in self.iter() {
             write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
             first = false;
         }
-        write!(fmt, ")")
+        write!(fmt, "{}", SEXPR_CLOSE)
     }
 }
 
 debug_from_display!(Sexpr<'_>);
+
+/// A tuple
+#[derive(Eq, PartialEq, Hash, Default)]
+pub struct Tuple<'a>(pub Vec<Expr<'a>>);
+
+impl<'a> Tuple<'a> {
+    /// Create a new empty tuple
+    pub fn unit() -> Tuple<'a> {
+        Tuple(Vec::new())
+    }
+}
+
+impl<'a> Deref for Tuple<'a> {
+    type Target = Vec<Expr<'a>>;
+    #[inline]
+    fn deref(&self) -> &Vec<Expr<'a>> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Tuple<'a> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<Expr<'a>> {
+        &mut self.0
+    }
+}
+
+impl Display for Tuple<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}", TUPLE_OPEN)?;
+        let mut first = true;
+        for expr in self.iter() {
+            write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
+            first = false;
+        }
+        write!(fmt, "{}", TUPLE_CLOSE)
+    }
+}
+
+debug_from_display!(Tuple<'_>);
 
 /// A `rain` expression
 #[derive(PartialEq, Eq, Hash)]
