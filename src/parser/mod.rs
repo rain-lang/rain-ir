@@ -333,8 +333,26 @@ pub fn sexpr(input: &str) -> IResult<&str, Sexpr> {
 }
 
 /**
+Parse a tuple
+*/
+pub fn tuple(input: &str) -> IResult<&str, Tuple> {
+    map(
+        delimited(
+            tag(TUPLE_OPEN),
+            opt(|input| parse_atoms(false, input)),
+            preceded(opt(ws), tag(TUPLE_CLOSE)),
+        ),
+        |s| s.map(Tuple).unwrap_or_default(),
+    )(input)
+}
+
+/**
 Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
 */
 pub fn atom(input: &str) -> IResult<&str, Expr> {
-    alt((map(path, Expr::Path), map(sexpr, Expr::Sexpr)))(input)
+    alt((
+        map(path, Expr::Path),   // Atom ::= Path
+        map(sexpr, Expr::Sexpr), // Atom ::= Sexpr
+        map(tuple, Expr::Tuple), // Atom ::= Tuple
+    ))(input)
 }

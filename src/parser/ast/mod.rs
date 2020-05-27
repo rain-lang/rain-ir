@@ -177,6 +177,8 @@ pub enum Expr<'a> {
     Path(Path<'a>),
     /// An S-expression
     Sexpr(Sexpr<'a>),
+    /// A tuple
+    Tuple(Tuple<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -184,6 +186,7 @@ impl Display for Expr<'_> {
         match self {
             Expr::Path(p) => Display::fmt(p, fmt),
             Expr::Sexpr(s) => Display::fmt(s, fmt),
+            Expr::Tuple(t) => Display::fmt(t, fmt),
         }
     }
 }
