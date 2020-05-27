@@ -88,16 +88,57 @@ impl<'a> DerefMut for Path<'a> {
     }
 }
 
+/// An S-expression
+pub struct Sexpr<'a>(pub Vec<Expr<'a>>);
+
+impl<'a> Sexpr<'a> {
+    /// Create a new empty S-expression
+    pub fn unit() -> Sexpr<'a> { Sexpr(Vec::new()) }
+}
+
+
+impl<'a> Deref for Sexpr<'a> {
+    type Target = Vec<Expr<'a>>;
+    #[inline]
+    fn deref(&self) -> &Vec<Expr<'a>> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Sexpr<'a> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<Expr<'a>> {
+        &mut self.0
+    }
+}
+
+impl Display for Sexpr<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "(")?;
+        let mut first = true;
+        for expr in self.iter() {
+            write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
+            first = false;
+        }
+        write!(fmt, ")")
+    }
+}
+
+debug_from_display!(Sexpr<'_>);
+
 /// A `rain` expression
 pub enum Expr<'a> {
     /// A path denoting a given `rain` value
     Path(Path<'a>),
+    /// An S-expression
+    Sexpr(Sexpr<'a>)
 }
 
 impl Display for Expr<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
             Expr::Path(p) => Display::fmt(p, fmt),
+            Expr::Sexpr(s) => Display::fmt(s, fmt)
         }
     }
 }
