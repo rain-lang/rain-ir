@@ -3,13 +3,13 @@ A simple parser, and AST for a textual representation of `rain` programs
 */
 use nom::{
     branch::alt,
-    bytes::complete::{is_not, tag, is_a as is_a_c},
+    bytes::complete::{is_a as is_a_c, is_not, tag},
     bytes::streaming::{is_a as is_a_s, take_until},
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, opt},
     multi::separated_nonempty_list,
     sequence::{delimited, preceded},
-    IResult, Err
+    Err, IResult,
 };
 use smallvec::SmallVec;
 
@@ -29,11 +29,29 @@ pub const PATH_SEP: &str = ".";
 /// The delimiter for single-line `rain` comments
 pub const SINGLE_COMMENT_START: &str = "//";
 
-/// The start delimiter for a multi-line `rain` comment
-pub const MULTI_COMMENT_START: &str = "/*";
+/// The opening delimiter for a multi-line `rain` comment
+pub const MULTI_COMMENT_OPEN: &str = "/*";
 
-/// The end delimiter for a multi-line `rain` comment
-pub const MULTI_COMMENT_END: &str = "*/";
+/// The closing delimiter for a multi-line `rain` comment
+pub const MULTI_COMMENT_CLOSE: &str = "*/";
+
+/// The opening delimiter for a sexpr
+pub const SEXPR_OPEN: &str = "(";
+
+/// The closing delimiter for a sexpr
+pub const SEXPR_CLOSE: &str = ")";
+
+/// The opening delimiter for a tuple
+pub const TUPLE_OPEN: &str = "[";
+
+/// The closing delimiter for a tuple
+pub const TUPLE_CLOSE: &str = "]";
+
+/// The opening delimiter for a scope
+pub const SCOPE_OPEN: &str = "{";
+
+/// The closing delimiter for a scope
+pub const SCOPE_CLOSE: &str = "}";
 
 /**
 Parse a single-line `rain` comment, returning the content as an `&str`.MULTI_COMMENT_END
@@ -84,14 +102,18 @@ assert!(parse_multi_comment("This is not a comment").is_err());
 ```
 */
 pub fn parse_multi_comment(input: &str) -> IResult<&str, &str> {
-    delimited(tag(MULTI_COMMENT_START), take_until(MULTI_COMMENT_END), tag(MULTI_COMMENT_END))(input)
+    delimited(
+        tag(MULTI_COMMENT_OPEN),
+        take_until(MULTI_COMMENT_CLOSE),
+        tag(MULTI_COMMENT_CLOSE),
+    )(input)
 }
 
 /**
 Parse whitespace (including comments). Returns nothing.
 
 If `complete` is true, then it will consume potentially incomplete whitespace. If `complete` is false and the end of input is
-reached and no non-whitespace character has been parsed, then `Incomplete` will be returned. `Incomplete` is always returned 
+reached and no non-whitespace character has been parsed, then `Incomplete` will be returned. `Incomplete` is always returned
 for unfinished multi-line and single-line comments.
 
 # Example
@@ -148,25 +170,34 @@ assert_eq!(parse_ws(true, "     ").unwrap(), ("", ()));
 ```
 */
 pub fn parse_ws(complete: bool, mut input: &str) -> IResult<&str, ()> {
-    let is_a = |input| if complete { is_a_c(WHITESPACE)(input) } else { is_a_s(WHITESPACE)(input) };
+    let is_a = |input| {
+        if complete {
+            is_a_c(WHITESPACE)(input)
+        } else {
+            is_a_s(WHITESPACE)(input)
+        }
+    };
     input = alt((parse_single_comment, parse_multi_comment, is_a))(input)?.0;
     loop {
         input = match alt((parse_single_comment, parse_multi_comment, is_a))(input) {
             Ok((rest, _)) => rest,
             Err(Err::Incomplete(n)) => return Err(Err::Incomplete(n)),
-            _ => return Ok((input, ()))
+            _ => return Ok((input, ())),
         }
     }
 }
 
 /// Parses whitespace (including comments). Streaming, returns nothing.
 /// See `parse_ws`
-pub fn ws(input: &str) -> IResult<&str, ()> { parse_ws(false, input) }
-
+pub fn ws(input: &str) -> IResult<&str, ()> {
+    parse_ws(false, input)
+}
 
 /// Parses whitespace (including comments). Complete, returns nothing.
 /// See `parse_ws`
-pub fn cws(input: &str) -> IResult<&str, ()> { parse_ws(true, input) }
+pub fn cws(input: &str) -> IResult<&str, ()> {
+    parse_ws(true, input)
+}
 
 /**
 Parse a `rain` identifier, which is composed of a string of non-special, non-whitespace characters.
@@ -267,27 +298,43 @@ pub fn path(input: &str) -> IResult<&str, Path> {
     ))(input)
 }
 
-
 /**
 Parse a list of `rain` atoms
 
 If `complete` is `false`, the parser will return `Incomplete` in the case of trailing whitespace.
-If `complete` is `true`, the parser will not do so, though it will still return `Incomplete` in the case of,  e.g., unfinished comments. 
+If `complete` is `true`, the parser will not do so, though it will still return `Incomplete` in the case of,  e.g., unfinished comments.
 In either case, the parser returns `Incomplete` if given only whitespace or an empty string.
 
 # Grammar
 The grammar for a list of atoms can be represented by the following EBNF fragment:
 ```ebnf
-Atoms ::= 
+Atoms ::= (WS Atom)+
 ```
 */
 pub fn parse_atoms(complete: bool, input: &str) -> IResult<&str, Vec<Expr>> {
-    preceded(ws, separated_nonempty_list(|input| parse_ws(complete, input), atom))(input)
+    preceded(
+        ws,
+        separated_nonempty_list(|input| parse_ws(complete, input), atom),
+    )(input)
 }
 
 /**
-Parse an atomic `rain` expression
+Parse an S-expression
 */
-pub fn atom(_input: &str) -> IResult<&str, Expr> {
-    unimplemented!()
+pub fn sexpr(input: &str) -> IResult<&str, Sexpr> {
+    map(
+        delimited(
+            tag(SEXPR_OPEN),
+            opt(|input| parse_atoms(false, input)),
+            preceded(opt(ws), tag(SEXPR_CLOSE)),
+        ),
+        |s| s.map(Sexpr).unwrap_or_default(),
+    )(input)
+}
+
+/**
+Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
+*/
+pub fn atom(input: &str) -> IResult<&str, Expr> {
+    alt((map(path, Expr::Path), map(sexpr, Expr::Sexpr)))(input)
 }

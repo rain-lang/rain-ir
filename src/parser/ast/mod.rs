@@ -48,7 +48,7 @@ pub const SMALL_PATH: usize = 1;
 pub type IdentVec<'a> = SmallVec<[Ident<'a>; SMALL_PATH]>;
 
 /// A path
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct Path<'a>(pub IdentVec<'a>);
 
 impl<'a> Path<'a> {
@@ -91,6 +91,7 @@ impl<'a> DerefMut for Path<'a> {
 }
 
 /// An S-expression
+#[derive(Eq, PartialEq, Hash, Default)]
 pub struct Sexpr<'a>(pub Vec<Expr<'a>>);
 
 impl<'a> Sexpr<'a> {
@@ -130,6 +131,7 @@ impl Display for Sexpr<'_> {
 debug_from_display!(Sexpr<'_>);
 
 /// A `rain` expression
+#[derive(PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
     /// A path denoting a given `rain` value
     Path(Path<'a>),
