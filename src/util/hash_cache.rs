@@ -80,7 +80,26 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     Garbage-collect a given cache. Return how many values were collected.
 
     # Example
-
+    ```rust
+    use rain_lang::util::hash_cache::Cache;
+    use triomphe::Arc;
+    let int_cache = Cache::<u64>::new();
+    
+    // Let's stick 2 used values and 3 unused values into the cache:
+    let used_1 = int_cache.cache(77);
+    let used_2 = int_cache.cache(88);
+    int_cache.cache(99);
+    int_cache.cache(500);
+    int_cache.cache(81);
+    // We can see that at this point there are 5 things in the cache:
+    assert_eq!(int_cache.len(), 5);
+    // Now, let's garbage collect the cache, which should bring us down 3 things:
+    assert_eq!(int_cache.gc(), 3);
+    // And we have 2 things left:
+    assert_eq!(int_cache.len(), 2);
+    assert!(Arc::ptr_eq(&used_1, &int_cache.cache(77)));
+    assert!(Arc::ptr_eq(&used_2, &int_cache.cache(88)));
+    ```
     */
     pub fn gc(&self) -> usize {
         let mut collected = 0;
@@ -93,5 +112,26 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
             }
         });
         collected
+    }
+
+    /**
+    Compute how many items are in a given cache.
+
+    # Example
+    ```rust
+    use rain_lang::util::hash_cache::Cache;
+    let int_cache = Cache::<u64>::new();
+    assert_eq!(int_cache.len(), 0);
+    int_cache.cache(10);
+    assert_eq!(int_cache.len(), 1);
+    int_cache.cache(20);
+    assert_eq!(int_cache.len(), 2);
+    // Since 10 is already in the cache, this is a no-op:
+    int_cache.cache(10);
+    assert_eq!(int_cache.len(), 2);
+    ```
+     */
+    pub fn len(&self) -> usize {
+        self.cache.len()
     }
 }
