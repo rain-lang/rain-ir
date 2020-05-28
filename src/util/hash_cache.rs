@@ -32,4 +32,12 @@ impl<T: Hash, S: BuildHasher> Cache<T, S> {
         }
         self.cache.entry(value.into()).or_default().key().clone()
     }
+    /// Garbage-collect a given cache. Return how many values were collected.
+    pub fn gc(&self) -> usize {
+        let mut collected = 0;
+        self.cache.retain(
+            |arc| if arc.is_unique() { collected += 1; false } else { true }
+        )
+        collected
+    }
 }
