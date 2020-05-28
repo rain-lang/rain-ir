@@ -5,6 +5,8 @@ Miscellaneous utilities and data structures used throughout the `rain` compiler
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;
 
+pub mod hash_cache;
+
 /// Quickly implement `Display` using a given function
 #[macro_export]
 macro_rules! quick_display {
