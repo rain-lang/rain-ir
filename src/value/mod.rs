@@ -2,7 +2,9 @@
 `rain` values
 */
 use crate::{debug_from_display, display_pretty};
-use std::sync::{Arc, Weak};
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use triomphe::Arc;
 
 pub mod primitive;
 pub mod region;
@@ -18,15 +20,18 @@ impl PartialEq for ValId {
     }
 }
 
+impl Hash for ValId {
+    #[inline]
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.deref(), hasher)
+    }
+}
+
 debug_from_display!(ValId);
 display_pretty!(ValId, |_, _| unimplemented!());
 
-/// A weak handle to a `rain` value
-#[derive(Debug, Clone)]
-pub struct WeakId(Weak<ValueEnum>);
-
 /// An enumeration of possible `rain` values
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {}
 
 debug_from_display!(ValueEnum);

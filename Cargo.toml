@@ -9,6 +9,8 @@ edition = "2018"
 [dependencies]
 ahash = "^0.3"
 smallvec = "^1.4"
+triomphe = "^0.1"
+dashmap = "^3"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }
