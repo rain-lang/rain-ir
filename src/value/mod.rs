@@ -1,7 +1,7 @@
 /*!
 `rain` values
 */
-use crate::{debug_from_display, display_pretty, enum_convert};
+use crate::{debug_from_display, display_pretty, enum_convert, forv};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -17,7 +17,7 @@ use tuple::{Product, Tuple};
 
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
-pub struct ValId(Arc<ValueEnum>);
+pub struct ValId(Arc<NormalValue>);
 
 impl PartialEq for ValId {
     #[inline]
@@ -43,6 +43,41 @@ pub struct TypeId(ValId);
 debug_from_display!(TypeId);
 display_pretty!(TypeId, "{}", self.deref());
 
+/// A normalized `rain` value
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct NormalValue(ValueEnum);
+
+impl Deref for NormalValue {
+    type Target = ValueEnum;
+    fn deref(&self) -> &ValueEnum {
+        &self.0
+    }
+}
+
+impl From<ValueEnum> for NormalValue {
+    #[inline]
+    fn from(value: ValueEnum) -> NormalValue {
+        forv! {
+            match (value) {
+                v => unimplemented!()
+            }
+        }
+    }
+}
+
+impl From<NormalValue> for ValueEnum {
+    #[inline]
+    fn from(normal: NormalValue) -> ValueEnum {
+        normal.0
+    }
+}
+
+debug_from_display!(NormalValue);
+display_pretty!(NormalValue, "{}", self.0);
+
+/// A trait implemented by `rain` values
+pub trait Value: Into<NormalValue> + Into<ValueEnum> {}
+
 /// An enumeration of possible `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {
@@ -61,6 +96,10 @@ enum_convert! {
     impl Injection<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {}
+    impl TryFrom<NormalValue> for Sexpr { ValueEnum::Sexpr, }
+    impl TryFrom<NormalValue> for Parameter { ValueEnum::Parameter, }
+    impl TryFrom<NormalValue> for Tuple { ValueEnum::Tuple, }
+    impl TryFrom<NormalValue> for Product { ValueEnum::Product, }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
@@ -90,7 +129,6 @@ macro_rules! forv {
     };
 }
 
-
 debug_from_display!(ValueEnum);
 display_pretty!(ValueEnum, fmt, v => forv! {
     match (v) { v => write!(fmt, "{}", v) }
@@ -98,7 +136,9 @@ display_pretty!(ValueEnum, fmt, v => forv! {
 
 impl Live for ValueEnum {
     fn lifetime(&self) -> LifetimeBorrow {
-        forv!(match (self) { s => s.lifetime() })
+        forv!(match (self) {
+            s => s.lifetime()
+        })
     }
 }
 
@@ -119,16 +159,29 @@ mod prettyprint_impl {
     }
 
     impl PrettyPrint for ValId {
+        #[inline]
         fn prettyprint(
             &self,
-            _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            self.deref().prettyprint(printer, fmt)
         }
     }
 
     impl PrettyPrint for TypeId {
+        #[inline]
+        fn prettyprint(
+            &self,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            self.0.prettyprint(printer, fmt)
+        }
+    }
+
+    impl PrettyPrint for NormalValue {
+        #[inline]
         fn prettyprint(
             &self,
             printer: &mut PrettyPrinter,
