@@ -2,6 +2,7 @@
 `rain` node regions
 */
 
+use super::TypeId;
 use crate::util::hash_cache::Cache;
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
@@ -14,7 +15,7 @@ pub const SMALL_PARAMS: usize = 2;
 
 lazy_static! {
     /// The global cache of constructed regions.
-    /// 
+    ///
     /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
     /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
     pub static ref REGION_CACHE: Cache<RegionData> = Cache::new();
@@ -116,7 +117,7 @@ pub trait Regional {
 }
 
 /// A vector of parameter types
-pub type ParamTyVec = SmallVec<[(); SMALL_PARAMS]>;
+pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
 
 /// The data composing a `rain` region
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
