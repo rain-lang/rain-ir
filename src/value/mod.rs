@@ -8,7 +8,7 @@ use triomphe::Arc;
 
 pub mod expr;
 pub mod primitive;
-pub mod region;
+pub mod lifetime;
 
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]

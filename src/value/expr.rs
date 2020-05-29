@@ -1,14 +1,14 @@
 /*!
 `rain` expressions
 */
-use super::{region::Region, TypeId, ValId};
+use super::{lifetime::Lifetime, TypeId, ValId};
 use crate::{debug_from_display, display_pretty};
 use smallvec::SmallVec;
 
 /// The size of a small S-expression
 pub const SMALL_SEXPR_SIZE: usize = 3;
 
-/// The arguments-vector of an S-expression
+/// The argument-vector of an S-expression
 pub type SexprArgs = SmallVec<[ValId; SMALL_SEXPR_SIZE]>;
 
 /// An S-expression
@@ -16,8 +16,8 @@ pub type SexprArgs = SmallVec<[ValId; SMALL_SEXPR_SIZE]>;
 pub struct Sexpr {
     /// The arguments of this S-expression
     args: SexprArgs,
-    /// The (cached) region of this S-expression
-    region: Option<Region>,
+    /// The (cached) lifetime of this S-expression
+    lifetime: Option<Lifetime>,
     /// The (cached) type of this S-expression
     ///
     /// TODO: Optional?

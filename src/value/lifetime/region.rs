@@ -1,8 +1,8 @@
 /*!
-`rain` node regions
+`rain` value regions
 */
 
-use super::TypeId;
+use crate::value::TypeId;
 use crate::util::hash_cache::Cache;
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
@@ -193,8 +193,8 @@ impl Parameter {
     # Examples
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
-    use rain_lang::value::region::{Region, Parameter};
-    let empty_region = Region::new(RegionData::new(None))
+    use rain_lang::value::lifetime::{Region, RegionData, Parameter};
+    let empty_region = Region::new(RegionData::new(None));
     assert_eq!(Parameter::new(empty_region, 1), Err(()));
     ```
     */
