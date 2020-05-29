@@ -130,7 +130,10 @@ enum_convert! {
     impl TryFrom<NormalValue> for Sexpr { match ValueEnum::Sexpr, }
     impl TryFrom<NormalValue> for Parameter { match ValueEnum::Parameter, }
     impl TryFrom<NormalValue> for Tuple { match ValueEnum::Tuple, }
-    impl TryFrom<NormalValue> for Product { match ValueEnum::Product, }
+    impl Injection<NormalValue> for Product { 
+        as |p| NormalValue(ValueEnum::Product(p)), 
+        match ValueEnum::Product, 
+    }
     impl TryFrom<NormalValue> for Universe { match ValueEnum::Universe, }
 }
 
