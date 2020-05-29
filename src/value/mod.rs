@@ -10,6 +10,7 @@ pub mod expr;
 pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
+pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
@@ -57,11 +58,15 @@ impl Deref for NormalValue {
 impl From<ValueEnum> for NormalValue {
     #[inline]
     fn from(value: ValueEnum) -> NormalValue {
+        /*
         forv! {
             match (value) {
                 v => unimplemented!()
             }
         }
+        */
+        let _ = value;
+        unimplemented!()
     }
 }
 
