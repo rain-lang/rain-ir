@@ -42,13 +42,6 @@ impl From<Arc<NormalValue>> for ValId {
     }
 }
 
-impl From<ValueEnum> for ValId {
-    #[inline]
-    fn from(value: ValueEnum) -> ValId {
-        ValId::from(NormalValue::from(value))
-    }
-}
-
 impl PartialEq for ValId {
     #[inline]
     fn eq(&self, other: &ValId) -> bool {
@@ -181,6 +174,22 @@ impl Live for ValueEnum {
         })
     }
 }
+
+/// Implement `ValId: From<T>` using `NormalValue: From<T>`
+#[macro_export]
+macro_rules! normal_valid {
+    ($T:ty) => {
+        impl From<$T> for $crate::value::ValId {
+            #[inline]
+            fn from(v: $T) -> $crate::value::ValId {
+                $crate::value::NormalValue::from(v).into()
+            }
+        }
+    }
+}
+
+normal_valid!(ValueEnum);
+//TODO: normal_valid! for other things...
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
