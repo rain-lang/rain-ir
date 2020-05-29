@@ -91,6 +91,15 @@ macro_rules! pretty_display {
     };
 }
 
+/// Count match arms
+#[macro_export]
+macro_rules! count_match_arms {
+    ($n:expr) => {};
+    ($n:expr; $first:pat $(if $first_guard:expr)* => $first_result:expr, ($($from:pat $(if $guard:expr)* => $to:expr,)*)*) => {
+        $first:pat $([$n]if $first_guard:expr)* => $first_result:expr count_match_arms!($n + 1, $($from $(if $guard)* => $to,)*)
+    }
+}
+
 /// Implement `From<T> for E` and implement `TryFrom<E> for T>` where `T` is an enum variant of `E`
 #[macro_export]
 macro_rules! enum_convert {
@@ -113,13 +122,27 @@ macro_rules! enum_convert {
         impl std::convert::TryFrom<$E> for $T {
             type Error = $E;
             fn try_from(v: $E) -> Result<$T, $E> {
+                use std::borrow::Borrow;
+                let v_ref: &$En = v.borrow();
+                #[allow(unreachable_patterns, unused_variables)]
+                let matches: bool = match v_ref {
+                    $En$(::$V)+(v) => true,
+                    $($($from $(if $guard)* => true,)*)*
+                    _ => false
+                };
+                if !matches {
+                    return Err(v)
+                }
                 let v: $En = v.into();
+                /*
                 #[allow(unreachable_patterns)]
                 match v {
                     $En$(::$V)+(v) => Ok(v.into()),
                     $($($from $(if $guard)* => $to,)*)*
                     e => Err(e.into())
                 }
+                */
+                unimplemented!()
             }
         }
     };

@@ -6,6 +6,7 @@ use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::borrow::Borrow;
 use triomphe::Arc;
 
 pub mod expr;
@@ -82,12 +83,20 @@ impl Deref for NormalValue {
 impl From<ValueEnum> for NormalValue {
     #[inline]
     fn from(value: ValueEnum) -> NormalValue {
+        /*
         forv! {
             match (value) {
                 v => v.into(),
             }
         }
+        */
+        unimplemented!()
     }
+}
+
+impl Borrow<ValueEnum> for NormalValue {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum { &self.0 }
 }
 
 impl From<NormalValue> for ValueEnum {
@@ -122,20 +131,21 @@ enum_convert! {
     // ValueEnum injection:
     impl Injection<ValueEnum> for Sexpr {
         match
-            other if other == () => Ok(Sexpr::unit()),
+            other if *other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
     impl Injection<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {
         match
-            other if other == () => Ok(Tuple::unit()),
+            other if *other == () => Ok(Tuple::unit()),
     }
     impl Injection<ValueEnum> for Product {
         match
-            other if other == Unit => Ok(Product::unit_ty()),
+            other if *other == Unit => Ok(Product::unit_ty()),
     }
     impl Injection<ValueEnum> for Universe {}
 
+    /*
     // NormalValue injection.
     impl Injection<NormalValue> for Sexpr {
         as ValueEnum,
@@ -151,7 +161,7 @@ enum_convert! {
     }
     impl Injection<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
     impl Injection<NormalValue> for Universe { as ValueEnum, }
-
+    */
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
