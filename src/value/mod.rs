@@ -1,7 +1,7 @@
 /*!
 `rain` values
 */
-use crate::{debug_from_display, pretty_display, enum_convert, forv};
+use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -15,6 +15,7 @@ pub mod universe;
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use tuple::{Product, Tuple};
+use universe::Universe;
 
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
@@ -94,6 +95,8 @@ pub enum ValueEnum {
     Tuple(Tuple),
     /// A finite Cartesian product of `rain` types, at least some of which are distinct.
     Product(Product),
+    /// A typing universe
+    Universe(Universe),
 }
 
 enum_convert! {
@@ -123,7 +126,8 @@ macro_rules! forv {
             ValueEnum::Sexpr($i) => $e,
             ValueEnum::Parameter($i) => $e,
             ValueEnum::Tuple($i) => $e,
-            ValueEnum::Product($i) => $e
+            ValueEnum::Product($i) => $e,
+            ValueEnum::Universe($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr }) => {

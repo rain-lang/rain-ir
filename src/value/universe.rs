@@ -2,6 +2,7 @@
 Typing universes
 */
 use crate::quick_pretty;
+use crate::value::lifetime::{LifetimeBorrow, Live};
 use std::cmp::Ordering;
 
 /// A universe of types
@@ -107,6 +108,12 @@ impl Universe {
 }
 
 quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.kind));
+
+impl Live for Universe {
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
 
 #[cfg(test)]
 mod tests {
