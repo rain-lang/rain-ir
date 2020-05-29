@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
+use std::ops::Deref;
 
 /// The size of a small tuple
 pub const SMALL_TUPLE_SIZE: usize = 3;
@@ -39,6 +40,12 @@ impl Live for Tuple {
     }
 }
 
+impl Deref for Tuple {
+    type Target = TupleElems;
+    #[inline]
+    fn deref(&self) -> &TupleElems { &self.elems }
+}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
 
@@ -62,6 +69,12 @@ impl Live for Product {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
     }
+}
+
+impl Deref for Product {
+    type Target = ProductElems;
+    #[inline]
+    fn deref(&self) -> &ProductElems { &self.elems }
 }
 
 #[cfg(feature = "prettyprinter")]

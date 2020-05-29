@@ -109,7 +109,7 @@ macro_rules! enum_convert {
             impl From<$T> for $E { as $E, }
         );
     };
-    (impl TryFrom<$E:ty> for $T:ty { as $En:ident$(::$V:ident)+, $(match $($from:pat => $to:expr,)*)* }) => {
+    (impl TryFrom<$E:ty> for $T:ty { as $En:ident$(::$V:ident)+, $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {
         impl std::convert::TryFrom<$E> for $T {
             type Error = $E;
             fn try_from(v: $E) -> Result<$T, $E> {
@@ -117,20 +117,20 @@ macro_rules! enum_convert {
                 #[allow(unreachable_patterns)]
                 match v {
                     $En$(::$V)+(v) => Ok(v.into()),
-                    $($($from => $to,)*)*
+                    $($($from $(if $guard)* => $to,)*)*
                     e => Err(e.into())
                 }
             }
         }
     };
-    (impl TryFrom<$E:ty> for $T:ident { as $En:ident, $(match $($from:pat => $to:expr,)*)* }) => {
+    (impl TryFrom<$E:ty> for $T:ident { as $En:ident, $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {
         enum_convert! {
-            impl TryFrom<$E> for $T { as $En::$T, $(match $($from => $to,)*)* }
+            impl TryFrom<$E> for $T { as $En::$T, $(match $($from $(if $guard:expr)* => $to,)*)* }
         }
     };
-    (impl TryFrom<$E:ident> for $T:ident { $(match $($from:pat => $to:expr,)*)* }) => {
+    (impl TryFrom<$E:ident> for $T:ident { $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {
         enum_convert! {
-            impl TryFrom<$E> for $T { as $E::$T, $(match $($from => $to,)*)* }
+            impl TryFrom<$E> for $T { as $E::$T, $(match $($from $(if $guard)* => $to,)*)* }
         }
     };
     (impl TryFrom<$E:ident> for $T:ident {}) => {
@@ -138,16 +138,16 @@ macro_rules! enum_convert {
             impl TryFrom<$E> for $T { as $E, }
         }
     };
-    (impl Injection<$E:ident> for $T:ident { $(as $t:ident,)* $(match $($from:pat => $to:expr,)*)* }) => {
+    (impl Injection<$E:ident> for $T:ident { $(as $t:ident,)* $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {
         enum_convert!{
             impl From<$T> for $E { $(as $t,)* }
-            impl TryFrom<$E> for $T { $(as $t,)* $(match $($from => $to,)*)* }
+            impl TryFrom<$E> for $T { $(as $t,)* $(match $($from $(if $guard)* => $to,)*)* }
         }
     };
-    ($(impl $Tr:ident<$E:ident> for $T:ident { $(as $t:ident,)* $(match $($from:pat => $to:expr,)*)* } )*) => {
+    ($(impl $Tr:ident<$E:ident> for $T:ident { $(as $t:ident,)* $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* } )*) => {
         $(
             enum_convert!{
-                impl $Tr<$E> for $T { $(as $t,)* $(match $($from => $to,)*)* }
+                impl $Tr<$E> for $T { $(as $t,)* $(match $($from $(if $guard)* => $to,)*)* }
             }
         )*
     }

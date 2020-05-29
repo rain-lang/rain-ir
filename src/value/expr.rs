@@ -32,7 +32,7 @@ pretty_display!(Sexpr, "(...)");
 
 impl Sexpr {
     /// Create an S-expression corresponding to the unit value
-    pub fn unit(_value: ValId) -> Sexpr {
+    pub fn unit() -> Sexpr {
         unimplemented!()
     }
     /// Create an S-expression corresponding to a singleton value

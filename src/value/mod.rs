@@ -12,8 +12,8 @@ pub mod expr;
 pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
-pub mod universe;
 pub mod typing;
+pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
@@ -123,17 +123,28 @@ pub enum ValueEnum {
 
 enum_convert! {
     // ValueEnum injection:
-    impl Injection<ValueEnum> for Sexpr { match other => Ok(Sexpr::singleton(ValId::from(other))), }
+    impl Injection<ValueEnum> for Sexpr {
+        match
+            //TODO: is_unit check instead... or just == Unit...
+            ValueEnum::Tuple(t) if t.len() == 0 => Ok(Sexpr::unit()),
+            other => Ok(Sexpr::singleton(ValId::from(other))),
+    }
     impl Injection<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {}
     impl Injection<ValueEnum> for Universe {}
-    // NormalValue injection
-    // impl Injection<NormalValue> for Sexpr { as ValueEnum, } TODO: normalization
+
+    // NormalValue injection.
+    impl Injection<NormalValue> for Sexpr { 
+        as ValueEnum, 
+        match 
+            other => Ok(Sexpr::singleton(ValId::from(other))), 
+    }
     impl Injection<NormalValue> for Parameter { as ValueEnum, }
     // impl Injection<NormalValue> for Tuple { as ValueEnum, } TODO: normalization
     impl Injection<NormalValue> for Product { as ValueEnum, }
     impl Injection<NormalValue> for Universe { as ValueEnum, }
+
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
@@ -187,7 +198,7 @@ macro_rules! normal_valid {
                 $crate::value::NormalValue::from(v).into()
             }
         }
-    }
+    };
 }
 
 normal_valid!(ValueEnum);
