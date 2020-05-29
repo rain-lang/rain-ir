@@ -214,7 +214,9 @@ macro_rules! normal_valid {
 }
 
 normal_valid!(ValueEnum);
-//TODO: normal_valid! for other things...
+normal_valid!(Sexpr);
+normal_valid!(Tuple);
+normal_valid!(Product);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

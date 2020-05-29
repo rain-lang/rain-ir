@@ -4,7 +4,7 @@ Primitive `rain` values and associated value descriptors
 use super::{
     expr::Sexpr,
     tuple::{Product, Tuple},
-    ValueEnum,
+    NormalValue, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
 use std::convert::TryFrom;
@@ -53,6 +53,18 @@ impl PartialEq<ValueEnum> for () {
     #[inline]
     fn eq(&self, value: &ValueEnum) -> bool {
         value.eq(self)
+    }
+}
+
+impl From<()> for ValueEnum {
+    fn from(_: ()) -> ValueEnum {
+        ValueEnum::Sexpr(Sexpr::unit())
+    }
+}
+
+impl From<()> for NormalValue {
+    fn from(_: ()) -> NormalValue {
+        NormalValue(ValueEnum::from(()))
     }
 }
 
@@ -107,7 +119,16 @@ impl PartialEq<ValueEnum> for Unit {
 
 impl From<Unit> for ValueEnum {
     #[inline]
-    fn from(_: Unit) -> ValueEnum { ValueEnum::Product(Product::unit_ty()) }
+    fn from(_: Unit) -> ValueEnum {
+        ValueEnum::Product(Product::unit_ty())
+    }
+}
+
+impl From<Unit> for NormalValue {
+    #[inline]
+    fn from(_: Unit) -> NormalValue {
+        NormalValue(ValueEnum::from(Unit))
+    }
 }
 
 impl TryFrom<ValueEnum> for Unit {
