@@ -5,6 +5,7 @@
 use super::{LifetimeBorrow, Live};
 use crate::util::hash_cache::Cache;
 use crate::value::TypeId;
+use crate::quick_pretty;
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -180,6 +181,8 @@ pub struct Parameter {
     /// The index of this parameter in the region's type vector
     ix: usize,
 }
+
+quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.region().depth(), s.ix()));
 
 impl Parameter {
     /**

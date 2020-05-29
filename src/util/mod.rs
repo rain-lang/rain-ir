@@ -7,10 +7,10 @@ pub mod symbol_table;
 
 pub mod hash_cache;
 
-/// Quickly implement `Display` using a given function
+/// Quickly implement `Display` using a given function or format string
 #[macro_export]
 macro_rules! quick_display {
-    ($t:ty, $s:ident, $fmt:ident => $e:expr) => {
+    ($t:ty, $s:pat, $fmt:pat => $e:expr) => {
         impl std::fmt::Display for $t {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 let $s = self;
@@ -18,6 +18,22 @@ macro_rules! quick_display {
                 $e
             }
         }
+    };
+    ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
+        quick_display!($t, fmt, s => write!(fmt, $fmt_string $(, $e)*));
+    };
+}
+
+/// Quickly implement `Display` or `PrettyPrint` using a given function or format string
+#[macro_export]
+macro_rules! quick_pretty {
+    ($t:ty, $s:pat, $fmt:pat => $e:expr) => {
+        $crate::quick_display!($t, $s, $fmt => $e);
+        $crate::display_pretty!($t);
+    };
+    ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
+        $crate::quick_display!($t, $fmt_string (,$e)*);
+        $crate::display_pretty!($t);
     };
 }
 
@@ -33,10 +49,27 @@ macro_rules! debug_from_display {
     };
 }
 
-/// Implement `Display` for a type using prettyprinting if it is enabled, and otherwise using a default function
+/// Implement `PrettyPrint` for a type using `Display` if prettyprinting is enabled, otherwise do nothing
 #[macro_export]
 macro_rules! display_pretty {
-    ($t:ty, $fmt:ident, $s:ident => $default:expr) => {
+    ($t:ty) => {
+        #[cfg(feature = "prettyprinter")]
+        impl $crate::prettyprinter::PrettyPrint for $t {
+            fn prettyprint(
+                &self,
+                _printer: $crate::prettyprinter::PrettyPrinter,
+                fmt: &mut std::fmt::Formatter,
+            ) -> Result<(), std::fmt::Error> {
+                std::fmt::Display::fmt(self, fmt)
+            }
+        }
+    };
+}
+
+/// Implement `Display` for a type using prettyprinting if it is enabled, and otherwise using a default function
+#[macro_export]
+macro_rules! pretty_display {
+    ($t:ty, $s:pat, $fmt:pat => $default:expr) => {
         impl std::fmt::Display for $t {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 #[cfg(feature = "prettyprinter")]
@@ -54,7 +87,7 @@ macro_rules! display_pretty {
         }
     };
     ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
-        display_pretty!($t, fmt, s => write!(fmt, $fmt_string $(, $e)*));
+        pretty_display!($t, _, fmt => write!(fmt, $fmt_string $(, $e)*));
     };
 }
 

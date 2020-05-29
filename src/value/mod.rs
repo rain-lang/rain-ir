@@ -1,7 +1,7 @@
 /*!
 `rain` values
 */
-use crate::{debug_from_display, display_pretty, enum_convert, forv};
+use crate::{debug_from_display, pretty_display, enum_convert, forv};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -34,14 +34,14 @@ impl Hash for ValId {
 }
 
 debug_from_display!(ValId);
-display_pretty!(ValId, "{}", self.deref());
+pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 
 /// A reference-counted, hash-consed `rain` type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct TypeId(ValId);
 
 debug_from_display!(TypeId);
-display_pretty!(TypeId, "{}", self.deref());
+pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A normalized `rain` value
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -73,7 +73,7 @@ impl From<NormalValue> for ValueEnum {
 }
 
 debug_from_display!(NormalValue);
-display_pretty!(NormalValue, "{}", self.0);
+pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
 pub trait Value: Into<NormalValue> + Into<ValueEnum> {}
@@ -131,7 +131,7 @@ macro_rules! forv {
 }
 
 debug_from_display!(ValueEnum);
-display_pretty!(ValueEnum, fmt, v => forv! {
+pretty_display!(ValueEnum, v, fmt => forv! {
     match (v) { v => write!(fmt, "{}", v) }
 });
 

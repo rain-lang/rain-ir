@@ -5,7 +5,7 @@ use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     TypeId, ValId,
 };
-use crate::{debug_from_display, display_pretty};
+use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
 
 /// The size of a small S-expression
@@ -28,7 +28,7 @@ pub struct Sexpr {
 }
 
 debug_from_display!(Sexpr);
-display_pretty!(Sexpr, "(...)");
+pretty_display!(Sexpr, "(...)");
 
 impl Live for Sexpr {
     fn lifetime(&self) -> LifetimeBorrow {

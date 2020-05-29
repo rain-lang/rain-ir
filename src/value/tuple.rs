@@ -5,7 +5,7 @@ use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     TypeId, ValId,
 };
-use crate::{debug_from_display, display_pretty};
+use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
 
 /// The size of a small tuple
@@ -40,7 +40,7 @@ impl Live for Tuple {
 }
 
 debug_from_display!(Tuple);
-display_pretty!(Tuple, "[...]");
+pretty_display!(Tuple, "[...]");
 
 /// A product of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -56,7 +56,7 @@ pub struct Product {
 }
 
 debug_from_display!(Product);
-display_pretty!(Product, "#product [...]");
+pretty_display!(Product, "#product [...]");
 
 impl Live for Product {
     fn lifetime(&self) -> LifetimeBorrow {
