@@ -36,7 +36,7 @@ macro_rules! debug_from_display {
 /// Implement `Display` for a type using prettyprinting if it is enabled, and otherwise using a default function
 #[macro_export]
 macro_rules! display_pretty {
-    ($t:ty, $fmt_string:literal $(,$default:expr)*) => {
+    ($t:ty, $fmt:ident, $s:ident => $default:expr) => {
         impl std::fmt::Display for $t {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 #[cfg(feature = "prettyprinter")]
@@ -46,10 +46,15 @@ macro_rules! display_pretty {
                 }
                 #[cfg(not(feature = "prettyprinter"))]
                 {
-                    write!(fmt, $fmt_string $(, $default)*)
+                    let $fmt = fmt;
+                    let $s = self;
+                    $default
                 }
             }
         }
+    };
+    ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
+        display_pretty!($t, fmt, s => write!(fmt, $fmt_string $(, $e)*));
     };
 }
 

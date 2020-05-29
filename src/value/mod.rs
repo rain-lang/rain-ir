@@ -92,7 +92,9 @@ macro_rules! forv {
 
 
 debug_from_display!(ValueEnum);
-display_pretty!(ValueEnum, "TODO");
+display_pretty!(ValueEnum, fmt, v => forv! {
+    match (v) { v => write!(fmt, "{}", v) }
+});
 
 impl Live for ValueEnum {
     fn lifetime(&self) -> LifetimeBorrow {
