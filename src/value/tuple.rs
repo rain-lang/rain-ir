@@ -34,6 +34,14 @@ pub struct Tuple {
     ty: TypeId,
 }
 
+impl Tuple {
+    /// Create the tuple corresponding to the element of the unit type
+    #[inline]
+    pub fn unit() -> Tuple {
+        unimplemented!()
+    }
+}
+
 impl Live for Tuple {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
@@ -60,6 +68,14 @@ pub struct Product {
     ///
     /// TODO: Optional?
     ty: TypeId,
+}
+
+impl Product {
+    /// Create the product corresponding to the unit type
+    #[inline]
+    pub fn unit_ty() -> Product {
+        unimplemented!()
+    }
 }
 
 debug_from_display!(Product);
