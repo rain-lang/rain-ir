@@ -20,7 +20,7 @@ macro_rules! quick_display {
         }
     };
     ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
-        quick_display!($t, fmt, s => write!(fmt, $fmt_string $(, $e)*));
+        $crate::quick_display!($t, _, fmt => write!(fmt, $fmt_string $(, $e)*));
     };
 }
 
@@ -32,7 +32,7 @@ macro_rules! quick_pretty {
         $crate::display_pretty!($t);
     };
     ($t:ty, $fmt_string:literal $(, $e:expr)*) => {
-        $crate::quick_display!($t, $fmt_string (,$e)*);
+        $crate::quick_display!($t, $fmt_string $(,$e)*);
         $crate::display_pretty!($t);
     };
 }
