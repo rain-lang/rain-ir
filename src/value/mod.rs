@@ -83,14 +83,11 @@ impl Deref for NormalValue {
 impl From<ValueEnum> for NormalValue {
     #[inline]
     fn from(value: ValueEnum) -> NormalValue {
-        /*
         forv! {
             match (value) {
                 v => v.into(),
             }
         }
-        */
-        unimplemented!()
     }
 }
 
@@ -145,23 +142,21 @@ enum_convert! {
     }
     impl Injection<ValueEnum> for Universe {}
 
-    /*
     // NormalValue injection.
     impl Injection<NormalValue> for Sexpr {
         as ValueEnum,
         match
-            other if other == () => Ok(Sexpr::unit()),
+            other if *other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
     impl Injection<NormalValue> for Parameter { as ValueEnum, }
     impl Injection<NormalValue> for Tuple {
         as ValueEnum,
         match
-            other if other == () => Ok(Tuple::unit()),
+            other if *other == () => Ok(Tuple::unit()),
     }
     impl Injection<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
     impl Injection<NormalValue> for Universe { as ValueEnum, }
-    */
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
