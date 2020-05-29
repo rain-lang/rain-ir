@@ -57,7 +57,7 @@ macro_rules! display_pretty {
         impl $crate::prettyprinter::PrettyPrint for $t {
             fn prettyprint(
                 &self,
-                _printer: $crate::prettyprinter::PrettyPrinter,
+                _printer: &mut $crate::prettyprinter::PrettyPrinter,
                 fmt: &mut std::fmt::Formatter,
             ) -> Result<(), std::fmt::Error> {
                 std::fmt::Display::fmt(self, fmt)

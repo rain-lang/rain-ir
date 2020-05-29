@@ -23,7 +23,7 @@ pretty_assertions = "^0.6"
 [features]
 default = [
     "parser", 
-    #"prettyprinter"
+    "prettyprinter"
     ]
 parser = ["nom", "symbol_table"]
 prettyprinter = ["symbol_table"]

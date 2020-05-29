@@ -1,7 +1,9 @@
 /*!
 `rain` values
 */
+use crate::util::hash_cache::Cache;
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
+use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -17,9 +19,35 @@ use lifetime::{LifetimeBorrow, Live, Parameter};
 use tuple::{Product, Tuple};
 use universe::Universe;
 
+lazy_static! {
+    /// The global `rain` value cache
+    pub static ref VALUE_CACHE: Cache<NormalValue> = Cache::new();
+}
+
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
 pub struct ValId(Arc<NormalValue>);
+
+impl From<NormalValue> for ValId {
+    #[inline]
+    fn from(value: NormalValue) -> ValId {
+        ValId(VALUE_CACHE.cache(value))
+    }
+}
+
+impl From<Arc<NormalValue>> for ValId {
+    #[inline]
+    fn from(value: Arc<NormalValue>) -> ValId {
+        ValId(VALUE_CACHE.cache(value))
+    }
+}
+
+impl From<ValueEnum> for ValId {
+    #[inline]
+    fn from(value: ValueEnum) -> ValId {
+        ValId::from(NormalValue::from(value))
+    }
+}
 
 impl PartialEq for ValId {
     #[inline]
