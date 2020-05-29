@@ -11,6 +11,7 @@ ahash = "^0.3"
 smallvec = "^1.4"
 triomphe = "^0.1"
 dashmap = "^3"
+lazy_static = "^1.4"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }
