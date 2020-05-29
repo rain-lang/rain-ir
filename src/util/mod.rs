@@ -52,3 +52,42 @@ macro_rules! display_pretty {
         }
     };
 }
+
+/// Implement `From<T> for E` and implement `TryFrom<E> for T>` where `T` is an enum variant of `E`
+#[macro_export]
+macro_rules! enum_convert {
+    (impl From<$T:ty> for $E:ty { $f:expr }) => {
+        impl From<$T> for $E {
+            fn from(v: $T) -> $E { $f(v) }
+        }
+    };
+    (impl From<$T:ident> for $E:ident {}) => {
+        enum_convert!(
+            impl From<$T> for $E { $E::$T }
+        );
+    };
+    (impl TryFrom<$E:ident> for $T:ty { $p:path $(,$ps:path)* }) => {
+        impl std::convert::TryFrom<$E> for $T {
+            type Error = $E;
+            fn try_from(v: $E) -> Result<$T, $E> {
+                #[allow(unreachable_patterns)]
+                match v {
+                    $p(v) => Ok(v),
+                    $(,$ps(v) => Ok(v))*
+                    e => Err(e)
+                }
+            }
+        }
+    };
+    (impl TryFrom<$E:ident> for $T:ident {}) => {
+        enum_convert!(
+            impl TryFrom<$E> for $T { $E::$T }
+        );
+    };
+    ($(impl Injection<$E:ident> for $T:ident {})*) => {
+        $(
+            enum_convert!(impl From<$T> for $E {});
+            enum_convert!(impl TryFrom<$E> for $T {});
+        )*
+    }
+}

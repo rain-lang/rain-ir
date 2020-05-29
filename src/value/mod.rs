@@ -1,7 +1,7 @@
 /*!
 `rain` values
 */
-use crate::{debug_from_display, display_pretty};
+use crate::{debug_from_display, display_pretty, enum_convert};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -54,6 +54,13 @@ pub enum ValueEnum {
     Tuple(Tuple),
     /// A finite Cartesian product of `rain` types, at least some of which are distinct.
     Product(Product),
+}
+
+enum_convert! {
+    impl Injection<ValueEnum> for Sexpr {}
+    impl Injection<ValueEnum> for Parameter {}
+    impl Injection<ValueEnum> for Tuple {}
+    impl Injection<ValueEnum> for Product {}
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
