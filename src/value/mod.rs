@@ -96,10 +96,11 @@ enum_convert! {
     impl Injection<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {}
-    impl TryFrom<NormalValue> for Sexpr { ValueEnum::Sexpr, }
-    impl TryFrom<NormalValue> for Parameter { ValueEnum::Parameter, }
-    impl TryFrom<NormalValue> for Tuple { ValueEnum::Tuple, }
-    impl TryFrom<NormalValue> for Product { ValueEnum::Product, }
+    //TODO: unit normalization
+    impl TryFrom<NormalValue> for Sexpr { match ValueEnum::Sexpr, }
+    impl TryFrom<NormalValue> for Parameter { match ValueEnum::Parameter, }
+    impl TryFrom<NormalValue> for Tuple { match ValueEnum::Tuple, }
+    impl TryFrom<NormalValue> for Product { match ValueEnum::Product, }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.

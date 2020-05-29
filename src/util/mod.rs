@@ -61,25 +61,25 @@ macro_rules! display_pretty {
 /// Implement `From<T> for E` and implement `TryFrom<E> for T>` where `T` is an enum variant of `E`
 #[macro_export]
 macro_rules! enum_convert {
-    (impl From<$T:ty> for $E:ty { $f:expr, }) => {
+    (impl From<$T:ty> for $E:ty { as $f:expr, }) => {
         impl From<$T> for $E {
             fn from(v: $T) -> $E { $f(v) }
         }
     };
     (impl From<$T:ident> for $E:ident {}) => {
         enum_convert!(
-            impl From<$T> for $E { $E::$T, }
+            impl From<$T> for $E { as $E::$T, }
         );
     };
-    (impl TryFrom<$E:ident> for $T:ty { $p:path, $($ps:path,)* $(try $ts:path,)* }) => {
+    (impl TryFrom<$E:ident> for $T:ty { $(match $ps:path,)+ $(try match $ts:path,)* $($from:tt => $to:tt,)* }) => {
         impl std::convert::TryFrom<$E> for $T {
             type Error = $E;
             fn try_from(v: $E) -> Result<$T, $E> {
                 #[allow(unreachable_patterns)]
                 match v.into() {
-                    $p(v) => Ok(v.into()),
-                    $(,$ps(v) => Ok(v.into()))*
-                    $(,$ts(v) => v.try_into().map_err(|err| err.into()))*
+                    $($ps(v) => Ok(v.into()),)*
+                    $($ts(v) => v.try_into().map_err(|err| err.into()),)*
+                    $($from => $to,)*
                     e => Err(e.into())
                 }
             }
@@ -87,14 +87,14 @@ macro_rules! enum_convert {
     };
     (impl TryFrom<$E:ident> for $T:ident {}) => {
         enum_convert!(
-            impl TryFrom<$E> for $T { $E::$T, }
+            impl TryFrom<$E> for $T { match $E::$T, }
         );
     };
-    (impl Injection<$E:ident> for $T:ident {}) => {
-            enum_convert!(impl From<$T> for $E {});
-            enum_convert!(impl TryFrom<$E> for $T {});
+    (impl Injection<$E:ident> for $T:ident { $(as $f:expr,)* $(match $ps:path,)* $(try match $ts:path,)* }) => {
+            enum_convert!(impl From<$T> for $E { $(as $f,)* });
+            enum_convert!(impl TryFrom<$E> for $T { $(match $ps,)* $(try match $ts:path,)* });
     };
-    ($(impl $Tr:ident<$E:ident> for $T:ident { $($ps:path,)* })*) => {
-        $(enum_convert!(impl $Tr<$E> for $T { $($ps,)* });)*
+    ($(impl $Tr:ident<$E:ident> for $T:ident { $(as $f:expr,)* $(match $ps:path,)* $(try match $ts:path,)* })*) => {
+        $(enum_convert!(impl $Tr<$E> for $T { $(as $f,)* $(match $ps,)* $(try match $ts:path,)* });)*
     }
 }
