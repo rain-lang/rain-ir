@@ -2,20 +2,34 @@
 `rain` node regions
 */
 
+use crate::util::hash_cache::Cache;
+use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
-
 use triomphe::{Arc, ArcBorrow};
 
 /// The size of a small set of parameters to a `rain` region
 pub const SMALL_PARAMS: usize = 2;
+
+lazy_static! {
+    /// The global cache of constructed regions.
+    /// 
+    /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
+    /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
+    pub static ref REGION_CACHE: Cache<RegionData> = Cache::new();
+}
 
 /// A `rain` region
 #[derive(Debug, Clone, Eq)]
 pub struct Region(Arc<RegionData>);
 
 impl Region {
+    /// Create a new reference from a given `RegionData`, caching if possible
+    #[inline]
+    pub fn new(data: RegionData) -> Region {
+        Region(REGION_CACHE.cache(data))
+    }
     /// Get a reference to a borrow of this region. More efficient than taking an `&Region`.
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
@@ -64,7 +78,9 @@ impl<'a> RegionBorrow<'a> {
         Region(self.0.clone_arc())
     }
     /// Get the underlying `ArcBorrow` of this `RegionData`
-    pub fn get_borrow(&self) -> ArcBorrow<'a, RegionData> { self.0 }
+    pub fn get_borrow(&self) -> ArcBorrow<'a, RegionData> {
+        self.0
+    }
 }
 
 impl Deref for RegionBorrow<'_> {
@@ -170,7 +186,17 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    /// Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
+    /**
+     Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
+
+    # Examples
+    Trying to make a parameter out of bounds returns `Err`:
+    ```rust
+    use rain_lang::value::region::{Region, Parameter};
+    let empty_region = Region::new(RegionData::new(None))
+    assert_eq!(Parameter::new(empty_region, 1), Err(()));
+    ```
+    */
     #[inline]
     pub fn new(region: Region, ix: usize) -> Result<Parameter, ()> {
         if ix >= region.len() {
