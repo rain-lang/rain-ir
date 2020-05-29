@@ -125,7 +125,7 @@ macro_rules! enum_convert {
     };
     (impl TryFrom<$E:ty> for $T:ident { as $En:ident, $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {
         enum_convert! {
-            impl TryFrom<$E> for $T { as $En::$T, $(match $($from $(if $guard:expr)* => $to,)*)* }
+            impl TryFrom<$E> for $T { as $En::$T, $(match $($from $(if $guard)* => $to,)*)* }
         }
     };
     (impl TryFrom<$E:ident> for $T:ident { $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* }) => {

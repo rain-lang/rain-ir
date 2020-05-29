@@ -17,6 +17,7 @@ pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
+use primitive::Unit;
 use tuple::{Product, Tuple};
 use universe::Universe;
 
@@ -125,24 +126,34 @@ enum_convert! {
     // ValueEnum injection:
     impl Injection<ValueEnum> for Sexpr {
         match
-            //TODO: is_unit check instead... or just == Unit...
-            ValueEnum::Tuple(t) if t.len() == 0 => Ok(Sexpr::unit()),
+            other if other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
     impl Injection<ValueEnum> for Parameter {}
-    impl Injection<ValueEnum> for Tuple {}
-    impl Injection<ValueEnum> for Product {}
+    impl Injection<ValueEnum> for Tuple {
+        match
+            other if other == () => Ok(Tuple::unit()),
+    }
+    impl Injection<ValueEnum> for Product {
+        match
+            other if other == Unit => Ok(Product::unit_ty()),
+    }
     impl Injection<ValueEnum> for Universe {}
 
     // NormalValue injection.
-    impl Injection<NormalValue> for Sexpr { 
-        as ValueEnum, 
-        match 
-            other => Ok(Sexpr::singleton(ValId::from(other))), 
+    impl Injection<NormalValue> for Sexpr {
+        as ValueEnum,
+        match
+            other if other == () => Ok(Sexpr::unit()),
+            other => Ok(Sexpr::singleton(ValId::from(other))),
     }
     impl Injection<NormalValue> for Parameter { as ValueEnum, }
-    // impl Injection<NormalValue> for Tuple { as ValueEnum, } TODO: normalization
-    impl Injection<NormalValue> for Product { as ValueEnum, }
+    impl Injection<NormalValue> for Tuple {
+        as ValueEnum,
+        match
+            other if other == () => Ok(Tuple::unit()),
+    }
+    impl Injection<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
     impl Injection<NormalValue> for Universe { as ValueEnum, }
 
 }
@@ -166,7 +177,7 @@ macro_rules! forv {
             ValueEnum::Universe($i) => $e,
         }
     };
-    (match ($v:expr) { $i:ident => $e:expr }) => {
+    (match ($v:expr) { $i:ident => $e:expr, }) => {
         forv! {
             match ($v) {
                 else $i => $e
@@ -183,7 +194,7 @@ pretty_display!(ValueEnum, v, fmt => forv! {
 impl Live for ValueEnum {
     fn lifetime(&self) -> LifetimeBorrow {
         forv!(match (self) {
-            s => s.lifetime()
+            s => s.lifetime(),
         })
     }
 }
