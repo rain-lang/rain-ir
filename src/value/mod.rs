@@ -82,15 +82,11 @@ impl Deref for NormalValue {
 impl From<ValueEnum> for NormalValue {
     #[inline]
     fn from(value: ValueEnum) -> NormalValue {
-        /*
         forv! {
             match (value) {
-                v => unimplemented!()
+                v => v.into(),
             }
         }
-        */
-        let _ = value;
-        unimplemented!()
     }
 }
 
