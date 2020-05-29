@@ -199,6 +199,30 @@ pub fn cws(input: &str) -> IResult<&str, ()> {
     parse_ws(true, input)
 }
 
+/// The `rain` keyword for `true`
+const KEYWORD_TRUE: &str = "#true";
+
+/// The `rain` keyword for `false`
+const KEYWORD_FALSE: &str = "#false";
+
+/**
+Parse a `bool`, i.e. `#true` or `#false`
+
+# Example
+```rust
+use rain_lang::parser::parse_bool;
+assert_eq!(parse_bool("#true something_else"), Ok((" something_else", true)));
+assert_eq!(parse_bool("#false #true"), Ok((" #true", false)));
+assert!(parse_bool("#7rue").is_err())
+```
+*/
+pub fn parse_bool(input: &str) -> IResult<&str, bool> {
+    alt((
+        map(tag(KEYWORD_TRUE), |_| true),
+        map(tag(KEYWORD_FALSE), |_| false)
+    ))(input)
+}
+
 /**
 Parse a `rain` identifier, which is composed of a string of non-special, non-whitespace characters.
 

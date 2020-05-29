@@ -89,7 +89,7 @@ impl<'a> DerefMut for Path<'a> {
 }
 
 /// A member access expression
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Member<'a> {
     /// The value whose member is being accessed
     pub base: Box<Expr<'a>>,
@@ -106,7 +106,7 @@ impl Display for Member<'_> {
 debug_from_display!(Member<'_>);
 
 /// An S-expression
-#[derive(Eq, PartialEq, Hash, Default)]
+#[derive(Clone, Eq, PartialEq, Hash, Default)]
 pub struct Sexpr<'a>(pub Vec<Expr<'a>>);
 
 impl<'a> Sexpr<'a> {
@@ -146,7 +146,7 @@ impl Display for Sexpr<'_> {
 debug_from_display!(Sexpr<'_>);
 
 /// A tuple
-#[derive(Eq, PartialEq, Hash, Default)]
+#[derive(Clone, Eq, PartialEq, Hash, Default)]
 pub struct Tuple<'a>(pub Vec<Expr<'a>>);
 
 impl<'a> Tuple<'a> {
@@ -186,7 +186,7 @@ impl Display for Tuple<'_> {
 debug_from_display!(Tuple<'_>);
 
 /// A `rain` expression
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
     /// An identifier
     Ident(Ident<'a>),
