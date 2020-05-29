@@ -30,6 +30,13 @@ impl Hash for ValId {
 debug_from_display!(ValId);
 display_pretty!(ValId, |_, _| unimplemented!());
 
+/// A reference-counted, hash-consed `rain` type
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct TypeId(ValId);
+
+debug_from_display!(TypeId);
+display_pretty!(TypeId, |fmt, ty| write!(fmt, "{}", ty.0));
+
 /// An enumeration of possible `rain` values
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {}
@@ -60,6 +67,16 @@ mod prettyprint_impl {
             _fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             unimplemented!()
+        }
+    }
+
+    impl PrettyPrint for TypeId {
+        fn prettyprint(
+            &self,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            self.0.prettyprint(printer, fmt)
         }
     }
 }
