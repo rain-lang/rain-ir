@@ -30,6 +30,17 @@ pub struct Sexpr {
 debug_from_display!(Sexpr);
 pretty_display!(Sexpr, "(...)");
 
+impl Sexpr {
+    /// Create an S-expression corresponding to the unit value
+    pub fn unit(_value: ValId) -> Sexpr {
+        unimplemented!()
+    }
+    /// Create an S-expression corresponding to a singleton value
+    pub fn singleton(_value: ValId) -> Sexpr {
+        unimplemented!() // Needs typing...
+    }
+}
+
 impl Live for Sexpr {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()

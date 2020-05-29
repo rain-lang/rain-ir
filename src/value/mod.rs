@@ -123,7 +123,7 @@ pub enum ValueEnum {
 
 enum_convert! {
     // ValueEnum injection:
-    impl Injection<ValueEnum> for Sexpr {}
+    impl Injection<ValueEnum> for Sexpr { match other => Ok(Sexpr::singleton(ValId::from(other))), }
     impl Injection<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {}
