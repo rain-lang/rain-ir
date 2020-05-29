@@ -64,7 +64,7 @@ impl Hash for Region {
 }
 
 /// A borrow of a `rain` region
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
 
 impl<'a> RegionBorrow<'a> {
@@ -108,12 +108,6 @@ impl Hash for RegionBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
     }
-}
-
-/// A trait implemented by values having a region
-pub trait Regional {
-    /// Get the region of this value
-    fn region(&self) -> Option<RegionBorrow>;
 }
 
 /// A vector of parameter types
@@ -213,13 +207,7 @@ impl Parameter {
     }
     /// Get this parameter's region
     #[inline]
-    pub fn get_region(&self) -> &Region {
+    pub fn region(&self) -> &Region {
         &self.region
-    }
-}
-
-impl Regional for Parameter {
-    fn region(&self) -> Option<RegionBorrow> {
-        Some(self.region.borrow_region())
     }
 }

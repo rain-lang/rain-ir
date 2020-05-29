@@ -7,8 +7,9 @@ use std::ops::Deref;
 use triomphe::Arc;
 
 pub mod expr;
-pub mod primitive;
 pub mod lifetime;
+pub mod primitive;
+pub mod tuple;
 
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
@@ -29,21 +30,21 @@ impl Hash for ValId {
 }
 
 debug_from_display!(ValId);
-display_pretty!(ValId, |_, _| unimplemented!());
+display_pretty!(ValId, "{}", self.deref());
 
 /// A reference-counted, hash-consed `rain` type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct TypeId(ValId);
 
 debug_from_display!(TypeId);
-display_pretty!(TypeId, |fmt, ty| write!(fmt, "{}", ty.0));
+display_pretty!(TypeId, "{}", self.deref());
 
 /// An enumeration of possible `rain` values
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {}
 
 debug_from_display!(ValueEnum);
-display_pretty!(ValueEnum, |_, _| unimplemented!());
+display_pretty!(ValueEnum, "TODO");
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

@@ -17,7 +17,7 @@ pub struct Sexpr {
     /// The arguments of this S-expression
     args: SexprArgs,
     /// The (cached) lifetime of this S-expression
-    lifetime: Option<Lifetime>,
+    lifetime: Lifetime,
     /// The (cached) type of this S-expression
     ///
     /// TODO: Optional?
@@ -25,7 +25,7 @@ pub struct Sexpr {
 }
 
 debug_from_display!(Sexpr);
-display_pretty!(Sexpr, |_, _| unimplemented!());
+display_pretty!(Sexpr, "(...)");
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

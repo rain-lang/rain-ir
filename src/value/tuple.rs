@@ -1,8 +1,9 @@
 /*!
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
+use super::{lifetime::Lifetime, TypeId, ValId};
 use crate::{debug_from_display, display_pretty};
-use super::{ValId, TypeId, region::Region}
+use smallvec::SmallVec;
 
 /// The size of a small tuple
 pub const SMALL_TUPLE_SIZE: usize = 3;
@@ -22,22 +23,55 @@ pub struct Tuple {
     /// The elements of this tuple
     elems: TupleElems,
     /// The (cached) region of this tuple
-    region: Option<Region>,
+    region: Lifetime,
     /// The (cached) type of this tuple
     ///
     /// TODO: Optional?
     ty: TypeId,
 }
 
+debug_from_display!(Tuple);
+display_pretty!(Tuple, "[...]");
+
 /// A product of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Product {
     /// The elements of this product type
     elems: TupleElems,
-    /// The (cached) region of this product type
-    region: Option<Region>,
+    /// The (cached) lifetime of this product type
+    lifetime: Lifetime,
     /// The (cached) type of this product type
     ///
     /// TODO: Optional?
     ty: TypeId,
+}
+
+debug_from_display!(Product);
+display_pretty!(Product, "#product [...]");
+
+#[cfg(feature = "prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use std::fmt::{self, Formatter};
+
+    impl PrettyPrint for Tuple {
+        fn prettyprint(
+            &self,
+            _printer: &mut PrettyPrinter,
+            _fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            unimplemented!()
+        }
+    }
+
+    impl PrettyPrint for Product {
+        fn prettyprint(
+            &self,
+            _printer: &mut PrettyPrinter,
+            _fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            unimplemented!()
+        }
+    }
 }
