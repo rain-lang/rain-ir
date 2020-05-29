@@ -13,6 +13,7 @@ pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
 pub mod universe;
+pub mod typing;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};

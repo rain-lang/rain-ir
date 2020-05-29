@@ -1,0 +1,3 @@
+/*!
+The `rain` type system
+*/
