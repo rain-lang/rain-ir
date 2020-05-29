@@ -128,6 +128,12 @@ enum_convert! {
     impl Injection<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {}
     impl Injection<ValueEnum> for Universe {}
+    // NormalValue injection
+    // impl Injection<NormalValue> for Sexpr { as ValueEnum, } TODO: normalization
+    impl Injection<NormalValue> for Parameter { as ValueEnum, }
+    // impl Injection<NormalValue> for Tuple { as ValueEnum, } TODO: normalization
+    impl Injection<NormalValue> for Product { as ValueEnum, }
+    impl Injection<NormalValue> for Universe { as ValueEnum, }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
