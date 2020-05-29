@@ -11,6 +11,10 @@ pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
 
+use expr::Sexpr;
+use lifetime::{LifetimeBorrow, Live, Parameter};
+use tuple::{Product, Tuple};
+
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
 pub struct ValId(Arc<ValueEnum>);
@@ -40,11 +44,54 @@ debug_from_display!(TypeId);
 display_pretty!(TypeId, "{}", self.deref());
 
 /// An enumeration of possible `rain` values
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub enum ValueEnum {}
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub enum ValueEnum {
+    /// An S-expression
+    Sexpr(Sexpr),
+    /// A parameter
+    Parameter(Parameter),
+    /// A tuple of `rain` values
+    Tuple(Tuple),
+    /// A finite Cartesian product of `rain` types, at least some of which are distinct.
+    Product(Product),
+}
+
+/// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
+#[macro_export]
+macro_rules! forv {
+    (
+        match ($v:expr) {
+            $(if $p:pat => $m:expr,)*
+            else $i:ident => $e:expr
+        }
+    ) => {
+        #[allow(unreachable_patterns)]
+        match $v {
+            $($p:pat => $m:expr,)*
+            ValueEnum::Sexpr($i) => $e,
+            ValueEnum::Parameter($i) => $e,
+            ValueEnum::Tuple($i) => $e,
+            ValueEnum::Product($i) => $e
+        }
+    };
+    (match ($v:expr) { $i:ident => $e:expr }) => {
+        forv! {
+            match ($v) {
+                else $i => $e
+            }
+        }
+    };
+}
+
 
 debug_from_display!(ValueEnum);
 display_pretty!(ValueEnum, "TODO");
+
+impl Live for ValueEnum {
+    fn lifetime(&self) -> LifetimeBorrow {
+        forv!(match (self) { s => s.lifetime() })
+    }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

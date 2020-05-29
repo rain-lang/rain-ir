@@ -2,8 +2,9 @@
 `rain` value regions
 */
 
-use crate::value::TypeId;
+use super::{LifetimeBorrow, Live};
 use crate::util::hash_cache::Cache;
+use crate::value::TypeId;
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -209,5 +210,11 @@ impl Parameter {
     #[inline]
     pub fn region(&self) -> &Region {
         &self.region
+    }
+}
+
+impl Live for Parameter {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.region().borrow_region().into()
     }
 }

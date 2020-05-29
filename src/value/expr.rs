@@ -1,7 +1,10 @@
 /*!
 `rain` expressions
 */
-use super::{lifetime::Lifetime, TypeId, ValId};
+use super::{
+    lifetime::{Lifetime, LifetimeBorrow, Live},
+    TypeId, ValId,
+};
 use crate::{debug_from_display, display_pretty};
 use smallvec::SmallVec;
 
@@ -26,6 +29,12 @@ pub struct Sexpr {
 
 debug_from_display!(Sexpr);
 display_pretty!(Sexpr, "(...)");
+
+impl Live for Sexpr {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.borrow_lifetime()
+    }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
