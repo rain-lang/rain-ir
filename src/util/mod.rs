@@ -94,12 +94,12 @@ macro_rules! pretty_display {
 /// Implement `From<T> for E` and implement `TryFrom<E> for T>` where `T` is an enum variant of `E`
 #[macro_export]
 macro_rules! enum_convert {
-    (impl From<$T:ident> for $E:ident { as $En:ident$(::$V:ident)+, }) => {
+    (impl From<$T:ty> for $E:ty { as $En:ident$(::$V:ident)+, }) => {
         impl From<$T> for $E {
             fn from(v: $T) -> $E { $En::$($V)+(v).into() }
         }
     };
-    (impl From<$T:ident> for $E:ident { as $En:ident, }) => {
+    (impl From<$T:ident> for $E:ty { as $En:ident, }) => {
         enum_convert!(
             impl From<$T> for $E { as $En::$T, }
         );
@@ -109,7 +109,7 @@ macro_rules! enum_convert {
             impl From<$T> for $E { as $E, }
         );
     };
-    (impl TryFrom<$E:ident> for $T:ident { as $En:ident$(::$V:ident)+, $(match $($from:tt => $to:tt,)*)* }) => {
+    (impl TryFrom<$E:ty> for $T:ty { as $En:ident$(::$V:ident)+, $(match $($from:tt => $to:tt,)*)* }) => {
         impl std::convert::TryFrom<$E> for $T {
             type Error = $E;
             fn try_from(v: $E) -> Result<$T, $E> {
@@ -123,9 +123,14 @@ macro_rules! enum_convert {
             }
         }
     };
-    (impl TryFrom<$E:ident> for $T:ident { as $En:ident, $(match $($from:tt => $to:tt,)*)* }) => {
+    (impl TryFrom<$E:ty> for $T:ident { as $En:ident, $(match $($from:tt => $to:tt,)*)* }) => {
         enum_convert! {
-            impl TryFrom<$E> for $T { as $En::$T, }
+            impl TryFrom<$E> for $T { as $En::$T, $(match $($from:tt => $to:tt,)*)* }
+        }
+    };
+    (impl TryFrom<$E:ident> for $T:ident { $(match $($from:tt => $to:tt,)*)* }) => {
+        enum_convert! {
+            impl TryFrom<$E> for $T { as $E::$T, $(match $($from:tt => $to:tt,)*)* }
         }
     };
     (impl TryFrom<$E:ident> for $T:ident {}) => {
