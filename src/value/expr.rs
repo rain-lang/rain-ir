@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
+use std::ops::Deref;
 
 /// The size of a small S-expression
 pub const SMALL_SEXPR_SIZE: usize = 3;
@@ -44,6 +45,13 @@ impl Sexpr {
 impl Live for Sexpr {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
+    }
+}
+
+impl Deref for Sexpr {
+    type Target = SexprArgs;
+    fn deref(&self) -> &SexprArgs {
+        &self.args
     }
 }
 
