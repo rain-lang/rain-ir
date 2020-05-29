@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::Arc;
 
+pub mod expr;
 pub mod primitive;
 pub mod region;
 
