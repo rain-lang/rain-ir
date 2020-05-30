@@ -6,6 +6,7 @@ use ref_cast::RefCast;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
+use triomphe::{Arc, ArcBorrow};
 
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;
@@ -111,6 +112,27 @@ where
 }
 
 impl<T, V> Eq for PrivateByAddr<T, V> where T: Deref {}
+
+impl<T, V> PrivateByAddr<Arc<T>, V> {
+    /// Borrow this `Arc` as a `PrivateByAddr<ArcBorrow<T>, V>`
+    #[inline]
+    pub fn borrow_arc(&self) -> PrivateByAddr<ArcBorrow<T>, V> {
+        PrivateByAddr::from(self.addr.borrow_arc())
+    }
+}
+
+impl<'a, T, V> PrivateByAddr<ArcBorrow<'a, T>, V> {
+    /// Clone this `Arc` as a `PrivateByAddr<Arc<T>, V>`, bumping the refcount
+    #[inline]
+    pub fn clone_arc(&self) -> PrivateByAddr<Arc<T>, V> {
+        PrivateByAddr::from(self.addr.clone_arc())
+    }
+    /// Get the referenced value with the lifetime of the `ArcBorrow`
+    #[inline]
+    pub fn get(&self) -> &'a T {
+        self.addr.get()
+    }
+}
 
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
