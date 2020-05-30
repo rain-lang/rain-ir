@@ -32,12 +32,23 @@ pub struct Tuple {
     /// The (cached) lifetime of this tuple
     lifetime: Lifetime,
     /// The (cached) type of this tuple
-    ///
-    /// TODO: Optional?
     ty: TypeId,
 }
 
 impl Tuple {
+    /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
+    #[inline]
+    pub fn new(elems: TupleElems) -> Result<Tuple, ()> {
+        let lifetime = Lifetime::default()
+            .intersect(elems.iter().map(|t| t.lifetime()))?
+            .clone_lifetime();
+        let ty = Product::new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
+        Ok(Tuple {
+            elems,
+            lifetime,
+            ty,
+        })
+    }
     /// Create the tuple corresponding to the element of the unit type
     #[inline]
     pub fn unit() -> Tuple {
@@ -80,8 +91,6 @@ pub struct Product {
     /// The (cached) lifetime of this product type
     lifetime: Lifetime,
     /// The (cached) type of this product type
-    ///
-    /// TODO: Optional?
     ty: TypeId,
 }
 
@@ -89,8 +98,11 @@ impl Product {
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn new(elems: ProductElems) -> Result<Product, ()> {
-        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?.clone_lifetime();
-        let ty = Universe::union_all(&Universe::finite(), elems.iter().map(|t| t.universe())).into();
+        let lifetime = Lifetime::default()
+            .intersect(elems.iter().map(|t| t.lifetime()))?
+            .clone_lifetime();
+        let ty =
+            Universe::union_all(&Universe::finite(), elems.iter().map(|t| t.universe())).into();
         Ok(Product {
             elems,
             lifetime,
