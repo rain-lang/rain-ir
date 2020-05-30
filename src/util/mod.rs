@@ -4,6 +4,7 @@ Miscellaneous utilities and data structures used throughout the `rain` compiler
 
 use ref_cast::RefCast;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "symbol_table")]
@@ -84,6 +85,15 @@ where
             addr,
             hide: std::marker::PhantomData,
         }
+    }
+}
+
+impl<T, V> Hash for PrivateByAddr<T, V>
+where
+    T: Deref,
+{
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.addr.deref(), hasher)
     }
 }
 
