@@ -141,17 +141,16 @@ impl Universe {
             ty: AtomicLazyCell::new(),
         }
     }
-    /// Take the union of an iterator of universes
-    pub fn union_all<I, T>(mut iter: I) -> Option<Universe>
+    /// Take the union of an iterator of universes with the given universe
+    pub fn union_all<I>(&self, iter: I) -> Universe
     where
-        I: Iterator<Item = T>,
-        T: Into<Option<Universe>>,
+        I: Iterator<Item = Universe>,
     {
-        let mut result = iter.next()?.into()?;
-        while let Some(universe) = iter.next() {
-            result = result.union(universe.into()?)
+        let mut base = self.clone();
+        for universe in iter {
+            base = base.union(universe)
         }
-        Some(result)
+        base
     }
 }
 

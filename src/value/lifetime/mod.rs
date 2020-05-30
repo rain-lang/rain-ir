@@ -27,12 +27,12 @@ impl Lifetime {
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect<'a>(
+    pub fn intersect<'a, I>(
         &'a self,
-        lifetimes: &'a [LifetimeBorrow<'a>],
-    ) -> Result<LifetimeBorrow<'a>, ()> {
+        lifetimes: I,
+    ) -> Result<LifetimeBorrow<'a>, ()> where I: Iterator<Item=LifetimeBorrow<'a>> {
         let mut base = self.borrow_lifetime();
-        for lifetime in lifetimes.iter().copied() {
+        for lifetime in lifetimes {
             if base.is_static() {
                 base = lifetime
             }
@@ -63,6 +63,11 @@ impl From<Option<Region>> for Lifetime {
 pub struct LifetimeBorrow<'a>(Option<RegionBorrow<'a>>);
 
 impl<'a> LifetimeBorrow<'a> {
+    /// Clone this lifetime
+    #[inline]
+    pub fn clone_lifetime(&self) -> Lifetime {
+        Lifetime(self.0.map(|r| r.clone_region()))
+    }
     /// Get the region of this lifetime
     #[inline]
     pub fn region(&self) -> Option<RegionBorrow<'a>> {

@@ -86,6 +86,17 @@ pub struct Product {
 }
 
 impl Product {
+    /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
+    #[inline]
+    pub fn new(elems: ProductElems) -> Result<Product, ()> {
+        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?.clone_lifetime();
+        let ty = Universe::union_all(&Universe::finite(), elems.iter().map(|t| t.universe())).into();
+        Ok(Product {
+            elems,
+            lifetime,
+            ty,
+        })
+    }
     /// Create the product corresponding to the unit type
     #[inline]
     pub fn unit_ty() -> Product {
