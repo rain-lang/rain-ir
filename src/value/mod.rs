@@ -6,7 +6,7 @@ use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
 use std::borrow::Borrow;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::Deref;
@@ -47,7 +47,7 @@ impl ValId {
     pub fn as_enum(&self) -> &ValueEnum {
         &self.0
     }
-    /// Get this `ValRef` as a `NormalValue`
+    /// Get this `ValId` as a `NormalValue`
     #[inline]
     pub fn as_norm(&self) -> &NormalValue {
         &self.0
@@ -106,9 +106,9 @@ impl<'a> ValRef<'a> {
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.0.get()
     }
-    /// Get this `NormalValue`
+    /// Get this `TypeRef` as a `NormalValue`
     #[inline]
-    pub fn get(&self) -> &'a NormalValue {
+    pub fn as_norm(&self) -> &'a NormalValue {
         self.0.get()
     }
 }
@@ -235,9 +235,9 @@ impl<'a> TypeRef<'a> {
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.0.get()
     }
-    /// Get this `NormalValue`
+    /// Get this `TypeRef` as a `NormalValue`
     #[inline]
-    pub fn get(&self) -> &'a NormalValue {
+    pub fn as_norm(&self) -> &'a NormalValue {
         self.0.get()
     }
 }
@@ -311,7 +311,7 @@ impl<'a, V> VarId<V> {
     pub fn borrow_var(&self) -> VarRef<V> {
         VarRef {
             ptr: self.ptr.borrow_arc(),
-            variant: self.variant
+            variant: self.variant,
         }
     }
     /// Borrow this `VarId` as a `ValRef`
@@ -326,7 +326,6 @@ impl<V> From<VarId<V>> for ValId {
     }
 }
 
-
 impl<V> Deref for VarId<V>
 where
     for<'a> &'a NormalValue: TryInto<&'a V>,
@@ -336,6 +335,23 @@ where
         match self.ptr.deref().try_into() {
             Ok(r) => r,
             _ => panic!("Impossible!"),
+        }
+    }
+}
+
+impl<V> TryFrom<ValId> for VarId<V>
+where
+    for<'a> &'a NormalValue: TryInto<&'a V>,
+{
+    type Error = ValId;
+    fn try_from(v: ValId) -> Result<VarId<V>, ValId> {
+        if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
+            Ok(VarId {
+                ptr: v.0,
+                variant: std::marker::PhantomData,
+            })
+        } else {
+            Err(v)
         }
     }
 }
@@ -413,6 +429,23 @@ impl<V> Display for VarId<V> {
 impl<V> Display for VarRef<'_, V> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self.ptr.get(), fmt)
+    }
+}
+
+impl<'a, V: 'a> TryFrom<ValRef<'a>> for VarRef<'a, V>
+where
+    &'a NormalValue: TryInto<&'a V>,
+{
+    type Error = ValRef<'a>;
+    fn try_from(v: ValRef<'a>) -> Result<VarRef<'a, V>, ValRef<'a>> {
+        if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
+            Ok(VarRef {
+                ptr: v.0,
+                variant: std::marker::PhantomData,
+            })
+        } else {
+            Err(v)
+        }
     }
 }
 
