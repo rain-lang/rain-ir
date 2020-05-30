@@ -14,7 +14,7 @@ lazy_static! {
     /// An instance of the unit value
     pub static ref UNIT: ValId = ValId::from(ValueEnum::from(()));
     /// An instance of the unit type
-    pub static ref UNIT_TY: TypeId = TypeId(ValId::from(ValueEnum::from(Unit)));
+    pub static ref UNIT_TY: TypeId = TypeId::assert_normal_ty(Unit);
 }
 
 impl PartialEq<()> for Tuple {
@@ -161,7 +161,7 @@ impl TryFrom<ValueEnum> for Unit {
 impl From<Unit> for ValId {
     #[inline]
     fn from(_: Unit) -> ValId {
-        UNIT_TY.as_valid().clone()
+        UNIT_TY.as_val().clone()
     }
 }
 

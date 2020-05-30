@@ -4,14 +4,14 @@ Typing universes
 use crate::quick_pretty;
 use crate::value::{
     lifetime::{LifetimeBorrow, Live},
-    TypeId, ValId, ValueEnum,
+    TypeId,
 };
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 
 lazy_static! {
     /// An instance of the universe of finite types
-    pub static ref FINITE_TY: TypeId = TypeId(ValId::from(ValueEnum::Universe(Universe::finite())));
+    pub static ref FINITE_TY: TypeId = TypeId::assert_normal_ty(Universe::finite());
 }
 
 /// A universe of types

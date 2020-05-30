@@ -13,15 +13,43 @@ pub mod symbol_table;
 
 pub mod hash_cache;
 
-/// An implementation of ByAddress which inherits visibility from its type parameters, allowing
-/// private implementation of `RefCast`.
+/// An implementation of ByAddress which can only be constructed if a value of the type
+/// parameter `V` can be constructed, which of course is impossible without `unsafe` if
+/// `V` has no public constructors.
 #[repr(transparent)]
-#[derive(RefCast, Copy, Clone)]
+#[derive(RefCast)]
 pub struct PrivateByAddr<T, V> {
     /// The underlying `Deref` implementor of this `PrivateByAddr`
     pub addr: T,
     hide: std::marker::PhantomData<V>,
 }
+
+impl<T, V> PrivateByAddr<T, V>
+where
+    T: Deref,
+{
+    /// Make a new `PrivateByAddr` instance
+    pub fn make(addr: T, _validator: V) -> PrivateByAddr<T, V> {
+        PrivateByAddr {
+            addr,
+            hide: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T, V> Clone for PrivateByAddr<T, V>
+where
+    T: Clone,
+{
+    fn clone(&self) -> PrivateByAddr<T, V> {
+        PrivateByAddr {
+            addr: self.addr.clone(),
+            hide: self.hide,
+        }
+    }
+}
+
+impl<T, V> Copy for PrivateByAddr<T, V> where T: Copy {}
 
 impl<T, V> Display for PrivateByAddr<T, V>
 where
@@ -78,18 +106,6 @@ where
     }
 }
 
-impl<T, V> From<T> for PrivateByAddr<T, V>
-where
-    T: Deref,
-{
-    fn from(addr: T) -> PrivateByAddr<T, V> {
-        PrivateByAddr {
-            addr,
-            hide: std::marker::PhantomData,
-        }
-    }
-}
-
 impl<T, V> Hash for PrivateByAddr<T, V>
 where
     T: Deref,
@@ -117,7 +133,10 @@ impl<T, V> PrivateByAddr<Arc<T>, V> {
     /// Borrow this `Arc` as a `PrivateByAddr<ArcBorrow<T>, V>`
     #[inline]
     pub fn borrow_arc(&self) -> PrivateByAddr<ArcBorrow<T>, V> {
-        PrivateByAddr::from(self.addr.borrow_arc())
+        PrivateByAddr {
+            addr: self.addr.borrow_arc(),
+            hide: std::marker::PhantomData,
+        }
     }
 }
 
@@ -125,7 +144,10 @@ impl<'a, T, V> PrivateByAddr<ArcBorrow<'a, T>, V> {
     /// Clone this `Arc` as a `PrivateByAddr<Arc<T>, V>`, bumping the refcount
     #[inline]
     pub fn clone_arc(&self) -> PrivateByAddr<Arc<T>, V> {
-        PrivateByAddr::from(self.addr.clone_arc())
+        PrivateByAddr {
+            addr: self.addr.clone_arc(),
+            hide: std::marker::PhantomData,
+        }
     }
     /// Get the referenced value with the lifetime of the `ArcBorrow`
     #[inline]

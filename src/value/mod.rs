@@ -1,11 +1,12 @@
 /*!
 `rain` values
 */
-use crate::util::hash_cache::Cache;
+use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
+use ref_cast::RefCast;
 use std::borrow::Borrow;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
 
@@ -28,61 +29,58 @@ lazy_static! {
 }
 
 /// A reference-counted, hash-consed `rain` value
-#[derive(Clone, Eq)]
+#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
-pub struct ValId(Arc<NormalValue>);
+pub struct ValId(NormAddr);
+
+impl ValId {
+    /// Borrow this value
+    #[inline]
+    pub fn borrow_val(&self) -> ValRef {
+        ValRef(self.0.borrow_arc())
+    }
+}
 
 impl Deref for ValId {
     type Target = Arc<NormalValue>;
     #[inline]
     fn deref(&self) -> &Arc<NormalValue> {
-        &self.0
+        &self.0.addr
     }
 }
 
 impl From<NormalValue> for ValId {
     #[inline]
     fn from(value: NormalValue) -> ValId {
-        ValId(VALUE_CACHE.cache(value))
+        ValId(NormAddr::make(VALUE_CACHE.cache(value), Private {}))
     }
 }
 
 impl From<Arc<NormalValue>> for ValId {
     #[inline]
     fn from(value: Arc<NormalValue>) -> ValId {
-        ValId(VALUE_CACHE.cache(value))
-    }
-}
-
-impl PartialEq for ValId {
-    #[inline]
-    fn eq(&self, other: &ValId) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-impl Hash for ValId {
-    #[inline]
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+        ValId(NormAddr::make(VALUE_CACHE.cache(value), Private {}))
     }
 }
 
 /// A reference to a `rain` value
-#[derive(Copy, Clone, Eq)]
-pub struct ValRef<'a>(ArcBorrow<'a, NormalValue>);
+#[derive(Copy, Clone, Eq, PartialEq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct ValRef<'a>(NormRef<'a>);
 
-impl PartialEq for ValRef<'_> {
+impl ValRef<'_> {
+    /// Clone this value reference as a `ValId`
     #[inline]
-    fn eq(&self, other: &ValRef) -> bool {
-        ArcBorrow::ptr_eq(&self.0, &other.0)
+    pub fn clone_val(&self) -> ValId {
+        ValId(self.0.clone_arc())
     }
 }
 
-impl Hash for ValRef<'_> {
+impl<'a> Deref for ValRef<'a> {
+    type Target = ArcBorrow<'a, NormalValue>;
     #[inline]
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+    fn deref(&self) -> &ArcBorrow<'a, NormalValue> {
+        &self.0.addr
     }
 }
 
@@ -92,34 +90,67 @@ debug_from_display!(ValRef<'_>);
 pretty_display!(ValRef<'_>, s, fmt  => write!(fmt, "{}", s.deref()));
 
 /// A reference-counted, hash-consed `rain` type
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct TypeId(ValId);
+#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct TypeId(NormAddr);
 
 impl Deref for TypeId {
     type Target = ValId;
     #[inline]
     fn deref(&self) -> &ValId {
-        &self.0
+        RefCast::ref_cast(&self.0)
     }
 }
 
 impl TypeId {
+    /// Assert a `NormalValue` is a valid type
+    pub(super) fn assert_normal_ty<T: Into<NormalValue>>(value: T) -> TypeId {
+        let normal: NormalValue = value.into();
+        TypeId(NormAddr::make(VALUE_CACHE.cache(normal), Private {}))
+    }
     /// Get this `TypeId` as a `ValId`
     #[inline]
-    pub fn as_valid(&self) -> &ValId {
+    pub fn as_val(&self) -> &ValId {
         &self
+    }
+}
+
+impl From<TypeId> for ValId {
+    #[inline]
+    fn from(ty: TypeId) -> ValId {
+        ValId(ty.0)
     }
 }
 
 /// A reference to a `rain` type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct TypeRef<'a>(ValRef<'a>);
+pub struct TypeRef<'a>(NormRef<'a>);
+
+impl<'a> TypeRef<'a> {
+    /// Clone this type reference as a `TypeRef`
+    #[inline]
+    pub fn clone_ty(&self) -> TypeId {
+        TypeId(self.0.clone_arc())
+    }
+    /// Get this `TypeRef` as `ValRef`
+    #[inline]
+    pub fn as_val(&self) -> ValRef<'a> {
+        ValRef(self.0)
+    }
+}
 
 impl<'a> Deref for TypeRef<'a> {
     type Target = ValRef<'a>;
     #[inline]
     fn deref(&self) -> &ValRef<'a> {
-        &self.0
+        RefCast::ref_cast(&self.0)
+    }
+}
+
+impl<'a> From<TypeRef<'a>> for ValRef<'a> {
+    #[inline]
+    fn from(t: TypeRef<'a>) -> ValRef<'a> {
+        t.as_val()
     }
 }
 
@@ -127,6 +158,19 @@ debug_from_display!(TypeId);
 pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
 debug_from_display!(TypeRef<'_>);
 pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
+
+/// A private type which can only be constructed within the `value` crate: an implementation detail so that
+/// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
+#[derive(Debug)]
+pub struct Private {}
+
+/// A wrapper over an `Arc<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
+/// Can only be constructed within the `value` crate: a user should never have direct access to these.
+type NormAddr = PrivateByAddr<Arc<NormalValue>, Private>;
+
+/// A wrapper over an `ArcBorrow<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
+/// Can only be constructed within the `value` crate: a user should never have direct access to these.
+type NormRef<'a> = PrivateByAddr<ArcBorrow<'a, NormalValue>, Private>;
 
 /// A normalized `rain` value
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -287,7 +331,7 @@ macro_rules! impl_to_type {
     ($T:ty) => {
         impl From<$T> for crate::value::TypeId {
             fn from(v: $T) -> crate::value::TypeId {
-                crate::value::TypeId(crate::value::ValId::from(v))
+                crate::value::TypeId(crate::value::ValId::from(v).0)
             }
         }
     };
