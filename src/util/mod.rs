@@ -17,7 +17,8 @@ pub mod hash_cache;
 #[repr(transparent)]
 #[derive(RefCast, Copy, Clone)]
 pub struct PrivateByAddr<T, V> {
-    addr: T,
+    /// The underlying `Deref` implementor of this `PrivateByAddr`
+    pub addr: T,
     hide: std::marker::PhantomData<V>,
 }
 
@@ -96,6 +97,20 @@ where
         std::ptr::hash(self.addr.deref(), hasher)
     }
 }
+
+impl<T, S, V, U> PartialEq<PrivateByAddr<S, U>> for PrivateByAddr<T, V>
+where
+    T: Deref,
+    S: Deref,
+{
+    fn eq(&self, other: &PrivateByAddr<S, U>) -> bool {
+        let self_ptr = self as *const PrivateByAddr<T, V> as *const u8;
+        let other_ptr = other as *const PrivateByAddr<S, U> as *const u8;
+        self_ptr == other_ptr
+    }
+}
+
+impl<T, V> Eq for PrivateByAddr<T, V> where T: Deref {}
 
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
