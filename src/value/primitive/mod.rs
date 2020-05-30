@@ -3,8 +3,10 @@ Primitive `rain` values and associated value descriptors
 */
 use super::{
     expr::Sexpr,
+    lifetime::{LifetimeBorrow, Live},
     tuple::{Product, Tuple},
-    NormalValue, TypeId, ValId, ValueEnum,
+    typing::Typed,
+    NormalValue, TypeId, TypeRef, ValId, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
 use lazy_static::lazy_static;
@@ -95,9 +97,28 @@ impl From<()> for ValId {
     }
 }
 
+impl Live for () {
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
+
+impl Typed for () {
+    fn ty(&self) -> TypeRef {
+        UNIT_TY.borrow_ty()
+    }
+}
+
+
 /// The unit type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
+
+impl Live for Unit {
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
 
 quick_pretty!(Unit, "#unit");
 debug_from_display!(Unit);
@@ -169,7 +190,7 @@ impl From<Unit> for TypeId {
     #[inline]
     fn from(_: Unit) -> TypeId {
         UNIT_TY.clone()
-    }   
+    }
 }
 
 /// The empty type

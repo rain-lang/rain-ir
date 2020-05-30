@@ -3,9 +3,9 @@
 */
 
 use super::{LifetimeBorrow, Live};
-use crate::util::hash_cache::Cache;
-use crate::value::TypeId;
 use crate::quick_pretty;
+use crate::util::hash_cache::Cache;
+use crate::value::{typing::Typed, TypeId, TypeRef};
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -219,5 +219,11 @@ impl Parameter {
 impl Live for Parameter {
     fn lifetime(&self) -> LifetimeBorrow {
         self.region().borrow_region().into()
+    }
+}
+
+impl Typed for Parameter {
+    fn ty(&self) -> TypeRef {
+        self.region[self.ix].borrow_ty()
     }
 }

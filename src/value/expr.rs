@@ -3,10 +3,12 @@
 */
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
-    TypeId, ValId,
+    primitive::UNIT_TY,
+    typing::Typed,
+    TypeId, TypeRef, ValId,
 };
 use crate::{debug_from_display, pretty_display};
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 use std::ops::Deref;
 
 /// The size of a small S-expression
@@ -23,8 +25,6 @@ pub struct Sexpr {
     /// The (cached) lifetime of this S-expression
     lifetime: Lifetime,
     /// The (cached) type of this S-expression
-    ///
-    /// TODO: Optional?
     ty: TypeId,
 }
 
@@ -34,17 +34,32 @@ pretty_display!(Sexpr, "(...)");
 impl Sexpr {
     /// Create an S-expression corresponding to the unit value
     pub fn unit() -> Sexpr {
-        unimplemented!()
+        Sexpr {
+            args: SexprArgs::new(),
+            lifetime: Lifetime::default(),
+            ty: UNIT_TY.clone(),
+        }
     }
     /// Create an S-expression corresponding to a singleton value
-    pub fn singleton(_value: ValId) -> Sexpr {
-        unimplemented!() // Needs typing...
+    pub fn singleton(value: ValId) -> Sexpr {
+        let ty = value.ty().clone_ty();
+        Sexpr {
+            args: smallvec![value],
+            lifetime: Lifetime::default(),
+            ty
+        }
     }
 }
 
 impl Live for Sexpr {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
+    }
+}
+
+impl Typed for Sexpr {
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
     }
 }
 

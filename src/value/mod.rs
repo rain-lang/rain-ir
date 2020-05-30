@@ -21,6 +21,7 @@ use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::Unit;
 use tuple::{Product, Tuple};
+use typing::Typed;
 use universe::Universe;
 
 lazy_static! {
@@ -63,6 +64,20 @@ impl From<Arc<NormalValue>> for ValId {
     }
 }
 
+impl Live for ValId {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
+    }
+}
+
+impl Typed for ValId {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.deref().ty()
+    }
+}
+
 /// A reference to a `rain` value
 #[derive(Copy, Clone, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
@@ -81,6 +96,20 @@ impl<'a> Deref for ValRef<'a> {
     #[inline]
     fn deref(&self) -> &ArcBorrow<'a, NormalValue> {
         &self.0.addr
+    }
+}
+
+impl Live for ValRef<'_> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
+    }
+}
+
+impl Typed for ValRef<'_> {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.deref().ty()
     }
 }
 
@@ -127,6 +156,21 @@ impl From<TypeId> for ValId {
     }
 }
 
+impl Live for TypeId {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
+    }
+}
+
+impl Typed for TypeId {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.deref().ty()
+    }
+}
+
+
 /// A reference to a `rain` type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct TypeRef<'a>(NormRef<'a>);
@@ -158,6 +202,21 @@ impl<'a> From<TypeRef<'a>> for ValRef<'a> {
         t.as_val()
     }
 }
+
+impl Live for TypeRef<'_> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
+    }
+}
+
+impl Typed for TypeRef<'_> {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.deref().ty()
+    }
+}
+
 
 debug_from_display!(TypeId);
 pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
@@ -306,6 +365,14 @@ impl Live for ValueEnum {
     fn lifetime(&self) -> LifetimeBorrow {
         forv!(match (self) {
             s => s.lifetime(),
+        })
+    }
+}
+
+impl Typed for ValueEnum {
+    fn ty(&self) -> TypeRef {
+        forv!(match (self) {
+            s => s.ty(),
         })
     }
 }
