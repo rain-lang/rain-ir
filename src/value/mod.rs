@@ -8,6 +8,8 @@ use ref_cast::RefCast;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::ops::Deref;
+use std::fmt::{self, Formatter, Debug, Display};
+use std::convert::TryInto;
 use triomphe::{Arc, ArcBorrow};
 
 pub mod expr;
@@ -268,11 +270,71 @@ impl Typed for TypeRef<'_> {
     }
 }
 
-
 debug_from_display!(TypeId);
 pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
 debug_from_display!(TypeRef<'_>);
 pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
+
+/// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+#[derive(Clone, PartialEq, Eq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct VarId<Variant> {
+    ptr: NormAddr,
+    variant: std::marker::PhantomData<Variant>
+}
+
+impl<V> Deref for VarId<V> where for <'a> &'a NormalValue: TryInto<&'a V> {
+    type Target = V;
+    fn deref(&self) -> &V {
+        match self.ptr.deref().try_into() {
+            Ok(r) => r,
+            _ => panic!("Impossible!")
+        }
+    }
+}
+
+/// A borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+#[derive(Clone, PartialEq, Eq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct VarRef<'a, Variant> {
+    ptr: NormRef<'a>,
+    variant: std::marker::PhantomData<Variant>
+}
+
+impl<V> Deref for VarRef<'_, V> where for <'a> &'a NormalValue: TryInto<&'a V> {
+    type Target = V;
+    fn deref(&self) -> &V {
+        match self.ptr.deref().try_into() {
+            Ok(r) => r,
+            _ => panic!("Impossible!")
+        }
+    }
+}
+
+impl<V> Debug for VarId<V> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Debug::fmt(self.ptr.deref(), fmt)
+    }
+}
+
+impl<V> Debug for VarRef<'_, V> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Debug::fmt(self.ptr.get(), fmt)
+    }
+}
+
+impl<V> Display for VarId<V> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(self.ptr.deref(), fmt)
+    }
+}
+
+impl<V> Display for VarRef<'_, V> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(self.ptr.get(), fmt)
+    }
+}
+
 
 /// A private type which can only be constructed within the `value` crate: an implementation detail so that
 /// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
@@ -351,16 +413,19 @@ enum_convert! {
             other if *other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
-    impl Injection<ValueEnum> for Parameter {}
+    impl TryFromRef<ValueEnum> for Sexpr {}
+    impl InjectionRef<ValueEnum> for Parameter {}
     impl Injection<ValueEnum> for Tuple {
         match
             other if *other == () => Ok(Tuple::unit()),
     }
+    impl TryFromRef<ValueEnum> for Tuple {}
     impl Injection<ValueEnum> for Product {
         match
             other if *other == Unit => Ok(Product::unit_ty()),
     }
-    impl Injection<ValueEnum> for Universe {}
+    impl TryFromRef<ValueEnum> for Product {}
+    impl InjectionRef<ValueEnum> for Universe {}
 
     // NormalValue injection.
     impl Injection<NormalValue> for Sexpr {
@@ -369,14 +434,16 @@ enum_convert! {
             other if *other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
-    impl Injection<NormalValue> for Parameter { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
+    impl InjectionRef<NormalValue> for Parameter { as ValueEnum, }
     impl Injection<NormalValue> for Tuple {
         as ValueEnum,
         match
             other if *other == () => Ok(Tuple::unit()),
     }
-    impl Injection<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
-    impl Injection<NormalValue> for Universe { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
+    impl InjectionRef<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
+    impl InjectionRef<NormalValue> for Universe { as ValueEnum, }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
