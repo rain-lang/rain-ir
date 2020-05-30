@@ -6,10 +6,10 @@ use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
 use std::borrow::Borrow;
+use std::convert::TryInto;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::Deref;
-use std::fmt::{self, Formatter, Debug, Display};
-use std::convert::TryInto;
 use triomphe::{Arc, ArcBorrow};
 
 pub mod expr;
@@ -23,7 +23,7 @@ use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::Unit;
 use tuple::{Product, Tuple};
-use typing::{Typed, Type};
+use typing::{Type, Typed};
 use universe::Universe;
 
 lazy_static! {
@@ -209,7 +209,7 @@ impl Type for TypeId {
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
-            _ => panic!("Impossible!")
+            _ => panic!("Impossible!"),
         }
     }
 }
@@ -280,33 +280,70 @@ pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
 #[repr(transparent)]
 pub struct VarId<Variant> {
     ptr: NormAddr,
-    variant: std::marker::PhantomData<Variant>
+    variant: std::marker::PhantomData<Variant>,
 }
 
-impl<V> Deref for VarId<V> where for <'a> &'a NormalValue: TryInto<&'a V> {
+impl<V> Deref for VarId<V>
+where
+    for<'a> &'a NormalValue: TryInto<&'a V>,
+{
     type Target = V;
     fn deref(&self) -> &V {
         match self.ptr.deref().try_into() {
             Ok(r) => r,
-            _ => panic!("Impossible!")
+            _ => panic!("Impossible!"),
         }
     }
 }
 
-/// A borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
-#[derive(Clone, PartialEq, Eq, Hash, RefCast)]
+/// A (*normalized, consed*) borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant, e.g. `()` or `Unit`)
+#[derive(PartialEq, Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarRef<'a, Variant> {
     ptr: NormRef<'a>,
-    variant: std::marker::PhantomData<Variant>
+    variant: std::marker::PhantomData<Variant>,
 }
 
-impl<V> Deref for VarRef<'_, V> where for <'a> &'a NormalValue: TryInto<&'a V> {
+impl<'a, V> Clone for VarRef<'a, V> {
+    #[inline]
+    fn clone(&self) -> VarRef<'a, V> {
+        VarRef {
+            ptr: self.ptr,
+            variant: self.variant,
+        }
+    }
+}
+
+impl<'a, V> Copy for VarRef<'a, V> {}
+
+impl<'a, V> VarRef<'a, V> {
+    /// Get this `VarRef` as a `NormalValue`
+    pub fn as_norm(&self) -> &NormalValue {
+        self.ptr.deref()
+    }
+    /// Get this `VarRef` as a `ValueEnum`
+    pub fn as_enum(&self) -> &ValueEnum {
+        self.ptr.deref()
+    }
+    /// Get this `VarRef` as a `ValRef`
+    pub fn as_val(&self) -> ValRef {
+        ValRef(self.ptr)
+    }
+    /// Clone this `VarRef` as a `ValId`
+    pub fn clone_val(&self) -> ValId {
+        self.as_val().clone_val()
+    }
+}
+
+impl<V> Deref for VarRef<'_, V>
+where
+    for<'a> &'a NormalValue: TryInto<&'a V>,
+{
     type Target = V;
     fn deref(&self) -> &V {
         match self.ptr.deref().try_into() {
             Ok(r) => r,
-            _ => panic!("Impossible!")
+            _ => panic!("Impossible!"),
         }
     }
 }
@@ -334,7 +371,6 @@ impl<V> Display for VarRef<'_, V> {
         Display::fmt(self.ptr.get(), fmt)
     }
 }
-
 
 /// A private type which can only be constructed within the `value` crate: an implementation detail so that
 /// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
