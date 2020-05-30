@@ -217,6 +217,23 @@ normal_valid!(ValueEnum);
 normal_valid!(Sexpr);
 normal_valid!(Tuple);
 normal_valid!(Product);
+normal_valid!(Universe);
+
+/// Implement `From<T>` for TypeId using the `From<T>` implementation of `ValId`, in effect
+/// asserting that a type's values are all `rain` types
+#[macro_use]
+macro_rules! impl_to_type {
+    ($T:ty) => {
+        impl From<$T> for crate::value::TypeId {
+            fn from(v: $T) -> crate::value::TypeId {
+                crate::value::TypeId(crate::value::ValId::from(v))
+            }
+        }
+    }
+}
+
+impl_to_type!(Product);
+impl_to_type!(Universe);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

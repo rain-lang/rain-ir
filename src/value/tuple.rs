@@ -3,6 +3,7 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
+    universe::Universe,
     TypeId, ValId,
 };
 use crate::{debug_from_display, pretty_display};
@@ -38,7 +39,11 @@ impl Tuple {
     /// Create the tuple corresponding to the element of the unit type
     #[inline]
     pub fn unit() -> Tuple {
-        unimplemented!()
+        Tuple {
+            elems: TupleElems::new(),
+            lifetime: Lifetime::default(),
+            ty: Product::unit_ty().into()
+        }
     }
 }
 
@@ -51,7 +56,9 @@ impl Live for Tuple {
 impl Deref for Tuple {
     type Target = TupleElems;
     #[inline]
-    fn deref(&self) -> &TupleElems { &self.elems }
+    fn deref(&self) -> &TupleElems {
+        &self.elems
+    }
 }
 
 debug_from_display!(Tuple);
@@ -74,7 +81,11 @@ impl Product {
     /// Create the product corresponding to the unit type
     #[inline]
     pub fn unit_ty() -> Product {
-        unimplemented!()
+        Product {
+            elems: SmallVec::new(),
+            lifetime: Lifetime::default(),
+            ty: Universe::finite().into(),
+        }
     }
 }
 
@@ -90,7 +101,9 @@ impl Live for Product {
 impl Deref for Product {
     type Target = ProductElems;
     #[inline]
-    fn deref(&self) -> &ProductElems { &self.elems }
+    fn deref(&self) -> &ProductElems {
+        &self.elems
+    }
 }
 
 #[cfg(feature = "prettyprinter")]
