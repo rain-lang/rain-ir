@@ -4,9 +4,9 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
-    typing::Typed,
-    universe::FINITE_TY,
-    TypeId, TypeRef, ValId,
+    typing::{Type, Typed},
+    universe::{Universe, FINITE_TY},
+    TypeId, TypeRef, ValId, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -117,6 +117,15 @@ impl Deref for Product {
 impl Typed for Product {
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
+    }
+}
+
+impl Type for Product {
+    fn universe(&self) -> Universe {
+        match self.ty().get().deref() {
+            ValueEnum::Universe(u) => u.clone(),
+            _ => unimplemented!(),
+        }
     }
 }
 

@@ -4,7 +4,7 @@ Typing universes
 use crate::quick_pretty;
 use crate::value::{
     lifetime::{LifetimeBorrow, Live},
-    typing::Typed,
+    typing::{Type, Typed},
     TypeId, TypeRef,
 };
 use lazy_static::lazy_static;
@@ -172,6 +172,12 @@ impl Typed for Universe {
             let _ = self.ty.fill(universe); // Ignore a failed fill
             self.ty.borrow().expect("Impossible").borrow_ty()
         }
+    }
+}
+
+impl Type for Universe {
+    fn universe(&self) -> Universe {
+        self.enclosing()
     }
 }
 

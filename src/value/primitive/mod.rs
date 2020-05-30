@@ -5,7 +5,8 @@ use super::{
     expr::Sexpr,
     lifetime::{LifetimeBorrow, Live},
     tuple::{Product, Tuple},
-    typing::Typed,
+    typing::{Typed, Type},
+    universe::{Universe, FINITE_TY},
     NormalValue, TypeId, TypeRef, ValId, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
@@ -114,9 +115,21 @@ impl Typed for () {
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
 
+impl Typed for Unit {
+    fn ty(&self) -> TypeRef {
+        FINITE_TY.borrow_ty()
+    }
+}
+
 impl Live for Unit {
     fn lifetime(&self) -> LifetimeBorrow {
         LifetimeBorrow::default()
+    }
+}
+
+impl Type for Unit {
+    fn universe(&self) -> Universe {
+        Universe::finite()
     }
 }
 
