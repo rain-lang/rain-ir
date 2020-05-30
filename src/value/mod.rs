@@ -21,7 +21,7 @@ use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::Unit;
 use tuple::{Product, Tuple};
-use typing::Typed;
+use typing::{Typed, Type};
 use universe::Universe;
 
 lazy_static! {
@@ -40,12 +40,22 @@ impl ValId {
     pub fn borrow_val(&self) -> ValRef {
         ValRef(self.0.borrow_arc())
     }
+    /// Get this `ValId` as a `ValueEnum`
+    #[inline]
+    pub fn as_enum(&self) -> &ValueEnum {
+        &self.0
+    }
+    /// Get this `ValRef` as a `NormalValue`
+    #[inline]
+    pub fn as_norm(&self) -> &NormalValue {
+        &self.0
+    }
 }
 
 impl Deref for ValId {
-    type Target = Arc<NormalValue>;
+    type Target = NormalValue;
     #[inline]
-    fn deref(&self) -> &Arc<NormalValue> {
+    fn deref(&self) -> &NormalValue {
         &self.0.addr
     }
 }
@@ -83,18 +93,28 @@ impl Typed for ValId {
 #[repr(transparent)]
 pub struct ValRef<'a>(NormRef<'a>);
 
-impl ValRef<'_> {
+impl<'a> ValRef<'a> {
     /// Clone this value reference as a `ValId`
     #[inline]
     pub fn clone_val(&self) -> ValId {
         ValId(self.0.clone_arc())
     }
+    /// Get this `ValRef` as a `ValueEnum`
+    #[inline]
+    pub fn as_enum(&self) -> &'a ValueEnum {
+        self.0.get()
+    }
+    /// Get this `NormalValue`
+    #[inline]
+    pub fn get(&self) -> &'a NormalValue {
+        self.0.get()
+    }
 }
 
 impl<'a> Deref for ValRef<'a> {
-    type Target = ArcBorrow<'a, NormalValue>;
+    type Target = NormalValue;
     #[inline]
-    fn deref(&self) -> &ArcBorrow<'a, NormalValue> {
+    fn deref(&self) -> &NormalValue {
         &self.0.addr
     }
 }
@@ -147,6 +167,16 @@ impl TypeId {
     pub fn borrow_ty(&self) -> TypeRef {
         TypeRef(self.0.borrow_arc())
     }
+    /// Get this `TypeId` as a `ValueEnum`
+    #[inline]
+    pub fn as_enum(&self) -> &ValueEnum {
+        &self.0
+    }
+    /// Get this `TypeRef` as a `NormalValue`
+    #[inline]
+    pub fn as_norm(&self) -> &NormalValue {
+        &self.0
+    }
 }
 
 impl From<TypeId> for ValId {
@@ -170,6 +200,17 @@ impl Typed for TypeId {
     }
 }
 
+impl Type for TypeId {
+    #[inline]
+    fn universe(&self) -> Universe {
+        match self.as_enum() {
+            ValueEnum::Universe(u) => u.universe(),
+            ValueEnum::Product(p) => p.universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!")
+        }
+    }
+}
 
 /// A reference to a `rain` type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -185,6 +226,16 @@ impl<'a> TypeRef<'a> {
     #[inline]
     pub fn as_val(&self) -> ValRef<'a> {
         ValRef(self.0)
+    }
+    /// Get this `TypeRef` as a `ValueEnum`
+    #[inline]
+    pub fn as_enum(&self) -> &'a ValueEnum {
+        self.0.get()
+    }
+    /// Get this `NormalValue`
+    #[inline]
+    pub fn get(&self) -> &'a NormalValue {
+        self.0.get()
     }
 }
 

@@ -122,7 +122,7 @@ impl Typed for Product {
 
 impl Type for Product {
     fn universe(&self) -> Universe {
-        match self.ty().get().deref() {
+        match self.ty().as_enum() {
             ValueEnum::Universe(u) => u.clone(),
             _ => unimplemented!(),
         }
