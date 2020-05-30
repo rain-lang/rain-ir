@@ -215,7 +215,8 @@ impl Type for TypeId {
 }
 
 /// A reference to a `rain` type
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, RefCast)]
+#[repr(transparent)]
 pub struct TypeRef<'a>(NormRef<'a>);
 
 impl<'a> TypeRef<'a> {
@@ -276,12 +277,55 @@ debug_from_display!(TypeRef<'_>);
 pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
-#[derive(Clone, PartialEq, Eq, Hash, RefCast)]
+#[derive(PartialEq, Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarId<Variant> {
     ptr: NormAddr,
     variant: std::marker::PhantomData<Variant>,
 }
+
+impl<'a, V> Clone for VarId<V> {
+    #[inline]
+    fn clone(&self) -> VarId<V> {
+        VarId {
+            ptr: self.ptr.clone(),
+            variant: self.variant,
+        }
+    }
+}
+
+impl<'a, V> VarId<V> {
+    /// Get this `VarId` as a `NormalValue`
+    pub fn as_norm(&self) -> &NormalValue {
+        self.ptr.deref()
+    }
+    /// Get this `VarId` as a `ValueEnum`
+    pub fn as_enum(&self) -> &ValueEnum {
+        self.ptr.deref()
+    }
+    /// Get this `VarId` as a `ValId`
+    pub fn as_val(&self) -> &ValId {
+        RefCast::ref_cast(&self.ptr)
+    }
+    /// Borrow this `VarId` as a `VarRef`
+    pub fn borrow_var(&self) -> VarRef<V> {
+        VarRef {
+            ptr: self.ptr.borrow_arc(),
+            variant: self.variant
+        }
+    }
+    /// Borrow this `VarId` as a `ValRef`
+    pub fn borrow_val(&self) -> ValRef {
+        ValRef(self.ptr.borrow_arc())
+    }
+}
+
+impl<V> From<VarId<V>> for ValId {
+    fn from(v: VarId<V>) -> ValId {
+        ValId(v.ptr)
+    }
+}
+
 
 impl<V> Deref for VarId<V>
 where
@@ -318,15 +362,15 @@ impl<'a, V> Copy for VarRef<'a, V> {}
 
 impl<'a, V> VarRef<'a, V> {
     /// Get this `VarRef` as a `NormalValue`
-    pub fn as_norm(&self) -> &NormalValue {
-        self.ptr.deref()
+    pub fn as_norm(&self) -> &'a NormalValue {
+        self.ptr.get()
     }
     /// Get this `VarRef` as a `ValueEnum`
-    pub fn as_enum(&self) -> &ValueEnum {
-        self.ptr.deref()
+    pub fn as_enum(&self) -> &'a ValueEnum {
+        self.ptr.get()
     }
     /// Get this `VarRef` as a `ValRef`
-    pub fn as_val(&self) -> ValRef {
+    pub fn as_val(&self) -> ValRef<'a> {
         ValRef(self.ptr)
     }
     /// Clone this `VarRef` as a `ValId`
