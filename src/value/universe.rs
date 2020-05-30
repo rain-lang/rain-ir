@@ -2,8 +2,17 @@
 Typing universes
 */
 use crate::quick_pretty;
-use crate::value::lifetime::{LifetimeBorrow, Live};
+use crate::value::{
+    lifetime::{LifetimeBorrow, Live},
+    TypeId, ValId, ValueEnum,
+};
+use lazy_static::lazy_static;
 use std::cmp::Ordering;
+
+lazy_static! {
+    /// An instance of the universe of finite types
+    pub static ref FINITE_TY: TypeId = TypeId(ValId::from(ValueEnum::Universe(Universe::finite())));
+}
 
 /// A universe of types
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]

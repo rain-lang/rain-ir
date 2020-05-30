@@ -4,9 +4,9 @@
 use crate::util::hash_cache::Cache;
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
+use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use std::borrow::Borrow;
 use triomphe::Arc;
 
 pub mod expr;
@@ -66,6 +66,22 @@ pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct TypeId(ValId);
 
+impl Deref for TypeId {
+    type Target = ValId;
+    #[inline]
+    fn deref(&self) -> &ValId {
+        &self.0
+    }
+}
+
+impl TypeId {
+    /// Get this `TypeId` as a `ValId`
+    #[inline]
+    pub fn as_valid(&self) -> &ValId {
+        &self
+    }
+}
+
 debug_from_display!(TypeId);
 pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
 
@@ -93,7 +109,9 @@ impl From<ValueEnum> for NormalValue {
 
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
-    fn borrow(&self) -> &ValueEnum { &self.0 }
+    fn borrow(&self) -> &ValueEnum {
+        &self.0
+    }
 }
 
 impl From<NormalValue> for ValueEnum {
@@ -229,7 +247,7 @@ macro_rules! impl_to_type {
                 crate::value::TypeId(crate::value::ValId::from(v))
             }
         }
-    }
+    };
 }
 
 impl_to_type!(Product);

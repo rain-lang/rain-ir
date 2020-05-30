@@ -4,10 +4,18 @@ Primitive `rain` values and associated value descriptors
 use super::{
     expr::Sexpr,
     tuple::{Product, Tuple},
-    NormalValue, ValueEnum,
+    NormalValue, TypeId, ValId, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
+use lazy_static::lazy_static;
 use std::convert::TryFrom;
+
+lazy_static! {
+    /// An instance of the unit value
+    pub static ref UNIT: ValId = ValId::from(ValueEnum::from(()));
+    /// An instance of the unit type
+    pub static ref UNIT_TY: TypeId = TypeId(ValId::from(ValueEnum::from(Unit)));
+}
 
 impl PartialEq<()> for Tuple {
     #[inline]
@@ -80,6 +88,13 @@ impl TryFrom<ValueEnum> for () {
     }
 }
 
+impl From<()> for ValId {
+    #[inline]
+    fn from(_: ()) -> ValId {
+        UNIT.clone()
+    }
+}
+
 /// The unit type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
@@ -141,6 +156,20 @@ impl TryFrom<ValueEnum> for Unit {
             Err(value)
         }
     }
+}
+
+impl From<Unit> for ValId {
+    #[inline]
+    fn from(_: Unit) -> ValId {
+        UNIT_TY.as_valid().clone()
+    }
+}
+
+impl From<Unit> for TypeId {
+    #[inline]
+    fn from(_: Unit) -> TypeId {
+        UNIT_TY.clone()
+    }   
 }
 
 /// The empty type

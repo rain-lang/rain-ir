@@ -3,7 +3,8 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
-    universe::Universe,
+    primitive::UNIT_TY,
+    universe::FINITE_TY,
     TypeId, ValId,
 };
 use crate::{debug_from_display, pretty_display};
@@ -42,7 +43,7 @@ impl Tuple {
         Tuple {
             elems: TupleElems::new(),
             lifetime: Lifetime::default(),
-            ty: Product::unit_ty().into()
+            ty: UNIT_TY.clone()
         }
     }
 }
@@ -84,7 +85,7 @@ impl Product {
         Product {
             elems: SmallVec::new(),
             lifetime: Lifetime::default(),
-            ty: Universe::finite().into(),
+            ty: FINITE_TY.clone()
         }
     }
 }
