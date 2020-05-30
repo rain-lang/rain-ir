@@ -20,6 +20,26 @@ impl Lifetime {
     pub fn region(&self) -> Option<RegionBorrow> {
         self.borrow_lifetime().region()
     }
+    /// Check whether this lifetime is the static (null) lifetime
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.0.is_none()
+    }
+    /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
+    #[inline]
+    pub fn intersect<'a>(&'a self, lifetimes: &'a [LifetimeBorrow<'a>]) -> LifetimeBorrow<'a> {
+        if self.is_static() {
+            return match lifetimes {
+                [] => self.borrow_lifetime(),
+                [l] => *l,
+                _ => unimplemented!()
+            }
+        }
+        match lifetimes {
+            [] => self.borrow_lifetime(),
+            _ => unimplemented!()
+        }
+    }
 }
 
 impl From<Region> for Lifetime {
@@ -37,7 +57,7 @@ impl From<Option<Region>> for Lifetime {
 }
 
 /// A borrow of a `rain` lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub struct LifetimeBorrow<'a>(Option<RegionBorrow<'a>>);
 
 impl<'a> LifetimeBorrow<'a> {
