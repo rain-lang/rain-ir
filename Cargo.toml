@@ -13,6 +13,7 @@ triomphe = "^0.1"
 dashmap = "^3"
 lazy_static = "^1.4"
 ref-cast = "^1"
+lazycell = "^1.2"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }

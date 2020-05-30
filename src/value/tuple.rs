@@ -4,8 +4,9 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
+    typing::Typed,
     universe::FINITE_TY,
-    TypeId, ValId,
+    TypeId, TypeRef, ValId,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -43,7 +44,7 @@ impl Tuple {
         Tuple {
             elems: TupleElems::new(),
             lifetime: Lifetime::default(),
-            ty: UNIT_TY.clone()
+            ty: UNIT_TY.clone(),
         }
     }
 }
@@ -59,6 +60,12 @@ impl Deref for Tuple {
     #[inline]
     fn deref(&self) -> &TupleElems {
         &self.elems
+    }
+}
+
+impl Typed for Tuple {
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
     }
 }
 
@@ -85,7 +92,7 @@ impl Product {
         Product {
             elems: SmallVec::new(),
             lifetime: Lifetime::default(),
-            ty: FINITE_TY.clone()
+            ty: FINITE_TY.clone(),
         }
     }
 }
@@ -104,6 +111,12 @@ impl Deref for Product {
     #[inline]
     fn deref(&self) -> &ProductElems {
         &self.elems
+    }
+}
+
+impl Typed for Product {
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
     }
 }
 

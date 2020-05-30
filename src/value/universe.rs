@@ -4,10 +4,13 @@ Typing universes
 use crate::quick_pretty;
 use crate::value::{
     lifetime::{LifetimeBorrow, Live},
-    TypeId,
+    typing::Typed,
+    TypeId, TypeRef,
 };
 use lazy_static::lazy_static;
+use lazycell::AtomicLazyCell;
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 
 lazy_static! {
     /// An instance of the universe of finite types
@@ -15,12 +18,31 @@ lazy_static! {
 }
 
 /// A universe of types
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct Universe {
     /// The level of this type universe
     level: usize,
     /// The kind of this type universe
     kind: usize,
+    /// The type of this universe. Lazily computed to avoid infinite regress
+    ty: AtomicLazyCell<TypeId>,
+}
+
+impl PartialEq for Universe {
+    #[inline]
+    fn eq(&self, other: &Universe) -> bool {
+        self.level == other.level && self.kind == other.kind
+    }
+}
+
+impl Eq for Universe {}
+
+impl Hash for Universe {
+    #[inline]
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        hasher.write_usize(self.level);
+        hasher.write_usize(self.kind);
+    }
 }
 
 impl PartialOrd for Universe {
@@ -42,18 +64,30 @@ impl Universe {
     /// Try to make a universe from a level and kind
     pub fn try_new(level: usize, kind: usize) -> Option<Universe> {
         if level >= kind {
-            Some(Universe { level, kind })
+            Some(Universe {
+                level,
+                kind,
+                ty: AtomicLazyCell::new(),
+            })
         } else {
             None
         }
     }
     /// Create a finite type universe
     pub fn finite() -> Universe {
-        Universe { level: 0, kind: 0 }
+        Universe {
+            level: 0,
+            kind: 0,
+            ty: AtomicLazyCell::new(),
+        }
     }
     /// Create a simple type universe
     pub fn simple() -> Universe {
-        Universe { level: 1, kind: 0 }
+        Universe {
+            level: 1,
+            kind: 0,
+            ty: AtomicLazyCell::new(),
+        }
     }
     /// Get the level of this type universe
     pub fn level(&self) -> usize {
@@ -68,6 +102,7 @@ impl Universe {
         Universe {
             level: self.level,
             kind: 0,
+            ty: AtomicLazyCell::new(),
         }
     }
     /// Get a type universe containing this universe's types and this universe
@@ -75,6 +110,7 @@ impl Universe {
         Universe {
             level: self.level + 1,
             kind: self.kind,
+            ty: AtomicLazyCell::new(),
         }
     }
     /// Get the type of this universe
@@ -82,6 +118,7 @@ impl Universe {
         Universe {
             level: self.level + 1,
             kind: self.kind + 1,
+            ty: AtomicLazyCell::new(),
         }
     }
     /// Get the universe of elements in this universe, if any
@@ -92,6 +129,7 @@ impl Universe {
             Some(Universe {
                 level: self.level,
                 kind: self.kind - 1,
+                ty: AtomicLazyCell::new(),
             })
         }
     }
@@ -100,6 +138,7 @@ impl Universe {
         Universe {
             level: self.level.max(other.level),
             kind: self.kind.min(other.kind),
+            ty: AtomicLazyCell::new(),
         }
     }
     /// Take the union of an iterator of universes
@@ -121,6 +160,18 @@ quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.ki
 impl Live for Universe {
     fn lifetime(&self) -> LifetimeBorrow {
         LifetimeBorrow::default()
+    }
+}
+
+impl Typed for Universe {
+    fn ty(&self) -> TypeRef {
+        if let Some(ty) = self.ty.borrow() {
+            ty.borrow_ty()
+        } else {
+            let universe = TypeId::from(self.enclosing());
+            let _ = self.ty.fill(universe); // Ignore a failed fill
+            self.ty.borrow().expect("Impossible").borrow_ty()
+        }
     }
 }
 

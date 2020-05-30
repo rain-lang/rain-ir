@@ -113,6 +113,11 @@ impl TypeId {
     pub fn as_val(&self) -> &ValId {
         &self
     }
+    /// Borrow a `TypeId`
+    #[inline]
+    pub fn borrow_ty(&self) -> TypeRef {
+        TypeRef(self.0.borrow_arc())
+    }
 }
 
 impl From<TypeId> for ValId {
