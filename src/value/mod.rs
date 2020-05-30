@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use triomphe::Arc;
+use triomphe::{Arc, ArcBorrow};
 
 pub mod expr;
 pub mod lifetime;
@@ -29,7 +29,16 @@ lazy_static! {
 
 /// A reference-counted, hash-consed `rain` value
 #[derive(Clone, Eq)]
+#[repr(transparent)]
 pub struct ValId(Arc<NormalValue>);
+
+impl Deref for ValId {
+    type Target = Arc<NormalValue>;
+    #[inline]
+    fn deref(&self) -> &Arc<NormalValue> {
+        &self.0
+    }
+}
 
 impl From<NormalValue> for ValId {
     #[inline]
@@ -59,8 +68,28 @@ impl Hash for ValId {
     }
 }
 
+/// A reference to a `rain` value
+#[derive(Copy, Clone, Eq)]
+pub struct ValRef<'a>(ArcBorrow<'a, NormalValue>);
+
+impl PartialEq for ValRef<'_> {
+    #[inline]
+    fn eq(&self, other: &ValRef) -> bool {
+        ArcBorrow::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Hash for ValRef<'_> {
+    #[inline]
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.deref(), hasher)
+    }
+}
+
 debug_from_display!(ValId);
 pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
+debug_from_display!(ValRef<'_>);
+pretty_display!(ValRef<'_>, s, fmt  => write!(fmt, "{}", s.deref()));
 
 /// A reference-counted, hash-consed `rain` type
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -82,8 +111,22 @@ impl TypeId {
     }
 }
 
+/// A reference to a `rain` type
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct TypeRef<'a>(ValRef<'a>);
+
+impl<'a> Deref for TypeRef<'a> {
+    type Target = ValRef<'a>;
+    #[inline]
+    fn deref(&self) -> &ValRef<'a> {
+        &self.0
+    }
+}
+
 debug_from_display!(TypeId);
 pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
+debug_from_display!(TypeRef<'_>);
+pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A normalized `rain` value
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -262,10 +305,12 @@ mod prettyprint_impl {
     impl PrettyPrint for ValueEnum {
         fn prettyprint(
             &self,
-            _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            forv! {
+                match (self) { v => v.prettyprint(printer, fmt), }
+            }
         }
     }
 
@@ -273,14 +318,36 @@ mod prettyprint_impl {
         #[inline]
         fn prettyprint(
             &self,
-            printer: &mut PrettyPrinter,
-            fmt: &mut Formatter,
+            _printer: &mut PrettyPrinter,
+            _fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            self.deref().prettyprint(printer, fmt)
+            unimplemented!()
+        }
+    }
+
+    impl PrettyPrint for ValRef<'_> {
+        #[inline]
+        fn prettyprint(
+            &self,
+            _printer: &mut PrettyPrinter,
+            _fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            unimplemented!()
         }
     }
 
     impl PrettyPrint for TypeId {
+        #[inline]
+        fn prettyprint(
+            &self,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            self.0.prettyprint(printer, fmt)
+        }
+    }
+
+    impl PrettyPrint for TypeRef<'_> {
         #[inline]
         fn prettyprint(
             &self,

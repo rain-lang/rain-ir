@@ -2,10 +2,90 @@
 Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
 
+use ref_cast::RefCast;
+use std::fmt::{self, Debug, Display, Formatter};
+use std::ops::{Deref, DerefMut};
+
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;
 
 pub mod hash_cache;
+
+/// An implementation of ByAddress which inherits visibility from its type parameters, allowing
+/// private implementation of `RefCast`.
+#[repr(transparent)]
+#[derive(RefCast, Copy, Clone)]
+pub struct PrivateByAddr<T, V> {
+    addr: T,
+    hide: std::marker::PhantomData<V>,
+}
+
+impl<T, V> Display for PrivateByAddr<T, V>
+where
+    T: Display,
+{
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(&self.addr, fmt)
+    }
+}
+
+impl<T, V> Debug for PrivateByAddr<T, V>
+where
+    T: Debug,
+{
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Debug::fmt(&self.addr, fmt)
+    }
+}
+
+impl<T, V> Deref for PrivateByAddr<T, V>
+where
+    T: Deref,
+{
+    type Target = T::Target;
+    fn deref(&self) -> &T::Target {
+        self.addr.deref()
+    }
+}
+
+impl<T, V> DerefMut for PrivateByAddr<T, V>
+where
+    T: DerefMut,
+{
+    fn deref_mut(&mut self) -> &mut T::Target {
+        self.addr.deref_mut()
+    }
+}
+
+impl<T, V, U> AsRef<U> for PrivateByAddr<T, V>
+where
+    T: AsRef<U>,
+{
+    fn as_ref(&self) -> &U {
+        self.addr.as_ref()
+    }
+}
+
+impl<T, V, U> AsMut<U> for PrivateByAddr<T, V>
+where
+    T: AsMut<U>,
+{
+    fn as_mut(&mut self) -> &mut U {
+        self.addr.as_mut()
+    }
+}
+
+impl<T, V> From<T> for PrivateByAddr<T, V>
+where
+    T: Deref,
+{
+    fn from(addr: T) -> PrivateByAddr<T, V> {
+        PrivateByAddr {
+            addr,
+            hide: std::marker::PhantomData,
+        }
+    }
+}
 
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
