@@ -27,17 +27,20 @@ impl Lifetime {
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect<'a>(&'a self, lifetimes: &'a [LifetimeBorrow<'a>]) -> LifetimeBorrow<'a> {
+    pub fn intersect<'a>(
+        &'a self,
+        lifetimes: &'a [LifetimeBorrow<'a>],
+    ) -> Result<LifetimeBorrow<'a>, ()> {
         if self.is_static() {
             return match lifetimes {
-                [] => self.borrow_lifetime(),
-                [l] => *l,
-                _ => unimplemented!()
-            }
+                [] => Ok(self.borrow_lifetime()),
+                [l] => Ok(*l),
+                _ => unimplemented!(),
+            };
         }
         match lifetimes {
-            [] => self.borrow_lifetime(),
-            _ => unimplemented!()
+            [] => Ok(self.borrow_lifetime()),
+            _ => unimplemented!(),
         }
     }
 }
