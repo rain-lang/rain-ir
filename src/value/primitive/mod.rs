@@ -5,9 +5,9 @@ use super::{
     expr::Sexpr,
     lifetime::{LifetimeBorrow, Live},
     tuple::{Product, Tuple},
-    typing::{Typed, Type},
-    universe::{Universe, FINITE_TY},
-    NormalValue, TypeId, TypeRef, ValId, ValueEnum,
+    typing::{Type, Typed},
+    universe::FINITE_TY,
+    NormalValue, TypeId, TypeRef, UniverseRef, ValId, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
 use lazy_static::lazy_static;
@@ -110,14 +110,13 @@ impl Typed for () {
     }
 }
 
-
 /// The unit type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
 
 impl Typed for Unit {
     fn ty(&self) -> TypeRef {
-        FINITE_TY.borrow_ty()
+        unimplemented!()
     }
 }
 
@@ -128,8 +127,8 @@ impl Live for Unit {
 }
 
 impl Type for Unit {
-    fn universe(&self) -> Universe {
-        Universe::finite()
+    fn universe(&self) -> UniverseRef {
+        FINITE_TY.borrow_var()
     }
 }
 

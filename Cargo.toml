@@ -14,6 +14,7 @@ dashmap = "^3"
 lazy_static = "^1.4"
 ref-cast = "^1"
 lazycell = "^1.2"
+either = "^1.5"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }

@@ -37,6 +37,18 @@ lazy_static! {
 pub struct ValId(NormAddr);
 
 impl ValId {
+    /// Directly construct a `ValId` from a `NormalValue`, deduplicating but not performing any other transformation/caching.
+    /// Useful to prevent infinite regress in e.g. cached constructors for `()`
+    #[inline]
+    pub fn direct_new<V: Into<NormalValue>>(v: V) -> ValId {
+        let norm = v.into();
+        ValId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
+    }
+    /// Deduplicate an `Arc<NormalValue>` to yield a `ValId`
+    #[inline]
+    pub fn dedup(norm: Arc<NormalValue>) -> ValId {
+        ValId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
+    }
     /// Borrow this value
     #[inline]
     pub fn borrow_val(&self) -> ValRef {
@@ -204,7 +216,7 @@ impl Typed for TypeId {
 
 impl Type for TypeId {
     #[inline]
-    fn universe(&self) -> Universe {
+    fn universe(&self) -> UniverseRef {
         match self.as_enum() {
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
@@ -295,6 +307,16 @@ impl<'a, V> Clone for VarId<V> {
 }
 
 impl<'a, V> VarId<V> {
+    /// Directly construct a `ValId` from a `V`, deduplicating but not performing any other transformation/caching.
+    /// Useful to prevent infinite regress in e.g. cached constructors for `()`
+    #[inline]
+    pub fn direct_new(v: V) -> VarId<V> where V: Into<NormalValue> {
+        let norm: NormalValue = v.into();
+        VarId{
+            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            variant: std::marker::PhantomData
+        }
+    }
     /// Get this `VarId` as a `NormalValue`
     pub fn as_norm(&self) -> &NormalValue {
         self.ptr.deref()
@@ -356,6 +378,26 @@ where
     }
 }
 
+impl<V> From<V> for VarId<V>
+where
+    V: Into<ValId>,
+    for<'a> &'a NormalValue: TryInto<&'a V>,
+{
+    fn from(val: V) -> VarId<V> {
+        let valid: ValId = val.into();
+        VarId {
+            ptr: valid.0,
+            variant: std::marker::PhantomData,
+        }
+    }
+}
+
+/// A reference-counted pointer to a value guaranteed to be a typing universe
+pub type UniverseId = VarId<Universe>;
+
+/// A pointer to a value guaranteed to be a typing universe
+pub type UniverseRef<'a> = VarRef<'a, Universe>;
+
 /// A (*normalized, consed*) borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant, e.g. `()` or `Unit`)
 #[derive(PartialEq, Eq, Hash, RefCast)]
 #[repr(transparent)]
@@ -392,6 +434,13 @@ impl<'a, V> VarRef<'a, V> {
     /// Clone this `VarRef` as a `ValId`
     pub fn clone_val(&self) -> ValId {
         self.as_val().clone_val()
+    }
+    /// Clone this `VarRef` as a `VarId`
+    pub fn clone_var(&self) -> VarId<V> {
+        VarId {
+            ptr: self.ptr.clone_arc(),
+            variant: self.variant
+        }
     }
 }
 

@@ -6,7 +6,7 @@ use super::{
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::{Universe, FINITE_TY},
-    TypeId, TypeRef, ValId, ValueEnum,
+    TypeId, TypeRef, UniverseId, UniverseRef, ValId, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -91,7 +91,7 @@ pub struct Product {
     /// The (cached) lifetime of this product type
     lifetime: Lifetime,
     /// The (cached) type of this product type
-    ty: TypeId,
+    ty: UniverseId,
 }
 
 impl Product {
@@ -101,8 +101,9 @@ impl Product {
         let lifetime = Lifetime::default()
             .intersect(elems.iter().map(|t| t.lifetime()))?
             .clone_lifetime();
-        let ty =
-            Universe::union_all(&Universe::finite(), elems.iter().map(|t| t.universe())).into();
+        let ty = FINITE_TY
+            .union_all(elems.iter().map(|t| t.universe()))
+            .clone_var();
         Ok(Product {
             elems,
             lifetime,
@@ -139,16 +140,13 @@ impl Deref for Product {
 
 impl Typed for Product {
     fn ty(&self) -> TypeRef {
-        self.ty.borrow_ty()
+        unimplemented!()
     }
 }
 
 impl Type for Product {
-    fn universe(&self) -> Universe {
-        match self.ty().as_enum() {
-            ValueEnum::Universe(u) => u.clone(),
-            _ => unimplemented!(),
-        }
+    fn universe(&self) -> UniverseRef {
+        self.ty.borrow_var()
     }
 }
 

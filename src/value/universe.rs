@@ -5,7 +5,7 @@ use crate::quick_pretty;
 use crate::value::{
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
-    TypeId, TypeRef,
+    UniverseId, UniverseRef, TypeRef
 };
 use lazy_static::lazy_static;
 use lazycell::AtomicLazyCell;
@@ -14,7 +14,7 @@ use std::hash::{Hash, Hasher};
 
 lazy_static! {
     /// An instance of the universe of finite types
-    pub static ref FINITE_TY: TypeId = TypeId::assert_normal_ty(Universe::finite());
+    pub static ref FINITE_TY: UniverseId = UniverseId::direct_new(Universe::finite());
 }
 
 /// A universe of types
@@ -25,7 +25,7 @@ pub struct Universe {
     /// The kind of this type universe
     kind: usize,
     /// The type of this universe. Lazily computed to avoid infinite regress
-    ty: AtomicLazyCell<TypeId>,
+    ty: AtomicLazyCell<UniverseId>,
 }
 
 impl PartialEq for Universe {
@@ -105,7 +105,7 @@ impl Universe {
             ty: AtomicLazyCell::new(),
         }
     }
-    /// Get a type universe containing this universe's types and this universe
+    /// Get a type universe containing this universe's types and this universe as a `Universe`
     pub fn enclosing(&self) -> Universe {
         Universe {
             level: self.level + 1,
@@ -113,7 +113,7 @@ impl Universe {
             ty: AtomicLazyCell::new(),
         }
     }
-    /// Get the type of this universe
+    /// Get the type of this universe as a `Universe`
     pub fn enclosing_ty(&self) -> Universe {
         Universe {
             level: self.level + 1,
@@ -133,18 +133,37 @@ impl Universe {
             })
         }
     }
+}
+
+quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.kind));
+
+impl<'a> UniverseId {
     /// Take the union of this universe and another
-    pub fn union(&self, other: Universe) -> Universe {
-        Universe {
-            level: self.level.max(other.level),
-            kind: self.kind.min(other.kind),
-            ty: AtomicLazyCell::new(),
-        }
+    pub fn union(&'a self, other: UniverseRef<'a>) -> UniverseRef<'a> {
+        unimplemented!()
     }
     /// Take the union of an iterator of universes with the given universe
-    pub fn union_all<I>(&self, iter: I) -> Universe
+    pub fn union_all<I>(&'a self, iter: I) -> UniverseRef<'a>
     where
-        I: Iterator<Item = Universe>,
+        I: Iterator<Item = UniverseRef<'a>>,
+    {
+        let mut base = self.borrow_var();
+        for universe in iter {
+            base = base.union(universe)
+        }
+        base
+    }
+}
+
+impl<'a> UniverseRef<'a> {
+    /// Take the union of this universe and another
+    pub fn union(&self, other: UniverseRef<'a>) -> UniverseRef<'a> {
+        unimplemented!()
+    }
+    /// Take the union of an iterator of universes with the given universe
+    pub fn union_all<I>(&self, iter: I) -> UniverseRef<'a>
+    where
+        I: Iterator<Item = UniverseRef<'a>>,
     {
         let mut base = self.clone();
         for universe in iter {
@@ -154,8 +173,6 @@ impl Universe {
     }
 }
 
-quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.kind));
-
 impl Live for Universe {
     fn lifetime(&self) -> LifetimeBorrow {
         LifetimeBorrow::default()
@@ -164,19 +181,19 @@ impl Live for Universe {
 
 impl Typed for Universe {
     fn ty(&self) -> TypeRef {
-        if let Some(ty) = self.ty.borrow() {
-            ty.borrow_ty()
-        } else {
-            let universe = TypeId::from(self.enclosing());
-            let _ = self.ty.fill(universe); // Ignore a failed fill
-            self.ty.borrow().expect("Impossible").borrow_ty()
-        }
+        unimplemented!()
     }
 }
 
 impl Type for Universe {
-    fn universe(&self) -> Universe {
-        self.enclosing()
+    fn universe(&self) -> UniverseRef {
+        if let Some(ty) = self.ty.borrow() {
+            ty.borrow_var()
+        } else {
+            let universe = UniverseId::from(self.enclosing());
+            let _ = self.ty.fill(universe); // Ignore a failed fill
+            self.ty.borrow().expect("Impossible").borrow_var()
+        }
     }
 }
 
