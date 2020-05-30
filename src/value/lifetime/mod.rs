@@ -31,17 +31,16 @@ impl Lifetime {
         &'a self,
         lifetimes: &'a [LifetimeBorrow<'a>],
     ) -> Result<LifetimeBorrow<'a>, ()> {
-        if self.is_static() {
-            return match lifetimes {
-                [] => Ok(self.borrow_lifetime()),
-                [l] => Ok(*l),
-                _ => unimplemented!(),
-            };
+        let mut base = self.borrow_lifetime();
+        for lifetime in lifetimes.iter().copied() {
+            if base.is_static() {
+                base = lifetime
+            }
+            if !lifetime.is_static() {
+                unimplemented!()
+            }
         }
-        match lifetimes {
-            [] => Ok(self.borrow_lifetime()),
-            _ => unimplemented!(),
-        }
+        Ok(base)
     }
 }
 
@@ -68,6 +67,11 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn region(&self) -> Option<RegionBorrow<'a>> {
         self.0
+    }
+    /// Check whether this lifetime is the static (null) lifetime
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.0.is_none()
     }
 }
 
