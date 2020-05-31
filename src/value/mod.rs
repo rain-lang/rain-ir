@@ -966,12 +966,28 @@ pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed {
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
     fn get_dep(&self, dep: usize) -> &ValId;
+    /// Get the dependencies of this value
+    #[inline]
+    fn get_deps(&self) -> &Deps<Self> {
+        RefCast::ref_cast(self)
+    }
 }
 
 /// The dependencies of a value
 #[derive(Debug, Copy, Clone, RefCast)]
 #[repr(transparent)]
 pub struct Deps<V>(pub V);
+
+impl<V: Value> Deps<V> {
+    /// The number of dependencies of this value
+    pub fn len(&self) -> usize {
+        self.0.no_deps()
+    }
+    /// Iterate over the dependencies of this value
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a ValId> + 'a {
+        (0..self.len()).map(move |ix| self.0.get_dep(ix))
+    }
+}
 
 impl<V: Value> std::ops::Index<usize> for Deps<V> {
     type Output = ValId;
