@@ -315,6 +315,17 @@ If `complete` is `false`, the parser will return `Incomplete` in the case of tra
 If `complete` is `true`, the parser will not do so, though it will still return `Incomplete` in the case of,  e.g., unfinished comments.
 In either case, the parser returns `Incomplete` if given only whitespace or an empty string.
 
+# Example
+```rust
+use rain_lang::parser::{parse_expr_list, ast::{Expr, Sexpr, Tuple}};
+let (rest, list_of_units) = parse_expr_list(true, "() () [] [] ()").expect("Valid");
+assert_eq!(rest, "");
+//assert!(parse_expr_list(false, "(), (), [] [] ()").is_err()); // Incomplete
+let (paren_rest, paren_list_of_units) = parse_expr_list(false, "() () [] [] ())").expect("Valid");
+assert_eq!(paren_rest, ")");
+assert_eq!(list_of_units, paren_list_of_units);
+```
+
 # Grammar
 The grammar for a list of compound expressions can be represented by the following EBNF fragment:
 ```ebnf
@@ -323,7 +334,7 @@ Compound ::= (WS Compound)+
 */
 pub fn parse_expr_list(complete: bool, input: &str) -> IResult<&str, Vec<Expr>> {
     preceded(
-        ws,
+        opt(ws),
         separated_nonempty_list(|input| parse_ws(complete, input), parse_compound),
     )(input)
 }

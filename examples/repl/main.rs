@@ -39,9 +39,9 @@ pub enum Command {
 pub fn parse_repl_statement(input: &str) -> IResult<&str, ReplStatement> {
     terminated(
         alt((
-            map(parse_command, |c| ReplStatement::Command(c)),
-            map(parse_statement, |l| ReplStatement::Let(l)),
             map(parse_expr, |e| ReplStatement::Expr(e)),
+            map(parse_statement, |l| ReplStatement::Let(l)),
+            map(parse_command, |c| ReplStatement::Command(c)),
         )),
         multispace0,
     )(input)
