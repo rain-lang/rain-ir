@@ -211,6 +211,76 @@ impl Display for Expr<'_> {
 
 debug_from_display!(Expr<'_>);
 
-/// A let-statement (TODO: this)
+/// A pattern to assign to
+#[derive(Clone, Eq, PartialEq)]
+pub enum Pattern<'a> {
+    /// A simple assignment to a variable
+    Simple(Simple<'a>),
+    /// A tuple-destructure assignment
+    Detuple(Detuple<'a>)
+}
+
+impl Display for Pattern<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Pattern::Simple(s) => Display::fmt(s, fmt),
+            Pattern::Detuple(d) => Display::fmt(d, fmt)
+        }
+    }
+}
+
+debug_from_display!(Pattern<'_>);
+
+/// A simple assignment to a variable
+#[derive(Clone, Eq, PartialEq)]
+pub struct Simple<'a> {
+    /// The name of the variable being assigned to
+    pub var: Ident<'a>,
+    /// A type-bound on the variable being assigned to, if any
+    pub ty: Option<Expr<'a>>
+}
+
+impl Display for Simple<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}", self.var)?;
+        if let Some(ty) = self.ty.as_ref() {
+            write!(fmt, ": {}", ty)?
+        }
+        Ok(())
+    }
+}
+
+debug_from_display!(Simple<'_>);
+
+/// A tuple-destructure assignment pattern
+#[derive(Clone, Eq, PartialEq)]
+pub struct Detuple<'a>(pub Vec<Pattern<'a>>);
+
+impl Display for Detuple<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "[")?;
+        let mut first = true;
+        for pattern in self.0.iter() {
+            write!(fmt, "{}{}", if first { "" } else { " " }, pattern)?;
+            first = false;
+        }
+        write!(fmt, "]")
+    }
+}
+
+debug_from_display!(Detuple<'_>);
+
+/// A let-statement
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Let<'a>(&'a str);
+pub struct Let<'a> {
+    /// The pattern being assigned to
+    pub lhs: Pattern<'a>,
+    /// The value being assigned to the pattern
+    pub rhs: Expr<'a>
+}
+
+impl Display for Let<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "let {} = {};", self.lhs, self.rhs)
+    }
+}
