@@ -12,6 +12,7 @@ use super::{
 use crate::{debug_from_display, quick_pretty};
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
+use std::ops::Deref;
 
 lazy_static! {
     /// An instance of the unit value
@@ -70,7 +71,7 @@ impl PartialEq<ValueEnum> for () {
 impl PartialEq<()> for NormalValue {
     #[inline]
     fn eq(&self, u: &()) -> bool {
-        self.0.eq(u)
+        self.deref().eq(u)
     }
 }
 
@@ -89,7 +90,7 @@ impl From<()> for ValueEnum {
 
 impl From<()> for NormalValue {
     fn from(_: ()) -> NormalValue {
-        NormalValue(ValueEnum::from(()))
+        NormalValue::assert_new(ValueEnum::from(()))
     }
 }
 
@@ -230,7 +231,7 @@ impl PartialEq<ValueEnum> for Unit {
 impl PartialEq<Unit> for NormalValue {
     #[inline]
     fn eq(&self, u: &Unit) -> bool {
-        self.0.eq(u)
+        self.deref().eq(u)
     }
 }
 
@@ -251,7 +252,7 @@ impl From<Unit> for ValueEnum {
 impl From<Unit> for NormalValue {
     #[inline]
     fn from(_: Unit) -> NormalValue {
-        NormalValue(ValueEnum::from(Unit))
+        NormalValue::assert_new(ValueEnum::from(Unit))
     }
 }
 

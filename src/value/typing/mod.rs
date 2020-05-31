@@ -1,7 +1,7 @@
 /*!
 The `rain` type system
 */
-use super::{TypeRef, UniverseRef, TypeId, Value};
+use super::{TypeId, TypeRef, UniverseRef, Value};
 
 /// A trait implemented by `rain` values with a type
 pub trait Typed {

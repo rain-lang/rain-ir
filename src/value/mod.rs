@@ -996,13 +996,21 @@ type NormAddr = PrivateByAddr<Arc<NormalValue>, Private>;
 type NormRef<'a> = PrivateByAddr<ArcBorrow<'a, NormalValue>, Private>;
 
 /// A normalized `rain` value
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct NormalValue(ValueEnum);
+#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct NormalValue(PrivateValue);
+
+impl NormalValue {
+    /// Assert a given value is normalized
+    fn assert_new(value: ValueEnum) -> NormalValue {
+        NormalValue(PrivateValue(value))
+    }
+}
 
 impl Deref for NormalValue {
     type Target = ValueEnum;
     fn deref(&self) -> &ValueEnum {
-        &self.0
+        &(self.0).0
     }
 }
 
@@ -1020,34 +1028,39 @@ impl From<ValueEnum> for NormalValue {
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &self.0
+        &(self.0).0
     }
 }
 
 impl From<NormalValue> for ValueEnum {
     #[inline]
     fn from(normal: NormalValue) -> ValueEnum {
-        normal.0
+        (normal.0).0
     }
 }
 
 impl Typed for NormalValue {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.0.ty()
+        self.deref().ty()
     }
 }
 
 impl Value for NormalValue {
     #[inline]
     fn no_deps(&self) -> usize {
-        self.0.no_deps()
+        self.deref().no_deps()
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        self.0.get_dep(ix)
+        self.deref().get_dep(ix)
     }
 }
+
+/// A wrapper around a `rain` value to assert refinement conditions. 
+/// Implementation detail: library consumers should not be able to construct this!
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct PrivateValue(ValueEnum);
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
@@ -1175,13 +1188,13 @@ impl From<Sexpr> for NormalValue {
         if sexpr.len() == 1 {
             return sexpr[0].as_norm().clone();
         }
-        NormalValue(ValueEnum::Sexpr(sexpr))
+        NormalValue::assert_new(ValueEnum::Sexpr(sexpr))
     }
 }
 
 impl From<Parameter> for NormalValue {
     fn from(param: Parameter) -> NormalValue {
-        NormalValue(ValueEnum::Parameter(param))
+        NormalValue::assert_new(ValueEnum::Parameter(param))
     }
 }
 
@@ -1190,7 +1203,7 @@ impl From<Tuple> for NormalValue {
         if tuple == () {
             return ().into();
         }
-        NormalValue(ValueEnum::Tuple(tuple))
+        NormalValue::assert_new(ValueEnum::Tuple(tuple))
     }
 }
 
@@ -1199,13 +1212,13 @@ impl From<Product> for NormalValue {
         if product == Unit {
             return Unit.into();
         }
-        NormalValue(ValueEnum::Product(product))
+        NormalValue::assert_new(ValueEnum::Product(product))
     }
 }
 
 impl From<Universe> for NormalValue {
     fn from(universe: Universe) -> NormalValue {
-        NormalValue(ValueEnum::Universe(universe))
+        NormalValue::assert_new(ValueEnum::Universe(universe))
     }
 }
 
@@ -1365,7 +1378,7 @@ mod prettyprint_impl {
             if let Some(name) = printer.lookup(self) {
                 write!(fmt, "{}", name)
             } else {
-                self.0.prettyprint(printer, fmt)
+                self.deref().prettyprint(printer, fmt)
             }
         }
     }
