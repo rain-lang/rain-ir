@@ -245,7 +245,7 @@ macro_rules! pretty_display {
 macro_rules! enum_convert {
     (impl From<$T:ty> for $E:ty { as $En:ident$(::$V:ident)+, }) => {
         impl From<$T> for $E {
-            fn from(v: $T) -> $E { $En::$($V)+(v).into() }
+            fn from(v: $T) -> $E { $En::$($V)+(v) }
         }
     };
     (impl From<$T:ident> for $E:ty { as $En:ident, }) => {

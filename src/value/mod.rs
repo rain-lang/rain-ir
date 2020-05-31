@@ -834,22 +834,59 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Universe {}
 
     // NormalValue injection.
-    impl Injection<NormalValue> for Sexpr {
+    impl TryFrom<NormalValue> for Sexpr {
         as ValueEnum,
         match
             other if *other == () => Ok(Sexpr::unit()),
             other => Ok(Sexpr::singleton(ValId::from(other))),
     }
     impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
-    impl InjectionRef<NormalValue> for Parameter { as ValueEnum, }
-    impl Injection<NormalValue> for Tuple {
+    impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
+    impl TryFrom<NormalValue> for Tuple {
         as ValueEnum,
         match
             other if *other == () => Ok(Tuple::unit()),
     }
     impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
-    impl InjectionRef<NormalValue> for Product { as ValueEnum, } // No need to check for unit due to normalization!
-    impl InjectionRef<NormalValue> for Universe { as ValueEnum, }
+    impl TryFrom<NormalValue> for Product { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Product { as ValueEnum, }
+    impl TryFrom<NormalValue> for Universe { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
+}
+
+impl From<Sexpr> for NormalValue {
+    fn from(sexpr: Sexpr) -> NormalValue {
+        if sexpr == () { return ().into() }
+        if sexpr.len() == 1 { return sexpr[0].as_norm().clone() }
+        NormalValue(ValueEnum::Sexpr(sexpr))
+    }
+}
+
+impl From<Parameter> for NormalValue {
+    fn from(param: Parameter) -> NormalValue {
+        NormalValue(ValueEnum::Parameter(param))
+    }
+}
+
+impl From<Tuple> for NormalValue {
+    fn from(tuple: Tuple) -> NormalValue {
+        if tuple == () { return ().into() }
+        NormalValue(ValueEnum::Tuple(tuple))
+    }
+}
+
+impl From<Product> for NormalValue {
+    fn from(product: Product) -> NormalValue {
+        if product == Unit { return Unit.into() }
+        NormalValue(ValueEnum::Product(product))
+    }
+}
+
+impl From<Universe> for NormalValue {
+    fn from(universe: Universe) -> NormalValue {
+        NormalValue(ValueEnum::Universe(universe))
+    }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
