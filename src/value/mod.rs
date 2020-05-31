@@ -166,10 +166,14 @@ impl Deref for TypeId {
 }
 
 impl TypeId {
-    /// Assert a `NormalValue` is a valid type
-    pub(super) fn assert_normal_ty<T: Into<NormalValue>>(value: T) -> TypeId {
-        let normal: NormalValue = value.into();
-        TypeId(NormAddr::make(VALUE_CACHE.cache(normal), Private {}))
+    /// Directly construct a `ValId` from a `NormalValue`, deduplicating but not performing any other transformation/caching.
+    /// Useful to prevent infinite regress in e.g. cached constructors for `()`
+    pub fn direct_new<V>(v: V) -> TypeId
+    where
+        V: Type + Into<NormalValue>,
+    {
+        let norm: NormalValue = v.into();
+        TypeId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
     }
     /// Get this `TypeId` as a `ValId`
     #[inline]

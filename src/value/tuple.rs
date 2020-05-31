@@ -55,7 +55,7 @@ impl Tuple {
         Tuple {
             elems: TupleElems::new(),
             lifetime: Lifetime::default(),
-            ty: UNIT_TY.clone(),
+            ty: UNIT_TY.as_ty().clone(),
         }
     }
 }

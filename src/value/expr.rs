@@ -37,7 +37,7 @@ impl Sexpr {
         Sexpr {
             args: SexprArgs::new(),
             lifetime: Lifetime::default(),
-            ty: UNIT_TY.clone(),
+            ty: UNIT_TY.as_ty().clone(),
         }
     }
     /// Create an S-expression corresponding to a singleton value

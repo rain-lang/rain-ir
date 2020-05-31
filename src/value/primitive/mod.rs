@@ -7,7 +7,7 @@ use super::{
     tuple::{Product, Tuple},
     typing::{Type, Typed},
     universe::FINITE_TY,
-    NormalValue, TypeId, TypeRef, UniverseRef, ValId, ValueEnum,
+    NormalValue, TypeId, TypeRef, UniverseRef, ValId, VarId, ValueEnum,
 };
 use crate::{debug_from_display, quick_pretty};
 use lazy_static::lazy_static;
@@ -15,9 +15,9 @@ use std::convert::TryFrom;
 
 lazy_static! {
     /// An instance of the unit value
-    pub static ref UNIT: ValId = ValId::from(ValueEnum::from(()));
+    pub static ref UNIT: VarId<()> = VarId::direct_new(());
     /// An instance of the unit type
-    pub static ref UNIT_TY: TypeId = TypeId::assert_normal_ty(Unit);
+    pub static ref UNIT_TY: VarId<Unit> = VarId::direct_new(Unit);
 }
 
 impl PartialEq<()> for Tuple {
@@ -132,7 +132,7 @@ impl<'a, 'b> TryFrom<&'a NormalValue> for &'b () {
 impl From<()> for ValId {
     #[inline]
     fn from(_: ()) -> ValId {
-        UNIT.clone()
+        UNIT.as_val().clone()
     }
 }
 
@@ -254,7 +254,7 @@ impl From<Unit> for ValId {
 impl From<Unit> for TypeId {
     #[inline]
     fn from(_: Unit) -> TypeId {
-        UNIT_TY.clone()
+        UNIT_TY.as_ty().clone()
     }
 }
 
