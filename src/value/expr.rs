@@ -4,7 +4,7 @@
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
-    typing::Typed,
+    typing::{Typed, Type},
     TypeId, TypeRef, ValId, Value,
 };
 use crate::{debug_from_display, pretty_display};
@@ -58,8 +58,17 @@ impl Live for Sexpr {
 }
 
 impl Typed for Sexpr {
+    #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        match self.len() {
+            0 => false,
+            1 => self[0].is_ty(),
+            _ => self.ty().is_universe()
+        }
     }
 }
 

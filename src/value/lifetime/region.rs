@@ -5,7 +5,10 @@
 use super::{LifetimeBorrow, Live};
 use crate::quick_pretty;
 use crate::util::hash_cache::Cache;
-use crate::value::{typing::Typed, TypeId, TypeRef, ValId, Value};
+use crate::value::{
+    typing::{Type, Typed},
+    TypeId, TypeRef, ValId, Value,
+};
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -223,8 +226,13 @@ impl Live for Parameter {
 }
 
 impl Typed for Parameter {
+    #[inline]
     fn ty(&self) -> TypeRef {
         self.region[self.ix].borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.ty().is_universe()
     }
 }
 

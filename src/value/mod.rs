@@ -144,6 +144,10 @@ impl Typed for ValId {
     fn ty(&self) -> TypeRef {
         self.deref().ty()
     }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
+    }
 }
 
 impl Value for ValId {
@@ -241,6 +245,10 @@ impl Typed for ValRef<'_> {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
     }
 }
 
@@ -396,6 +404,10 @@ impl Typed for TypeId {
     fn ty(&self) -> TypeRef {
         self.deref().ty()
     }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
+    }
 }
 
 impl Value for TypeId {
@@ -526,6 +538,10 @@ impl Typed for TypeRef<'_> {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
     }
 }
 
@@ -778,6 +794,10 @@ impl<V: Typed> Typed for VarId<V> {
     fn ty(&self) -> TypeRef {
         self.as_norm().ty()
     }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
+    }
 }
 
 impl<V: Value> Value for VarId<V> {
@@ -957,6 +977,10 @@ impl<V: Typed> Typed for VarRef<'_, V> {
     fn ty(&self) -> TypeRef {
         self.as_norm().ty()
     }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.as_norm().is_ty()
+    }
 }
 
 impl<'a, V: Value> Value for VarRef<'a, V> {
@@ -1043,6 +1067,10 @@ impl Typed for NormalValue {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.deref().is_ty()
     }
 }
 
@@ -1264,9 +1292,16 @@ impl Live for ValueEnum {
 }
 
 impl Typed for ValueEnum {
+    #[inline]
     fn ty(&self) -> TypeRef {
         forv!(match (self) {
             s => s.ty(),
+        })
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        forv!(match (self) {
+            s => s.is_ty(),
         })
     }
 }

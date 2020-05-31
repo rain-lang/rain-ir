@@ -144,8 +144,13 @@ impl Live for () {
 }
 
 impl Typed for () {
+    #[inline]
     fn ty(&self) -> TypeRef {
         UNIT_TY.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
     }
 }
 
@@ -173,8 +178,13 @@ This is a singleton struct representing values of the unit type. It implements e
 pub struct Unit;
 
 impl Typed for Unit {
+    #[inline]
     fn ty(&self) -> TypeRef {
         unimplemented!()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
     }
 }
 

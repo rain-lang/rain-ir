@@ -190,8 +190,13 @@ impl Live for Universe {
 }
 
 impl Typed for Universe {
+    #[inline]
     fn ty(&self) -> TypeRef {
         self.universe().as_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
     }
 }
 

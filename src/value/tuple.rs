@@ -75,8 +75,13 @@ impl Deref for Tuple {
 }
 
 impl Typed for Tuple {
+    #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
     }
 }
 
@@ -148,8 +153,13 @@ impl Deref for Product {
 }
 
 impl Typed for Product {
+    #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
     }
 }
 

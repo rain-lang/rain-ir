@@ -1,7 +1,7 @@
 /*!
 The `rain` type system
 */
-use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, Value};
+use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, Value, ValueEnum};
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
 use std::ops::Deref;
@@ -10,6 +10,8 @@ use std::ops::Deref;
 pub trait Typed {
     /// Compute the type of this `rain` value
     fn ty(&self) -> TypeRef;
+    /// Check whether this `rain` value is a type
+    fn is_ty(&self) -> bool;
 }
 
 /// A trait implemented by `rain` values which are a type
@@ -32,6 +34,18 @@ impl Deref for TypeValue {
     type Target = NormalValue;
     fn deref(&self) -> &NormalValue {
         RefCast::ref_cast(&self.0)
+    }
+}
+
+impl From<TypeValue> for NormalValue {
+    fn from(ty: TypeValue) -> NormalValue {
+        NormalValue(ty.0)
+    }
+}
+
+impl From<TypeValue> for ValueEnum {
+    fn from(ty: TypeValue) -> ValueEnum {
+        (ty.0).0
     }
 }
 
