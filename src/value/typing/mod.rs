@@ -1,11 +1,12 @@
 /*!
 The `rain` type system
 */
-use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, Value, ValueEnum};
+use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum};
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
-use std::ops::Deref;
+use std::borrow::Borrow;
 use std::convert::TryFrom;
+use std::ops::Deref;
 
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
@@ -30,6 +31,55 @@ pub struct TypeValue(PrivateValue);
 
 debug_from_display!(TypeValue);
 pretty_display!(TypeValue, s, fmt => write!(fmt, "{}", s.deref()));
+
+impl Typed for TypeValue {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.deref().ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.deref().is_ty()
+    }
+}
+
+impl Value for TypeValue {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.deref().get_dep(ix)
+    }
+}
+
+impl Type for TypeValue {
+    #[inline]
+    fn universe(&self) -> UniverseRef {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.universe(),
+            ValueEnum::Product(p) => p.universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!"),
+        }
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.is_universe(),
+            ValueEnum::Product(p) => p.is_universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!"),
+        }
+    }
+}
+
+impl From<TypeValue> for TypeId {
+    fn from(_ty: TypeValue) -> TypeId {
+        panic!("Dummy!")
+    }
+}
 
 impl Deref for TypeValue {
     type Target = NormalValue;
@@ -71,6 +121,30 @@ impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
         } else {
             Err(value)
         }
+    }
+}
+
+impl<'a> From<&'a TypeValue> for &'a NormalValue {
+    fn from(value: &'a TypeValue) -> &'a NormalValue {
+        RefCast::ref_cast(&value.0)
+    }
+}
+
+impl Borrow<NormalValue> for TypeValue {
+    fn borrow(&self) -> &NormalValue {
+        self.into()
+    }
+}
+
+impl<'a> From<&'a TypeValue> for &'a ValueEnum {
+    fn from(value: &'a TypeValue) -> &'a ValueEnum {
+        &(value.0).0
+    }
+}
+
+impl Borrow<ValueEnum> for TypeValue {
+    fn borrow(&self) -> &ValueEnum {
+        self.into()
     }
 }
 

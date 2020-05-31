@@ -23,7 +23,7 @@ use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::Unit;
 use tuple::{Product, Tuple};
-use typing::{Type, Typed};
+use typing::{Type, Typed, TypeValue};
 use universe::Universe;
 
 lazy_static! {
@@ -78,20 +78,8 @@ impl<V> PartialEq<VarId<V>> for ValId {
     }
 }
 
-impl PartialEq<TypeId> for ValId {
-    fn eq(&self, other: &TypeId) -> bool {
-        self.0 == other.0
-    }
-}
-
 impl<'a> PartialEq<ValRef<'a>> for ValId {
     fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<TypeRef<'a>> for ValId {
-    fn eq(&self, other: &TypeRef<'a>) -> bool {
         self.0 == other.0
     }
 }
@@ -214,18 +202,6 @@ impl<'a> PartialEq<ValId> for ValRef<'a> {
     }
 }
 
-impl<'a> PartialEq<TypeId> for ValRef<'a> {
-    fn eq(&self, other: &TypeId) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<TypeRef<'a>> for ValRef<'a> {
-    fn eq(&self, other: &TypeRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
 impl<'a> Deref for ValRef<'a> {
     type Target = NormalValue;
     #[inline]
@@ -294,325 +270,11 @@ pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 debug_from_display!(ValRef<'_>);
 pretty_display!(ValRef<'_>, s, fmt  => write!(fmt, "{}", s.deref()));
 
-//TODO: consider making `TypeId` into `VarId<TypeEnum>`
+/// A `rain` type
+pub type TypeId = VarId<TypeValue>;
 
-/// A reference-counted, hash-consed `rain` type
-#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
-#[repr(transparent)]
-pub struct TypeId(NormAddr);
-
-impl<'a, V> PartialEq<VarRef<'a, V>> for TypeId {
-    fn eq(&self, other: &VarRef<'a, V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<V> PartialEq<VarId<V>> for TypeId {
-    fn eq(&self, other: &VarId<V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl PartialEq<ValId> for TypeId {
-    fn eq(&self, other: &ValId) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<ValRef<'a>> for TypeId {
-    fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<TypeRef<'a>> for TypeId {
-    fn eq(&self, other: &TypeRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Deref for TypeId {
-    type Target = ValId;
-    #[inline]
-    fn deref(&self) -> &ValId {
-        RefCast::ref_cast(&self.0)
-    }
-}
-
-impl Borrow<NormalValue> for TypeId {
-    #[inline]
-    fn borrow(&self) -> &NormalValue {
-        &self.0.addr
-    }
-}
-
-impl Borrow<ValueEnum> for TypeId {
-    #[inline]
-    fn borrow(&self) -> &ValueEnum {
-        &self.0.addr
-    }
-}
-
-impl TypeId {
-    /// Directly construct a `ValId` from a `NormalValue`, deduplicating but not performing any other transformation/caching.
-    /// Useful to prevent infinite regress in e.g. cached constructors for `()`
-    pub fn direct_new<V>(v: V) -> TypeId
-    where
-        V: Type + Into<NormalValue>,
-    {
-        let norm: NormalValue = v.into();
-        TypeId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
-    }
-    /// Get this `TypeId` as a `ValId`
-    #[inline]
-    pub fn as_val(&self) -> &ValId {
-        &self
-    }
-    /// Borrow a `TypeId`
-    #[inline]
-    pub fn borrow_ty(&self) -> TypeRef {
-        TypeRef(self.0.borrow_arc())
-    }
-    /// Get this `TypeId` as a `ValueEnum`
-    #[inline]
-    pub fn as_enum(&self) -> &ValueEnum {
-        &self.0
-    }
-    /// Get this `TypeRef` as a `NormalValue`
-    #[inline]
-    pub fn as_norm(&self) -> &NormalValue {
-        &self.0
-    }
-}
-
-impl From<TypeId> for ValId {
-    #[inline]
-    fn from(ty: TypeId) -> ValId {
-        ValId(ty.0)
-    }
-}
-
-impl Live for TypeId {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
-    }
-}
-
-impl Typed for TypeId {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.deref().ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
-    }
-}
-
-impl Value for TypeId {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        self.deref().no_deps()
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
-    }
-}
-
-impl From<TypeId> for ValueEnum {
-    fn from(val: TypeId) -> ValueEnum {
-        val.as_enum().clone()
-    }
-}
-
-impl From<TypeId> for NormalValue {
-    fn from(val: TypeId) -> NormalValue {
-        val.as_norm().clone()
-    }
-}
-
-impl Type for TypeId {
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        match self.as_enum() {
-            ValueEnum::Universe(u) => u.universe(),
-            ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            _ => panic!("Impossible!"),
-        }
-    }
-    #[inline]
-    fn is_universe(&self) -> bool {
-        match self.as_enum() {
-            ValueEnum::Universe(u) => u.is_universe(),
-            ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            _ => panic!("Impossible!"),
-        }
-    }
-}
-
-/// A reference to a `rain` type
-#[derive(Copy, Clone, Eq, PartialEq, Hash, RefCast)]
-#[repr(transparent)]
-pub struct TypeRef<'a>(NormRef<'a>);
-
-impl<'a> TypeRef<'a> {
-    /// Clone this type reference as a `TypeRef`
-    #[inline]
-    pub fn clone_ty(&self) -> TypeId {
-        TypeId(self.0.clone_arc())
-    }
-    /// Get this `TypeRef` as `ValRef`
-    #[inline]
-    pub fn as_val(&self) -> ValRef<'a> {
-        ValRef(self.0)
-    }
-    /// Get this `TypeRef` as a `ValueEnum`
-    #[inline]
-    pub fn as_enum(&self) -> &'a ValueEnum {
-        self.0.get()
-    }
-    /// Get this `TypeRef` as a `NormalValue`
-    #[inline]
-    pub fn as_norm(&self) -> &'a NormalValue {
-        self.0.get()
-    }
-}
-
-impl<'a, V> PartialEq<VarRef<'a, V>> for TypeRef<'a> {
-    fn eq(&self, other: &VarRef<'a, V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<'a, V> PartialEq<VarId<V>> for TypeRef<'a> {
-    fn eq(&self, other: &VarId<V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<'a> PartialEq<ValId> for TypeRef<'a> {
-    fn eq(&self, other: &ValId) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<TypeId> for TypeRef<'a> {
-    fn eq(&self, other: &TypeId) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> PartialEq<ValRef<'a>> for TypeRef<'a> {
-    fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<'a> Deref for TypeRef<'a> {
-    type Target = ValRef<'a>;
-    #[inline]
-    fn deref(&self) -> &ValRef<'a> {
-        RefCast::ref_cast(&self.0)
-    }
-}
-
-impl<'a> From<TypeRef<'a>> for ValRef<'a> {
-    #[inline]
-    fn from(t: TypeRef<'a>) -> ValRef<'a> {
-        t.as_val()
-    }
-}
-
-impl Live for TypeRef<'_> {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
-    }
-}
-
-impl Typed for TypeRef<'_> {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.deref().ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
-    }
-}
-
-impl Value for TypeRef<'_> {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        self.deref().no_deps()
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
-    }
-}
-
-impl From<TypeRef<'_>> for ValueEnum {
-    fn from(val: TypeRef) -> ValueEnum {
-        val.as_enum().clone()
-    }
-}
-
-impl From<TypeRef<'_>> for NormalValue {
-    fn from(val: TypeRef) -> NormalValue {
-        val.as_norm().clone()
-    }
-}
-
-impl Borrow<NormalValue> for TypeRef<'_> {
-    #[inline]
-    fn borrow(&self) -> &NormalValue {
-        &self.0.addr
-    }
-}
-
-impl Borrow<ValueEnum> for TypeRef<'_> {
-    #[inline]
-    fn borrow(&self) -> &ValueEnum {
-        &self.0.addr
-    }
-}
-
-impl Type for TypeRef<'_> {
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        match self.as_enum() {
-            ValueEnum::Universe(u) => u.universe(),
-            ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            _ => panic!("Impossible!"),
-        }
-    }
-    #[inline]
-    fn is_universe(&self) -> bool {
-        match self.as_enum() {
-            ValueEnum::Universe(u) => u.is_universe(),
-            ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            _ => panic!("Impossible!"),
-        }
-    }
-}
-
-impl From<TypeRef<'_>> for TypeId {
-    fn from(t: TypeRef) -> TypeId {
-        t.clone_ty()
-    }
-}
-
-debug_from_display!(TypeId);
-pretty_display!(TypeId, s, fmt => write!(fmt, "{}", s.deref()));
-debug_from_display!(TypeRef<'_>);
-pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
+/// A `rain` type reference
+pub type TypeRef<'a> = VarRef<'a, TypeValue>;
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
 #[derive(Eq, Hash, RefCast)]
@@ -642,18 +304,6 @@ impl<V> PartialEq<ValId> for VarId<V> {
 
 impl<'a, V> PartialEq<ValRef<'a>> for VarId<V> {
     fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<V> PartialEq<TypeId> for VarId<V> {
-    fn eq(&self, other: &TypeId) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<'a, V> PartialEq<TypeRef<'a>> for VarId<V> {
-    fn eq(&self, other: &TypeRef<'a>) -> bool {
         self.ptr == other.0
     }
 }
@@ -717,7 +367,10 @@ impl<'a, V> VarId<V> {
     where
         V: Type,
     {
-        TypeRef(self.ptr.borrow_arc())
+        VarRef {
+            ptr: self.ptr.borrow_arc(),
+            variant: std::marker::PhantomData
+        }
     }
 }
 
@@ -771,24 +424,6 @@ where
     }
 }
 
-impl<V> From<VarId<V>> for TypeId
-where
-    V: Type,
-{
-    fn from(v: VarId<V>) -> TypeId {
-        TypeId(v.ptr)
-    }
-}
-
-impl<'a, V> From<VarRef<'a, V>> for TypeRef<'a>
-where
-    V: Type,
-{
-    fn from(v: VarRef<'a, V>) -> TypeRef<'a> {
-        TypeRef(v.ptr)
-    }
-}
-
 impl<V: Typed> Typed for VarId<V> {
     #[inline]
     fn ty(&self) -> TypeRef {
@@ -820,6 +455,12 @@ impl<V: Value> From<VarId<V>> for ValueEnum {
 impl<V: Value> From<VarId<V>> for NormalValue {
     fn from(val: VarId<V>) -> NormalValue {
         val.as_norm().clone()
+    }
+}
+
+impl<'a, V: Value> From<&'a VarId<V>> for &'a ValId {
+    fn from(var: &'a VarId<V>) -> &'a ValId {
+        RefCast::ref_cast(&var.ptr)
     }
 }
 
@@ -861,18 +502,6 @@ impl<'a, V> PartialEq<ValRef<'a>> for VarRef<'a, V> {
     }
 }
 
-impl<'a, V> PartialEq<TypeId> for VarRef<'a, V> {
-    fn eq(&self, other: &TypeId) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<'a, V> PartialEq<TypeRef<'a>> for VarRef<'a, V> {
-    fn eq(&self, other: &TypeRef<'a>) -> bool {
-        self.ptr == other.0
-    }
-}
-
 impl<'a, V> Clone for VarRef<'a, V> {
     #[inline]
     fn clone(&self) -> VarRef<'a, V> {
@@ -903,11 +532,18 @@ impl<'a, V> VarRef<'a, V> {
     where
         V: Type,
     {
-        TypeRef(self.ptr)
+        VarRef {
+            ptr: self.ptr,
+            variant: std::marker::PhantomData
+        }
     }
     /// Clone this `VarRef` as a `ValId`
     pub fn clone_val(&self) -> ValId {
         self.as_val().clone_val()
+    }
+    /// Clone this `VarRef` as a `TypeId`
+    pub fn clone_ty(&self) -> TypeId where V: Type {
+        self.as_ty().clone_var()
     }
     /// Clone this `VarRef` as a `VarId`
     pub fn clone_var(&self) -> VarId<V> {
@@ -1332,7 +968,10 @@ macro_rules! impl_to_type {
     ($T:ty) => {
         impl From<$T> for crate::value::TypeId {
             fn from(v: $T) -> crate::value::TypeId {
-                crate::value::TypeId(crate::value::ValId::from(v).0)
+                crate::value::TypeId {
+                    ptr: crate::value::ValId::from(v).0,
+                    variant: std::marker::PhantomData
+                }
             }
         }
     };
@@ -1378,28 +1017,6 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             self.deref().prettyprint(printer, fmt)
-        }
-    }
-
-    impl PrettyPrint for TypeId {
-        #[inline]
-        fn prettyprint<I: From<usize> + Display>(
-            &self,
-            printer: &mut PrettyPrinter<I>,
-            fmt: &mut Formatter,
-        ) -> Result<(), fmt::Error> {
-            self.0.prettyprint(printer, fmt)
-        }
-    }
-
-    impl PrettyPrint for TypeRef<'_> {
-        #[inline]
-        fn prettyprint<I: From<usize> + Display>(
-            &self,
-            printer: &mut PrettyPrinter<I>,
-            fmt: &mut Formatter,
-        ) -> Result<(), fmt::Error> {
-            self.0.prettyprint(printer, fmt)
         }
     }
 

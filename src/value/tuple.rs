@@ -179,7 +179,7 @@ impl Value for Product {
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        &self[ix]
+        (&self[ix]).into()
     }
 }
 
