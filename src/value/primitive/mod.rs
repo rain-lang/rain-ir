@@ -293,3 +293,22 @@ pub struct Empty;
 
 quick_pretty!(Empty, "#empty");
 debug_from_display!(Empty);
+
+#[cfg(test)]
+mod tests {
+    //use super::*;
+    /*
+    /// Construction of the unit value and unit type in various manners yields the correct results
+    #[test]
+    fn unit_construction() {
+        let unit: ValId = ().into();
+        let unit_ty: TypeId = Unit.into();
+        let unit_cached = UNIT.clone();
+        let unit_ty_cached = UNIT_TY.clone();
+        assert_eq!(unit, unit_cached);
+        //assert_eq!(unit_ty, unit_ty_cached);
+        //assert_ne!(unit_ty, unit);
+        //assert_eq!(unit.ty(), unit_ty);
+    }
+    */
+}

@@ -80,9 +80,13 @@ mod prettyprint_impl {
         fn prettyprint(
             &self,
             _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            write!(fmt, "(")?;
+            for _value in self.iter() {
+                unimplemented!()
+            }
+            write!(fmt, ")")
         }
     }
 }

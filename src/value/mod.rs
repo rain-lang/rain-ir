@@ -995,10 +995,11 @@ mod prettyprint_impl {
         #[inline]
         fn prettyprint(
             &self,
-            _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            //TODO: this
+            self.deref().prettyprint(printer, fmt)
         }
     }
 
@@ -1006,10 +1007,11 @@ mod prettyprint_impl {
         #[inline]
         fn prettyprint(
             &self,
-            _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            printer: &mut PrettyPrinter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            //TODO: this
+            self.deref().prettyprint(printer, fmt)
         }
     }
 

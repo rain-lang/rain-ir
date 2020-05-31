@@ -168,8 +168,9 @@ mod prettyprint_impl {
         fn prettyprint(
             &self,
             _printer: &mut PrettyPrinter,
-            _fmt: &mut Formatter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
+            if self.len() == 0 { return write!(fmt, "{}", crate::value::primitive::Unit) }
             unimplemented!()
         }
     }
