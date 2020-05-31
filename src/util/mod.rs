@@ -121,8 +121,8 @@ where
     S: Deref,
 {
     fn eq(&self, other: &PrivateByAddr<S, U>) -> bool {
-        let self_ptr = self as *const PrivateByAddr<T, V> as *const u8;
-        let other_ptr = other as *const PrivateByAddr<S, U> as *const u8;
+        let self_ptr = self.deref() as *const _ as *const u8;
+        let other_ptr = other.deref() as *const _ as *const u8;
         self_ptr == other_ptr
     }
 }
@@ -361,5 +361,21 @@ macro_rules! enum_convert {
                 impl $Tr<$E> for $T { $(as $t,)* $(match $($from $(if $guard)* => $to,)*)* }
             );
         )+
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Check the basic functionality of `PrivateByAddress`
+    #[test]
+    fn private_by_address() {
+        let t_1 = PrivateByAddr::make(Arc::new(true), ());
+        let t_2 = PrivateByAddr::make(Arc::new(true), ());
+        assert_ne!(t_1, t_2);
+        assert_eq!(t_1.deref(), t_2.deref());
+        let t_1b = t_1.borrow_arc();
+        assert_eq!(t_1b, t_1);
     }
 }

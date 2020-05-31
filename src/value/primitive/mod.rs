@@ -296,19 +296,27 @@ debug_from_display!(Empty);
 
 #[cfg(test)]
 mod tests {
-    //use super::*;
-    /*
+    use super::*;
     /// Construction of the unit value and unit type in various manners yields the correct results
     #[test]
     fn unit_construction() {
         let unit: ValId = ().into();
-        let unit_ty: TypeId = Unit.into();
+        let unit_sexpr: ValId = Sexpr::unit().into();
+        let unit_tuple: ValId = Tuple::unit().into();
         let unit_cached = UNIT.clone();
+        let unit_ty: TypeId = Unit.into();
+        let unit_ty_product: TypeId = Product::unit_ty().into();
+        let unit_ty_val: ValId = Unit.into();
+        let unit_ty_product_val: ValId = Product::unit_ty().into();
         let unit_ty_cached = UNIT_TY.clone();
+        assert_eq!(unit, unit_sexpr);
+        assert_eq!(unit, unit_tuple);
         assert_eq!(unit, unit_cached);
-        //assert_eq!(unit_ty, unit_ty_cached);
-        //assert_ne!(unit_ty, unit);
-        //assert_eq!(unit.ty(), unit_ty);
+        assert_eq!(unit_ty, unit_ty_product);
+        assert_eq!(unit_ty, unit_ty_val);
+        assert_eq!(unit_ty, unit_ty_product_val);
+        assert_eq!(unit_ty, unit_ty_cached);
+        assert_eq!(unit.ty(), unit_ty);
+        assert_ne!(unit_ty, unit);
     }
-    */
 }
