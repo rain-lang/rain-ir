@@ -41,7 +41,7 @@ pub const DEFAULT_MAX_TABS: u16 = 4;
 
 impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     /// Create a new prettyprinter
-    pub fn new() -> PrettyPrinter {
+    pub fn new() -> PrettyPrinter<I> {
         PrettyPrinter {
             symbols: SymbolTable::new(),
             unique: 0,
@@ -105,7 +105,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                     write!(fmt, "let {} = ", name)?;
                 }
                 top.prettyprint(self, fmt)?;
-                write!(fmt, ";\n")?;
+                writeln!(fmt, ";")?;
                 self.symbols.def(top.deref(), name);
                 // Record the increase in the number of defined names
                 self.unique += 1;

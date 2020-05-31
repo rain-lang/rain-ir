@@ -134,4 +134,20 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     pub fn len(&self) -> usize {
         self.cache.len()
     }
+
+    /**
+    Check if this value cache is empty.
+
+    # Example
+    ```rust
+    use rain_lang::util::hash_cache::Cache;
+    let int_cache = Cache::<u64>::new();
+    assert!(int_cache.is_empty());
+    int_cache.cache(10);
+    assert!(!int_cache.is_empty());
+    ```
+    */
+    pub fn is_empty(&self) -> bool {
+        self.cache.is_empty()
+    }
 }

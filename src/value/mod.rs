@@ -965,7 +965,7 @@ impl<'a, V: Value> Value for VarRef<'a, V> {
         self.deref().no_deps()
     }
     #[inline]
-    fn get_dep<'b>(&'b self, ix: usize) -> &'b ValId {
+    fn get_dep(&self, ix: usize) -> &ValId {
         self.as_norm().get_dep(ix)
     }
 }
@@ -1074,6 +1074,10 @@ impl<V: Value> Deps<V> {
     /// The number of dependencies of this value
     pub fn len(&self) -> usize {
         self.0.no_deps()
+    }
+    /// Check whether this value has no dependencies
+    pub fn is_empty(&self) -> bool {
+        self.0.no_deps() == 0
     }
     /// Iterate over the dependencies of this value
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
