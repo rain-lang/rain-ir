@@ -388,3 +388,13 @@ Parse a compound `rain` expression. Does *not* consume whitespace before the exp
 pub fn parse_compound(input: &str) -> IResult<&str, Expr> {
     parse_atom(input) //TODO: this
 }
+
+/// Parse a statement (TODO: this)
+pub fn parse_statement(input: &str) -> IResult<&str, Let> {
+    Err(nom::Err::Error((input, nom::error::ErrorKind::RegexpMatch)))
+}
+
+/// Parse a standalone `rain` expression
+pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
+    map(|input| parse_expr_list(false, input), |e| Expr::Sexpr(Sexpr(e)))(input)
+}

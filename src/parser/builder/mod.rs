@@ -1,9 +1,9 @@
 /*!
 A builder for `rain` expressions
 */
+use super::ast::{Expr, Ident, Let, Member, Sexpr as SExpr, Tuple as TupleExpr};
 use crate::util::symbol_table::SymbolTable;
-use crate::value::{ValId, tuple::Tuple, expr::Sexpr};
-use super::ast::{Ident, Expr, Member, Tuple as TupleExpr, Sexpr as SExpr};
+use crate::value::{expr::Sexpr, tuple::Tuple, ValId};
 use ahash::RandomState;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{BuildHasher, Hash};
@@ -21,12 +21,11 @@ impl<S: Hash + Eq + Debug, B: BuildHasher> Debug for Builder<S, B> {
     }
 }
 
-
 impl<'a, S: Hash + Eq + From<&'a str>> Builder<S> {
     /// Create a new builder
     pub fn new() -> Builder<S> {
         Builder {
-            symbols: SymbolTable::new()
+            symbols: SymbolTable::new(),
         }
     }
 }
@@ -34,7 +33,7 @@ impl<'a, S: Hash + Eq + From<&'a str>> Builder<S> {
 impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher + Default> Default for Builder<S, B> {
     fn default() -> Builder<S, B> {
         Builder {
-            symbols: SymbolTable::default()
+            symbols: SymbolTable::default(),
         }
     }
 }
@@ -45,7 +44,7 @@ pub enum Error<'a> {
     /// An undefined identifier
     UndefinedIdent(Ident<'a>),
     /// An unimplemented `rain` IR build
-    NotImplemented
+    NotImplemented,
 }
 
 impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher> Builder<S, B> {
@@ -55,7 +54,7 @@ impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher> Builder<S, B> {
             Expr::Ident(ident) => self.build_ident(*ident)?,
             Expr::Member(member) => self.build_member(member)?,
             Expr::Sexpr(sexpr) => self.build_sexpr(sexpr)?.into(),
-            Expr::Tuple(tuple) => self.build_tuple(tuple)?.into()
+            Expr::Tuple(tuple) => self.build_tuple(tuple)?.into(),
         };
         Ok(result_value)
     }
@@ -74,5 +73,9 @@ impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher> Builder<S, B> {
     /// Build a tuple
     pub fn build_tuple(&self, _tuple: &TupleExpr<'a>) -> Result<Tuple, Error<'a>> {
         Err(Error::NotImplemented)
-    } 
+    }
+    /// Build a let-statement
+    pub fn build_let(&self, _l: &Let<'a>) -> Result<(), Error<'a>> {
+        unimplemented!()
+    }
 }
