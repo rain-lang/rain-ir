@@ -5,6 +5,7 @@ use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, Value, Valu
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
 use std::ops::Deref;
+use std::convert::TryFrom;
 
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
@@ -46,6 +47,42 @@ impl From<TypeValue> for NormalValue {
 impl From<TypeValue> for ValueEnum {
     fn from(ty: TypeValue) -> ValueEnum {
         (ty.0).0
+    }
+}
+
+impl TryFrom<NormalValue> for TypeValue {
+    type Error = NormalValue;
+    #[inline]
+    fn try_from(value: NormalValue) -> Result<TypeValue, NormalValue> {
+        if value.is_ty() {
+            Ok(TypeValue(value.0))
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
+    type Error = &'a NormalValue;
+    #[inline]
+    fn try_from(value: &'a NormalValue) -> Result<&'a TypeValue, &'a NormalValue> {
+        if value.is_ty() {
+            Ok(RefCast::ref_cast(&value.0))
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl TryFrom<ValueEnum> for TypeValue {
+    type Error = ValueEnum;
+    #[inline]
+    fn try_from(value: ValueEnum) -> Result<TypeValue, ValueEnum> {
+        if value.is_ty() {
+            Ok(TypeValue(NormalValue::from(value).0))
+        } else {
+            Err(value)
+        }
     }
 }
 
