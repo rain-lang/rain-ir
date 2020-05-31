@@ -911,27 +911,27 @@ where
     }
 }
 
-impl<V> Debug for VarId<V> {
+impl<V> Debug for VarId<V> where V: Value {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Debug::fmt(self.ptr.deref(), fmt)
+        Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Debug for VarRef<'_, V> {
+impl<V> Debug for VarRef<'_, V> where V: Value {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Debug::fmt(self.ptr.get(), fmt)
+        Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarId<V> {
+impl<V> Display for VarId<V> where V: Value {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Display::fmt(self.ptr.deref(), fmt)
+        Display::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarRef<'_, V> {
+impl<V> Display for VarRef<'_, V> where V: Value {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Display::fmt(self.ptr.get(), fmt)
+        Display::fmt(self.as_norm(), fmt)
     }
 }
 
