@@ -5,8 +5,8 @@ use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
-    universe::{Universe, FINITE_TY},
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId, ValueEnum,
+    universe::FINITE_TY,
+    TypeId, TypeRef, UniverseId, UniverseRef, ValId,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -101,9 +101,7 @@ impl Product {
         let lifetime = Lifetime::default()
             .intersect(elems.iter().map(|t| t.lifetime()))?
             .clone_lifetime();
-        let ty = FINITE_TY
-            .union_all(elems.iter().map(|t| t.universe()))
-            .clone_var();
+        let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
             lifetime,
@@ -140,7 +138,7 @@ impl Deref for Product {
 
 impl Typed for Product {
     fn ty(&self) -> TypeRef {
-        unimplemented!()
+        self.ty.borrow_ty()
     }
 }
 

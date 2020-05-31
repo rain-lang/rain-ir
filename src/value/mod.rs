@@ -310,11 +310,14 @@ impl<'a, V> VarId<V> {
     /// Directly construct a `ValId` from a `V`, deduplicating but not performing any other transformation/caching.
     /// Useful to prevent infinite regress in e.g. cached constructors for `()`
     #[inline]
-    pub fn direct_new(v: V) -> VarId<V> where V: Into<NormalValue> {
+    pub fn direct_new(v: V) -> VarId<V>
+    where
+        V: Into<NormalValue>,
+    {
         let norm: NormalValue = v.into();
-        VarId{
+        VarId {
             ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
-            variant: std::marker::PhantomData
+            variant: std::marker::PhantomData,
         }
     }
     /// Get this `VarId` as a `NormalValue`
@@ -329,6 +332,13 @@ impl<'a, V> VarId<V> {
     pub fn as_val(&self) -> &ValId {
         RefCast::ref_cast(&self.ptr)
     }
+    /// Get this `VarId` as a `TypeId`
+    pub fn as_ty(&self) -> &TypeId
+    where
+        V: Type,
+    {
+        RefCast::ref_cast(&self.ptr)
+    }
     /// Borrow this `VarId` as a `VarRef`
     pub fn borrow_var(&self) -> VarRef<V> {
         VarRef {
@@ -339,6 +349,13 @@ impl<'a, V> VarId<V> {
     /// Borrow this `VarId` as a `ValRef`
     pub fn borrow_val(&self) -> ValRef {
         ValRef(self.ptr.borrow_arc())
+    }
+    /// Borrow this `VarId` as a `TypeRef`
+    pub fn borrow_ty(&self) -> TypeRef
+    where
+        V: Type,
+    {
+        TypeRef(self.ptr.borrow_arc())
     }
 }
 
@@ -392,6 +409,24 @@ where
     }
 }
 
+impl<V> From<VarId<V>> for TypeId
+where
+    V: Type,
+{
+    fn from(v: VarId<V>) -> TypeId {
+        TypeId(v.ptr)
+    }
+}
+
+impl<'a, V> From<VarRef<'a, V>> for TypeRef<'a>
+where
+    V: Type,
+{
+    fn from(v: VarRef<'a, V>) -> TypeRef<'a> {
+        TypeRef(v.ptr)
+    }
+}
+
 /// A reference-counted pointer to a value guaranteed to be a typing universe
 pub type UniverseId = VarId<Universe>;
 
@@ -431,6 +466,13 @@ impl<'a, V> VarRef<'a, V> {
     pub fn as_val(&self) -> ValRef<'a> {
         ValRef(self.ptr)
     }
+    /// Get this `VarRef` as a `TypeRef`
+    pub fn as_ty(&self) -> TypeRef<'a>
+    where
+        V: Type,
+    {
+        TypeRef(self.ptr)
+    }
     /// Clone this `VarRef` as a `ValId`
     pub fn clone_val(&self) -> ValId {
         self.as_val().clone_val()
@@ -439,7 +481,7 @@ impl<'a, V> VarRef<'a, V> {
     pub fn clone_var(&self) -> VarId<V> {
         VarId {
             ptr: self.ptr.clone_arc(),
-            variant: self.variant
+            variant: self.variant,
         }
     }
 }

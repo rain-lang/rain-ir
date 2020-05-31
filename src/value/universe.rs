@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use lazycell::AtomicLazyCell;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 lazy_static! {
     /// An instance of the universe of finite types
@@ -139,33 +140,41 @@ quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.ki
 
 impl<'a> UniverseId {
     /// Take the union of this universe and another
-    pub fn union(&'a self, other: UniverseRef<'a>) -> UniverseRef<'a> {
-        unimplemented!()
+    pub fn union(&'a self, other: UniverseRef<'a>) -> UniverseId {
+        self.borrow_var().union(other)
     }
     /// Take the union of an iterator of universes with the given universe
-    pub fn union_all<I>(&'a self, iter: I) -> UniverseRef<'a>
+    pub fn union_all<I>(&'a self, iter: I) -> UniverseId
     where
         I: Iterator<Item = UniverseRef<'a>>,
     {
-        let mut base = self.borrow_var();
-        for universe in iter {
-            base = base.union(universe)
-        }
-        base
+        self.borrow_var().union_all(iter)
     }
 }
 
 impl<'a> UniverseRef<'a> {
     /// Take the union of this universe and another
-    pub fn union(&self, other: UniverseRef<'a>) -> UniverseRef<'a> {
-        unimplemented!()
+    pub fn union(&self, other: UniverseRef<'a>) -> UniverseId {
+        //TODO: optimize, `UniverseCow`...
+        if self.deref() >= other.deref() {
+            self.clone_var()
+        } else if other.deref() >= self.deref() {
+            other.clone_var()
+        } else {
+            Universe {
+                level: self.level.max(other.level),
+                kind: self.kind.min(other.kind),
+                ty: AtomicLazyCell::new()
+            }.into()
+        }
     }
     /// Take the union of an iterator of universes with the given universe
-    pub fn union_all<I>(&self, iter: I) -> UniverseRef<'a>
+    pub fn union_all<I>(&self, iter: I) -> UniverseId
     where
         I: Iterator<Item = UniverseRef<'a>>,
     {
-        let mut base = self.clone();
+        //TODO: optimize... `UniverseCow`...
+        let mut base = self.clone_var();
         for universe in iter {
             base = base.union(universe)
         }
@@ -181,7 +190,7 @@ impl Live for Universe {
 
 impl Typed for Universe {
     fn ty(&self) -> TypeRef {
-        unimplemented!()
+        self.universe().as_ty()
     }
 }
 
