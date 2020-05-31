@@ -407,5 +407,5 @@ pub fn parse_statement(input: &str) -> IResult<&str, Let> {
 
 /// Parse a standalone `rain` expression
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    map(|input| parse_expr_list(false, input), |e| Expr::Sexpr(Sexpr(e)))(input)
+    map(|input| parse_expr_list(true, input), |e| Expr::Sexpr(Sexpr(e)))(input)
 }
