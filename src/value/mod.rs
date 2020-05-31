@@ -96,7 +96,6 @@ impl<'a> PartialEq<TypeRef<'a>> for ValId {
     }
 }
 
-
 impl Deref for ValId {
     type Target = NormalValue;
     #[inline]
@@ -130,6 +129,29 @@ impl Typed for ValId {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+}
+
+impl Value for ValId {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.deref().get_dep(ix)
+    }
+}
+
+impl From<ValId> for ValueEnum {
+    fn from(val: ValId) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl From<ValId> for NormalValue {
+    fn from(val: ValId) -> NormalValue {
+        val.as_norm().clone()
     }
 }
 
@@ -208,6 +230,29 @@ impl Typed for ValRef<'_> {
     }
 }
 
+impl Value for ValRef<'_> {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.deref().get_dep(ix)
+    }
+}
+
+impl From<ValRef<'_>> for ValueEnum {
+    fn from(val: ValRef) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl From<ValRef<'_>> for NormalValue {
+    fn from(val: ValRef) -> NormalValue {
+        val.as_norm().clone()
+    }
+}
+
 debug_from_display!(ValId);
 pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 debug_from_display!(ValRef<'_>);
@@ -249,7 +294,6 @@ impl<'a> PartialEq<TypeRef<'a>> for TypeId {
         self.0 == other.0
     }
 }
-
 
 impl Deref for TypeId {
     type Target = ValId;
@@ -309,6 +353,29 @@ impl Typed for TypeId {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+}
+
+impl Value for TypeId {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.deref().get_dep(ix)
+    }
+}
+
+impl From<TypeId> for ValueEnum {
+    fn from(val: TypeId) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl From<TypeId> for NormalValue {
+    fn from(val: TypeId) -> NormalValue {
+        val.as_norm().clone()
     }
 }
 
@@ -382,7 +449,6 @@ impl<'a> PartialEq<ValRef<'a>> for TypeRef<'a> {
     }
 }
 
-
 impl<'a> Deref for TypeRef<'a> {
     type Target = ValRef<'a>;
     #[inline]
@@ -409,6 +475,29 @@ impl Typed for TypeRef<'_> {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.deref().ty()
+    }
+}
+
+impl Value for TypeRef<'_> {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.deref().get_dep(ix)
+    }
+}
+
+impl From<TypeRef<'_>> for ValueEnum {
+    fn from(val: TypeRef) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl From<TypeRef<'_>> for NormalValue {
+    fn from(val: TypeRef) -> NormalValue {
+        val.as_norm().clone()
     }
 }
 
@@ -460,7 +549,6 @@ impl<'a, V> PartialEq<TypeRef<'a>> for VarId<V> {
         self.ptr == other.0
     }
 }
-
 
 impl<'a, V> Clone for VarId<V> {
     #[inline]
@@ -590,6 +678,36 @@ where
 {
     fn from(v: VarRef<'a, V>) -> TypeRef<'a> {
         TypeRef(v.ptr)
+    }
+}
+
+impl<V: Typed> Typed for VarId<V> {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.as_norm().ty()
+    }
+}
+
+impl<V: Value> Value for VarId<V> {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.as_norm().get_dep(ix)
+    }
+}
+
+impl<V: Value> From<VarId<V>> for ValueEnum {
+    fn from(val: VarId<V>) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl<V: Value> From<VarId<V>> for NormalValue {
+    fn from(val: VarId<V>) -> NormalValue {
+        val.as_norm().clone()
     }
 }
 
@@ -742,6 +860,36 @@ where
     }
 }
 
+impl<V: Typed> Typed for VarRef<'_, V> {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.as_norm().ty()
+    }
+}
+
+impl<'a, V: Value> Value for VarRef<'a, V> {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.deref().no_deps()
+    }
+    #[inline]
+    fn get_dep<'b>(&'b self, ix: usize) -> &'b ValId {
+        self.as_norm().get_dep(ix)
+    }
+}
+
+impl<V: Value> From<VarRef<'_, V>> for ValueEnum {
+    fn from(val: VarRef<V>) -> ValueEnum {
+        val.as_enum().clone()
+    }
+}
+
+impl<V: Value> From<VarRef<'_, V>> for NormalValue {
+    fn from(val: VarRef<V>) -> NormalValue {
+        val.as_norm().clone()
+    }
+}
+
 /// A private type which can only be constructed within the `value` crate: an implementation detail so that
 /// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
 #[derive(Debug)]
@@ -791,11 +939,46 @@ impl From<NormalValue> for ValueEnum {
     }
 }
 
+impl Typed for NormalValue {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.0.ty()
+    }
+}
+
+impl Value for NormalValue {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.0.no_deps()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        self.0.get_dep(ix)
+    }
+}
+
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value: Into<NormalValue> + Into<ValueEnum> {}
+pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed {
+    /// Get the number of dependencies of this value
+    fn no_deps(&self) -> usize;
+    /// Get a given dependency of this value
+    fn get_dep(&self, dep: usize) -> &ValId;
+}
+
+/// The dependencies of a value
+#[derive(Debug, Copy, Clone, RefCast)]
+#[repr(transparent)]
+pub struct Deps<V>(pub V);
+
+impl<V: Value> std::ops::Index<usize> for Deps<V> {
+    type Output = ValId;
+    fn index(&self, ix: usize) -> &ValId {
+        self.0.get_dep(ix)
+    }
+}
 
 /// An enumeration of possible `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -810,6 +993,23 @@ pub enum ValueEnum {
     Product(Product),
     /// A typing universe
     Universe(Universe),
+}
+
+impl Value for ValueEnum {
+    fn no_deps(&self) -> usize {
+        forv! {
+            match(self) {
+                v => v.no_deps(),
+            }
+        }
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        forv! {
+            match(self) {
+                v => v.get_dep(ix),
+            }
+        }
+    }
 }
 
 enum_convert! {
@@ -857,8 +1057,12 @@ enum_convert! {
 
 impl From<Sexpr> for NormalValue {
     fn from(sexpr: Sexpr) -> NormalValue {
-        if sexpr == () { return ().into() }
-        if sexpr.len() == 1 { return sexpr[0].as_norm().clone() }
+        if sexpr == () {
+            return ().into();
+        }
+        if sexpr.len() == 1 {
+            return sexpr[0].as_norm().clone();
+        }
         NormalValue(ValueEnum::Sexpr(sexpr))
     }
 }
@@ -871,14 +1075,18 @@ impl From<Parameter> for NormalValue {
 
 impl From<Tuple> for NormalValue {
     fn from(tuple: Tuple) -> NormalValue {
-        if tuple == () { return ().into() }
+        if tuple == () {
+            return ().into();
+        }
         NormalValue(ValueEnum::Tuple(tuple))
     }
 }
 
 impl From<Product> for NormalValue {
     fn from(product: Product) -> NormalValue {
-        if product == Unit { return Unit.into() }
+        if product == Unit {
+            return Unit.into();
+        }
         NormalValue(ValueEnum::Product(product))
     }
 }

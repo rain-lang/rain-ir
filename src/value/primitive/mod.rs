@@ -7,7 +7,7 @@ use super::{
     tuple::{Product, Tuple},
     typing::{Type, Typed},
     universe::FINITE_TY,
-    NormalValue, TypeId, TypeRef, UniverseRef, ValId, VarId, ValueEnum,
+    NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
 use crate::{debug_from_display, quick_pretty};
 use lazy_static::lazy_static;
@@ -148,6 +148,20 @@ impl Typed for () {
     }
 }
 
+impl Value for () {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Attempted to get dependency {} of the unit value, but `()` has no dependencies!",
+            ix
+        )
+    }
+}
+
 /**
 The unit type
 
@@ -222,7 +236,6 @@ impl PartialEq<NormalValue> for Unit {
     }
 }
 
-
 impl From<Unit> for ValueEnum {
     #[inline]
     fn from(_: Unit) -> ValueEnum {
@@ -284,6 +297,20 @@ impl<'a, 'b> TryFrom<&'a NormalValue> for &'b Unit {
         } else {
             Err(value)
         }
+    }
+}
+
+impl Value for Unit {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Attempted to get dependency {} of the unit type, but `Unit` has no dependencies!",
+            ix
+        )
     }
 }
 

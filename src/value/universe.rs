@@ -5,7 +5,7 @@ use crate::quick_pretty;
 use crate::value::{
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
-    UniverseId, UniverseRef, TypeRef
+    TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
 use lazy_static::lazy_static;
 use lazycell::AtomicLazyCell;
@@ -164,8 +164,9 @@ impl<'a> UniverseRef<'a> {
             Universe {
                 level: self.level.max(other.level),
                 kind: self.kind.min(other.kind),
-                ty: AtomicLazyCell::new()
-            }.into()
+                ty: AtomicLazyCell::new(),
+            }
+            .into()
         }
     }
     /// Take the union of an iterator of universes with the given universe
@@ -203,6 +204,20 @@ impl Type for Universe {
             let _ = self.ty.fill(universe); // Ignore a failed fill
             self.ty.borrow().expect("Impossible").borrow_var()
         }
+    }
+}
+
+impl Value for Universe {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Attempted to get dependency {} of typing universe {}, but `Universe` has no dependencies!",
+            ix, self
+        )
     }
 }
 

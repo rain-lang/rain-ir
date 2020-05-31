@@ -5,7 +5,7 @@
 use super::{LifetimeBorrow, Live};
 use crate::quick_pretty;
 use crate::util::hash_cache::Cache;
-use crate::value::{typing::Typed, TypeId, TypeRef};
+use crate::value::{typing::Typed, TypeId, TypeRef, ValId, Value};
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -225,5 +225,14 @@ impl Live for Parameter {
 impl Typed for Parameter {
     fn ty(&self) -> TypeRef {
         self.region[self.ix].borrow_ty()
+    }
+}
+
+impl Value for Parameter {
+    fn no_deps(&self) -> usize {
+        0
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!("Attempted to get dependency {} of parameter #{} of a region, but parameters have no deps!", ix, self.ix)
     }
 }

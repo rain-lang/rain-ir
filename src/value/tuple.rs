@@ -6,7 +6,7 @@ use super::{
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::FINITE_TY,
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId,
+    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -80,6 +80,17 @@ impl Typed for Tuple {
     }
 }
 
+impl Value for Tuple {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.len()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        &self[ix]
+    }
+}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
 
@@ -148,6 +159,17 @@ impl Type for Product {
     }
 }
 
+impl Value for Product {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.len()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        &self[ix]
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
@@ -170,7 +192,9 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            if self.len() == 0 { return write!(fmt, "{}", crate::value::primitive::Unit) }
+            if self.len() == 0 {
+                return write!(fmt, "{}", crate::value::primitive::Unit);
+            }
             unimplemented!()
         }
     }

@@ -1,7 +1,7 @@
 /*!
 The `rain` type system
 */
-use super::{TypeRef, UniverseRef, TypeId};
+use super::{TypeRef, UniverseRef, TypeId, Value};
 
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
@@ -10,7 +10,7 @@ pub trait Typed {
 }
 
 /// A trait implemented by `rain` values which are a type
-pub trait Type: Into<TypeId> {
+pub trait Type: Into<TypeId> + Value {
     /// Get the universe of this type
     fn universe(&self) -> UniverseRef;
 }

@@ -5,7 +5,7 @@ use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::Typed,
-    TypeId, TypeRef, ValId,
+    TypeId, TypeRef, ValId, Value,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::{smallvec, SmallVec};
@@ -46,7 +46,7 @@ impl Sexpr {
         Sexpr {
             args: smallvec![value],
             lifetime: Lifetime::default(),
-            ty
+            ty,
         }
     }
 }
@@ -60,6 +60,17 @@ impl Live for Sexpr {
 impl Typed for Sexpr {
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
+    }
+}
+
+impl Value for Sexpr {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.len()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        &self[ix]
     }
 }
 
