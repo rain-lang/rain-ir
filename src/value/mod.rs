@@ -66,6 +66,37 @@ impl ValId {
     }
 }
 
+impl<'a, V> PartialEq<VarRef<'a, V>> for ValId {
+    fn eq(&self, other: &VarRef<'a, V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<V> PartialEq<VarId<V>> for ValId {
+    fn eq(&self, other: &VarId<V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl PartialEq<TypeId> for ValId {
+    fn eq(&self, other: &TypeId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<ValRef<'a>> for ValId {
+    fn eq(&self, other: &ValRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<TypeRef<'a>> for ValId {
+    fn eq(&self, other: &TypeRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
+
 impl Deref for ValId {
     type Target = NormalValue;
     #[inline]
@@ -125,6 +156,36 @@ impl<'a> ValRef<'a> {
     }
 }
 
+impl<'a, V> PartialEq<VarRef<'a, V>> for ValRef<'a> {
+    fn eq(&self, other: &VarRef<'a, V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<'a, V> PartialEq<VarId<V>> for ValRef<'a> {
+    fn eq(&self, other: &VarId<V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<'a> PartialEq<ValId> for ValRef<'a> {
+    fn eq(&self, other: &ValId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<TypeId> for ValRef<'a> {
+    fn eq(&self, other: &TypeId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<TypeRef<'a>> for ValRef<'a> {
+    fn eq(&self, other: &TypeRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
 impl<'a> Deref for ValRef<'a> {
     type Target = NormalValue;
     #[inline]
@@ -152,10 +213,43 @@ pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 debug_from_display!(ValRef<'_>);
 pretty_display!(ValRef<'_>, s, fmt  => write!(fmt, "{}", s.deref()));
 
+//TODO: consider making `TypeId` into `VarId<TypeEnum>`
+
 /// A reference-counted, hash-consed `rain` type
 #[derive(Clone, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct TypeId(NormAddr);
+
+impl<'a, V> PartialEq<VarRef<'a, V>> for TypeId {
+    fn eq(&self, other: &VarRef<'a, V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<V> PartialEq<VarId<V>> for TypeId {
+    fn eq(&self, other: &VarId<V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl PartialEq<ValId> for TypeId {
+    fn eq(&self, other: &ValId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<ValRef<'a>> for TypeId {
+    fn eq(&self, other: &ValRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<TypeRef<'a>> for TypeId {
+    fn eq(&self, other: &TypeRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
 
 impl Deref for TypeId {
     type Target = ValId;
@@ -258,6 +352,37 @@ impl<'a> TypeRef<'a> {
     }
 }
 
+impl<'a, V> PartialEq<VarRef<'a, V>> for TypeRef<'a> {
+    fn eq(&self, other: &VarRef<'a, V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<'a, V> PartialEq<VarId<V>> for TypeRef<'a> {
+    fn eq(&self, other: &VarId<V>) -> bool {
+        self.0 == other.ptr
+    }
+}
+
+impl<'a> PartialEq<ValId> for TypeRef<'a> {
+    fn eq(&self, other: &ValId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<TypeId> for TypeRef<'a> {
+    fn eq(&self, other: &TypeId) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<'a> PartialEq<ValRef<'a>> for TypeRef<'a> {
+    fn eq(&self, other: &ValRef<'a>) -> bool {
+        self.0 == other.0
+    }
+}
+
+
 impl<'a> Deref for TypeRef<'a> {
     type Target = ValRef<'a>;
     #[inline]
@@ -293,12 +418,49 @@ debug_from_display!(TypeRef<'_>);
 pretty_display!(TypeRef<'_>, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
-#[derive(PartialEq, Eq, Hash, RefCast)]
+#[derive(Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarId<Variant> {
     ptr: NormAddr,
     variant: std::marker::PhantomData<Variant>,
 }
+
+impl<'a, U, V> PartialEq<VarRef<'a, U>> for VarId<V> {
+    fn eq(&self, other: &VarRef<'a, U>) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl<U, V> PartialEq<VarId<U>> for VarId<V> {
+    fn eq(&self, other: &VarId<U>) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl<V> PartialEq<ValId> for VarId<V> {
+    fn eq(&self, other: &ValId) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<'a, V> PartialEq<ValRef<'a>> for VarId<V> {
+    fn eq(&self, other: &ValRef<'a>) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<V> PartialEq<TypeId> for VarId<V> {
+    fn eq(&self, other: &TypeId) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<'a, V> PartialEq<TypeRef<'a>> for VarId<V> {
+    fn eq(&self, other: &TypeRef<'a>) -> bool {
+        self.ptr == other.0
+    }
+}
+
 
 impl<'a, V> Clone for VarId<V> {
     #[inline]
@@ -438,11 +600,47 @@ pub type UniverseId = VarId<Universe>;
 pub type UniverseRef<'a> = VarRef<'a, Universe>;
 
 /// A (*normalized, consed*) borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant, e.g. `()` or `Unit`)
-#[derive(PartialEq, Eq, Hash, RefCast)]
+#[derive(Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarRef<'a, Variant> {
     ptr: NormRef<'a>,
     variant: std::marker::PhantomData<Variant>,
+}
+
+impl<'a, U, V> PartialEq<VarRef<'a, U>> for VarRef<'a, V> {
+    fn eq(&self, other: &VarRef<'a, U>) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl<'a, U, V> PartialEq<VarId<U>> for VarRef<'a, V> {
+    fn eq(&self, other: &VarId<U>) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl<'a, V> PartialEq<ValId> for VarRef<'a, V> {
+    fn eq(&self, other: &ValId) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<'a, V> PartialEq<ValRef<'a>> for VarRef<'a, V> {
+    fn eq(&self, other: &ValRef<'a>) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<'a, V> PartialEq<TypeId> for VarRef<'a, V> {
+    fn eq(&self, other: &TypeId) -> bool {
+        self.ptr == other.0
+    }
+}
+
+impl<'a, V> PartialEq<TypeRef<'a>> for VarRef<'a, V> {
+    fn eq(&self, other: &TypeRef<'a>) -> bool {
+        self.ptr == other.0
+    }
 }
 
 impl<'a, V> Clone for VarRef<'a, V> {

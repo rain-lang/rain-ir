@@ -148,7 +148,12 @@ impl Typed for () {
     }
 }
 
-/// The unit type
+/**
+The unit type
+
+This is a singleton struct representing values of the unit type. It implements efficient conversion to `ValId` and `TypeId`
+(as well as `VarId<Unit>`) and is the recommended way to get values of these types corresponding to the unit type.
+*/
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
 
