@@ -5,13 +5,23 @@ A simple, general use symbol table
 use ahash::RandomState;
 use indexmap::{Equivalent, IndexMap};
 use std::default::Default;
+use std::fmt::{self, Debug, Formatter};
 use std::hash::{BuildHasher, Hash};
 
 /// A simple, generic symbol table
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SymbolTable<K: Hash + Eq, V, S: BuildHasher = RandomState> {
     symbols: IndexMap<K, Vec<(V, usize)>, S>,
     scopes: Vec<Vec<usize>>,
+}
+
+impl<K: Hash + Eq + Debug, V: Debug> Debug for SymbolTable<K, V> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        fmt.debug_struct("SymbolTable")
+            .field("symbols", &self.symbols)
+            .field("scopes", &self.scopes)
+            .finish()
+    }
 }
 
 impl<K: Hash + Eq, V, S: BuildHasher> SymbolTable<K, V, S>

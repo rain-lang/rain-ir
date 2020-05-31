@@ -7,7 +7,7 @@ use crate::{debug_from_display, quick_display};
 use ahash::RandomState;
 use smallvec::SmallVec;
 use std::default::Default;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::BuildHasher;
 use std::ops::Deref;
 
@@ -25,12 +25,23 @@ debug_from_display!(VirtualRegister);
 quick_display!(VirtualRegister, s, fmt => write!(fmt, "%{}", s));
 
 /// A prettyprinter for `rain` values
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = RandomState> {
     symbols: SymbolTable<*const NormalValue, I, S>,
     unique: usize,
     scope: usize,
     max_tabs: u16
+}
+
+impl<I: Debug, S: BuildHasher> Debug for PrettyPrinter<I, S> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        fmt.debug_struct("PrettyPrinter")
+            .field("symbols", &"SymbolTable { ... }")
+            .field("unique", &self.unique)
+            .field("scope", &self.scope)
+            .field("max_tabs", &self.max_tabs)
+            .finish()
+    }
 }
 
 /// The size of prettyprinter stack to use before allocating
