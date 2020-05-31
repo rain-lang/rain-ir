@@ -182,23 +182,37 @@ mod prettyprint_impl {
     impl PrettyPrint for Tuple {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
-            _fmt: &mut Formatter,
+            printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            write!(fmt, "[")?;
+            let mut first = true;
+            for elem in self.iter() {
+                if !first { write!(fmt, " ")?; }
+                first = false;
+                elem.prettyprint(printer, fmt)?;
+            }
+            write!(fmt, "]")
         }
     }
 
     impl PrettyPrint for Product {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             if self.len() == 0 {
                 return write!(fmt, "{}", crate::value::primitive::Unit);
             }
-            unimplemented!()
+            write!(fmt, "#product[")?;
+            let mut first = true;
+            for elem in self.iter() {
+                if !first { write!(fmt, " ")?; }
+                first = false;
+                elem.prettyprint(printer, fmt)?;
+            }
+            write!(fmt, "]")
         }
     }
 }

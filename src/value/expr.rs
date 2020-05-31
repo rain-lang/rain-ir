@@ -85,17 +85,22 @@ impl Deref for Sexpr {
 mod prettyprint_impl {
     use super::*;
     use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
-    use std::fmt::{self, Formatter};
+    use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Sexpr {
-        fn prettyprint<I>(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(")?;
-            for _value in self.iter() {
-                unimplemented!()
+            let mut first = true;
+            for value in self.iter() {
+                if !first {
+                    write!(fmt, " ")?;
+                }
+                first = true;
+                value.prettyprint(printer, fmt)?;
             }
             write!(fmt, ")")
         }

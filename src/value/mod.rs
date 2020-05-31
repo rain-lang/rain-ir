@@ -1314,7 +1314,6 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            //TODO: this
             self.deref().prettyprint(printer, fmt)
         }
     }
@@ -1326,7 +1325,6 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            //TODO: this
             self.deref().prettyprint(printer, fmt)
         }
     }
@@ -1360,7 +1358,11 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            self.0.prettyprint(printer, fmt)
+            if let Some(name) = printer.lookup(self) {
+                write!(fmt, "{}", name)
+            } else {
+                self.0.prettyprint(printer, fmt)
+            }
         }
     }
 }

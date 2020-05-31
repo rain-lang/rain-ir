@@ -128,6 +128,10 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
         }
         Ok(new_deps)
     }
+    /// Lookup a value in this symbol table
+    pub fn lookup(&self, value: &NormalValue) -> Option<&I> {
+        self.symbols.get(&(value as *const NormalValue))
+    }
 }
 
 impl Default for PrettyPrinter {
