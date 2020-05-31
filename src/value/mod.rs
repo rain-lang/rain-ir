@@ -104,6 +104,20 @@ impl Deref for ValId {
     }
 }
 
+impl Borrow<NormalValue> for ValId {
+    #[inline]
+    fn borrow(&self) -> &NormalValue {
+        &self.0.addr
+    }
+}
+
+impl Borrow<ValueEnum> for ValId {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum {
+        &self.0.addr
+    }
+}
+
 impl From<NormalValue> for ValId {
     #[inline]
     fn from(value: NormalValue) -> ValId {
@@ -253,6 +267,20 @@ impl From<ValRef<'_>> for NormalValue {
     }
 }
 
+impl Borrow<NormalValue> for ValRef<'_> {
+    #[inline]
+    fn borrow(&self) -> &NormalValue {
+        &self.0.addr
+    }
+}
+
+impl Borrow<ValueEnum> for ValRef<'_> {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum {
+        &self.0.addr
+    }
+}
+
 debug_from_display!(ValId);
 pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 debug_from_display!(ValRef<'_>);
@@ -300,6 +328,20 @@ impl Deref for TypeId {
     #[inline]
     fn deref(&self) -> &ValId {
         RefCast::ref_cast(&self.0)
+    }
+}
+
+impl Borrow<NormalValue> for TypeId {
+    #[inline]
+    fn borrow(&self) -> &NormalValue {
+        &self.0.addr
+    }
+}
+
+impl Borrow<ValueEnum> for TypeId {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum {
+        &self.0.addr
     }
 }
 
@@ -385,6 +427,15 @@ impl Type for TypeId {
         match self.as_enum() {
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!"),
+        }
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::Universe(u) => u.is_universe(),
+            ValueEnum::Product(p) => p.is_universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
             _ => panic!("Impossible!"),
         }
@@ -498,6 +549,47 @@ impl From<TypeRef<'_>> for ValueEnum {
 impl From<TypeRef<'_>> for NormalValue {
     fn from(val: TypeRef) -> NormalValue {
         val.as_norm().clone()
+    }
+}
+
+impl Borrow<NormalValue> for TypeRef<'_> {
+    #[inline]
+    fn borrow(&self) -> &NormalValue {
+        &self.0.addr
+    }
+}
+
+impl Borrow<ValueEnum> for TypeRef<'_> {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum {
+        &self.0.addr
+    }
+}
+
+impl Type for TypeRef<'_> {
+    #[inline]
+    fn universe(&self) -> UniverseRef {
+        match self.as_enum() {
+            ValueEnum::Universe(u) => u.universe(),
+            ValueEnum::Product(p) => p.universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!"),
+        }
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::Universe(u) => u.is_universe(),
+            ValueEnum::Product(p) => p.is_universe(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            _ => panic!("Impossible!"),
+        }
+    }
+}
+
+impl From<TypeRef<'_>> for TypeId {
+    fn from(t: TypeRef) -> TypeId {
+        t.clone_ty()
     }
 }
 
@@ -968,7 +1060,7 @@ pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed {
     fn get_dep(&self, dep: usize) -> &ValId;
     /// Get the dependencies of this value
     #[inline]
-    fn get_deps(&self) -> &Deps<Self> {
+    fn deps(&self) -> &Deps<Self> {
         RefCast::ref_cast(self)
     }
 }
@@ -984,7 +1076,7 @@ impl<V: Value> Deps<V> {
         self.0.no_deps()
     }
     /// Iterate over the dependencies of this value
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item=&'a ValId> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
 }
@@ -1204,9 +1296,9 @@ mod prettyprint_impl {
     use std::fmt::{self, Formatter};
 
     impl PrettyPrint for ValueEnum {
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             forv! {
@@ -1217,9 +1309,9 @@ mod prettyprint_impl {
 
     impl PrettyPrint for ValId {
         #[inline]
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             //TODO: this
@@ -1229,9 +1321,9 @@ mod prettyprint_impl {
 
     impl PrettyPrint for ValRef<'_> {
         #[inline]
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             //TODO: this
@@ -1241,9 +1333,9 @@ mod prettyprint_impl {
 
     impl PrettyPrint for TypeId {
         #[inline]
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             self.0.prettyprint(printer, fmt)
@@ -1252,9 +1344,9 @@ mod prettyprint_impl {
 
     impl PrettyPrint for TypeRef<'_> {
         #[inline]
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             self.0.prettyprint(printer, fmt)
@@ -1263,9 +1355,9 @@ mod prettyprint_impl {
 
     impl PrettyPrint for NormalValue {
         #[inline]
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            printer: &mut PrettyPrinter,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             self.0.prettyprint(printer, fmt)

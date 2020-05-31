@@ -196,6 +196,7 @@ impl Typed for Universe {
 }
 
 impl Type for Universe {
+    #[inline]
     fn universe(&self) -> UniverseRef {
         if let Some(ty) = self.ty.borrow() {
             ty.borrow_var()
@@ -204,6 +205,10 @@ impl Type for Universe {
             let _ = self.ty.fill(universe); // Ignore a failed fill
             self.ty.borrow().expect("Impossible").borrow_var()
         }
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        true
     }
 }
 

@@ -13,4 +13,6 @@ pub trait Typed {
 pub trait Type: Into<TypeId> + Value {
     /// Get the universe of this type
     fn universe(&self) -> UniverseRef;
+    /// Get whether this type is a universe
+    fn is_universe(&self) -> bool;
 }

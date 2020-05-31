@@ -157,6 +157,9 @@ impl Type for Product {
     fn universe(&self) -> UniverseRef {
         self.ty.borrow_var()
     }
+    fn is_universe(&self) -> bool {
+        false
+    }
 }
 
 impl Value for Product {
@@ -174,12 +177,12 @@ impl Value for Product {
 mod prettyprint_impl {
     use super::*;
     use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
-    use std::fmt::{self, Formatter};
+    use std::fmt::{self, Formatter, Display};
 
     impl PrettyPrint for Tuple {
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter,
+            _printer: &mut PrettyPrinter<I>,
             _fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             unimplemented!()
@@ -187,9 +190,9 @@ mod prettyprint_impl {
     }
 
     impl PrettyPrint for Product {
-        fn prettyprint(
+        fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter,
+            _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             if self.len() == 0 {

@@ -88,9 +88,9 @@ mod prettyprint_impl {
     use std::fmt::{self, Formatter};
 
     impl PrettyPrint for Sexpr {
-        fn prettyprint(
+        fn prettyprint<I>(
             &self,
-            _printer: &mut PrettyPrinter,
+            _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(")?;

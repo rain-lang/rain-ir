@@ -204,9 +204,9 @@ macro_rules! display_pretty {
     ($t:ty) => {
         #[cfg(feature = "prettyprinter")]
         impl $crate::prettyprinter::PrettyPrint for $t {
-            fn prettyprint(
+            fn prettyprint<I>(
                 &self,
-                _printer: &mut $crate::prettyprinter::PrettyPrinter,
+                _printer: &mut $crate::prettyprinter::PrettyPrinter<I>,
                 fmt: &mut std::fmt::Formatter,
             ) -> Result<(), std::fmt::Error> {
                 std::fmt::Display::fmt(self, fmt)

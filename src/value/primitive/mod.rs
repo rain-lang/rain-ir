@@ -184,8 +184,13 @@ impl Live for Unit {
 }
 
 impl Type for Unit {
+    #[inline]
     fn universe(&self) -> UniverseRef {
         FINITE_TY.borrow_var()
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        false
     }
 }
 
