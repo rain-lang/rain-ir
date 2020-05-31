@@ -43,8 +43,10 @@ impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher + Default> Default for Bui
 pub enum Error<'a> {
     /// An undefined identifier
     UndefinedIdent(Ident<'a>),
+    /// An error message
+    Message(&'a str),
     /// An unimplemented `rain` IR build
-    NotImplemented,
+    NotImplemented(&'a str),
 }
 
 impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher> Builder<S, B> {
@@ -60,19 +62,24 @@ impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher> Builder<S, B> {
     }
     /// Build a `rain` ident
     pub fn build_ident(&self, _ident: Ident<'a>) -> Result<ValId, Error<'a>> {
-        Err(Error::NotImplemented)
+        Err(Error::NotImplemented("Ident building is not implemented"))
     }
     /// Build a member expression
     pub fn build_member(&self, _member: &Member<'a>) -> Result<ValId, Error<'a>> {
-        Err(Error::NotImplemented)
+        Err(Error::NotImplemented("Member building is not implemented"))
     }
     /// Build an S-expression
-    pub fn build_sexpr(&self, _sexpr: &SExpr<'a>) -> Result<Sexpr, Error<'a>> {
-        Err(Error::NotImplemented)
+    pub fn build_sexpr(&self, sexpr: &SExpr<'a>) -> Result<Sexpr, Error<'a>> { 
+        match sexpr.len() {
+            0 => Ok(Sexpr::unit()),
+            1 => Ok(Sexpr::singleton(self.build_expr(&sexpr.0[0])?)),
+            _ => Err(Error::NotImplemented("Non-singleton/unit sexpr building is not implemented"))
+        }
     }
     /// Build a tuple
-    pub fn build_tuple(&self, _tuple: &TupleExpr<'a>) -> Result<Tuple, Error<'a>> {
-        Err(Error::NotImplemented)
+    pub fn build_tuple(&self, tuple: &TupleExpr<'a>) -> Result<Tuple, Error<'a>> {
+        let elems: Result<_, _> = tuple.0.iter().map(|elem| self.build_expr(elem)).collect();
+        Tuple::new(elems?).map_err(|_| Error::Message("Failed to build tuple"))
     }
     /// Build a let-statement
     pub fn build_let(&self, _l: &Let<'a>) -> Result<(), Error<'a>> {
