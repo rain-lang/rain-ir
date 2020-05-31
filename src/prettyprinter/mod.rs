@@ -36,7 +36,7 @@ pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = RandomState> {
 impl<I: Debug, S: BuildHasher> Debug for PrettyPrinter<I, S> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         fmt.debug_struct("PrettyPrinter")
-            .field("symbols", &"SymbolTable { ... }")
+            .field("symbols", &self.symbols)
             .field("unique", &self.unique)
             .field("scope", &self.scope)
             .field("max_tabs", &self.max_tabs)

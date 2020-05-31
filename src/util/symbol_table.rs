@@ -15,7 +15,7 @@ pub struct SymbolTable<K: Hash + Eq, V, S: BuildHasher = RandomState> {
     scopes: Vec<Vec<usize>>,
 }
 
-impl<K: Hash + Eq + Debug, V: Debug> Debug for SymbolTable<K, V> {
+impl<K: Hash + Eq + Debug, V: Debug, S: BuildHasher> Debug for SymbolTable<K, V, S> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         fmt.debug_struct("SymbolTable")
             .field("symbols", &self.symbols)
