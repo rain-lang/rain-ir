@@ -67,6 +67,20 @@ impl PartialEq<ValueEnum> for () {
     }
 }
 
+impl PartialEq<()> for NormalValue {
+    #[inline]
+    fn eq(&self, u: &()) -> bool {
+        self.0.eq(u)
+    }
+}
+
+impl PartialEq<NormalValue> for () {
+    #[inline]
+    fn eq(&self, value: &NormalValue) -> bool {
+        value.eq(self)
+    }
+}
+
 impl From<()> for ValueEnum {
     fn from(_: ()) -> ValueEnum {
         ValueEnum::Sexpr(Sexpr::unit())
@@ -85,6 +99,30 @@ impl TryFrom<ValueEnum> for () {
     fn try_from(value: ValueEnum) -> Result<(), ValueEnum> {
         if value == () {
             Ok(())
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl<'a, 'b> TryFrom<&'a ValueEnum> for &'b () {
+    type Error = &'a ValueEnum;
+    #[inline]
+    fn try_from(value: &'a ValueEnum) -> Result<&'b (), &'a ValueEnum> {
+        if value == &() {
+            Ok(&())
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl<'a, 'b> TryFrom<&'a NormalValue> for &'b () {
+    type Error = &'a NormalValue;
+    #[inline]
+    fn try_from(value: &'a NormalValue) -> Result<&'b (), &'a NormalValue> {
+        if value == &() {
+            Ok(&())
         } else {
             Err(value)
         }
@@ -165,6 +203,21 @@ impl PartialEq<ValueEnum> for Unit {
     }
 }
 
+impl PartialEq<Unit> for NormalValue {
+    #[inline]
+    fn eq(&self, u: &Unit) -> bool {
+        self.0.eq(u)
+    }
+}
+
+impl PartialEq<NormalValue> for Unit {
+    #[inline]
+    fn eq(&self, value: &NormalValue) -> bool {
+        value.eq(self)
+    }
+}
+
+
 impl From<Unit> for ValueEnum {
     #[inline]
     fn from(_: Unit) -> ValueEnum {
@@ -202,6 +255,30 @@ impl From<Unit> for TypeId {
     #[inline]
     fn from(_: Unit) -> TypeId {
         UNIT_TY.clone()
+    }
+}
+
+impl<'a, 'b> TryFrom<&'a ValueEnum> for &'b Unit {
+    type Error = &'a ValueEnum;
+    #[inline]
+    fn try_from(value: &'a ValueEnum) -> Result<&'b Unit, &'a ValueEnum> {
+        if value == &Unit {
+            Ok(&Unit)
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl<'a, 'b> TryFrom<&'a NormalValue> for &'b Unit {
+    type Error = &'a NormalValue;
+    #[inline]
+    fn try_from(value: &'a NormalValue) -> Result<&'b Unit, &'a NormalValue> {
+        if value == &Unit {
+            Ok(&Unit)
+        } else {
+            Err(value)
+        }
     }
 }
 
