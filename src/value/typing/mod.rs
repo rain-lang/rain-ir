@@ -1,7 +1,10 @@
 /*!
 The `rain` type system
 */
-use super::{NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum};
+use super::{
+    lifetime::{LifetimeBorrow, Live},
+    NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+};
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
 use std::borrow::Borrow;
@@ -40,6 +43,13 @@ impl Typed for TypeValue {
     #[inline]
     fn is_ty(&self) -> bool {
         self.deref().is_ty()
+    }
+}
+
+impl Live for TypeValue {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
     }
 }
 

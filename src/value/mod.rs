@@ -446,6 +446,13 @@ impl<V: Value> Value for VarId<V> {
     }
 }
 
+impl<V: Value> Live for VarId<V> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.ptr.lifetime()
+    }
+}
+
 impl<V: Value> From<VarId<V>> for ValueEnum {
     fn from(val: VarId<V>) -> ValueEnum {
         val.as_enum().clone()
@@ -645,6 +652,13 @@ impl<'a, V: Value> Value for VarRef<'a, V> {
     }
 }
 
+impl<'a, V: Value> Live for VarRef<'a, V> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.ptr.lifetime()
+    }
+}
+
 impl<V: Value> From<VarRef<'_, V>> for ValueEnum {
     fn from(val: VarRef<V>) -> ValueEnum {
         val.as_enum().clone()
@@ -736,6 +750,13 @@ impl Value for NormalValue {
     }
 }
 
+impl Live for NormalValue {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.deref().lifetime()
+    }
+}
+
 /// A wrapper around a `rain` value to assert refinement conditions.
 /// Implementation detail: library consumers should not be able to construct this!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -745,7 +766,7 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed {
+pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed + Live {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
@@ -905,7 +926,6 @@ impl From<Universe> for NormalValue {
         NormalValue::assert_new(ValueEnum::Universe(universe))
     }
 }
-
 
 impl From<Bool> for NormalValue {
     fn from(b: Bool) -> NormalValue {
