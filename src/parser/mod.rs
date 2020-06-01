@@ -164,12 +164,6 @@ pub fn cws(input: &str) -> IResult<&str, ()> {
     parse_ws(true, input)
 }
 
-/// The `rain` keyword for `true`
-const KEYWORD_TRUE: &str = "#true";
-
-/// The `rain` keyword for `false`
-const KEYWORD_FALSE: &str = "#false";
-
 /**
 Parse a `bool`, i.e. `#true` or `#false`
 

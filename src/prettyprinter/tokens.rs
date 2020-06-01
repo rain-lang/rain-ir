@@ -23,6 +23,12 @@ pub const KEYWORD_LET: &str = "#let";
 /// The `rain` keyword for the boolean type
 pub const KEYWORD_BOOL: &str = "#bool";
 
+/// The `rain` keyword for `true`
+pub const KEYWORD_TRUE: &str = "#true";
+
+/// The `rain` keyword for `false`
+pub const KEYWORD_FALSE: &str = "#false";
+
 /// The delimiter for `rain` statements
 pub const STATEMENT_DELIM: &str = ";";
 

@@ -935,7 +935,7 @@ impl TryFrom<ValueEnum> for Bool {
     fn try_from(val: ValueEnum) -> Result<Bool, ValueEnum> {
         match val {
             ValueEnum::BoolTy(b) => Ok(b),
-            v => Err(v)
+            v => Err(v),
         }
     }
 }
@@ -945,7 +945,7 @@ impl<'a> TryFrom<&'a ValueEnum> for &'a Bool {
     fn try_from(val: &'a ValueEnum) -> Result<&'a Bool, &'a ValueEnum> {
         match val {
             ValueEnum::BoolTy(b) => Ok(b),
-            v => Err(v)
+            v => Err(v),
         }
     }
 }
@@ -961,7 +961,7 @@ impl TryFrom<NormalValue> for Bool {
     fn try_from(val: NormalValue) -> Result<Bool, NormalValue> {
         match val.deref() {
             ValueEnum::BoolTy(b) => Ok(*b),
-            _ => Err(val)
+            _ => Err(val),
         }
     }
 }
@@ -971,7 +971,7 @@ impl<'a> TryFrom<&'a NormalValue> for &'a Bool {
     fn try_from(val: &'a NormalValue) -> Result<&'a Bool, &'a NormalValue> {
         match val.deref() {
             ValueEnum::BoolTy(b) => Ok(b),
-            _ => Err(val)
+            _ => Err(val),
         }
     }
 }

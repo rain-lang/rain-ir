@@ -41,3 +41,23 @@ impl Live for Bool {
         LifetimeBorrow::default()
     }
 }
+
+#[cfg(feature="prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use std::fmt::{self, Display, Formatter};
+
+    impl PrettyPrint for bool {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            match self {
+                true => write!(fmt, "{}", KEYWORD_TRUE),
+                false => write!(fmt, "{}", KEYWORD_FALSE),
+            }
+        }
+    }
+}
