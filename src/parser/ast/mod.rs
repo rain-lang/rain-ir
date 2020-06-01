@@ -1,7 +1,7 @@
 /*!
 An AST for `rain` programs
 */
-use super::{parse_ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN};
+use super::{parse_ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN, NULL_SYMBOL, KEYWORD_LET, ASSIGN};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -30,6 +30,16 @@ impl<'a> Ident<'a> {
     #[inline]
     pub fn get_str(&self) -> &'a str {
         self.0
+    }
+    /// Get this identifier as a symbol string. Return `None` for the null symbol.
+    #[inline]
+    pub fn get_sym(&self) -> Result<Option<&'a str>, Ident<'a>> {
+        if self.get_str() == NULL_SYMBOL {
+            Ok(None)
+        } else {
+            //TODO: number checking, etc.
+            Ok(Some(self.get_str()))
+        }
     }
 }
 
@@ -258,13 +268,13 @@ pub struct Detuple<'a>(pub Vec<Pattern<'a>>);
 
 impl Display for Detuple<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "[")?;
+        write!(fmt, "{}", TUPLE_OPEN)?;
         let mut first = true;
         for pattern in self.0.iter() {
             write!(fmt, "{}{}", if first { "" } else { " " }, pattern)?;
             first = false;
         }
-        write!(fmt, "]")
+        write!(fmt, "{}", TUPLE_CLOSE)
     }
 }
 
@@ -281,6 +291,6 @@ pub struct Let<'a> {
 
 impl Display for Let<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "let {} = {};", self.lhs, self.rhs)
+        write!(fmt, "{} {} {} {};", KEYWORD_LET, self.lhs, ASSIGN, self.rhs)
     }
 }

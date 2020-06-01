@@ -26,6 +26,21 @@ pub const WHITESPACE: &str = " \t\r\n";
 /// The `rain` path separator charactor
 pub const PATH_SEP: &str = ".";
 
+/// The `rain` typing judgement character
+pub const JUDGE_TYPE: &str = ":";
+
+/// The `rain` assignment character
+pub const ASSIGN: &str = "=";
+
+/// The `rain` keyword for `let`-statements
+pub const KEYWORD_LET: &str = "#let";
+
+/// The delimiter for `rain` statements
+pub const STATEMENT_DELIM: &str = ";";
+
+/// The null `rain` symbol
+pub const NULL_SYMBOL: &str = "_";
+
 /// The delimiter for single-line `rain` comments
 pub const SINGLE_COMMENT_START: &str = "//";
 
@@ -219,7 +234,7 @@ assert!(parse_bool("#7rue").is_err())
 pub fn parse_bool(input: &str) -> IResult<&str, bool> {
     alt((
         map(tag(KEYWORD_TRUE), |_| true),
-        map(tag(KEYWORD_FALSE), |_| false)
+        map(tag(KEYWORD_FALSE), |_| false),
     ))(input)
 }
 
@@ -400,12 +415,64 @@ pub fn parse_compound(input: &str) -> IResult<&str, Expr> {
     parse_atom(input) //TODO: this
 }
 
-/// Parse a statement (TODO: this)
+/// Parse a simple assignment
+pub fn parse_simple_assign(input: &str) -> IResult<&str, Simple> {
+    map(
+        tuple((
+            parse_ident,
+            opt(preceded(
+                delimited(opt(ws), tag(JUDGE_TYPE), opt(ws)),
+                parse_compound,
+            )),
+        )),
+        |(var, ty)| Simple { var, ty },
+    )(input)
+}
+
+/// Parse a tuple destructure pattern
+pub fn parse_detuple(input: &str) -> IResult<&str, Detuple> {
+    map(
+        delimited(
+            preceded(tag(TUPLE_OPEN), opt(ws)),
+            separated_nonempty_list(ws, parse_pattern),
+            preceded(opt(ws), tag(TUPLE_CLOSE)),
+        ),
+        |elems| Detuple(elems),
+    )(input)
+}
+
+/// Parse a pattern
+pub fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
+    alt((
+        map(parse_simple_assign, Pattern::Simple),
+        map(parse_detuple, Pattern::Detuple),
+    ))(input)
+}
+
+/// Parse a statement
 pub fn parse_statement(input: &str) -> IResult<&str, Let> {
-    Err(nom::Err::Error((input, nom::error::ErrorKind::RegexpMatch)))
+    map(
+        tuple((
+            tag(KEYWORD_LET),
+            ws,
+            parse_pattern,
+            opt(ws),
+            tag(ASSIGN),
+            opt(ws),
+            parse_expr,
+            opt(ws),
+            tag(STATEMENT_DELIM)
+        )),
+        |(_, _, lhs, _, _, _, rhs, _, _)| {
+            Let { lhs, rhs }
+        }
+    )(input)
 }
 
 /// Parse a standalone `rain` expression
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    map(|input| parse_expr_list(true, input), |e| Expr::Sexpr(Sexpr(e)))(input)
+    map(
+        |input| parse_expr_list(true, input),
+        |e| Expr::Sexpr(Sexpr(e)),
+    )(input)
 }

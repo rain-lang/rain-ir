@@ -111,9 +111,9 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 // Print the correct number of tabs (corresponding to the current scope level)
                 self.print_tabs(fmt)?;
                 if !ty.is_universe() { // Only print the type of non-types
-                    write!(fmt, "let {}: {} = ", name, ty)?;
+                    write!(fmt, "#let {}: {} = ", name, ty)?;
                 } else {
-                    write!(fmt, "let {} = ", name)?;
+                    write!(fmt, "#let {} = ", name)?;
                 }
                 top.prettyprint(self, fmt)?;
                 writeln!(fmt, ";")?;
