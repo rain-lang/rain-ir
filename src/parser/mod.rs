@@ -7,7 +7,7 @@ use nom::{
     bytes::streaming::{is_a as is_a_s, take_until},
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, opt},
-    multi::{many1, separated_nonempty_list},
+    multi::{many1, separated_nonempty_list, separated_list},
     sequence::{delimited, preceded, tuple},
     Err, IResult,
 };
@@ -434,7 +434,7 @@ pub fn parse_detuple(input: &str) -> IResult<&str, Detuple> {
     map(
         delimited(
             preceded(tag(TUPLE_OPEN), opt(ws)),
-            separated_nonempty_list(ws, parse_pattern),
+            separated_list(ws, parse_pattern),
             preceded(opt(ws), tag(TUPLE_CLOSE)),
         ),
         |elems| Detuple(elems),
