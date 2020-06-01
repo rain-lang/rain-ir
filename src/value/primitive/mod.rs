@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use std::convert::TryFrom;
 use std::ops::Deref;
 
-mod logical;
+pub mod logical;
 
 lazy_static! {
     /// An instance of the unit value

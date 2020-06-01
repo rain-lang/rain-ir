@@ -21,7 +21,7 @@ pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
-use primitive::Unit;
+use primitive::{logical::Bool, Unit};
 use tuple::{Product, Tuple};
 use typing::{Type, TypeValue, Typed};
 use universe::Universe;
@@ -797,6 +797,8 @@ pub enum ValueEnum {
     Product(Product),
     /// A typing universe
     Universe(Universe),
+    /// The type of booleans
+    Bool(Bool),
 }
 
 impl Value for ValueEnum {
@@ -836,6 +838,7 @@ enum_convert! {
     }
     impl TryFromRef<ValueEnum> for Product {}
     impl InjectionRef<ValueEnum> for Universe {}
+    impl InjectionRef<ValueEnum> for Bool {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -857,6 +860,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Product { as ValueEnum, }
     impl TryFrom<NormalValue> for Universe { as ValueEnum, }
     impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
+    impl TryFrom<NormalValue> for Bool { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Bool { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -901,6 +906,13 @@ impl From<Universe> for NormalValue {
     }
 }
 
+
+impl From<Bool> for NormalValue {
+    fn from(b: Bool) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Bool(b))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -918,6 +930,7 @@ macro_rules! forv {
             ValueEnum::Tuple($i) => $e,
             ValueEnum::Product($i) => $e,
             ValueEnum::Universe($i) => $e,
+            ValueEnum::Bool($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
