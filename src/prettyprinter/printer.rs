@@ -2,6 +2,7 @@
 The actual, conditionally compiled prettyprinter implementation
 */
 
+use super::tokens::*;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     typing::{Type, Typed},
@@ -123,12 +124,12 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 self.print_tabs(fmt)?;
                 if !ty.is_universe() {
                     // Only print the type of non-types
-                    write!(fmt, "#let {}: {} = ", name, ty)?;
+                    write!(fmt, "{} {}{} {} {} ", KEYWORD_LET, name, JUDGE_TYPE, ty, ASSIGN)?;
                 } else {
-                    write!(fmt, "#let {} = ", name)?;
+                    write!(fmt, "{} {} {} ", KEYWORD_LET, name, ASSIGN)?;
                 }
                 top.prettyprint(self, fmt)?;
-                writeln!(fmt, ";")?;
+                writeln!(fmt, "{}", STATEMENT_DELIM)?;
                 self.symbols.def(top.deref(), name);
                 // Record the increase in the number of defined names
                 self.unique += 1;
