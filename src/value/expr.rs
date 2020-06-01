@@ -4,7 +4,7 @@
 use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
-    typing::{Typed, Type},
+    typing::{Type, Typed},
     TypeId, TypeRef, ValId, Value,
 };
 use crate::{debug_from_display, pretty_display};
@@ -67,7 +67,7 @@ impl Typed for Sexpr {
         match self.len() {
             0 => false,
             1 => self[0].is_ty(),
-            _ => self.ty().is_universe()
+            _ => self.ty().is_universe(),
         }
     }
 }
@@ -93,7 +93,7 @@ impl Deref for Sexpr {
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Sexpr {
@@ -102,7 +102,7 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(")?;
+            write!(fmt, "{}", SEXPR_OPEN)?;
             let mut first = true;
             for value in self.iter() {
                 if !first {
@@ -111,7 +111,7 @@ mod prettyprint_impl {
                 first = true;
                 value.prettyprint(printer, fmt)?;
             }
-            write!(fmt, ")")
+            write!(fmt, "{}", SEXPR_CLOSE)
         }
     }
 }

@@ -186,9 +186,9 @@ impl Value for Product {
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{PrettyPrint, PrettyPrinter, tokens::*};
+    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
     use crate::value::primitive::Unit;
-    use std::fmt::{self, Formatter, Display};
+    use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Tuple {
         fn prettyprint<I: From<usize> + Display>(
@@ -197,16 +197,18 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             if self.len() == 0 {
-                return write!(fmt, "()");
+                return write!(fmt, "{}", UNIT_VALUE);
             }
-            write!(fmt, "[")?;
+            write!(fmt, "{}", TUPLE_OPEN)?;
             let mut first = true;
             for elem in self.iter() {
-                if !first { write!(fmt, " ")?; }
+                if !first {
+                    write!(fmt, " ")?;
+                }
                 first = false;
                 elem.prettyprint(printer, fmt)?;
             }
-            write!(fmt, "]")
+            write!(fmt, "{}", TUPLE_CLOSE)
         }
     }
 
@@ -219,32 +221,43 @@ mod prettyprint_impl {
             if self.len() == 0 {
                 return write!(fmt, "{}", Unit);
             }
-            write!(fmt, "#product[")?;
+            write!(fmt, "{}{}", KEYWORD_PROD, TUPLE_OPEN)?;
             let mut first = true;
             for elem in self.iter() {
-                if !first { write!(fmt, " ")?; }
+                if !first {
+                    write!(fmt, " ")?;
+                }
                 first = false;
                 elem.prettyprint(printer, fmt)?;
             }
-            write!(fmt, "]")
+            write!(fmt, "{}", TUPLE_CLOSE)
         }
     }
 
     #[cfg(test)]
     mod tests {
-        use smallvec::smallvec;
         use super::*;
+        use smallvec::smallvec;
         #[test]
         fn nested_units_print_properly() {
             let unit = Tuple::unit();
             let unit_ty = Product::unit_ty();
-            assert_eq!(format!("{}", unit), "()");
+            assert_eq!(format!("{}", unit), format!("{}", UNIT_VALUE));
             assert_eq!(format!("{}", unit_ty), format!("{}", Unit));
             let two_units = Tuple::new(smallvec![unit.clone().into(), unit.into()])
                 .expect("This is a valid tuple!");
-            assert_eq!(format!("{}", two_units), "[() ()]");
+            assert_eq!(
+                format!("{}", two_units),
+                format!("{}{} {}{}", TUPLE_OPEN, UNIT_VALUE, UNIT_VALUE, TUPLE_CLOSE)
+            );
             let unit_squared = two_units.ty();
-            assert_eq!(format!("{}", unit_squared), format!("#product[{} {}]", Unit, Unit));
+            assert_eq!(
+                format!("{}", unit_squared),
+                format!(
+                    "{}{}{} {}{}",
+                    KEYWORD_PROD, TUPLE_OPEN, Unit, Unit, TUPLE_CLOSE
+                )
+            );
         }
     }
 }

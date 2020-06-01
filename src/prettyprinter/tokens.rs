@@ -58,3 +58,6 @@ pub const UNIT_VALUE: &str = "()";
 
 /// The standard representation for the unit type
 pub const UNIT_TYPE: &str = "#unit";
+
+/// The keyword for product types
+pub const KEYWORD_PROD: &str = "#product";

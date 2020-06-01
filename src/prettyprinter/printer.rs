@@ -3,7 +3,10 @@ The actual, conditionally compiled prettyprinter implementation
 */
 
 use crate::util::symbol_table::SymbolTable;
-use crate::value::{typing::{Type, Typed}, ValRef, Value, NormalValue};
+use crate::value::{
+    typing::{Type, Typed},
+    NormalValue, ValRef, Value,
+};
 use crate::{debug_from_display, quick_display};
 use ahash::RandomState;
 use smallvec::SmallVec;
@@ -31,7 +34,7 @@ pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = RandomState> {
     symbols: SymbolTable<*const NormalValue, I, S>,
     unique: usize,
     scope: usize,
-    max_tabs: u16
+    max_tabs: u16,
 }
 
 impl<I: Debug, S: BuildHasher> Debug for PrettyPrinter<I, S> {
@@ -58,7 +61,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
             symbols: SymbolTable::new(),
             unique: 0,
             scope: 0,
-            max_tabs: DEFAULT_MAX_TABS
+            max_tabs: DEFAULT_MAX_TABS,
         }
     }
     /// Print the appropriate number of tabs for the given scope level, up to the maximum
@@ -70,8 +73,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
         Ok(())
     }
     /// Prettyprint a `ValId` and its dependencies as `let` statements, avoiding recursion.
-    /// Return the number of new definitions, if any. 
-    /// 
+    /// Return the number of new definitions, if any.
+    ///
     /// This is a depth-first search, so we should never see the same dependency twice.
     pub fn prettyprint_valid_and_deps(
         &mut self,
@@ -80,14 +83,20 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     ) -> Result<usize, fmt::Error> {
         let mut new_deps = 0;
         let mut visit_stack = SmallVec::<[(ValRef, usize); PRETTYPRINTER_STACK_DEPTH]>::new();
-        if self.symbols.contains_key(&(value.deref() as *const NormalValue)) {
+        if self
+            .symbols
+            .contains_key(&(value.deref() as *const NormalValue))
+        {
             return Ok(0);
         }
         visit_stack.push((value, 0));
         while let Some((top, mut ix)) = visit_stack.pop() {
             while ix < top.no_deps() {
                 let dep = top.as_norm().get_dep(ix);
-                if self.symbols.contains_key(&(dep.deref() as *const NormalValue)) {
+                if self
+                    .symbols
+                    .contains_key(&(dep.deref() as *const NormalValue))
+                {
                     ix += 1;
                 } else {
                     // Push the new dependency, and the old dependency
@@ -99,7 +108,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
             if ix == top.no_deps() {
                 ix += 1;
                 let ty = top.as_norm().ty();
-                if !ty.is_universe() { // Print the dependencies of non-universe types
+                if !ty.is_universe() {
+                    // Print the dependencies of non-universe types
                     visit_stack.push((top, ix));
                     visit_stack.push((ty.as_val(), 0));
                     continue;
@@ -111,7 +121,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 let ty = top.ty();
                 // Print the correct number of tabs (corresponding to the current scope level)
                 self.print_tabs(fmt)?;
-                if !ty.is_universe() { // Only print the type of non-types
+                if !ty.is_universe() {
+                    // Only print the type of non-types
                     write!(fmt, "#let {}: {} = ", name, ty)?;
                 } else {
                     write!(fmt, "#let {} = ", name)?;

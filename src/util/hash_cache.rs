@@ -54,7 +54,7 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     // Similarly, we'll get the same `Arc` if we insert the value again
     let new_32 = int_cache.cache(32);
     assert!(Arc::ptr_eq(&new_32, &cached_32));
-    
+
     // We can also insert an `Arc` from the get-go:
     let arc_44 = Arc::new(44);
     let cached_44 = int_cache.cache(arc_44.clone());
@@ -84,7 +84,7 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     use rain_lang::util::hash_cache::Cache;
     use triomphe::Arc;
     let int_cache = Cache::<u64>::new();
-    
+
     // Let's stick 2 used values and 3 unused values into the cache:
     let used_1 = int_cache.cache(77);
     let used_2 = int_cache.cache(88);

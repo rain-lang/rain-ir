@@ -27,10 +27,10 @@ impl Lifetime {
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect<'a, I>(
-        &'a self,
-        lifetimes: I,
-    ) -> Result<LifetimeBorrow<'a>, ()> where I: Iterator<Item=LifetimeBorrow<'a>> {
+    pub fn intersect<'a, I>(&'a self, lifetimes: I) -> Result<LifetimeBorrow<'a>, ()>
+    where
+        I: Iterator<Item = LifetimeBorrow<'a>>,
+    {
         let mut base = self.borrow_lifetime();
         for lifetime in lifetimes {
             if base.is_static() {

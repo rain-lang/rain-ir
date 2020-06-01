@@ -341,18 +341,18 @@ macro_rules! enum_convert {
         }
     };
     (
-        impl $Tr_first:ident<$E_first:ident> for $T_first:ident { 
-            $(as $t_first:ident,)* 
+        impl $Tr_first:ident<$E_first:ident> for $T_first:ident {
+            $(as $t_first:ident,)*
             $(match $($from_first:pat $(if $guard_first:expr)* => $to_first:expr,)*)*
         }
-        $(impl $Tr:ident<$E:ident> for $T:ident { 
-            $(as $t:ident,)* 
-            $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)* 
+        $(impl $Tr:ident<$E:ident> for $T:ident {
+            $(as $t:ident,)*
+            $(match $($from:pat $(if $guard:expr)* => $to:expr,)*)*
         })+
     ) => {
         enum_convert! {
-            impl $Tr_first<$E_first> for $T_first { 
-                $(as $t_first,)* 
+            impl $Tr_first<$E_first> for $T_first {
+                $(as $t_first,)*
                 $(match $($from_first $(if $guard_first)* => $to_first,)*)*
             }
         }

@@ -23,7 +23,7 @@ use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::Unit;
 use tuple::{Product, Tuple};
-use typing::{Type, Typed, TypeValue};
+use typing::{Type, TypeValue, Typed};
 use universe::Universe;
 
 lazy_static! {
@@ -369,7 +369,7 @@ impl<'a, V> VarId<V> {
     {
         VarRef {
             ptr: self.ptr.borrow_arc(),
-            variant: std::marker::PhantomData
+            variant: std::marker::PhantomData,
         }
     }
 }
@@ -534,7 +534,7 @@ impl<'a, V> VarRef<'a, V> {
     {
         VarRef {
             ptr: self.ptr,
-            variant: std::marker::PhantomData
+            variant: std::marker::PhantomData,
         }
     }
     /// Clone this `VarRef` as a `ValId`
@@ -542,7 +542,10 @@ impl<'a, V> VarRef<'a, V> {
         self.as_val().clone_val()
     }
     /// Clone this `VarRef` as a `TypeId`
-    pub fn clone_ty(&self) -> TypeId where V: Type {
+    pub fn clone_ty(&self) -> TypeId
+    where
+        V: Type,
+    {
         self.as_ty().clone_var()
     }
     /// Clone this `VarRef` as a `VarId`
@@ -567,25 +570,37 @@ where
     }
 }
 
-impl<V> Debug for VarId<V> where V: Value {
+impl<V> Debug for VarId<V>
+where
+    V: Value,
+{
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Debug for VarRef<'_, V> where V: Value {
+impl<V> Debug for VarRef<'_, V>
+where
+    V: Value,
+{
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarId<V> where V: Value {
+impl<V> Display for VarId<V>
+where
+    V: Value,
+{
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarRef<'_, V> where V: Value {
+impl<V> Display for VarRef<'_, V>
+where
+    V: Value,
+{
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self.as_norm(), fmt)
     }
@@ -721,7 +736,7 @@ impl Value for NormalValue {
     }
 }
 
-/// A wrapper around a `rain` value to assert refinement conditions. 
+/// A wrapper around a `rain` value to assert refinement conditions.
 /// Implementation detail: library consumers should not be able to construct this!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct PrivateValue(ValueEnum);
@@ -970,7 +985,7 @@ macro_rules! impl_to_type {
             fn from(v: $T) -> crate::value::TypeId {
                 crate::value::TypeId {
                     ptr: crate::value::ValId::from(v).0,
-                    variant: std::marker::PhantomData
+                    variant: std::marker::PhantomData,
                 }
             }
         }
