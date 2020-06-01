@@ -3,8 +3,13 @@ Boolean types and logical operations
 */
 
 use crate::prettyprinter::tokens::*;
+use crate::value::{
+    lifetime::{LifetimeBorrow, Live},
+    typing::Typed,
+    universe::FINITE_TY,
+    TypeRef, ValId, Value,
+};
 use crate::{debug_from_display, quick_pretty};
-use crate::value::{typing::Typed, universe::FINITE_TY, TypeRef, ValId, Value, lifetime::{Live, LifetimeBorrow}};
 
 /// The type of booleans
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
@@ -42,10 +47,12 @@ impl Live for Bool {
     }
 }
 
-#[cfg(feature="prettyprinter")]
+#[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
-    use super::*;
-    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{
+        tokens::{KEYWORD_FALSE, KEYWORD_TRUE},
+        PrettyPrint, PrettyPrinter,
+    };
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for bool {
