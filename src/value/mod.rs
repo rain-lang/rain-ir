@@ -819,7 +819,7 @@ pub enum ValueEnum {
     /// A typing universe
     Universe(Universe),
     /// The type of booleans
-    Bool(Bool),
+    BoolTy(Bool),
 }
 
 impl Value for ValueEnum {
@@ -859,7 +859,6 @@ enum_convert! {
     }
     impl TryFromRef<ValueEnum> for Product {}
     impl InjectionRef<ValueEnum> for Universe {}
-    impl InjectionRef<ValueEnum> for Bool {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -881,8 +880,6 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Product { as ValueEnum, }
     impl TryFrom<NormalValue> for Universe { as ValueEnum, }
     impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
-    impl TryFrom<NormalValue> for Bool { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Bool { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -927,9 +924,55 @@ impl From<Universe> for NormalValue {
     }
 }
 
+impl From<Bool> for ValueEnum {
+    fn from(b: Bool) -> ValueEnum {
+        ValueEnum::BoolTy(b)
+    }
+}
+
+impl TryFrom<ValueEnum> for Bool {
+    type Error = ValueEnum;
+    fn try_from(val: ValueEnum) -> Result<Bool, ValueEnum> {
+        match val {
+            ValueEnum::BoolTy(b) => Ok(b),
+            v => Err(v)
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a ValueEnum> for &'a Bool {
+    type Error = &'a ValueEnum;
+    fn try_from(val: &'a ValueEnum) -> Result<&'a Bool, &'a ValueEnum> {
+        match val {
+            ValueEnum::BoolTy(b) => Ok(b),
+            v => Err(v)
+        }
+    }
+}
+
 impl From<Bool> for NormalValue {
     fn from(b: Bool) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Bool(b))
+        NormalValue::assert_new(ValueEnum::BoolTy(b))
+    }
+}
+
+impl TryFrom<NormalValue> for Bool {
+    type Error = NormalValue;
+    fn try_from(val: NormalValue) -> Result<Bool, NormalValue> {
+        match val.deref() {
+            ValueEnum::BoolTy(b) => Ok(*b),
+            _ => Err(val)
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a NormalValue> for &'a Bool {
+    type Error = &'a NormalValue;
+    fn try_from(val: &'a NormalValue) -> Result<&'a Bool, &'a NormalValue> {
+        match val.deref() {
+            ValueEnum::BoolTy(b) => Ok(b),
+            _ => Err(val)
+        }
     }
 }
 
@@ -950,7 +993,7 @@ macro_rules! forv {
             ValueEnum::Tuple($i) => $e,
             ValueEnum::Product($i) => $e,
             ValueEnum::Universe($i) => $e,
-            ValueEnum::Bool($i) => $e,
+            ValueEnum::BoolTy($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
