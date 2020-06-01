@@ -21,5 +21,4 @@ pub mod value;
 #[cfg(feature = "parser")]
 pub mod parser;
 
-#[cfg(feature = "prettyprinter")]
 pub mod prettyprinter;

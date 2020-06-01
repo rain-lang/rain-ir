@@ -186,7 +186,7 @@ impl Value for Product {
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter, tokens::*};
     use crate::value::primitive::Unit;
     use std::fmt::{self, Formatter, Display};
 

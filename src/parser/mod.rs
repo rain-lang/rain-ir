@@ -1,13 +1,14 @@
 /*!
 A simple parser, and AST for a textual representation of `rain` programs
 */
+use crate::prettyprinter::tokens::*;
 use nom::{
     branch::alt,
     bytes::complete::{is_a as is_a_c, is_not, tag},
     bytes::streaming::{is_a as is_a_s, take_until},
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, opt},
-    multi::{many1, separated_nonempty_list, separated_list},
+    multi::{many1, separated_list, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
     Err, IResult,
 };
@@ -16,57 +17,6 @@ use smallvec::SmallVec;
 pub mod ast;
 use ast::*;
 pub mod builder;
-
-/// The `rain` special characters, including whitespace
-pub const SPECIAL_CHARACTERS: &str = " \t\r\n#()[]|\"\':.;/";
-
-/// The `rain` whitespace characters
-pub const WHITESPACE: &str = " \t\r\n";
-
-/// The `rain` path separator charactor
-pub const PATH_SEP: &str = ".";
-
-/// The `rain` typing judgement character
-pub const JUDGE_TYPE: &str = ":";
-
-/// The `rain` assignment character
-pub const ASSIGN: &str = "=";
-
-/// The `rain` keyword for `let`-statements
-pub const KEYWORD_LET: &str = "#let";
-
-/// The delimiter for `rain` statements
-pub const STATEMENT_DELIM: &str = ";";
-
-/// The null `rain` symbol
-pub const NULL_SYMBOL: &str = "_";
-
-/// The delimiter for single-line `rain` comments
-pub const SINGLE_COMMENT_START: &str = "//";
-
-/// The opening delimiter for a multi-line `rain` comment
-pub const MULTI_COMMENT_OPEN: &str = "/*";
-
-/// The closing delimiter for a multi-line `rain` comment
-pub const MULTI_COMMENT_CLOSE: &str = "*/";
-
-/// The opening delimiter for a parse_sexpr
-pub const SEXPR_OPEN: &str = "(";
-
-/// The closing delimiter for a parse_sexpr
-pub const SEXPR_CLOSE: &str = ")";
-
-/// The opening delimiter for a parse_tuple
-pub const TUPLE_OPEN: &str = "[";
-
-/// The closing delimiter for a parse_tuple
-pub const TUPLE_CLOSE: &str = "]";
-
-/// The opening delimiter for a scope
-pub const SCOPE_OPEN: &str = "{";
-
-/// The closing delimiter for a scope
-pub const SCOPE_CLOSE: &str = "}";
 
 /**
 Parse a single-line `rain` comment, returning the content as an `&str`.MULTI_COMMENT_END
@@ -461,11 +411,9 @@ pub fn parse_statement(input: &str) -> IResult<&str, Let> {
             opt(ws),
             parse_expr,
             opt(ws),
-            tag(STATEMENT_DELIM)
+            tag(STATEMENT_DELIM),
         )),
-        |(_, _, lhs, _, _, _, rhs, _, _)| {
-            Let { lhs, rhs }
-        }
+        |(_, _, lhs, _, _, _, rhs, _, _)| Let { lhs, rhs },
     )(input)
 }
 

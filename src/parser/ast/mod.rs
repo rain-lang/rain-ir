@@ -1,7 +1,8 @@
 /*!
 An AST for `rain` programs
 */
-use super::{parse_ident, PATH_SEP, SEXPR_CLOSE, SEXPR_OPEN, TUPLE_CLOSE, TUPLE_OPEN, NULL_SYMBOL, KEYWORD_LET, ASSIGN};
+use super::parse_ident;
+use crate::prettyprinter::tokens::*;
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -72,7 +73,7 @@ impl Display for Path<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         if self.len() == 0 {
             // Edge case (temporary)
-            return Ok(())
+            return Ok(());
         }
         for ident in self.iter() {
             write!(fmt, "{}{}", PATH_SEP, ident)?;
@@ -104,7 +105,7 @@ pub struct Member<'a> {
     /// The value whose member is being accessed
     pub base: Box<Expr<'a>>,
     /// The path to the member being accessed
-    pub path: Path<'a>
+    pub path: Path<'a>,
 }
 
 impl Display for Member<'_> {
@@ -205,7 +206,7 @@ pub enum Expr<'a> {
     /// A tuple
     Tuple(Tuple<'a>),
     /// A member access
-    Member(Member<'a>)
+    Member(Member<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -214,7 +215,7 @@ impl Display for Expr<'_> {
             Expr::Ident(i) => Display::fmt(i, fmt),
             Expr::Sexpr(s) => Display::fmt(s, fmt),
             Expr::Tuple(t) => Display::fmt(t, fmt),
-            Expr::Member(m) => Display::fmt(m, fmt)
+            Expr::Member(m) => Display::fmt(m, fmt),
         }
     }
 }
@@ -227,14 +228,14 @@ pub enum Pattern<'a> {
     /// A simple assignment to a variable
     Simple(Simple<'a>),
     /// A tuple-destructure assignment
-    Detuple(Detuple<'a>)
+    Detuple(Detuple<'a>),
 }
 
 impl Display for Pattern<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self {
             Pattern::Simple(s) => Display::fmt(s, fmt),
-            Pattern::Detuple(d) => Display::fmt(d, fmt)
+            Pattern::Detuple(d) => Display::fmt(d, fmt),
         }
     }
 }
@@ -247,7 +248,7 @@ pub struct Simple<'a> {
     /// The name of the variable being assigned to
     pub var: Ident<'a>,
     /// A type-bound on the variable being assigned to, if any
-    pub ty: Option<Expr<'a>>
+    pub ty: Option<Expr<'a>>,
 }
 
 impl Display for Simple<'_> {
@@ -286,7 +287,7 @@ pub struct Let<'a> {
     /// The pattern being assigned to
     pub lhs: Pattern<'a>,
     /// The value being assigned to the pattern
-    pub rhs: Expr<'a>
+    pub rhs: Expr<'a>,
 }
 
 impl Display for Let<'_> {
