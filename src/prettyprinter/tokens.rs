@@ -20,6 +20,9 @@ pub const ASSIGN: &str = "=";
 /// The `rain` keyword for `let`-statements
 pub const KEYWORD_LET: &str = "#let";
 
+/// The `rain` keyword for the boolean type
+pub const KEYWORD_BOOL: &str = "#bool";
+
 /// The delimiter for `rain` statements
 pub const STATEMENT_DELIM: &str = ";";
 
