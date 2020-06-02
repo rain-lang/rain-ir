@@ -32,6 +32,12 @@ pub const KEYWORD_FALSE: &str = "#false";
 /// The `rain` keyword for `typeof`
 pub const KEYWORD_TYPEOF: &str = "#typeof";
 
+/// The `rain` keyword for finite types
+pub const KEYWORD_FINITE: &str = "#finite";
+
+/// The `rain` keyword for indices into finite types
+pub const KEYWORD_IX: &str = "#ix";
+
 /// The delimiter for `rain` statements
 pub const STATEMENT_DELIM: &str = ";";
 

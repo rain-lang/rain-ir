@@ -15,6 +15,7 @@ use std::convert::TryFrom;
 use std::ops::Deref;
 
 pub mod logical;
+pub mod finite;
 
 lazy_static! {
     /// An instance of the unit value
