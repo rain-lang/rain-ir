@@ -2,13 +2,14 @@
 A simple parser, and AST for a textual representation of `rain` programs
 */
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::logical::Bool;
+use crate::value::primitive::{finite::Finite, logical::Bool};
 use nom::{
     branch::alt,
     bytes::complete::{is_a as is_a_c, is_not, tag},
     bytes::streaming::{is_a as is_a_s, take_until},
+    character::complete::{digit1, hex_digit1, oct_digit1},
     character::streaming::{line_ending, not_line_ending},
-    combinator::{map, opt},
+    combinator::{map, map_res, opt},
     multi::{many1, separated_list, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
     Err, IResult,
@@ -342,9 +343,62 @@ pub fn parse_typeof(input: &str) -> IResult<&str, TypeOf> {
         delimited(
             preceded(tag(KEYWORD_TYPEOF), tag("(")),
             preceded(opt(ws), parse_expr),
-            preceded(opt(ws), tag(")"))
+            preceded(opt(ws), tag(")")),
         ),
-        |expr| TypeOf(Box::new(expr))
+        |expr| TypeOf(Box::new(expr)),
+    )(input)
+}
+
+/**
+Parse a 128-bit integer
+*/
+pub fn parse_u128(input: &str) -> IResult<&str, u128> {
+    alt((
+        map_res(preceded(tag("0x"), hex_digit1), |input| {
+            u128::from_str_radix(input, 16)
+        }),
+        map_res(preceded(tag("0o"), oct_digit1), |input| {
+            u128::from_str_radix(input, 8)
+        }),
+        map_res(preceded(tag("0b"), is_a_c("01")), |input| {
+            u128::from_str_radix(input, 2)
+        }),
+        map_res(digit1, |input| u128::from_str_radix(input, 10)),
+    ))(input)
+}
+
+/**
+Parse a finite type
+*/
+pub fn parse_finite(input: &str) -> IResult<&str, Finite> {
+    delimited(
+        preceded(tag(KEYWORD_FINITE), tag("(")),
+        preceded(opt(ws), map(parse_u128, Finite)),
+        preceded(opt(ws), tag(")")),
+    )(input)
+}
+
+/**
+Parse an index into a finite type
+*/
+pub fn parse_ix(input: &str) -> IResult<&str, Index> {
+    preceded(
+        tag(KEYWORD_IX),
+        map(
+            tuple((
+                opt(delimited(
+                    preceded(tag("("), opt(ws)),
+                    map(parse_u128, Finite),
+                    preceded(opt(ws), tag(")")),
+                )),
+                delimited(
+                    preceded(tag("["), opt(ws)),
+                    parse_u128,
+                    preceded(opt(ws), tag("]")),
+                ),
+            )),
+            |(ty, ix)| Index { ty, ix },
+        ),
     )(input)
 }
 
@@ -363,6 +417,8 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_bool, Expr::Bool),
                 map(parse_bool_ty, Expr::BoolTy),
                 map(parse_typeof, Expr::TypeOf),
+                map(parse_finite, Expr::Finite),
+                map(parse_ix, Expr::Index),
             )),
             opt(parse_path),
         )),
