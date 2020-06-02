@@ -2,12 +2,12 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    eval::Apply,
+    eval::{Application, Apply, Error},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::FINITE_TY,
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
+    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -97,7 +97,33 @@ impl Value for Tuple {
     }
 }
 
-impl Apply for Tuple {}
+impl Apply for Tuple {
+    /**
+    Tuples accept finite indices as arguments, which is the `rain` syntax for a member access.
+    */
+    fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
+        // Check for a null application
+        if args.len() == 0 {
+            return Ok(Application::Complete(self.lifetime().clone_lifetime(), self.ty().clone_ty()))
+        }
+        // Do a type check
+        match args[0].ty().as_enum() {
+            ValueEnum::Finite(f) => {
+                if self.len() as u128 != f.0 {
+                    return Err(Error::TupleLengthMismatch)
+                }
+            },
+            _ => return Err(Error::TypeMismatch)
+        }
+        // See if we can actually evaluate this expression
+        match args[0].as_enum() {
+            ValueEnum::Index(ix) => {
+                Ok(Application::Success(&args[1..], self[ix.ix() as usize].clone()))
+            },
+            _ => unimplemented!() //TODO: product downcasting...
+        }
+    }
+}
 
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");

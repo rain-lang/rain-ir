@@ -13,6 +13,10 @@ use super::{
 pub enum Error {
     /// Attempting to apply a non-function
     NotAFunction,
+    /// Type mismatch
+    TypeMismatch,
+    /// Tuple length mismatch
+    TupleLengthMismatch
 }
 
 /// The result of a *valid* application. An invalid application should return an error!
