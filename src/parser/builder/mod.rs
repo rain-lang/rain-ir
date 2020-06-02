@@ -5,6 +5,7 @@ use super::ast::{
     Detuple, Expr, Ident, Index as IndexExpr, Let, Member, Pattern, Sexpr as SExpr, Simple,
     Tuple as TupleExpr, TypeOf,
 };
+use super::parse_expr;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     eval::Error as EvalError,
@@ -82,6 +83,8 @@ pub enum Error<'a> {
         /// The expected tuple size
         expected: TypeId,
     },
+    /// A parse error
+    ParseError(&'a str),
     /// An error message
     Message(&'a str),
     /// An unimplemented `rain` IR build
@@ -240,5 +243,11 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                 "Non-unit tuple destructure is not yet implemented!",
             )),
         }
+    }
+
+    /// Parse an expression, and return it
+    pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
+        let (rest, expr) = parse_expr(expr).map_err(|_| Error::ParseError(expr))?;
+        self.build_expr(&expr).map(|value| (rest, value))
     }
 }

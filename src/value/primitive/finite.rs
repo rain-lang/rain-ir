@@ -163,3 +163,22 @@ impl Value for Index {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::builder::Builder;
+    use crate::value::ValId;
+    #[test]
+    fn basic_indexing_works() {
+        let mut builder = Builder::<&str>::new();
+        let exprs: &[(&str, ValId)] = &[
+            ("[#true #false ()] #ix(3)[1]", false.into()),
+            //("[#")
+        ];
+        for (expr, value) in exprs {
+            let (rest, expr) = builder.parse_expr(expr).expect(expr);
+            assert_eq!(&expr, value);
+            assert_eq!(rest, "");
+        }
+    }
+}
