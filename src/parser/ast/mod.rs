@@ -1,7 +1,7 @@
 /*!
 An AST for `rain` programs
 */
-use super::parse_ident;
+use super::{parse_ident, parse_u128};
 use crate::prettyprinter::tokens::*;
 use crate::value::primitive::{finite::Finite, logical::Bool};
 use crate::{debug_from_display, quick_display};
@@ -41,6 +41,14 @@ impl<'a> Ident<'a> {
         } else {
             //TODO: number checking, etc.
             Ok(Some(self.get_str()))
+        }
+    }
+    /// Try to convert this identifier to a `u128`. Return it on failure
+    #[inline]
+    pub fn get_u128(&self) -> Result<u128, Ident<'a>> {
+        match parse_u128(self.0) {
+            Ok(("", r)) => Ok(r),
+            _ => Err(*self)
         }
     }
 }

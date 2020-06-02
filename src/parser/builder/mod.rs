@@ -11,9 +11,10 @@ use crate::value::{
     primitive::{finite::Index, Unit, UNIT},
     tuple::Tuple,
     typing::Typed,
-    TypeId, ValId,
+    TypeId, ValId, ValueEnum,
 };
 use ahash::RandomState;
+use num::ToPrimitive;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{BuildHasher, Hash};
@@ -61,6 +62,13 @@ pub enum Error<'a> {
         got: usize,
         /// The expected tuple size
         expected: usize,
+    },
+    /// Index out of bounds
+    IndexOutOfBounds {
+        /// The index
+        ix: u128,
+        /// The maximum index
+        max: usize,
     },
     /// A type mismatch
     TypeMismatch {
@@ -119,8 +127,49 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     }
 
     /// Build a member expression
-    pub fn build_member(&mut self, _member: &Member<'a>) -> Result<ValId, Error<'a>> {
-        Err(Error::NotImplemented("Member building is not implemented!"))
+    pub fn build_member(&mut self, member: &Member<'a>) -> Result<ValId, Error<'a>> {
+        let mut base = self.build_expr(&member.base)?;
+        for ident in member.path.iter() {
+            if let Ok(ix) = ident.get_u128() {
+                // First try direct tuple indexing
+                match base.as_enum() {
+                    ValueEnum::Tuple(t) => {
+                        let ix = if let Some(ix_u) = ix.to_usize() {
+                            if ix_u < t.len() {
+                                ix_u
+                            } else {
+                                return Err(Error::IndexOutOfBounds { ix, max: t.len() });
+                            }
+                        } else {
+                            return Err(Error::IndexOutOfBounds { ix, max: t.len() });
+                        };
+                        base = t[ix].clone();
+                    }
+                    _ => match base.ty().as_enum() {
+                        // Else try index-expression building
+                        ValueEnum::Product(p) => {
+                            let _ix = if let Some(ix_u) = ix.to_usize() {
+                                if ix_u < p.len() {
+                                    ix_u
+                                } else {
+                                    return Err(Error::IndexOutOfBounds { ix, max: p.len() });
+                                }
+                            } else {
+                                return Err(Error::IndexOutOfBounds { ix, max: p.len() });
+                            };
+                            //TODO: build appropriate sexpr
+                            unimplemented!()
+                        }
+                        _ => return Err(Error::Message("Non-tuple indexing not yet implemented!")),
+                    },
+                }
+            } else {
+                return Err(Error::Message(
+                    "Non-numeric member-access not yet implemented!",
+                ));
+            }
+        }
+        Ok(base)
     }
 
     /// Build an S-expression

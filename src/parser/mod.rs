@@ -368,6 +368,24 @@ pub fn parse_u128(input: &str) -> IResult<&str, u128> {
 }
 
 /**
+Parse a `usize`
+*/
+pub fn parse_usize(input: &str) -> IResult<&str, usize> {
+    alt((
+        map_res(preceded(tag("0x"), hex_digit1), |input| {
+            usize::from_str_radix(input, 16)
+        }),
+        map_res(preceded(tag("0o"), oct_digit1), |input| {
+            usize::from_str_radix(input, 8)
+        }),
+        map_res(preceded(tag("0b"), is_a_c("01")), |input| {
+            usize::from_str_radix(input, 2)
+        }),
+        map_res(digit1, |input| usize::from_str_radix(input, 10)),
+    ))(input)
+}
+
+/**
 Parse a finite type
 */
 pub fn parse_finite(input: &str) -> IResult<&str, Finite> {
