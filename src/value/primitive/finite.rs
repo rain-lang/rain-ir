@@ -166,6 +166,7 @@ impl Value for Index {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::parser::builder::Builder;
     use crate::value::ValId;
     #[test]
@@ -173,7 +174,8 @@ mod tests {
         let mut builder = Builder::<&str>::new();
         let exprs: &[(&str, ValId)] = &[
             ("[#true #false ()] #ix(3)[1]", false.into()),
-            //("[#")
+            ("[#false [#true] ()] #ix(3)[1] #ix(1)[0]", true.into()),
+            ("[#false #finite(6) #false] #ix(3)[1]", Finite(6).into())
         ];
         for (expr, value) in exprs {
             let (rest, expr) = builder.parse_expr(expr).expect(expr);
