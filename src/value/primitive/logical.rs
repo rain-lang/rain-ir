@@ -17,6 +17,7 @@ use lazy_static::lazy_static;
 pub struct Bool;
 
 lazy_static! {
+    /// A reference to the type of booleans
     pub static ref BOOL_TY: VarId<Bool> = VarId::direct_new(Bool);
 }
 
