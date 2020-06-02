@@ -20,7 +20,7 @@ pub trait Typed {
 }
 
 /// A trait implemented by `rain` values which are a type
-pub trait Type: Into<TypeId> + Value {
+pub trait Type: Value {
     /// Get the universe of this type
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe

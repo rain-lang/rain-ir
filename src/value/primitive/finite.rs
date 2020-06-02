@@ -3,9 +3,17 @@ Finite-valued types
 */
 
 use crate::prettyprinter::tokens::*;
+use crate::value::{
+    lifetime::{LifetimeBorrow, Live},
+    typing::{Type, Typed},
+    universe::FINITE_TY,
+    TypeRef, UniverseRef, ValId, Value, VarId, VarRef,
+};
 use crate::{debug_from_display, quick_pretty};
 use num::ToPrimitive;
 use ref_cast::RefCast;
+use std::cmp::Ordering;
+use std::ops::Deref;
 
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
@@ -14,15 +22,6 @@ pub struct Finite(pub u128);
 
 debug_from_display!(Finite);
 quick_pretty!(Finite, s, fmt => write!(fmt, "{}({})", KEYWORD_FINITE, s.0));
-
-/// An index into a finite type
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Index {
-    /// The type this index is part of
-    ty: Finite,
-    /// This index
-    ix: u128,
-}
 
 impl Finite {
     /// Get an index into this type. Return an error if out of bounds
@@ -36,13 +35,83 @@ impl Finite {
     }
 }
 
+impl Live for Finite {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
+
+impl Typed for Finite {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        FINITE_TY.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
+    }
+}
+
+impl Value for Finite {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Tried to get dependency #{} of finite type {}, which has none",
+            ix, self
+        )
+    }
+}
+
+impl Type for Finite {
+    #[inline]
+    fn universe(&self) -> UniverseRef {
+        FINITE_TY.borrow_var()
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        false
+    }
+}
+
+/// An index into a finite type
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Index {
+    /// The type this index is part of
+    ty: VarId<Finite>,
+    /// This index
+    ix: u128,
+}
+
+impl PartialOrd for Index {
+    /**
+    Compare two arbitrary indices.
+
+    Indices in general form a partial order: indices into different types are incomparable, whereas
+    the trivial injection into the natural numbers induces a total order on indices into the same
+    type.
+    */
+    fn partial_cmp(&self, other: &Index) -> Option<Ordering> {
+        if self.ty != other.ty {
+            None
+        } else {
+            Some(self.ix.cmp(&other.ix))
+        }
+    }
+}
+
 debug_from_display!(Index);
 quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty, s.ix));
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds
-    pub fn try_new(ty: Finite, ix: u128) -> Result<Index, ()> {
-        if ix >= ty.0 {
+    pub fn try_new<F: Into<VarId<Finite>>>(ty: F, ix: u128) -> Result<Index, ()> {
+        let ty = ty.into();
+        if ix >= ty.deref().0 {
             Err(())
         } else {
             Ok(Index { ty, ix })
@@ -53,7 +122,39 @@ impl Index {
         self.ix
     }
     /// Get the (finite) type of this index
-    pub fn get_ty(&self) -> Finite {
-        self.ty
+    pub fn get_ty(&self) -> VarRef<Finite> {
+        self.ty.borrow_var()
+    }
+}
+
+impl Typed for Index {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+}
+
+impl Live for Index {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
+
+impl Value for Index {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Tried to get dependency #{} of finite index {}, which has none",
+            ix, self
+        )
     }
 }

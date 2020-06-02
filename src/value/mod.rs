@@ -21,7 +21,7 @@ pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
-use primitive::{logical::Bool, Unit};
+use primitive::{logical::Bool, finite::{Finite, Index}, Unit};
 use tuple::{Product, Tuple};
 use typing::{Type, TypeValue, Typed};
 use universe::Universe;
@@ -821,7 +821,11 @@ pub enum ValueEnum {
     /// The type of booleans
     BoolTy(Bool),
     /// A boolean value
-    Bool(bool)
+    Bool(bool),
+    /// A finite type
+    Finite(Finite),
+    /// An index into a finite type
+    Index(Index),
 }
 
 impl Value for ValueEnum {
@@ -861,6 +865,8 @@ enum_convert! {
     }
     impl TryFromRef<ValueEnum> for Product {}
     impl InjectionRef<ValueEnum> for Universe {}
+    impl InjectionRef<ValueEnum> for Finite {}
+    impl InjectionRef<ValueEnum> for Index {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -882,6 +888,10 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Product { as ValueEnum, }
     impl TryFrom<NormalValue> for Universe { as ValueEnum, }
     impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
+    impl TryFrom<NormalValue> for Finite { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Finite { as ValueEnum, }
+    impl TryFrom<NormalValue> for Index { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Index { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1030,6 +1040,18 @@ impl<'a> TryFrom<&'a NormalValue> for &'a bool {
     }
 }
 
+impl From<Finite> for NormalValue {
+    fn from(finite: Finite) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Finite(finite))
+    }
+}
+
+impl From<Index> for NormalValue {
+    fn from(ix: Index) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Index(ix))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1049,6 +1071,8 @@ macro_rules! forv {
             ValueEnum::Universe($i) => $e,
             ValueEnum::BoolTy($i) => $e,
             ValueEnum::Bool($i) => $e,
+            ValueEnum::Finite($i) => $e,
+            ValueEnum::Index($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1107,19 +1131,22 @@ normal_valid!(Tuple);
 normal_valid!(Product);
 normal_valid!(Universe);
 normal_valid!(Bool);
-normal_valid!(bool);
+normal_valid!(bool); //TODO
+normal_valid!(Finite);
 
-/// Implement `From<T>` for TypeId using the `From<T>` implementation of `ValId`, in effect
+/// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
 #[macro_use]
 macro_rules! impl_to_type {
     ($T:ty) => {
+        impl From<$T> for crate::value::TypeValue {
+            fn from(v: $T) -> crate::value::typing::TypeValue {
+                crate::value::typing::TypeValue::try_from(crate::value::NormalValue::from(v)).expect("Impossible")
+            }
+        }
         impl From<$T> for crate::value::TypeId {
             fn from(v: $T) -> crate::value::TypeId {
-                crate::value::TypeId {
-                    ptr: crate::value::ValId::from(v).0,
-                    variant: std::marker::PhantomData,
-                }
+                crate::value::TypeId::try_from(crate::value::ValId::from(v)).expect("Impossible")
             }
         }
     };
@@ -1128,6 +1155,7 @@ macro_rules! impl_to_type {
 impl_to_type!(Product);
 impl_to_type!(Universe);
 impl_to_type!(Bool);
+impl_to_type!(Finite);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
