@@ -4,6 +4,7 @@ An AST for `rain` programs
 use super::parse_ident;
 use crate::prettyprinter::tokens::*;
 use crate::{debug_from_display, quick_display};
+use crate::value::primitive::logical::Bool;
 use smallvec::SmallVec;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
@@ -208,7 +209,9 @@ pub enum Expr<'a> {
     /// A member access
     Member(Member<'a>),
     /// A boolean
-    Bool(bool)
+    Bool(bool),
+    /// The boolean type
+    BoolTy(Bool)
 }
 
 impl Display for Expr<'_> {
@@ -221,7 +224,8 @@ impl Display for Expr<'_> {
             Expr::Bool(b) => match b {
                 true => write!(fmt, "{}", KEYWORD_TRUE),
                 false => write!(fmt, "{}", KEYWORD_FALSE)
-            }
+            },
+            Expr::BoolTy(b) => Display::fmt(b, fmt),
         }
     }
 }

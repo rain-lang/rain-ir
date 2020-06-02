@@ -2,6 +2,7 @@
 A simple parser, and AST for a textual representation of `rain` programs
 */
 use crate::prettyprinter::tokens::*;
+use crate::value::primitive::logical::Bool;
 use nom::{
     branch::alt,
     bytes::complete::{is_a as is_a_c, is_not, tag},
@@ -183,6 +184,13 @@ pub fn parse_bool(input: &str) -> IResult<&str, bool> {
 }
 
 /**
+Parse the boolean type
+*/
+pub fn parse_bool_ty(input: &str) -> IResult<&str, Bool> {
+    map(tag(KEYWORD_BOOL), |_| Bool)(input)
+}
+
+/**
 Parse a `rain` identifier, which is composed of a string of non-special, non-whitespace characters.
 
 Numbers are parsed as `Ident`s as well, and only later resolved to their special numeric types.
@@ -339,6 +347,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_tuple, Expr::Tuple),
                 map(parse_ident, Expr::Ident),
                 map(parse_bool, Expr::Bool),
+                map(parse_bool_ty, Expr::BoolTy)
             )),
             opt(parse_path),
         )),

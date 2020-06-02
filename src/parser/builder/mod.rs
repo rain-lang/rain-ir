@@ -83,7 +83,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Member(member) => self.build_member(member)?,
             Expr::Sexpr(sexpr) => self.build_sexpr(sexpr)?.into(),
             Expr::Tuple(tuple) => self.build_tuple(tuple)?.into(),
-            Expr::Bool(b) => (*b).into()
+            Expr::Bool(b) => (*b).into(),
+            Expr::BoolTy(b) => (*b).into()
         };
         Ok(result_value)
     }
