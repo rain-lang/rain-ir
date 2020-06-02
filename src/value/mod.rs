@@ -21,7 +21,11 @@ pub mod universe;
 
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
-use primitive::{logical::Bool, finite::{Finite, Index}, Unit};
+use primitive::{
+    finite::{Finite, Index},
+    logical::Bool,
+    Unit,
+};
 use tuple::{Product, Tuple};
 use typing::{Type, TypeValue, Typed};
 use universe::Universe;
@@ -1132,7 +1136,8 @@ normal_valid!(Product);
 normal_valid!(Universe);
 normal_valid!(Bool);
 normal_valid!(bool); //TODO
-normal_valid!(Finite);
+normal_valid!(Finite); //TODO: unit + empty?
+normal_valid!(Index); //TODO: unit?
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
@@ -1141,7 +1146,8 @@ macro_rules! impl_to_type {
     ($T:ty) => {
         impl From<$T> for crate::value::TypeValue {
             fn from(v: $T) -> crate::value::typing::TypeValue {
-                crate::value::typing::TypeValue::try_from(crate::value::NormalValue::from(v)).expect("Impossible")
+                crate::value::typing::TypeValue::try_from(crate::value::NormalValue::from(v))
+                    .expect("Impossible")
             }
         }
         impl From<$T> for crate::value::TypeId {

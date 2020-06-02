@@ -3,7 +3,7 @@ An AST for `rain` programs
 */
 use super::parse_ident;
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::logical::Bool;
+use crate::value::primitive::{finite::Finite, logical::Bool};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -216,6 +216,27 @@ impl Display for TypeOf<'_> {
 
 debug_from_display!(TypeOf<'_>);
 
+/// An index into a finite type
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Index {
+    /// The type of this index
+    pub ty: Option<Finite>,
+    /// The index
+    pub ix: u128,
+}
+
+debug_from_display!(Index);
+
+impl Display for Index {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        if let Some(ty) = self.ty {
+            write!(fmt, "{}({})[{}]", KEYWORD_IX, ty, self.ix)
+        } else {
+            write!(fmt, "{}[{}]", KEYWORD_IX, self.ix)
+        }
+    }
+}
+
 /// A `rain` expression
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
@@ -233,6 +254,10 @@ pub enum Expr<'a> {
     BoolTy(Bool),
     /// A typeof expression
     TypeOf(TypeOf<'a>),
+    /// A finite type
+    Finite(Finite),
+    /// An index into a finite type
+    Index(Index),
 }
 
 impl Display for Expr<'_> {
@@ -248,6 +273,8 @@ impl Display for Expr<'_> {
             },
             Expr::BoolTy(b) => Display::fmt(b, fmt),
             Expr::TypeOf(t) => Display::fmt(t, fmt),
+            Expr::Finite(f) => Display::fmt(f, fmt),
+            Expr::Index(i) => Display::fmt(i, fmt),
         }
     }
 }

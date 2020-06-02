@@ -2,12 +2,13 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Let, Member, Pattern, Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
+    Detuple, Expr, Ident, Index as IndexExpr, Let, Member, Pattern, Sexpr as SExpr, Simple,
+    Tuple as TupleExpr, TypeOf,
 };
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     expr::Sexpr,
-    primitive::{Unit, UNIT},
+    primitive::{finite::Index, Unit, UNIT},
     tuple::Tuple,
     typing::Typed,
     TypeId, ValId,
@@ -85,6 +86,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Bool(b) => (*b).into(),
             Expr::BoolTy(b) => (*b).into(),
             Expr::TypeOf(ty) => self.build_typeof(ty)?.into(),
+            Expr::Finite(f) => (*f).into(),
+            Expr::Index(i) => self.build_index(*i)?.into(),
         };
         Ok(result_value)
     }
@@ -104,9 +107,20 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         self.symbols.get(sym).ok_or(Error::UndefinedIdent(ident))
     }
 
+    /// Build an index into a finite type
+    pub fn build_index(&self, ix: IndexExpr) -> Result<Index, Error<'a>> {
+        if let Some(ty) = ix.ty {
+            Index::try_new(ty, ix.ix).map_err(|_| Error::Message("Invalid index!"))
+        } else {
+            Err(Error::NotImplemented(
+                "Index type inference not implemented!",
+            ))
+        }
+    }
+
     /// Build a member expression
     pub fn build_member(&mut self, _member: &Member<'a>) -> Result<ValId, Error<'a>> {
-        Err(Error::NotImplemented("Member building is not implemented"))
+        Err(Error::NotImplemented("Member building is not implemented!"))
     }
 
     /// Build an S-expression
