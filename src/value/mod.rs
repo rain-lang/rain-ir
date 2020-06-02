@@ -820,6 +820,8 @@ pub enum ValueEnum {
     Universe(Universe),
     /// The type of booleans
     BoolTy(Bool),
+    /// A boolean value
+    Bool(bool)
 }
 
 impl Value for ValueEnum {
@@ -976,6 +978,58 @@ impl<'a> TryFrom<&'a NormalValue> for &'a Bool {
     }
 }
 
+impl From<bool> for ValueEnum {
+    fn from(b: bool) -> ValueEnum {
+        ValueEnum::Bool(b)
+    }
+}
+
+impl TryFrom<ValueEnum> for bool {
+    type Error = ValueEnum;
+    fn try_from(val: ValueEnum) -> Result<bool, ValueEnum> {
+        match val {
+            ValueEnum::Bool(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a ValueEnum> for &'a bool {
+    type Error = &'a ValueEnum;
+    fn try_from(val: &'a ValueEnum) -> Result<&'a bool, &'a ValueEnum> {
+        match val {
+            ValueEnum::Bool(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl From<bool> for NormalValue {
+    fn from(b: bool) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Bool(b))
+    }
+}
+
+impl TryFrom<NormalValue> for bool {
+    type Error = NormalValue;
+    fn try_from(val: NormalValue) -> Result<bool, NormalValue> {
+        match val.deref() {
+            ValueEnum::Bool(b) => Ok(*b),
+            _ => Err(val),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a NormalValue> for &'a bool {
+    type Error = &'a NormalValue;
+    fn try_from(val: &'a NormalValue) -> Result<&'a bool, &'a NormalValue> {
+        match val.deref() {
+            ValueEnum::Bool(b) => Ok(b),
+            _ => Err(val),
+        }
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -994,6 +1048,7 @@ macro_rules! forv {
             ValueEnum::Product($i) => $e,
             ValueEnum::Universe($i) => $e,
             ValueEnum::BoolTy($i) => $e,
+            ValueEnum::Bool($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1051,6 +1106,7 @@ normal_valid!(Sexpr);
 normal_valid!(Tuple);
 normal_valid!(Product);
 normal_valid!(Universe);
+normal_valid!(Bool);
 
 /// Implement `From<T>` for TypeId using the `From<T>` implementation of `ValId`, in effect
 /// asserting that a type's values are all `rain` types
@@ -1070,6 +1126,7 @@ macro_rules! impl_to_type {
 
 impl_to_type!(Product);
 impl_to_type!(Universe);
+impl_to_type!(Bool);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
