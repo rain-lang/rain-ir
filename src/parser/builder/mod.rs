@@ -7,14 +7,19 @@ use super::ast::{
 };
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
+    eval::Error as EvalError,
     expr::Sexpr,
-    primitive::{finite::Index, Unit, UNIT},
+    primitive::{
+        finite::{Finite, Index},
+        Unit, UNIT,
+    },
     tuple::Tuple,
     typing::Typed,
     TypeId, ValId, ValueEnum,
 };
 use ahash::RandomState;
 use num::ToPrimitive;
+use smallvec::smallvec;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{BuildHasher, Hash};
@@ -81,6 +86,14 @@ pub enum Error<'a> {
     Message(&'a str),
     /// An unimplemented `rain` IR build
     NotImplemented(&'a str),
+    /// An evaluation error
+    EvalError(EvalError),
+}
+
+impl<'a> From<EvalError> for Error<'a> {
+    fn from(error: EvalError) -> Error<'a> {
+        Error::EvalError(error)
+    }
 }
 
 impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, B> {
@@ -148,17 +161,16 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                     _ => match base.ty().as_enum() {
                         // Else try index-expression building
                         ValueEnum::Product(p) => {
-                            let _ix = if let Some(ix_u) = ix.to_usize() {
-                                if ix_u < p.len() {
-                                    ix_u
-                                } else {
-                                    return Err(Error::IndexOutOfBounds { ix, max: p.len() });
-                                }
-                            } else {
-                                return Err(Error::IndexOutOfBounds { ix, max: p.len() });
-                            };
-                            //TODO: build appropriate sexpr
-                            unimplemented!()
+                            base = Sexpr::try_new(smallvec![
+                                base.clone(),
+                                Index::try_new(Finite(p.len() as u128), ix)
+                                    .map_err(|_| Error::IndexOutOfBounds {
+                                        ix: ix,
+                                        max: p.len()
+                                    })?
+                                    .into()
+                            ])?
+                            .into();
                         }
                         _ => return Err(Error::Message("Non-tuple indexing not yet implemented!")),
                     },
@@ -174,13 +186,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
 
     /// Build an S-expression
     pub fn build_sexpr(&mut self, sexpr: &SExpr<'a>) -> Result<Sexpr, Error<'a>> {
-        match sexpr.len() {
-            0 => Ok(Sexpr::unit()),
-            1 => Ok(Sexpr::singleton(self.build_expr(&sexpr.0[0])?)),
-            _ => Err(Error::NotImplemented(
-                "Non-singleton/unit sexpr building is not implemented",
-            )),
-        }
+        let args: Result<_, _> = sexpr.iter().map(|arg| self.build_expr(arg)).collect();
+        Ok(Sexpr::try_new(args?)?)
     }
 
     /// Build a tuple
