@@ -20,7 +20,7 @@ pub mod tuple;
 pub mod typing;
 pub mod universe;
 
-use eval::{AppRes, Apply, Error as EvalError};
+use eval::{Application, Apply, Error as EvalError};
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
@@ -146,7 +146,7 @@ impl Typed for ValId {
 
 impl Apply for ValId {
     #[inline]
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -242,7 +242,7 @@ impl Typed for ValRef<'_> {
 }
 
 impl Apply for ValRef<'_> {
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -454,9 +454,9 @@ impl<V: Typed> Typed for VarId<V> {
     }
 }
 
-impl<V: Apply> Apply for VarId<V> {
+impl<V: Value> Apply for VarId<V> {
     #[inline]
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         self.ptr.do_apply(args, inline)
     }
 }
@@ -685,9 +685,9 @@ impl<V: Value> Live for VarRef<'_, V> {
     }
 }
 
-impl<V: Apply> Apply for VarRef<'_, V> {
+impl<V: Value> Apply for VarRef<'_, V> {
     #[inline]
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         self.ptr.do_apply(args, inline)
     }
 }
@@ -774,7 +774,7 @@ impl Typed for NormalValue {
 
 impl Apply for NormalValue {
     #[inline]
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -870,7 +870,7 @@ pub enum ValueEnum {
 
 impl Apply for ValueEnum {
     #[inline]
-    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, EvalError> {
         forv! {match (self) {
             v => v.do_apply(args, inline),
         }}

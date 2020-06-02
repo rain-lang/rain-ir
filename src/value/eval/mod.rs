@@ -2,7 +2,11 @@
 `rain` value evaluation.
 */
 
-use super::{ValId, TypeRef, typing::Typed};
+use super::{
+    lifetime::{Lifetime, Live},
+    typing::Typed,
+    TypeId, ValId,
+};
 
 /// An evaluation error
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -13,29 +17,26 @@ pub enum Error {
 
 /// The result of a *valid* application. An invalid application should return an error!
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Application<V = ValId> {
+pub enum Application<'a, V = ValId> {
     /// Stopped evaluation: not enough information without a change in parameters given
-    Stop,
+    Stop(Lifetime, TypeId),
     /// Complete evaluation: any more parameters will cause a failure
-    Complete,
+    Complete(Lifetime, TypeId),
     /// Incomplete information: may be enough information with more parameters
-    Incomplete,
+    Incomplete(Lifetime, TypeId),
     /// A successful evaluation to a value
-    Success(V),
+    Success(&'a [ValId], V),
 }
 
-/// The result of a valid application
-pub type AppRes<'a> = (&'a [ValId], TypeRef<'a>, Application);
-
 /// An object which can be applied to a list of `rain` values
-pub trait Apply: Typed {
+pub trait Apply: Typed + Live {
     /**
     Attempt to apply an object to a list of `rain` values, returning an `Application`.
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
     #[inline]
-    fn apply<'a>(&'a self, args: &'a [ValId]) -> Result<AppRes<'a>, Error> {
+    fn apply<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
         self.do_apply(args, false)
     }
     /**
@@ -44,7 +45,7 @@ pub trait Apply: Typed {
     Use a loop to be sure!
     */
     #[inline]
-    fn inline<'a>(&'a self, args: &'a [ValId]) -> Result<AppRes<'a>, Error> {
+    fn inline<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
         self.do_apply(args, true)
     }
     /**
@@ -52,9 +53,9 @@ pub trait Apply: Typed {
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
-    fn do_apply<'a>(&'a self, args: &'a [ValId], _inline: bool) -> Result<AppRes<'a>, Error> {
+    fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
         if args.len() == 0 {
-            Ok((args, self.ty(), Application::Complete))
+            Ok(Application::Complete(self.lifetime().clone_lifetime(), self.ty().clone_ty()))
         } else {
             Err(Error::NotAFunction)
         }

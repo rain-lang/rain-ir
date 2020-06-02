@@ -2,7 +2,7 @@
 `rain` expressions
 */
 use super::{
-    eval::Apply,
+    eval::{Application, Apply, Error},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
@@ -33,6 +33,53 @@ debug_from_display!(Sexpr);
 pretty_display!(Sexpr, "(...)");
 
 impl Sexpr {
+    /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.
+    pub fn try_new(mut args: SexprArgs) -> Result<Sexpr, Error> {
+        // Simple cases
+        match args.len() {
+            0 => return Ok(Self::unit()),
+            1 => return Ok(Self::singleton(args.swap_remove(0))),
+            _ => {}
+        }
+        // General case
+        let (lifetime, ty) = match args[0].apply(&args[1..])? {
+            Application::Success(rest, valid) => {
+                return Self::applied_with(valid, rest)
+            }
+            Application::Complete(lifetime, ty)
+            | Application::Incomplete(lifetime, ty)
+            | Application::Stop(lifetime, ty) => (lifetime, ty),
+        };
+        Ok(Sexpr { args, lifetime, ty })
+    }
+    /// Attempt to create an S-expression from an un-owned argument-list, evaluating as necessary
+    pub fn eval(args: &[ValId]) -> Result<Sexpr, Error> {
+        match args.len() {
+            0 => return Ok(Self::unit()),
+            _ => Self::applied_with(args[0].clone(), &args[..])
+        }
+    }
+    /// Attempt to create an S-expression by applying an argument to an argument list, evaluating as necessary.
+    pub fn applied_with(mut f: ValId, mut args: &[ValId]) -> Result<Sexpr, Error> {
+        while !args.is_empty() {
+            match f.apply(args)? {
+                Application::Success(rest, v) => {
+                    args = rest;
+                    f = v;
+                    continue;
+                }
+                Application::Complete(lifetime, ty)
+                | Application::Incomplete(lifetime, ty)
+                | Application::Stop(lifetime, ty) => {
+                    let mut a = SexprArgs::with_capacity(1 + args.len());
+                    a.push(f);
+                    a.clone_from_slice(args);
+                    return Ok(Sexpr { args: a, lifetime, ty })
+                }
+            };
+        }
+        Ok(Self::singleton(f))
+    }
     /// Create an S-expression corresponding to the unit value
     pub fn unit() -> Sexpr {
         Sexpr {
