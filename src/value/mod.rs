@@ -14,11 +14,13 @@ use triomphe::{Arc, ArcBorrow};
 
 pub mod eval;
 pub mod expr;
+pub mod function;
 pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
 pub mod typing;
 pub mod universe;
+pub mod data;
 
 use eval::{Application, Apply, Error as EvalError};
 use expr::Sexpr;
