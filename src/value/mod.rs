@@ -20,6 +20,7 @@ pub mod tuple;
 pub mod typing;
 pub mod universe;
 
+use eval::{AppRes, Apply, Error as EvalError};
 use expr::Sexpr;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
@@ -143,6 +144,13 @@ impl Typed for ValId {
     }
 }
 
+impl Apply for ValId {
+    #[inline]
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        self.deref().do_apply(args, inline)
+    }
+}
+
 impl Value for ValId {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -230,6 +238,12 @@ impl Typed for ValRef<'_> {
     #[inline]
     fn is_ty(&self) -> bool {
         self.as_norm().is_ty()
+    }
+}
+
+impl Apply for ValRef<'_> {
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        self.deref().do_apply(args, inline)
     }
 }
 
@@ -437,6 +451,13 @@ impl<V: Typed> Typed for VarId<V> {
     #[inline]
     fn is_ty(&self) -> bool {
         self.as_norm().is_ty()
+    }
+}
+
+impl<V: Apply> Apply for VarId<V> {
+    #[inline]
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        self.ptr.do_apply(args, inline)
     }
 }
 
@@ -657,10 +678,17 @@ impl<'a, V: Value> Value for VarRef<'a, V> {
     }
 }
 
-impl<'a, V: Value> Live for VarRef<'a, V> {
+impl<V: Value> Live for VarRef<'_, V> {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.ptr.lifetime()
+    }
+}
+
+impl<V: Apply> Apply for VarRef<'_, V> {
+    #[inline]
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        self.ptr.do_apply(args, inline)
     }
 }
 
@@ -744,6 +772,13 @@ impl Typed for NormalValue {
     }
 }
 
+impl Apply for NormalValue {
+    #[inline]
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        self.deref().do_apply(args, inline)
+    }
+}
+
 impl Value for NormalValue {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -771,7 +806,7 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed + Live {
+pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
@@ -831,6 +866,15 @@ pub enum ValueEnum {
     Finite(Finite),
     /// An index into a finite type
     Index(Index),
+}
+
+impl Apply for ValueEnum {
+    #[inline]
+    fn do_apply<'a>(&'a self, args: &'a [ValId], inline: bool) -> Result<AppRes<'a>, EvalError> {
+        forv! {match (self) {
+            v => v.do_apply(args, inline),
+        }}
+    }
 }
 
 impl Value for ValueEnum {

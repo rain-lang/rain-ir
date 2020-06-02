@@ -2,6 +2,7 @@
 Primitive `rain` values and associated value descriptors
 */
 use super::{
+    eval::Apply,
     expr::Sexpr,
     lifetime::{LifetimeBorrow, Live},
     tuple::{Product, Tuple},
@@ -14,8 +15,8 @@ use lazy_static::lazy_static;
 use std::convert::TryFrom;
 use std::ops::Deref;
 
-pub mod logical;
 pub mod finite;
+pub mod logical;
 
 lazy_static! {
     /// An instance of the unit value
@@ -157,6 +158,8 @@ impl Typed for () {
     }
 }
 
+impl Apply for () {}
+
 impl Value for () {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -179,6 +182,8 @@ This is a singleton struct representing values of the unit type. It implements e
 */
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Unit;
+
+impl Apply for Unit {}
 
 impl Typed for Unit {
     #[inline]

@@ -2,6 +2,7 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
+    eval::Apply,
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
@@ -96,6 +97,8 @@ impl Value for Tuple {
     }
 }
 
+impl Apply for Tuple {}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
 
@@ -162,6 +165,8 @@ impl Typed for Product {
         true
     }
 }
+
+impl Apply for Product {}
 
 impl Type for Product {
     fn universe(&self) -> UniverseRef {

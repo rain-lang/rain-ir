@@ -3,6 +3,7 @@ Typing universes
 */
 use crate::quick_pretty;
 use crate::value::{
+    eval::Apply,
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
     TypeRef, UniverseId, UniverseRef, ValId, Value,
@@ -219,6 +220,8 @@ impl Type for Universe {
         true
     }
 }
+
+impl Apply for Universe {}
 
 impl Value for Universe {
     #[inline]

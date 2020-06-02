@@ -4,6 +4,7 @@ Boolean types and logical operations
 
 use crate::prettyprinter::tokens::*;
 use crate::value::{
+    eval::Apply,
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
     universe::FINITE_TY,
@@ -34,6 +35,8 @@ impl Typed for Bool {
         true
     }
 }
+
+impl Apply for Bool {}
 
 impl Value for Bool {
     #[inline]
@@ -75,6 +78,8 @@ impl Typed for bool {
     }
 }
 
+impl Apply for bool {}
+
 impl Live for bool {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
@@ -89,7 +94,10 @@ impl Value for bool {
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        panic!("Boolean #{} has no dependencies (asked for dependency #{})", self, ix)
+        panic!(
+            "Boolean #{} has no dependencies (asked for dependency #{})",
+            self, ix
+        )
     }
 }
 

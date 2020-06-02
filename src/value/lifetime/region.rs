@@ -6,6 +6,7 @@ use super::{LifetimeBorrow, Live};
 use crate::quick_pretty;
 use crate::util::hash_cache::Cache;
 use crate::value::{
+    eval::Apply,
     typing::{Type, Typed},
     TypeId, TypeRef, ValId, Value,
 };
@@ -235,6 +236,8 @@ impl Typed for Parameter {
         self.ty().is_universe()
     }
 }
+
+impl Apply for Parameter {}
 
 impl Value for Parameter {
     fn no_deps(&self) -> usize {

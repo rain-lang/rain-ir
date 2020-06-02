@@ -2,6 +2,7 @@
 `rain` expressions
 */
 use super::{
+    eval::Apply,
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
@@ -89,6 +90,8 @@ impl Deref for Sexpr {
         &self.args
     }
 }
+
+impl Apply for Sexpr {}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

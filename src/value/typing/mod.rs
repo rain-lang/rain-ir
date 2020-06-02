@@ -2,6 +2,7 @@
 The `rain` type system
 */
 use super::{
+    eval::Apply,
     lifetime::{LifetimeBorrow, Live},
     NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
 };
@@ -53,6 +54,8 @@ impl Live for TypeValue {
     }
 }
 
+impl Apply for TypeValue {}
+
 impl Value for TypeValue {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -72,7 +75,10 @@ impl Type for TypeValue {
             ValueEnum::Product(p) => p.universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.universe(),
-            u => panic!("Impossible (TypeValue::universe): TypeValue({}) is not a type", u),
+            u => panic!(
+                "Impossible (TypeValue::universe): TypeValue({}) is not a type",
+                u
+            ),
         }
     }
     #[inline]
@@ -82,7 +88,10 @@ impl Type for TypeValue {
             ValueEnum::Product(p) => p.is_universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.is_universe(),
-            u => panic!("Impossible (TypeValue::is_universe): TypeValue({}) is not a type", u),
+            u => panic!(
+                "Impossible (TypeValue::is_universe): TypeValue({}) is not a type",
+                u
+            ),
         }
     }
 }

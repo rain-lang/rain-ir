@@ -2,7 +2,7 @@
 `rain` value evaluation.
 */
 
-use super::ValId;
+use super::{ValId, TypeRef, typing::Typed};
 
 /// An evaluation error
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -11,26 +11,31 @@ pub enum Error {
     NotAFunction,
 }
 
-/// The result of a *valid* evaluation. An invalid evaluation should return an error!
+/// The result of a *valid* application. An invalid application should return an error!
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Application<'a, V = ValId> {
-    /// Stop evaluation: not enough information without a change in parameters given
-    Stop(&'a [ValId]),
+pub enum Application<V = ValId> {
+    /// Stopped evaluation: not enough information without a change in parameters given
+    Stop,
+    /// Complete evaluation: any more parameters will cause a failure
+    Complete,
     /// Incomplete information: may be enough information with more parameters
-    Incomplete(&'a [ValId]),
+    Incomplete,
     /// A successful evaluation to a value
-    Success(&'a [ValId], V),
+    Success(V),
 }
 
+/// The result of a valid application
+pub type AppRes<'a> = (&'a [ValId], TypeRef<'a>, Application);
+
 /// An object which can be applied to a list of `rain` values
-pub trait Apply {
+pub trait Apply: Typed {
     /**
     Attempt to apply an object to a list of `rain` values, returning an `Application`.
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
     #[inline]
-    fn apply(&self, args: &[ValId]) -> Result<Application, Error> {
+    fn apply<'a>(&'a self, args: &'a [ValId]) -> Result<AppRes<'a>, Error> {
         self.do_apply(args, false)
     }
     /**
@@ -39,7 +44,7 @@ pub trait Apply {
     Use a loop to be sure!
     */
     #[inline]
-    fn inline(&self, args: &[ValId]) -> Result<Application, Error> {
+    fn inline<'a>(&'a self, args: &'a [ValId]) -> Result<AppRes<'a>, Error> {
         self.do_apply(args, true)
     }
     /**
@@ -47,7 +52,11 @@ pub trait Apply {
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
-    fn do_apply(&self, _args: &[ValId], _inline: bool) -> Result<Application, Error> {
-        Err(Error::NotAFunction)
+    fn do_apply<'a>(&'a self, args: &'a [ValId], _inline: bool) -> Result<AppRes<'a>, Error> {
+        if args.len() == 0 {
+            Ok((args, self.ty(), Application::Complete))
+        } else {
+            Err(Error::NotAFunction)
+        }
     }
 }

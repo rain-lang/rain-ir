@@ -4,6 +4,7 @@ Finite-valued types
 
 use crate::prettyprinter::tokens::*;
 use crate::value::{
+    eval::Apply,
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
     universe::FINITE_TY,
@@ -52,6 +53,8 @@ impl Typed for Finite {
         true
     }
 }
+
+impl Apply for Finite {}
 
 impl Value for Finite {
     #[inline]
@@ -137,6 +140,8 @@ impl Typed for Index {
         false
     }
 }
+
+impl Apply for Index {}
 
 impl Live for Index {
     #[inline]
