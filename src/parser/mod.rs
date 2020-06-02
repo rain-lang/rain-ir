@@ -335,6 +335,20 @@ pub fn parse_tuple(input: &str) -> IResult<&str, Tuple> {
 }
 
 /**
+Parse a typeof expression
+*/
+pub fn parse_typeof(input: &str) -> IResult<&str, TypeOf> {
+    map(
+        delimited(
+            preceded(tag(KEYWORD_TYPEOF), tag("(")),
+            preceded(opt(ws), parse_expr),
+            preceded(opt(ws), tag(")"))
+        ),
+        |expr| TypeOf(Box::new(expr))
+    )(input)
+}
+
+/**
 Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
 
 These expressions can have paths attached
@@ -347,7 +361,8 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_tuple, Expr::Tuple),
                 map(parse_ident, Expr::Ident),
                 map(parse_bool, Expr::Bool),
-                map(parse_bool_ty, Expr::BoolTy)
+                map(parse_bool_ty, Expr::BoolTy),
+                map(parse_typeof, Expr::TypeOf),
             )),
             opt(parse_path),
         )),
