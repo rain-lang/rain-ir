@@ -8,7 +8,7 @@ use crate::value::{
     TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
 use lazy_static::lazy_static;
-use lazycell::AtomicLazyCell;
+use once_cell::sync::OnceCell;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
@@ -26,7 +26,7 @@ pub struct Universe {
     /// The kind of this type universe
     kind: usize,
     /// The type of this universe. Lazily computed to avoid infinite regress
-    ty: AtomicLazyCell<UniverseId>,
+    ty: OnceCell<UniverseId>,
 }
 
 impl PartialEq for Universe {
@@ -68,7 +68,7 @@ impl Universe {
             Some(Universe {
                 level,
                 kind,
-                ty: AtomicLazyCell::new(),
+                ty: OnceCell::new(),
             })
         } else {
             None
@@ -79,7 +79,7 @@ impl Universe {
         Universe {
             level: 0,
             kind: 0,
-            ty: AtomicLazyCell::new(),
+            ty: OnceCell::new(),
         }
     }
     /// Create a simple type universe
@@ -87,7 +87,7 @@ impl Universe {
         Universe {
             level: 1,
             kind: 0,
-            ty: AtomicLazyCell::new(),
+            ty: OnceCell::new(),
         }
     }
     /// Get the level of this type universe
@@ -103,7 +103,7 @@ impl Universe {
         Universe {
             level: self.level,
             kind: 0,
-            ty: AtomicLazyCell::new(),
+            ty: OnceCell::new(),
         }
     }
     /// Get a type universe containing this universe's types and this universe as a `Universe`
@@ -111,7 +111,7 @@ impl Universe {
         Universe {
             level: self.level + 1,
             kind: self.kind,
-            ty: AtomicLazyCell::new(),
+            ty: OnceCell::new(),
         }
     }
     /// Get the type of this universe as a `Universe`
@@ -119,7 +119,7 @@ impl Universe {
         Universe {
             level: self.level + 1,
             kind: self.kind + 1,
-            ty: AtomicLazyCell::new(),
+            ty: OnceCell::new(),
         }
     }
     /// Get the universe of elements in this universe, if any
@@ -130,7 +130,7 @@ impl Universe {
             Some(Universe {
                 level: self.level,
                 kind: self.kind - 1,
-                ty: AtomicLazyCell::new(),
+                ty: OnceCell::new(),
             })
         }
     }
@@ -164,7 +164,7 @@ impl<'a> UniverseRef<'a> {
             Universe {
                 level: self.level.max(other.level),
                 kind: self.kind.min(other.kind),
-                ty: AtomicLazyCell::new(),
+                ty: OnceCell::new(),
             }
             .into()
         }
@@ -203,12 +203,15 @@ impl Typed for Universe {
 impl Type for Universe {
     #[inline]
     fn universe(&self) -> UniverseRef {
-        if let Some(ty) = self.ty.borrow() {
+        if let Some(ty) = self.ty.get() {
             ty.borrow_var()
         } else {
             let universe = UniverseId::from(self.enclosing());
-            let _ = self.ty.fill(universe); // Ignore a failed fill
-            self.ty.borrow().expect("Impossible").borrow_var()
+            let _ = self.ty.set(universe); // Ignore a failed fill
+            self.ty
+                .get()
+                .expect("Impossible: this universe's type has just been initialized!")
+                .borrow_var()
         }
     }
     #[inline]

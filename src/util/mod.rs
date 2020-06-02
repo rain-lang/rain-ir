@@ -268,13 +268,13 @@ macro_rules! enum_convert {
                 match v_ref {
                     $En$(::$V)+(_) => match v.into() {
                         $En$(::$V)+(v) => Ok(v),
-                        _ => panic!("Impossible!")
+                        _ => panic!("Impossible: pattern was previously matched on reference")
                     },
                     $($($from $(if $guard)* => {
                         let v: $En = v.into();
                         match v {
                             $from => $to,
-                            _ => panic!("Impossible")
+                            _ => panic!("Impossible: guarded pattern was previously matched on reference")
                         }
                     },)*)*
                     _ => Err(v)

@@ -388,7 +388,7 @@ where
     fn deref(&self) -> &V {
         match self.ptr.deref().try_into() {
             Ok(r) => r,
-            _ => panic!("Impossible!"),
+            _ => panic!("Impossible: VarId is not asserted variant"),
         }
     }
 }
@@ -572,7 +572,7 @@ where
     fn deref(&self) -> &V {
         match self.ptr.deref().try_into() {
             Ok(r) => r,
-            _ => panic!("Impossible!"),
+            _ => panic!("Impossible: VarRef is not asserted variant"),
         }
     }
 }

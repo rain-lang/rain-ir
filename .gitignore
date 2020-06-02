@@ -3,3 +3,4 @@
 /cache
 Cargo.lock
 tarpaulin-report.html
+.gdb_history
