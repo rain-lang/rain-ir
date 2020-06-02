@@ -122,3 +122,29 @@ mod prettyprint_impl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::value::ValId;
+    use crate::parser::builder::Builder;
+    #[test]
+    fn booleans_parse_properly() {
+        let mut builder = Builder::<&str>::new();
+        let (rest, expr) = builder.parse_expr("#true").expect("#true");
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(true));
+
+        let (rest, expr) = builder.parse_expr("#false").expect("#false");
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(false));
+
+        let (rest, expr) = builder.parse_expr("#bool").expect("#bool");
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(Bool));
+
+        assert!(builder.parse_expr("#fals").is_err());
+    }
+
+
+}
