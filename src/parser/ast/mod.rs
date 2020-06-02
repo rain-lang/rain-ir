@@ -207,6 +207,8 @@ pub enum Expr<'a> {
     Tuple(Tuple<'a>),
     /// A member access
     Member(Member<'a>),
+    /// A boolean
+    Bool(bool)
 }
 
 impl Display for Expr<'_> {
@@ -216,6 +218,10 @@ impl Display for Expr<'_> {
             Expr::Sexpr(s) => Display::fmt(s, fmt),
             Expr::Tuple(t) => Display::fmt(t, fmt),
             Expr::Member(m) => Display::fmt(m, fmt),
+            Expr::Bool(b) => match b {
+                true => write!(fmt, "{}", KEYWORD_TRUE),
+                false => write!(fmt, "{}", KEYWORD_FALSE)
+            }
         }
     }
 }

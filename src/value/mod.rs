@@ -1107,6 +1107,7 @@ normal_valid!(Tuple);
 normal_valid!(Product);
 normal_valid!(Universe);
 normal_valid!(Bool);
+normal_valid!(bool);
 
 /// Implement `From<T>` for TypeId using the `From<T>` implementation of `ValId`, in effect
 /// asserting that a type's values are all `rain` types

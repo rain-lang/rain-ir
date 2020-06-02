@@ -338,6 +338,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_sexpr, Expr::Sexpr),
                 map(parse_tuple, Expr::Tuple),
                 map(parse_ident, Expr::Ident),
+                map(parse_bool, Expr::Bool),
             )),
             opt(parse_path),
         )),

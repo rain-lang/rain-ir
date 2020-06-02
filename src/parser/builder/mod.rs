@@ -75,6 +75,7 @@ pub enum Error<'a> {
 }
 
 impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, B> {
+
     /// Build a `rain` expression into IR
     pub fn build_expr(&mut self, expr: &Expr<'a>) -> Result<ValId, Error<'a>> {
         let result_value = match expr {
@@ -82,9 +83,11 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Member(member) => self.build_member(member)?,
             Expr::Sexpr(sexpr) => self.build_sexpr(sexpr)?.into(),
             Expr::Tuple(tuple) => self.build_tuple(tuple)?.into(),
+            Expr::Bool(b) => (*b).into()
         };
         Ok(result_value)
     }
+
     /// Build a `rain` ident
     pub fn build_ident(&mut self, ident: Ident<'a>) -> Result<&ValId, Error<'a>> {
         let sym = ident
@@ -93,10 +96,12 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             .ok_or(Error::Message("Cannot access the null identifier"))?;
         self.symbols.get(sym).ok_or(Error::UndefinedIdent(ident))
     }
+
     /// Build a member expression
     pub fn build_member(&mut self, _member: &Member<'a>) -> Result<ValId, Error<'a>> {
         Err(Error::NotImplemented("Member building is not implemented"))
     }
+
     /// Build an S-expression
     pub fn build_sexpr(&mut self, sexpr: &SExpr<'a>) -> Result<Sexpr, Error<'a>> {
         match sexpr.len() {
@@ -107,16 +112,19 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             )),
         }
     }
+
     /// Build a tuple
     pub fn build_tuple(&mut self, tuple: &TupleExpr<'a>) -> Result<Tuple, Error<'a>> {
         let elems: Result<_, _> = tuple.0.iter().map(|elem| self.build_expr(elem)).collect();
         Tuple::new(elems?).map_err(|_| Error::Message("Failed to build tuple"))
     }
+
     /// Build a let-statement
     pub fn build_let(&mut self, l: &Let<'a>) -> Result<(), Error<'a>> {
         let rhs = self.build_expr(&l.rhs)?;
         self.build_assign(&l.lhs, rhs)
     }
+
     /// Build an assignment
     pub fn build_assign(&mut self, p: &Pattern<'a>, v: ValId) -> Result<(), Error<'a>> {
         match p {
@@ -124,6 +132,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Pattern::Detuple(d) => self.build_detuple(d, v),
         }
     }
+    
     /// Build a simple assignment
     pub fn build_simple(&mut self, s: &Simple<'a>, v: ValId) -> Result<(), Error<'a>> {
         if let Some(_ty) = s.ty.as_ref() {
