@@ -3,8 +3,8 @@ An AST for `rain` programs
 */
 use super::parse_ident;
 use crate::prettyprinter::tokens::*;
-use crate::{debug_from_display, quick_display};
 use crate::value::primitive::logical::Bool;
+use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
@@ -197,6 +197,25 @@ impl Display for Tuple<'_> {
 
 debug_from_display!(Tuple<'_>);
 
+/// A tuple
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct TypeOf<'a>(pub Box<Expr<'a>>);
+
+impl<'a> TypeOf<'a> {
+    /// Create a new empty tuple
+    pub fn unit() -> Tuple<'a> {
+        Tuple(Vec::new())
+    }
+}
+
+impl Display for TypeOf<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}({})", KEYWORD_TYPEOF, self.0)
+    }
+}
+
+debug_from_display!(TypeOf<'_>);
+
 /// A `rain` expression
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
@@ -211,7 +230,9 @@ pub enum Expr<'a> {
     /// A boolean
     Bool(bool),
     /// The boolean type
-    BoolTy(Bool)
+    BoolTy(Bool),
+    /// A typeof expression
+    TypeOf(TypeOf<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -223,9 +244,10 @@ impl Display for Expr<'_> {
             Expr::Member(m) => Display::fmt(m, fmt),
             Expr::Bool(b) => match b {
                 true => write!(fmt, "{}", KEYWORD_TRUE),
-                false => write!(fmt, "{}", KEYWORD_FALSE)
+                false => write!(fmt, "{}", KEYWORD_FALSE),
             },
             Expr::BoolTy(b) => Display::fmt(b, fmt),
+            Expr::TypeOf(t) => Display::fmt(t, fmt),
         }
     }
 }

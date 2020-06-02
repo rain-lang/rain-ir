@@ -29,6 +29,9 @@ pub const KEYWORD_TRUE: &str = "#true";
 /// The `rain` keyword for `false`
 pub const KEYWORD_FALSE: &str = "#false";
 
+/// The `rain` keyword for `typeof`
+pub const KEYWORD_TYPEOF: &str = "#typeof";
+
 /// The delimiter for `rain` statements
 pub const STATEMENT_DELIM: &str = ";";
 

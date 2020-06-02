@@ -2,7 +2,7 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Let, Member, Pattern, Sexpr as SExpr, Simple, Tuple as TupleExpr,
+    Detuple, Expr, Ident, Let, Member, Pattern, Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
 };
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
@@ -75,7 +75,6 @@ pub enum Error<'a> {
 }
 
 impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, B> {
-
     /// Build a `rain` expression into IR
     pub fn build_expr(&mut self, expr: &Expr<'a>) -> Result<ValId, Error<'a>> {
         let result_value = match expr {
@@ -84,9 +83,16 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Sexpr(sexpr) => self.build_sexpr(sexpr)?.into(),
             Expr::Tuple(tuple) => self.build_tuple(tuple)?.into(),
             Expr::Bool(b) => (*b).into(),
-            Expr::BoolTy(b) => (*b).into()
+            Expr::BoolTy(b) => (*b).into(),
+            Expr::TypeOf(ty) => self.build_typeof(ty)?.into(),
         };
         Ok(result_value)
+    }
+
+    /// Build a `rain` typeof expression
+    pub fn build_typeof(&mut self, ty: &TypeOf<'a>) -> Result<TypeId, Error<'a>> {
+        let expr = self.build_expr(&ty.0)?;
+        Ok(expr.ty().clone_ty())
     }
 
     /// Build a `rain` ident
@@ -133,7 +139,6 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Pattern::Detuple(d) => self.build_detuple(d, v),
         }
     }
-    
     /// Build a simple assignment
     pub fn build_simple(&mut self, s: &Simple<'a>, v: ValId) -> Result<(), Error<'a>> {
         if let Some(_ty) = s.ty.as_ref() {
