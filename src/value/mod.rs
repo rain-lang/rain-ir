@@ -12,6 +12,7 @@ use std::hash::Hash;
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
 
+pub mod eval;
 pub mod expr;
 pub mod lifetime;
 pub mod primitive;
