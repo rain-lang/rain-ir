@@ -4,6 +4,8 @@
 
 mod region;
 pub use region::*;
+mod parametrized;
+pub use parametrized::*;
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
