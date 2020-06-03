@@ -1,6 +1,7 @@
 /*!
 `rain` value lifetimes
 */
+use std::cmp::Ordering;
 
 mod region;
 pub use region::*;
@@ -35,11 +36,13 @@ impl Lifetime {
     {
         let mut base = self.borrow_lifetime();
         for lifetime in lifetimes {
-            if base.is_static() {
-                base = lifetime
-            }
-            if !lifetime.is_static() {
-                unimplemented!()
+            if let Some(ord) = base.partial_cmp(&lifetime) {
+                if ord == Ordering::Less {
+                    base = lifetime
+                }
+            } else {
+                //TODO: lifetime intersections where possible...
+                return Err(()) // Incompatible regions!
             }
         }
         Ok(base)
@@ -60,9 +63,41 @@ impl From<Option<Region>> for Lifetime {
     }
 }
 
+impl PartialOrd for Lifetime {
+    /**
+    We define a lifetime to be a sublifetime of another lifetime if every value in one lifetime lies in the other,
+    This naturally induces a partial ordering on the set of regions.
+    */
+    fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
+        use Ordering::*;
+        match (self.0.as_ref(), other.0.as_ref()) {
+            (None, None) => Some(Equal),
+            (None, Some(_)) => Some(Less),
+            (Some(_), None) => Some(Greater),
+            (Some(l), Some(r)) => l.partial_cmp(r)
+        }
+    }
+}
+
 /// A borrow of a `rain` lifetime
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub struct LifetimeBorrow<'a>(Option<RegionBorrow<'a>>);
+
+impl PartialOrd for LifetimeBorrow<'_> {
+    /**
+    We define a lifetime to be a sublifetime of another lifetime if every value in one lifetime lies in the other,
+    This naturally induces a partial ordering on the set of regions.
+    */
+    fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
+        use Ordering::*;
+        match (self.0.as_ref(), other.0.as_ref()) {
+            (None, None) => Some(Equal),
+            (None, Some(_)) => Some(Less),
+            (Some(_), None) => Some(Greater),
+            (Some(l), Some(r)) => l.partial_cmp(r)
+        }
+    }
+}
 
 impl<'a> LifetimeBorrow<'a> {
     /// Clone this lifetime
@@ -100,4 +135,6 @@ impl<'a> From<Option<RegionBorrow<'a>>> for LifetimeBorrow<'a> {
 pub trait Live {
     /// Get the lifetime of this value
     fn lifetime(&self) -> LifetimeBorrow;
+    /// Get the region of this value, or `None` if the value is global
+    fn region(&self) -> Option<RegionBorrow> { self.lifetime().region() }
 }
