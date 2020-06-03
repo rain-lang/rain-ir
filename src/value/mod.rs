@@ -5,13 +5,17 @@ use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
+use smallvec::Array;
+use smallvec::SmallVec;
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
+use fxhash::FxHashSet;
 
+pub mod data;
 pub mod eval;
 pub mod expr;
 pub mod function;
@@ -20,7 +24,6 @@ pub mod primitive;
 pub mod tuple;
 pub mod typing;
 pub mod universe;
-pub mod data;
 
 use eval::{Application, Apply, Error as EvalError};
 use expr::Sexpr;
@@ -825,6 +828,8 @@ pub trait Value: Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply {
 #[repr(transparent)]
 pub struct Deps<V>(pub V);
 
+const DEP_SEARCH_STACK_SIZE: usize = 16;
+
 impl<V: Value> Deps<V> {
     /// The number of dependencies of this value
     pub fn len(&self) -> usize {
@@ -837,6 +842,24 @@ impl<V: Value> Deps<V> {
     /// Iterate over the dependencies of this value
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
+    }
+    /// Collect the immediate dependencies of this value below a given depth.
+    pub fn collect_deps<A>(&self, below: usize) -> SmallVec<A>
+    where
+        A: Array<Item = ValId>,
+    {
+        let mut result: SmallVec<A> = SmallVec::new();
+        let mut searched =  FxHashSet::<&ValId>::default();
+        let mut frontier: SmallVec::<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
+        while let Some(dep) = frontier.pop() {
+            searched.insert(dep);
+            if dep.lifetime().depth() < below {
+                result.push(dep.clone())
+            } else {
+                frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
+            }
+        }
+        result
     }
 }
 

@@ -28,6 +28,11 @@ impl Lifetime {
     pub fn is_static(&self) -> bool {
         self.0.is_none()
     }
+    /// Get the region-depth of this lifetime
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.0.as_ref().map(|region| region.depth()).unwrap_or(0)
+    }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
     pub fn intersect<'a, I>(&'a self, lifetimes: I) -> Result<LifetimeBorrow<'a>, ()>
@@ -102,6 +107,11 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn is_static(&self) -> bool {
         self.0.is_none()
+    }
+    /// Get the region-depth of this lifetime
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.0.map(|region| region.depth()).unwrap_or(0)
     }
 }
 
