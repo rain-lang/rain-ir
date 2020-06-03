@@ -28,7 +28,12 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
         match value.region().partial_cmp(region.deref()) {
             None | Some(Less) => Err(()),
             Some(Equal) => {
-                unimplemented!()
+                let deps = value.deps().collect_deps(value.lifetime().depth());
+                Ok(Parametrized {
+                    region,
+                    value,
+                    deps
+                })
             },
             Some(Greater) => {
                 let deps = smallvec![value.clone().into()];

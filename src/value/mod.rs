@@ -3,6 +3,7 @@
 */
 use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
+use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
 use smallvec::Array;
@@ -13,7 +14,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
-use fxhash::FxHashSet;
 
 pub mod data;
 pub mod eval;
@@ -849,8 +849,12 @@ impl<V: Value> Deps<V> {
         A: Array<Item = ValId>,
     {
         let mut result: SmallVec<A> = SmallVec::new();
-        let mut searched =  FxHashSet::<&ValId>::default();
-        let mut frontier: SmallVec::<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
+        // Simple edge case
+        if below == 0 {
+            return result;
+        }
+        let mut searched = FxHashSet::<&ValId>::default();
+        let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
         while let Some(dep) = frontier.pop() {
             searched.insert(dep);
             if dep.lifetime().depth() < below {
