@@ -69,13 +69,7 @@ impl PartialOrd for Lifetime {
     This naturally induces a partial ordering on the set of regions.
     */
     fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        use Ordering::*;
-        match (self.0.as_ref(), other.0.as_ref()) {
-            (None, None) => Some(Equal),
-            (None, Some(_)) => Some(Less),
-            (Some(_), None) => Some(Greater),
-            (Some(l), Some(r)) => l.partial_cmp(r)
-        }
+        self.0.partial_cmp(&other.0)
     }
 }
 
@@ -89,13 +83,7 @@ impl PartialOrd for LifetimeBorrow<'_> {
     This naturally induces a partial ordering on the set of regions.
     */
     fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
-        use Ordering::*;
-        match (self.0.as_ref(), other.0.as_ref()) {
-            (None, None) => Some(Equal),
-            (None, Some(_)) => Some(Less),
-            (Some(_), None) => Some(Greater),
-            (Some(l), Some(r)) => l.partial_cmp(r)
-        }
+        self.0.partial_cmp(&other.0)
     }
 }
 

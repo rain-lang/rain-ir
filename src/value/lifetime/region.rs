@@ -117,6 +117,18 @@ impl Hash for RegionBorrow<'_> {
     }
 }
 
+impl PartialOrd for RegionBorrow<'_> {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &RegionBorrow<'_>) -> Option<Ordering> {
+        self.deref().partial_cmp(other.deref())
+    }
+}
+
 /// A vector of parameter types
 pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
 
@@ -174,10 +186,74 @@ impl RegionData {
     }
 }
 
+impl PartialEq<Option<RegionBorrow<'_>>> for RegionData {
+    #[inline]
+    fn eq(&self, other: &Option<RegionBorrow<'_>>) -> bool {
+        self.eq(&other.map(|b| b.get()))
+    }
+}
+
+impl PartialOrd<Option<RegionBorrow<'_>>> for RegionData {
+    #[inline]
+    fn partial_cmp(&self, other: &Option<RegionBorrow<'_>>) -> Option<Ordering> {
+        self.partial_cmp(&other.map(|b| b.get()))
+    }
+}
+
+impl PartialEq<RegionData> for Option<RegionBorrow<'_>> {
+    #[inline]
+    fn eq(&self, other: &RegionData) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialOrd<RegionData> for Option<RegionBorrow<'_>> {
+    #[inline]
+    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
+        other.partial_cmp(self).map(Ordering::reverse)
+    }
+}
+
+impl PartialEq<Option<&'_ RegionData>> for RegionData {
+    #[inline]
+    fn eq(&self, other: &Option<&'_ RegionData>) -> bool {
+        if let Some(other) = *other {
+            self.eq(other)
+        } else {
+            false
+        }
+    }
+}
+
+impl PartialOrd<Option<&'_ RegionData>> for RegionData {
+    #[inline]
+    fn partial_cmp(&self, other: &Option<&'_ RegionData>) -> Option<Ordering> {
+        if let Some(other) = *other {
+            self.partial_cmp(other)
+        } else {
+            Some(Ordering::Greater)
+        }
+    }
+}
+
+impl PartialEq<RegionData> for Option<&'_ RegionData> {
+    #[inline]
+    fn eq(&self, other: &RegionData) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialOrd<RegionData> for Option<&'_ RegionData> {
+    #[inline]
+    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
+        other.partial_cmp(self).map(Ordering::reverse)
+    }
+}
+
 impl PartialOrd for RegionData {
     /**
     We define a region to be a subregion of another region if every value in one region lies in the other,
-    which is true if and only if one of the regions is a parent of another. This naturally induces a partial 
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
     ordering on the set of regions.
     */
     #[inline]
@@ -213,13 +289,13 @@ impl PartialOrd for RegionData {
     #[inline]
     fn lt(&self, other: &RegionData) -> bool {
         if self.depth >= other.depth {
-            return false
+            return false;
         }
         let mut other_p = other.parent().expect("Impossible: self.depth < other.depth implies other.depth >= 2, i.e. other has a parent");
         while other_p.depth > self.depth {
             other_p = other.parent().expect("Impossible: self.depth < other_p.depth implies other.depth >= 2, i.e. other has a parent");
         }
-        return other_p.deref() == self
+        return other_p.deref() == self;
     }
     /**
     Check whether the left region is a parent of the right region
