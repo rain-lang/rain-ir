@@ -12,6 +12,7 @@ use crate::value::{
 };
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 use triomphe::{Arc, ArcBorrow};
@@ -28,7 +29,7 @@ lazy_static! {
 }
 
 /// A `rain` region
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, PartialOrd)]
 pub struct Region(Arc<RegionData>);
 
 impl Region {
@@ -170,6 +171,76 @@ impl RegionData {
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
         self.parent.as_ref()
+    }
+}
+
+impl PartialOrd for RegionData {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial 
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
+        use Ordering::*;
+        match self.depth.cmp(&other.depth) {
+            Less => {
+                if self < other {
+                    Some(Less)
+                } else {
+                    None
+                }
+            }
+            Equal => {
+                if self == other {
+                    Some(Equal)
+                } else {
+                    None
+                }
+            }
+            Greater => {
+                if self > other {
+                    Some(Greater)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+    /**
+    Check whether the right region is a parent of the left region.
+    */
+    #[inline]
+    fn lt(&self, other: &RegionData) -> bool {
+        if self.depth >= other.depth {
+            return false
+        }
+        let mut other_p = other.parent().expect("Impossible: self.depth < other.depth implies other.depth >= 2, i.e. other has a parent");
+        while other_p.depth > self.depth {
+            other_p = other.parent().expect("Impossible: self.depth < other_p.depth implies other.depth >= 2, i.e. other has a parent");
+        }
+        return other_p.deref() == self
+    }
+    /**
+    Check whether the left region is a parent of the right region
+    */
+    #[inline]
+    fn gt(&self, other: &RegionData) -> bool {
+        other.lt(self)
+    }
+    /**
+    Check whether the left and right regions are equal, or the left is a parent of the right
+    */
+    #[inline]
+    fn le(&self, other: &RegionData) -> bool {
+        self == other || self.lt(other)
+    }
+    /**
+    Check whether the left and right regions are equal, or the right is a parent of the left
+    */
+    #[inline]
+    fn ge(&self, other: &RegionData) -> bool {
+        other.le(self)
     }
 }
 
