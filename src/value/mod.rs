@@ -27,7 +27,7 @@ pub mod universe;
 
 use eval::{Application, Apply, Error as EvalError};
 use expr::Sexpr;
-use function::pi::Pi;
+use function::{lambda::Lambda, pi::Pi};
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
@@ -898,6 +898,8 @@ pub enum ValueEnum {
     Index(Index),
     /// A pi type
     Pi(Pi),
+    /// A lambda function
+    Lambda(Lambda),
 }
 
 impl Apply for ValueEnum {
@@ -949,6 +951,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Finite {}
     impl InjectionRef<ValueEnum> for Index {}
     impl InjectionRef<ValueEnum> for Pi {}
+    impl InjectionRef<ValueEnum> for Lambda {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -976,6 +979,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Index { as ValueEnum, }
     impl TryFrom<NormalValue> for Pi { as ValueEnum, }
     impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
+    impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1142,6 +1147,12 @@ impl From<Pi> for NormalValue {
     }
 }
 
+impl From<Lambda> for NormalValue {
+    fn from(l: Lambda) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Lambda(l))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1164,6 +1175,7 @@ macro_rules! forv {
             ValueEnum::Finite($i) => $e,
             ValueEnum::Index($i) => $e,
             ValueEnum::Pi($i) => $e,
+            ValueEnum::Lambda($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1226,6 +1238,7 @@ normal_valid!(bool); //TODO
 normal_valid!(Finite); //TODO: unit + empty?
 normal_valid!(Index); //TODO: unit?
 normal_valid!(Pi);
+normal_valid!(Lambda);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types

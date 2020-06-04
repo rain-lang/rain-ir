@@ -3,10 +3,11 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::value::{
+    eval::Apply,
     lifetime::Live,
     lifetime::{LifetimeBorrow, Parametrized},
     typing::Typed,
-    TypeRef, ValId, VarId,
+    TypeRef, ValId, Value, VarId,
 };
 use crate::{debug_from_display, pretty_display};
 
@@ -34,6 +35,21 @@ impl Live for Lambda {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.result.lifetime()
+    }
+}
+
+impl Apply for Lambda {
+    //TODO: this, this one is pretty important, no?
+}
+
+impl Value for Lambda {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        self.result.deps().len()
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        &self.result.deps()[ix]
     }
 }
 
