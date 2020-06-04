@@ -48,7 +48,7 @@ impl<'a> Ident<'a> {
     pub fn get_u128(&self) -> Result<u128, Ident<'a>> {
         match parse_u128(self.0) {
             Ok(("", r)) => Ok(r),
-            _ => Err(*self)
+            _ => Err(*self),
         }
     }
 }
@@ -245,6 +245,53 @@ impl Display for Index {
     }
 }
 
+/// A parametrized expression
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Parametrized<'a> {
+    /// The arguments of this lambda function
+    pub args: Vec<(Ident<'a>, Expr<'a>)>,
+    /// The result of this lambda function
+    pub result: Box<Expr<'a>>,
+}
+
+debug_from_display!(Parametrized<'_>);
+
+impl Display for Parametrized<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "|")?;
+        let mut first = true;
+        for (var, ty) in self.args.iter() {
+            write!(fmt, "{}{}: {}", if first { "" } else { " " }, var, ty)?;
+            first = false;
+        }
+        write!(fmt, "| {}", self.result)
+    }
+}
+
+/// A lambda function
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Lambda<'a>(pub Parametrized<'a>);
+
+debug_from_display!(Lambda<'_>);
+
+impl Display for Lambda<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "#lambda{}", self.0)
+    }
+}
+
+/// A pi type
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Pi<'a>(pub Parametrized<'a>);
+
+debug_from_display!(Pi<'_>);
+
+impl Display for Pi<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "#pi{}", self.0)
+    }
+}
+
 /// A `rain` expression
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
@@ -266,6 +313,10 @@ pub enum Expr<'a> {
     Finite(Finite),
     /// An index into a finite type
     Index(Index),
+    /// A lambda function
+    Lambda(Lambda<'a>),
+    /// A pi type
+    Pi(Pi<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -283,6 +334,8 @@ impl Display for Expr<'_> {
             Expr::TypeOf(t) => Display::fmt(t, fmt),
             Expr::Finite(f) => Display::fmt(f, fmt),
             Expr::Index(i) => Display::fmt(i, fmt),
+            Expr::Lambda(l) => Display::fmt(l, fmt),
+            Expr::Pi(p) => Display::fmt(p, fmt),
         }
     }
 }

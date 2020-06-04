@@ -2,14 +2,15 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Index as IndexExpr, Let, Member, Pattern, Sexpr as SExpr, Simple,
-    Tuple as TupleExpr, TypeOf,
+    Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, Pattern,
+    Pi as PiExpr, Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
 };
 use super::parse_expr;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     eval::Error as EvalError,
     expr::Sexpr,
+    function::{lambda::Lambda, pi::Pi},
     primitive::{
         finite::{Finite, Index},
         Unit, UNIT,
@@ -112,6 +113,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::TypeOf(ty) => self.build_typeof(ty)?.into(),
             Expr::Finite(f) => (*f).into(),
             Expr::Index(i) => self.build_index(*i)?.into(),
+            Expr::Lambda(l) => self.build_lambda(l)?.into(),
+            Expr::Pi(p) => self.build_pi(p)?.into(),
         };
         Ok(result_value)
     }
@@ -244,7 +247,18 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             )),
         }
     }
-
+    /// Build a lambda function
+    pub fn build_lambda(&mut self, _lambda: &LambdaExpr) -> Result<Lambda, Error<'a>> {
+        Err(Error::NotImplemented(
+            "Lambda function construction is not yet implemented!",
+        ))
+    }
+    /// Build a pi type
+    pub fn build_pi(&mut self, _pi: &PiExpr) -> Result<Pi, Error<'a>> {
+        Err(Error::NotImplemented(
+            "Pi function construction is not yet implemented!",
+        ))
+    }
     /// Parse an expression, and return it
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
         let (rest, expr) = parse_expr(expr).map_err(|_| Error::ParseError(expr))?;
