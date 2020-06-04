@@ -297,6 +297,19 @@ impl Display for Parametrized<'_> {
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Lambda<'a>(pub Parametrized<'a>);
 
+impl<'a> Deref for Lambda<'a> {
+    type Target = Parametrized<'a>;
+    fn deref(&self) -> &Parametrized<'a> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Lambda<'a> {
+    fn deref_mut(&mut self) -> &mut Parametrized<'a> {
+        &mut self.0
+    }
+}
+
 debug_from_display!(Lambda<'_>);
 
 impl Display for Lambda<'_> {
@@ -308,6 +321,19 @@ impl Display for Lambda<'_> {
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Pi<'a>(pub Parametrized<'a>);
+
+impl<'a> Deref for Pi<'a> {
+    type Target = Parametrized<'a>;
+    fn deref(&self) -> &Parametrized<'a> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Pi<'a> {
+    fn deref_mut(&mut self) -> &mut Parametrized<'a> {
+        &mut self.0
+    }
+}
 
 debug_from_display!(Pi<'_>);
 

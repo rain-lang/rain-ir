@@ -2,8 +2,9 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, Pattern,
-    Pi as PiExpr, Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
+    Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, ParamArgs,
+    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Sexpr as SExpr, Simple,
+    Tuple as TupleExpr, TypeOf,
 };
 use super::parse_expr;
 use crate::util::symbol_table::SymbolTable;
@@ -11,6 +12,7 @@ use crate::value::{
     eval::Error as EvalError,
     expr::Sexpr,
     function::{lambda::Lambda, pi::Pi},
+    lifetime::{Parametrized, Region},
     primitive::{
         finite::{Finite, Index},
         Unit, UNIT,
@@ -23,12 +25,16 @@ use ahash::RandomState;
 use num::ToPrimitive;
 use smallvec::smallvec;
 use std::borrow::Borrow;
+use std::convert::TryInto;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{BuildHasher, Hash};
 
 /// A rain IR builder
 pub struct Builder<S: Hash + Eq, B: BuildHasher = RandomState> {
+    /// The symbol table
     symbols: SymbolTable<S, ValId, B>,
+    /// The stack of regions being defined, along with associated scope stack depth
+    stack: Vec<(Region, usize)>,
 }
 
 impl<S: Hash + Eq + Debug, B: BuildHasher> Debug for Builder<S, B> {
@@ -44,6 +50,7 @@ impl<'a, S: Hash + Eq + From<&'a str>> Builder<S> {
     pub fn new() -> Builder<S> {
         Builder {
             symbols: SymbolTable::new(),
+            stack: Vec::new(),
         }
     }
 }
@@ -52,6 +59,7 @@ impl<'a, S: Hash + Eq + From<&'a str>, B: BuildHasher + Default> Default for Bui
     fn default() -> Builder<S, B> {
         Builder {
             symbols: SymbolTable::default(),
+            stack: Vec::new(),
         }
     }
 }
@@ -117,6 +125,13 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Pi(p) => self.build_pi(p)?.into(),
         };
         Ok(result_value)
+    }
+
+    /// Build a `rain` expression into a type. Return an error if it is not
+    pub fn build_ty(&mut self, expr: &Expr<'a>) -> Result<TypeId, Error<'a>> {
+        self.build_expr(expr)?
+            .try_into()
+            .map_err(|_| Error::Message("Not a type!"))
     }
 
     /// Build a `rain` typeof expression
@@ -247,17 +262,54 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             )),
         }
     }
-    /// Build a lambda function
-    pub fn build_lambda(&mut self, _lambda: &LambdaExpr) -> Result<Lambda, Error<'a>> {
+    /// Build a set of parameter arguments into a region, registering a new scope for them
+    /// Push this region onto the region stack
+    pub fn push_args(&mut self, _args: &ParamArgs) -> Result<(), Error<'a>> {
         Err(Error::NotImplemented(
-            "Lambda function construction is not yet implemented!",
+            "Argument pushing not yet implemented!",
         ))
     }
+    /// Push a region onto the region stack *without affecting the symbol table*
+    pub fn push_region(&mut self, region: Region) {
+        self.stack.push((region, self.symbols.depth()))
+    }
+    /// Pop the top region from the region stack, along with any scopes in the region. Return it, if any
+    pub fn pop_region(&mut self) -> Option<Region> {
+        if let Some((region, depth)) = self.stack.pop() {
+            self.symbols.jump_to_depth(depth);
+            Some(region)
+        } else {
+            None
+        }
+    }
+    /// Push a scope onto the symbol table
+    pub fn push_scope(&mut self) {
+        self.symbols.push()
+    }
+    /// Pop a scope from the symbol table
+    pub fn pop_scope(&mut self) {
+        self.symbols.pop()
+    }
+    /// Build a lambda function
+    pub fn build_lambda(&mut self, lambda: &LambdaExpr<'a>) -> Result<Lambda, Error<'a>> {
+        self.build_parametrized(lambda).map(Lambda::new)
+    }
     /// Build a pi type
-    pub fn build_pi(&mut self, _pi: &PiExpr) -> Result<Pi, Error<'a>> {
-        Err(Error::NotImplemented(
-            "Pi function construction is not yet implemented!",
-        ))
+    pub fn build_pi(&mut self, pi: &PiExpr<'a>) -> Result<Pi, Error<'a>> {
+        let _result = self.build_parametrized(pi)?;
+        unimplemented!()
+    }
+    /// Build a parametrized value
+    pub fn build_parametrized(
+        &mut self,
+        param: &ParametrizedExpr<'a>,
+    ) -> Result<Parametrized<ValId>, Error<'a>> {
+        self.push_args(&param.args)?;
+        let result = self.build_expr(&param.result);
+        let region = self
+            .pop_region()
+            .expect("`push_args` should always push a region to the stack!");
+        Parametrized::try_new(result?, region).map_err(|_| Error::Message("Invalid parametrized value!"))
     }
     /// Parse an expression, and return it
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
