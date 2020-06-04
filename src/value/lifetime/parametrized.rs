@@ -2,9 +2,9 @@
 A parametrized `rain` value of a given type
 */
 
-use crate::value::lifetime::Region;
+use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
 use crate::value::{ValId, Value};
-use smallvec::{SmallVec, smallvec};
+use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::ops::Deref;
 
@@ -17,6 +17,7 @@ pub struct Parametrized<V> {
     region: Region,
     value: V,
     deps: SmallVec<[ValId; SMALL_PARAM_DEPS]>,
+    lifetime: Lifetime,
 }
 
 impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
@@ -29,20 +30,41 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
             None | Some(Less) => Err(()),
             Some(Equal) => {
                 let deps = value.deps().collect_deps(value.lifetime().depth());
+                let lifetime =
+                    Lifetime::default().intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))?;
                 Ok(Parametrized {
                     region,
                     value,
-                    deps
+                    deps,
+                    lifetime,
                 })
-            },
+            }
             Some(Greater) => {
                 let deps = smallvec![value.clone().into()];
+                let lifetime =
+                    Lifetime::default().intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))?;
                 Ok(Parametrized {
                     region,
                     value,
-                    deps
+                    deps,
+                    lifetime,
                 })
             }
         }
+    }
+}
+
+impl<V> Parametrized<V> {
+    /**
+    Get the value being parametrized
+    */
+    pub fn value(&self) -> &V {
+        &self.value
+    }
+}
+
+impl<V: Value> Live for Parametrized<V> {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.borrow_lifetime()
     }
 }

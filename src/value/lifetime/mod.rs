@@ -35,7 +35,7 @@ impl Lifetime {
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect<'a, I>(&'a self, lifetimes: I) -> Result<LifetimeBorrow<'a>, ()>
+    pub fn intersect<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, ()>
     where
         I: Iterator<Item = LifetimeBorrow<'a>>,
     {
@@ -50,7 +50,7 @@ impl Lifetime {
                 return Err(()) // Incompatible regions!
             }
         }
-        Ok(base)
+        Ok(base.clone_lifetime())
     }
 }
 

@@ -7,7 +7,7 @@ use super::{
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::FINITE_TY,
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum
+    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::SmallVec;
@@ -40,9 +40,7 @@ impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn new(elems: TupleElems) -> Result<Tuple, ()> {
-        let lifetime = Lifetime::default()
-            .intersect(elems.iter().map(|t| t.lifetime()))?
-            .clone_lifetime();
+        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
         let ty = Product::new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
             elems,
@@ -104,23 +102,27 @@ impl Apply for Tuple {
     fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
         // Check for a null application
         if args.len() == 0 {
-            return Ok(Application::Complete(self.lifetime().clone_lifetime(), self.ty().clone_ty()))
+            return Ok(Application::Complete(
+                self.lifetime().clone_lifetime(),
+                self.ty().clone_ty(),
+            ));
         }
         // Do a type check
         match args[0].ty().as_enum() {
             ValueEnum::Finite(f) => {
                 if self.len() as u128 != f.0 {
-                    return Err(Error::TupleLengthMismatch)
+                    return Err(Error::TupleLengthMismatch);
                 }
-            },
-            _ => return Err(Error::TypeMismatch)
+            }
+            _ => return Err(Error::TypeMismatch),
         }
         // See if we can actually evaluate this expression
         match args[0].as_enum() {
-            ValueEnum::Index(ix) => {
-                Ok(Application::Success(&args[1..], self[ix.ix() as usize].clone()))
-            },
-            _ => unimplemented!() //TODO: product downcasting...
+            ValueEnum::Index(ix) => Ok(Application::Success(
+                &args[1..],
+                self[ix.ix() as usize].clone(),
+            )),
+            _ => unimplemented!(), //TODO: product downcasting...
         }
     }
 }
@@ -143,9 +145,7 @@ impl Product {
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn new(elems: ProductElems) -> Result<Product, ()> {
-        let lifetime = Lifetime::default()
-            .intersect(elems.iter().map(|t| t.lifetime()))?
-            .clone_lifetime();
+        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
