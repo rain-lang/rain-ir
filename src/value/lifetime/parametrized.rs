@@ -6,6 +6,7 @@ use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
 use crate::value::{typing::Typed, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::ops::Deref;
 
 /// The size of a small list of parameter dependencies
@@ -84,6 +85,39 @@ impl<V> Parametrized<V> {
     */
     pub fn def_region(&self) -> &Region {
         &self.region
+    }
+}
+
+impl<V: Value> Parametrized<V> {
+    /**
+    Convert a parametrized value into another
+    */
+    pub fn into_value<U>(self) -> Parametrized<U>
+    where
+        U: Value,
+        V: Into<U>,
+    {
+        Parametrized {
+            region: self.region,
+            value: self.value.into(),
+            deps: self.deps,
+            lifetime: self.lifetime,
+        }
+    }
+    /**
+    Try to convert a parametrized value into another
+    */
+    pub fn try_into_value<U>(self) -> Result<Parametrized<U>, V::Error>
+    where
+        U: Value,
+        V: TryInto<U>,
+    {
+        Ok(Parametrized {
+            region: self.region,
+            value: self.value.try_into()?,
+            deps: self.deps,
+            lifetime: self.lifetime
+        })
     }
 }
 

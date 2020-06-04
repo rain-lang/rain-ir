@@ -296,8 +296,11 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     }
     /// Build a pi type
     pub fn build_pi(&mut self, pi: &PiExpr<'a>) -> Result<Pi, Error<'a>> {
-        let _result = self.build_parametrized(pi)?;
-        unimplemented!()
+        let result = self.build_parametrized(pi)?;
+        result
+            .try_into_value()
+            .map_err(|_| Error::Message("Pi type must parametrize a valid type"))
+            .map(Pi::new)
     }
     /// Build a parametrized value
     pub fn build_parametrized(
@@ -309,7 +312,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         let region = self
             .pop_region()
             .expect("`push_args` should always push a region to the stack!");
-        Parametrized::try_new(result?, region).map_err(|_| Error::Message("Invalid parametrized value!"))
+        Parametrized::try_new(result?, region)
+            .map_err(|_| Error::Message("Invalid parametrized value!"))
     }
     /// Parse an expression, and return it
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
