@@ -75,6 +75,7 @@ impl Type for TypeValue {
             ValueEnum::Product(p) => p.universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.universe(),
+            ValueEnum::Pi(p) => p.universe(),
             u => panic!(
                 "Impossible (TypeValue::universe): TypeValue({}) is not a type",
                 u
@@ -88,6 +89,7 @@ impl Type for TypeValue {
             ValueEnum::Product(p) => p.is_universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.is_universe(),
+            ValueEnum::Pi(p) => p.is_universe(),
             u => panic!(
                 "Impossible (TypeValue::is_universe): TypeValue({}) is not a type",
                 u
