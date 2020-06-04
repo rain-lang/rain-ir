@@ -486,10 +486,37 @@ pub fn parse_parametrized(input: &str) -> IResult<&str, Parametrized> {
 }
 
 /**
+Parse a lambda function 
+*/
+pub fn parse_lambda(input: &str) -> IResult<&str, Lambda> {
+    map(
+        parse_parametrized,
+        Lambda
+    )(input)
+}
+
+/**
+Parse a pi type
+*/
+pub fn parse_pi(input: &str) -> IResult<&str, Pi> {
+    map(
+        preceded(
+            preceded(tag(KEYWORD_PI), opt(ws)),
+            parse_parametrized
+        ),
+        Pi
+    )(input)
+}
+
+/**
 Parse a compound `rain` expression. Does *not* consume whitespace before the expression!
 */
 pub fn parse_compound(input: &str) -> IResult<&str, Expr> {
-    parse_atom(input) //TODO: this
+    alt((
+        map(parse_pi, Expr::Pi),
+        map(parse_lambda, Expr::Lambda),
+        parse_atom
+    ))(input)
 }
 
 /// Parse a simple assignment

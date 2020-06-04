@@ -85,3 +85,6 @@ pub const UNIT_TYPE: &str = "#unit";
 
 /// The keyword for product types
 pub const KEYWORD_PROD: &str = "#product";
+
+/// The keyword for pi types
+pub const KEYWORD_PI: &str = "#pi";
