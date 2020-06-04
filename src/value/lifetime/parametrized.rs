@@ -61,6 +61,12 @@ impl<V> Parametrized<V> {
     pub fn value(&self) -> &V {
         &self.value
     }
+    /**
+    Get the dependencies of this value
+    */
+    pub fn deps(&self) -> &[ValId] {
+        &self.deps
+    }
 }
 
 impl<V: Value> Live for Parametrized<V> {

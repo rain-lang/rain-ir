@@ -27,6 +27,7 @@ pub mod universe;
 
 use eval::{Application, Apply, Error as EvalError};
 use expr::Sexpr;
+use function::pi::Pi;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
@@ -895,6 +896,8 @@ pub enum ValueEnum {
     Finite(Finite),
     /// An index into a finite type
     Index(Index),
+    /// A pi type
+    Pi(Pi),
 }
 
 impl Apply for ValueEnum {
@@ -945,6 +948,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Universe {}
     impl InjectionRef<ValueEnum> for Finite {}
     impl InjectionRef<ValueEnum> for Index {}
+    impl InjectionRef<ValueEnum> for Pi {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -970,6 +974,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Finite { as ValueEnum, }
     impl TryFrom<NormalValue> for Index { as ValueEnum, }
     impl TryFromRef<NormalValue> for Index { as ValueEnum, }
+    impl TryFrom<NormalValue> for Pi { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1130,6 +1136,12 @@ impl From<Index> for NormalValue {
     }
 }
 
+impl From<Pi> for NormalValue {
+    fn from(p: Pi) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Pi(p))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1151,6 +1163,7 @@ macro_rules! forv {
             ValueEnum::Bool($i) => $e,
             ValueEnum::Finite($i) => $e,
             ValueEnum::Index($i) => $e,
+            ValueEnum::Pi($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1212,6 +1225,7 @@ normal_valid!(Bool);
 normal_valid!(bool); //TODO
 normal_valid!(Finite); //TODO: unit + empty?
 normal_valid!(Index); //TODO: unit?
+normal_valid!(Pi);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
@@ -1236,6 +1250,7 @@ impl_to_type!(Product);
 impl_to_type!(Universe);
 impl_to_type!(Bool);
 impl_to_type!(Finite);
+impl_to_type!(Pi);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
