@@ -81,9 +81,10 @@ mod prettyprint_impl {
         fn prettyprint<I: From<usize> + Display>(
             &self,
             _printer: &mut PrettyPrinter<I>,
-            _fmt: &mut Formatter,
+            fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            unimplemented!()
+            //TODO: this
+            writeln!(fmt, "UNIMPLEMENTED!")
         }
     }
 }

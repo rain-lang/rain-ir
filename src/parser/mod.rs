@@ -452,6 +452,40 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
 }
 
 /**
+Parse an argument to a parametrized expression
+*/
+pub fn parse_param_arg(input: &str) -> IResult<&str, (Ident, Expr)> {
+    map(
+        tuple((parse_ident, opt(ws), tag(JUDGE_TYPE), opt(ws), parse_atom)),
+        |(id, _, _, _, atom)| (id, atom),
+    )(input)
+}
+
+/**
+Parse the arguments of a parametrized expression
+*/
+pub fn parse_param_args(input: &str) -> IResult<&str, ParamArgs> {
+    delimited(
+        preceded(tag(PARAM_OPEN), opt(ws)),
+        map(separated_nonempty_list(ws, parse_param_arg), ParamArgs),
+        preceded(opt(ws), tag(PARAM_CLOSE)),
+    )(input)
+}
+
+/**
+Parse a parametrized expression
+*/
+pub fn parse_parametrized(input: &str) -> IResult<&str, Parametrized> {
+    map(
+        tuple((parse_param_args, opt(ws), parse_expr)),
+        |(args, _, expr)| Parametrized {
+            args,
+            result: Box::new(expr),
+        },
+    )(input)
+}
+
+/**
 Parse a compound `rain` expression. Does *not* consume whitespace before the expression!
 */
 pub fn parse_compound(input: &str) -> IResult<&str, Expr> {

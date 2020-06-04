@@ -71,6 +71,12 @@ pub const SCOPE_OPEN: &str = "{";
 /// The closing delimiter for a scope
 pub const SCOPE_CLOSE: &str = "}";
 
+/// The opening delimiter for a parameter list
+pub const PARAM_OPEN: &str = "|";
+
+/// The closing delimiter for a parameter list
+pub const PARAM_CLOSE: &str = "|";
+
 /// The standard representation for the unit value
 pub const UNIT_VALUE: &str = "()";
 

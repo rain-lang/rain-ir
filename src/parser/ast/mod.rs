@@ -245,11 +245,42 @@ impl Display for Index {
     }
 }
 
+/// The arguments of a parametrized expression
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct ParamArgs<'a>(pub Vec<(Ident<'a>, Expr<'a>)>);
+
+impl<'a> Deref for ParamArgs<'a> {
+    type Target = Vec<(Ident<'a>, Expr<'a>)>;
+    fn deref(&self) -> &Vec<(Ident<'a>, Expr<'a>)> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for ParamArgs<'a> {
+    fn deref_mut(&mut self) -> &mut Vec<(Ident<'a>, Expr<'a>)> {
+        &mut self.0
+    }
+}
+ 
+impl Display for ParamArgs<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "|")?;
+        let mut first = true;
+        for (var, ty) in self.iter() {
+            write!(fmt, "{}{}: {}", if first { "" } else { " " }, var, ty)?;
+            first = false;
+        }
+        write!(fmt, "|")
+    }
+}
+
+debug_from_display!(ParamArgs<'_>);
+
 /// A parametrized expression
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Parametrized<'a> {
     /// The arguments of this lambda function
-    pub args: Vec<(Ident<'a>, Expr<'a>)>,
+    pub args: ParamArgs<'a>,
     /// The result of this lambda function
     pub result: Box<Expr<'a>>,
 }
@@ -258,13 +289,7 @@ debug_from_display!(Parametrized<'_>);
 
 impl Display for Parametrized<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "|")?;
-        let mut first = true;
-        for (var, ty) in self.args.iter() {
-            write!(fmt, "{}{}: {}", if first { "" } else { " " }, var, ty)?;
-            first = false;
-        }
-        write!(fmt, "| {}", self.result)
+        write!(fmt, "{} {}", self.args, self.result)
     }
 }
 
