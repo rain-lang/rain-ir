@@ -28,7 +28,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, ()> {
         use Ordering::*;
         match value.region().partial_cmp(region.deref()) {
-            None | Some(Less) => Err(()),
+            None | Some(Greater) => Err(()),
             Some(Equal) => {
                 let deps = value.deps().collect_deps(value.lifetime().depth());
                 let lifetime =
@@ -40,7 +40,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                     lifetime,
                 })
             }
-            Some(Greater) => {
+            Some(Less) => {
                 let deps = smallvec![value.clone().into()];
                 let lifetime =
                     Lifetime::default().intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))?;

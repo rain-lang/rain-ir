@@ -74,6 +74,7 @@ impl Type for TypeValue {
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.universe(),
             ValueEnum::Pi(p) => p.universe(),
             u => panic!(
@@ -88,6 +89,7 @@ impl Type for TypeValue {
             ValueEnum::Universe(u) => u.is_universe(),
             ValueEnum::Product(p) => p.is_universe(),
             ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.is_universe(),
             ValueEnum::Pi(p) => p.is_universe(),
             u => panic!(

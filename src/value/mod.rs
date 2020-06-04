@@ -1239,6 +1239,7 @@ normal_valid!(Finite); //TODO: unit + empty?
 normal_valid!(Index); //TODO: unit?
 normal_valid!(Pi);
 normal_valid!(Lambda);
+normal_valid!(Parameter);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types

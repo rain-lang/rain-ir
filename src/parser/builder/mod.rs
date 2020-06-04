@@ -12,7 +12,7 @@ use crate::value::{
     eval::Error as EvalError,
     expr::Sexpr,
     function::{lambda::Lambda, pi::Pi},
-    lifetime::{Parametrized, Region},
+    lifetime::{Parametrized, Region, RegionData},
     primitive::{
         finite::{Finite, Index},
         Unit, UNIT,
@@ -264,10 +264,28 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     }
     /// Build a set of parameter arguments into a region, registering a new scope for them
     /// Push this region onto the region stack
-    pub fn push_args(&mut self, _args: &ParamArgs) -> Result<(), Error<'a>> {
-        Err(Error::NotImplemented(
-            "Argument pushing not yet implemented!",
-        ))
+    pub fn push_args(&mut self, args: &ParamArgs<'a>) -> Result<(), Error<'a>> {
+        let tys: Result<_, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
+        let region = Region::new(RegionData::with(
+            tys?,
+            self.stack.last().map(|(r, _)| r.clone()),
+        ));
+        self.push_scope();
+        for (i, (id, _)) in args.iter().enumerate() {
+            match id.get_sym() {
+                Ok(Some(sym)) => self.symbols.def(
+                    sym.into(),
+                    region.param(i).expect("Index must be in bounds").into(),
+                ),
+                Ok(None) => None,
+                Err(_) => {
+                    self.pop_scope();
+                    return Err(Error::Message("Cannot assign to this symbol!"));
+                }
+            };
+        }
+        self.push_region(region);
+        Ok(())
     }
     /// Push a region onto the region stack *without affecting the symbol table*
     pub fn push_region(&mut self, region: Region) {

@@ -48,6 +48,11 @@ impl Region {
     pub fn get_arc(&self) -> &Arc<RegionData> {
         &self.0
     }
+    /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
+    #[inline]
+    pub fn param(&self, ix: usize) -> Result<Parameter, ()> {
+        Parameter::new(self.clone(), ix)
+    }
 }
 
 impl Deref for Region {
