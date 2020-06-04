@@ -275,7 +275,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             match id.get_sym() {
                 Ok(Some(sym)) => self.symbols.def(
                     sym.into(),
-                    region.param(i).expect("Index must be in bounds").into(),
+                    region.clone().param(i).expect("Index must be in bounds").into(),
                 ),
                 Ok(None) => None,
                 Err(_) => {

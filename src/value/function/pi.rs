@@ -98,11 +98,11 @@ mod prettyprint_impl {
     impl PrettyPrint for Pi {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            //TODO: this
-            writeln!(fmt, "UNIMPLEMENTED!")
+            write!(fmt, "#pi")?;
+            self.result.prettyprint(printer, fmt)
         }
     }
 }

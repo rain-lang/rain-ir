@@ -116,7 +116,7 @@ impl<V: Value> Parametrized<V> {
             region: self.region,
             value: self.value.try_into()?,
             deps: self.deps,
-            lifetime: self.lifetime
+            lifetime: self.lifetime,
         })
     }
 }
@@ -124,5 +124,36 @@ impl<V: Value> Parametrized<V> {
 impl<V: Value> Live for Parametrized<V> {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
+    }
+}
+
+#[cfg(feature = "prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter, tokens::*};
+    use std::fmt::{self, Display, Formatter};
+
+    impl<V> PrettyPrint for Parametrized<V>
+    where
+        V: PrettyPrint + Value,
+    {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "{}", PARAM_OPEN)?;
+            let mut first = true;
+            for param in self.region.borrow_params() {
+                if !first {
+                    write!(fmt, " ")?;
+                }
+                first = false;
+                printer.prettyprint_index(fmt, ValId::from(param).borrow_val())?;
+            }
+            write!(fmt, "{} ", PARAM_CLOSE)?;
+            printer.scoped_print(fmt, &self.value)?;
+            Ok(())
+        }
     }
 }

@@ -80,11 +80,10 @@ mod prettyprint_impl {
     impl PrettyPrint for Lambda {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            //TODO: this
-            writeln!(fmt, "UNIMPLEMENTED!")
+            self.result.prettyprint(printer, fmt)
         }
     }
 }

@@ -1306,6 +1306,37 @@ mod prettyprint_impl {
         }
     }
 
+    impl<V> PrettyPrint for VarId<V>
+    where
+        VarId<V>: Deref,
+        <VarId<V> as Deref>::Target: PrettyPrint,
+    {
+        #[inline]
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            self.deref().prettyprint(printer, fmt)
+        }
+    }
+
+    impl<'a, V> PrettyPrint for VarRef<'a, V>
+    where
+        VarRef<'a, V>: Deref,
+        <VarRef<'a, V> as Deref>::Target: PrettyPrint,
+    {
+        #[inline]
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            self.deref().prettyprint(printer, fmt)
+        }
+    }
+
+
     impl PrettyPrint for NormalValue {
         #[inline]
         fn prettyprint<I: From<usize> + Display>(

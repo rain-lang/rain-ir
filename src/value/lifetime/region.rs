@@ -50,8 +50,20 @@ impl Region {
     }
     /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
     #[inline]
-    pub fn param(&self, ix: usize) -> Result<Parameter, ()> {
-        Parameter::new(self.clone(), ix)
+    pub fn param(self, ix: usize) -> Result<Parameter, ()> {
+        Parameter::new(self, ix)
+    }
+    /// Iterate over the parameters of this `Region`.
+    #[inline]
+    pub fn params(self) -> impl Iterator<Item=Parameter> {
+        let l = self.len();
+        (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
+    }
+    /// Iterate over the parameters of this `Region`, borrowing a reference
+    #[inline]
+    pub fn borrow_params(&self) -> impl '_ + Iterator<Item=Parameter> {
+        let l = self.len();
+        (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
 }
 
