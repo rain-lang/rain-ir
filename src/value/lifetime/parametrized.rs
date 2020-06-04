@@ -3,7 +3,7 @@ A parametrized `rain` value of a given type
 */
 
 use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
-use crate::value::{ValId, Value};
+use crate::value::{typing::Typed, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::ops::Deref;
@@ -54,6 +54,18 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     }
 }
 
+impl<V: Typed> Parametrized<V> {
+    /**
+    Get the parametrized type of this parametrized value
+    */
+    pub fn ty(&self) -> Parametrized<TypeId> {
+        let ty = self.value.ty().clone_ty();
+        Parametrized::try_new(ty, self.region.clone())
+            //TODO: think about this...
+            .expect("A type should never be in a region a value is not!")
+    }
+}
+
 impl<V> Parametrized<V> {
     /**
     Get the value being parametrized
@@ -66,6 +78,12 @@ impl<V> Parametrized<V> {
     */
     pub fn deps(&self) -> &[ValId] {
         &self.deps
+    }
+    /**
+    Get the region in which this parametrized value is defined
+    */
+    pub fn def_region(&self) -> &Region {
+        &self.region
     }
 }
 
