@@ -2,7 +2,7 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    eval::{Application, Apply, Error},
+    eval::{Application, Apply, Error, Substitute, SubstituteToValId, EvalCtx},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
@@ -39,9 +39,9 @@ pub struct Tuple {
 impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn new(elems: TupleElems) -> Result<Tuple, ()> {
+    pub fn try_new(elems: TupleElems) -> Result<Tuple, ()> {
         let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
-        let ty = Product::new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
+        let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
             elems,
             lifetime,
@@ -127,6 +127,20 @@ impl Apply for Tuple {
     }
 }
 
+impl Substitute for Tuple {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Tuple, Error> {
+        let elems: Result<_, _> = self
+            .elems
+            .iter()
+            .cloned()
+            .map(|val| val.substitute(ctx))
+            .collect();
+        Tuple::try_new(elems?).map_err(|_| Error::IncomparableRegions)
+    }
+}
+
+impl SubstituteToValId for Tuple {}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
 
@@ -144,7 +158,7 @@ pub struct Product {
 impl Product {
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn new(elems: ProductElems) -> Result<Product, ()> {
+    pub fn try_new(elems: ProductElems) -> Result<Product, ()> {
         let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
@@ -275,7 +289,7 @@ mod prettyprint_impl {
             let unit_ty = Product::unit_ty();
             assert_eq!(format!("{}", unit), format!("{}", UNIT_VALUE));
             assert_eq!(format!("{}", unit_ty), format!("{}", Unit));
-            let two_units = Tuple::new(smallvec![unit.clone().into(), unit.into()])
+            let two_units = Tuple::try_new(smallvec![unit.clone().into(), unit.into()])
                 .expect("This is a valid tuple!");
             assert_eq!(
                 format!("{}", two_units),

@@ -214,7 +214,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Build a tuple
     pub fn build_tuple(&mut self, tuple: &TupleExpr<'a>) -> Result<Tuple, Error<'a>> {
         let elems: Result<_, _> = tuple.0.iter().map(|elem| self.build_expr(elem)).collect();
-        Tuple::new(elems?).map_err(|_| Error::Message("Failed to build tuple"))
+        Tuple::try_new(elems?).map_err(|_| Error::Message("Failed to build tuple"))
     }
 
     /// Build a let-statement
