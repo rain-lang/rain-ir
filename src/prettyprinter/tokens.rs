@@ -91,3 +91,6 @@ pub const KEYWORD_PROD: &str = "#product";
 
 /// The keyword for pi types
 pub const KEYWORD_PI: &str = "#pi";
+
+/// The keyword for gamma nodes
+pub const KEYWORD_GAMMA: &str = "#gamma";

@@ -24,6 +24,7 @@ pub mod primitive;
 pub mod tuple;
 pub mod typing;
 pub mod universe;
+pub mod gamma;
 
 use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
