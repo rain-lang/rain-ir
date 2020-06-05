@@ -9,9 +9,9 @@ use crate::value::{ValId, VarId, lifetime::Region, function::pi::Pi};
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Gamma {
     /// The branches of this gamma node
-    branches: Vec<Branch>,
+    branches: Box<[Branch]>,
     /// The dependencies of this gamma node, taken as a whole
-    deps: Vec<ValId>,
+    deps: Box<[ValId]>,
     /// The type of this gamma node
     ty: VarId<Pi>
 }
@@ -38,7 +38,7 @@ pub enum Pattern {
     /// Match a variant
     Variant(Variant),
     /// Recognize a pattern, binding it to a parameter
-    Recognize(Box<Pattern>),
+    Recognize(Recognize),
     /// Take the conjunction of a set of patterns, potentially binding the parameters of each.
     And(And),
     /// Take the disjunction of a set of patterns, potentially binding the parameters of each.
@@ -48,12 +48,21 @@ pub enum Pattern {
     /// Specify a multiset of parameters to use, ignoring the rest
     Select(Select),
     /// Specify the failure to match a given branch number *as a predicate*
-    Failure(usize),
+    Failure(Failure),
     /// Specify the success of a given pattern *as a predicate*
-    Success(Box<Pattern>),
+    Success(Success),
     /// Bind a given pattern *as a reference*
-    Ref(Box<Pattern>),
+    Ref(Ref),
+    //TODO: range patterns, bit patterns...
 }
+
+/// A pattern which matches anything, and produces a parameter
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Any;
+
+/// A pattern which matches anything, but produces nothing
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Null;
 
 /// A pattern which recognizes its sub-pattern, and binds it to a parameter
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -71,19 +80,34 @@ pub struct Variant {
 
 /// A pattern corresponding to the conjunction of a set of patterns.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct And(pub Vec<Pattern>);
+pub struct And(pub Box<[Pattern]>);
 
 /// A pattern corresponding to the disjunction of a set of patterns.
 /// 
 /// All patterns must have the *same* bound variables of the *same* type in the *same* order!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Or(Vec<Pattern>);
+pub struct Or(Box<[Pattern]>);
 
 /// A pattern corresponding to using a multiset of the parameters of a pattern, in a given order
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Select {
+    pattern: Box<Pattern>,
+    parameters: Box<[usize]>
+}
+
+/// A pattern corresponding to the failure of a set of branch numbers
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Failure {
     //TODO: this
 }
+
+/// A pattern corresponding to the success of a given pattern
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Success(Box<Pattern>);
+
+/// A pattern corresponding to taking a reference of a given pattern
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Ref(Box<Pattern>);
 
 /// Bind a given pattern as a reference
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
