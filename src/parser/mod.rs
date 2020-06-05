@@ -336,6 +336,20 @@ pub fn parse_tuple(input: &str) -> IResult<&str, Tuple> {
 }
 
 /**
+Parse a product type
+*/
+pub fn parse_product(input: &str) -> IResult<&str, Product> {
+    map(
+        delimited(
+            preceded(tag(KEYWORD_PROD), tag(TUPLE_OPEN)),
+            opt(|input| parse_expr_list(false, input)),
+            preceded(opt(ws), tag(TUPLE_CLOSE)),
+        ),
+        |s| s.map(Product).unwrap_or_default(),
+    )(input)
+}
+
+/**
 Parse a typeof expression
 */
 pub fn parse_typeof(input: &str) -> IResult<&str, TypeOf> {
@@ -437,6 +451,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_typeof, Expr::TypeOf),
                 map(parse_finite, Expr::Finite),
                 map(parse_ix, Expr::Index),
+                map(parse_product, Expr::Product),
             )),
             opt(parse_path),
         )),
@@ -486,13 +501,10 @@ pub fn parse_parametrized(input: &str) -> IResult<&str, Parametrized> {
 }
 
 /**
-Parse a lambda function 
+Parse a lambda function
 */
 pub fn parse_lambda(input: &str) -> IResult<&str, Lambda> {
-    map(
-        parse_parametrized,
-        Lambda
-    )(input)
+    map(parse_parametrized, Lambda)(input)
 }
 
 /**
@@ -500,11 +512,8 @@ Parse a pi type
 */
 pub fn parse_pi(input: &str) -> IResult<&str, Pi> {
     map(
-        preceded(
-            preceded(tag(KEYWORD_PI), opt(ws)),
-            parse_parametrized
-        ),
-        Pi
+        preceded(preceded(tag(KEYWORD_PI), opt(ws)), parse_parametrized),
+        Pi,
     )(input)
 }
 
@@ -515,7 +524,7 @@ pub fn parse_compound(input: &str) -> IResult<&str, Expr> {
     alt((
         map(parse_pi, Expr::Pi),
         map(parse_lambda, Expr::Lambda),
-        parse_atom
+        parse_atom,
     ))(input)
 }
 
