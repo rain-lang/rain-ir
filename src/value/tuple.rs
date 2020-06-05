@@ -2,14 +2,14 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    eval::{Application, Apply, Error, Substitute, SubstituteToValId, EvalCtx},
+    eval::{Application, Apply, Error, Substitute, EvalCtx},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::FINITE_TY,
     TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
 };
-use crate::{debug_from_display, pretty_display};
+use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::SmallVec;
 use std::ops::Deref;
 
@@ -139,7 +139,7 @@ impl Substitute for Tuple {
     }
 }
 
-impl SubstituteToValId for Tuple {}
+substitute_to_valid!(Tuple);
 
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
@@ -180,6 +180,20 @@ impl Product {
 
 debug_from_display!(Product);
 pretty_display!(Product, "#product [...]");
+
+impl Substitute for Product {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
+        let elems: Result<_, _> = self
+            .elems
+            .iter()
+            .cloned()
+            .map(|val| val.substitute(ctx))
+            .collect();
+        Product::try_new(elems?).map_err(|_| Error::IncomparableRegions)
+    }
+}
+
+substitute_to_valid!(Product);
 
 impl Live for Product {
     fn lifetime(&self) -> LifetimeBorrow {

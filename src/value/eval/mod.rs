@@ -29,7 +29,9 @@ pub enum Error {
     /// Empty sexpr application
     EmptySexprApp,
     /// No inlining violation
-    NoInlineError
+    NoInlineError,
+    /// A value is no longer a type after substitution
+    NotATypeError,
 }
 
 /// The result of a *valid* application. An invalid application should return an error!
@@ -51,13 +53,29 @@ pub trait Substitute<S=Self> {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<S, Error>;
 }
 
-/// Implement `Substitute<ValId>` via `Substitute<Self>`
-pub trait SubstituteToValId {}
+/// Implemented `Substitute` trivially for a type which is `Clone`
+#[macro_export]
+macro_rules! trivial_substitute {
+    ($T:ty) => {
+        impl<U: From<$T>> crate::value::eval::Substitute<U> for $T {
+            /// Substitute this object in the given context: this is always a no-op
+            fn substitute(&self, _ctx: &mut $crate::value::eval::EvalCtx) -> Result<U, $crate::value::eval::Error> {
+                Ok(self.clone().into())
+            }
+        }
+    }
+}
 
-impl<T> Substitute<ValId> for T where T: Into<ValId> + Substitute + SubstituteToValId {
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        let sub: T = self.substitute(ctx)?;
-        Ok(sub.into())
+/// Implemented `Substitute<ValId>` for a type implementing `Substitute<Self>`
+#[macro_export]
+macro_rules! substitute_to_valid {
+    ($T:ty) => {
+        impl $crate::value::eval::Substitute<ValId> for $T {
+            fn substitute(&self, ctx: &mut $crate::value::eval::EvalCtx) -> Result<$crate::value::ValId, $crate::value::eval::Error> {
+                let sub: $T = self.substitute(ctx)?;
+                Ok(sub.into())
+            }
+        }
     }
 }
 

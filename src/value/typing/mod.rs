@@ -2,14 +2,14 @@
 The `rain` type system
 */
 use super::{
-    eval::Apply,
+    eval::{self, Apply, EvalCtx, Substitute},
     lifetime::{LifetimeBorrow, Live},
-    NormalValue, PrivateValue, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+    NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
 use std::borrow::Borrow;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
 /// A trait implemented by `rain` values with a type
@@ -51,6 +51,21 @@ impl Live for TypeValue {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.deref().lifetime()
+    }
+}
+
+impl Substitute for TypeId {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<TypeId, eval::Error> {
+        let v: ValId = self.as_val().substitute(ctx)?;
+        v.try_into().map_err(|_| eval::Error::NotATypeError)
+    }
+}
+
+impl Substitute<ValId> for TypeId {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+        self.as_val().substitute(ctx)
     }
 }
 

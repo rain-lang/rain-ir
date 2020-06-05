@@ -2,13 +2,13 @@
 `rain` expressions
 */
 use super::{
-    eval::{Application, Apply, Error, EvalCtx, Substitute, SubstituteToValId},
+    eval::{Application, Apply, Error, EvalCtx, Substitute},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
     TypeId, TypeRef, ValId, Value, ValueEnum,
 };
-use crate::{debug_from_display, pretty_display};
+use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::{smallvec, SmallVec};
 use std::ops::Deref;
 
@@ -171,7 +171,7 @@ impl Substitute for Sexpr {
     }
 }
 
-impl SubstituteToValId for Sexpr {}
+substitute_to_valid!(Sexpr);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
