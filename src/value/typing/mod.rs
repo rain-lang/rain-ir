@@ -62,10 +62,10 @@ impl Substitute for TypeId {
     }
 }
 
-impl Substitute<ValId> for TypeId {
+impl Substitute<ValId> for TypeValue {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
-        self.as_val().substitute(ctx)
+        self.deref().substitute(ctx)
     }
 }
 

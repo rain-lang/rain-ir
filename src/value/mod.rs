@@ -355,6 +355,13 @@ impl Borrow<ValueEnum> for ValRef<'_> {
     }
 }
 
+impl<'a> Substitute<ValId> for ValRef<'a> {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+        self.clone_val().substitute(ctx)
+    }
+}
+
 debug_from_display!(ValId);
 pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
 debug_from_display!(ValRef<'_>);
@@ -533,6 +540,13 @@ impl<V: Value> Apply for VarId<V> {
         inline: bool,
     ) -> Result<Application<'a>, eval::Error> {
         self.ptr.do_apply(args, inline)
+    }
+}
+
+impl<V: Value> Substitute<ValId> for VarId<V> {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+        self.as_val().substitute(ctx)
     }
 }
 
@@ -742,6 +756,13 @@ impl<V: Typed> Typed for VarRef<'_, V> {
     }
 }
 
+impl<'a, V: Value> Substitute<ValId> for VarRef<'a, V> {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+        self.clone_val().substitute(ctx)
+    }
+}
+
 impl<'a, V: Value> Value for VarRef<'a, V> {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -895,7 +916,7 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value: Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply {
+pub trait Value: Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply + Substitute<ValId> {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value

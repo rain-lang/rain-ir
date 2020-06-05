@@ -136,7 +136,7 @@ where
     U: Value + Clone,
 {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Parametrized<U>, eval::Error> {
-        let value = self.value().substitute(ctx)?.into();
+        let value: U = self.value().substitute(ctx)?;
         Parametrized::try_new(value, self.def_region().clone())
     }
 }
