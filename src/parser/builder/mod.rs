@@ -4,7 +4,7 @@ A builder for `rain` expressions
 use super::ast::{
     Detuple, Expr, Ident, Index as IndexExpr, Jeq, Lambda as LambdaExpr, Let, Member, ParamArgs,
     Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr,
-    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
+    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf, Scope
 };
 use super::{parse_expr, parse_statement};
 use crate::util::symbol_table::SymbolTable;
@@ -125,8 +125,24 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Pi(p) => self.build_pi(p)?.into(),
             Expr::Product(p) => self.build_product(p)?.into(),
             Expr::Jeq(j) => self.build_jeq(j)?.into(),
+            Expr::Scope(s) => self.build_scope(s)?,
         };
         Ok(result_value)
+    }
+
+    /// Build a scope
+    pub fn build_scope(&mut self, scope: &Scope<'a>) -> Result<ValId, Error<'a>> {
+        self.push_scope();
+        for statement in scope.statements.iter() {
+            self.build_statement(statement)?
+        }
+        let result = scope.retv.as_ref().map(|expr| self.build_expr(expr));
+        self.pop_scope();
+        if let Some(result) = result {
+            result
+        } else {
+            Err(Error::NotImplemented("Non-value scopes"))
+        }
     }
 
     /// Build a `rain` expression into a type. Return an error if it is not

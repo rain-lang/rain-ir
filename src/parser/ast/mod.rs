@@ -415,6 +415,37 @@ impl Display for Pi<'_> {
     }
 }
 
+/// A scope expression
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Scope<'a> {
+    /// The statements making up this scope
+    pub statements: Vec<Statement<'a>>,
+    /// The return value of this scope, if any
+    pub retv: Option<Box<Expr<'a>>>,
+}
+
+debug_from_display!(Scope<'_>);
+
+impl Display for Scope<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{{")?;
+        for statement in self.statements.iter() {
+            write!(fmt, "\n{}", statement)?;
+        }
+        let new_or_nothing = if self.statements.len() != 0 { "\n" } else { "" };
+        let new_or_space = if self.statements.len() != 0 {
+            "\n"
+        } else {
+            " "
+        };
+        if let Some(retv) = self.retv.as_ref() {
+            write!(fmt, "{}{}{}}}", new_or_space, retv, new_or_space)
+        } else {
+            write!(fmt, "{}}}", new_or_nothing)
+        }
+    }
+}
+
 /// A `rain` expression
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
@@ -444,6 +475,8 @@ pub enum Expr<'a> {
     Pi(Pi<'a>),
     /// A product type
     Product(Product<'a>),
+    /// A scope
+    Scope(Scope<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -465,6 +498,7 @@ impl Display for Expr<'_> {
             Expr::Pi(p) => Display::fmt(p, fmt),
             Expr::Product(p) => Display::fmt(p, fmt),
             Expr::Jeq(j) => Display::fmt(j, fmt),
+            Expr::Scope(s) => Display::fmt(s, fmt),
         }
     }
 }
@@ -472,7 +506,7 @@ impl Display for Expr<'_> {
 debug_from_display!(Expr<'_>);
 
 /// A pattern to assign to
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub enum Pattern<'a> {
     /// A simple assignment to a variable
     Simple(Simple<'a>),
@@ -492,7 +526,7 @@ impl Display for Pattern<'_> {
 debug_from_display!(Pattern<'_>);
 
 /// A simple assignment to a variable
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Simple<'a> {
     /// The name of the variable being assigned to
     pub var: Ident<'a>,
@@ -513,7 +547,7 @@ impl Display for Simple<'_> {
 debug_from_display!(Simple<'_>);
 
 /// A tuple-destructure assignment pattern
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Detuple<'a>(pub Vec<Pattern<'a>>);
 
 impl Display for Detuple<'_> {
@@ -531,7 +565,7 @@ impl Display for Detuple<'_> {
 debug_from_display!(Detuple<'_>);
 
 /// A statement
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub enum Statement<'a> {
     /// A let-statement
     Let(Let<'a>),
@@ -548,7 +582,7 @@ impl Display for Statement<'_> {
 debug_from_display!(Statement<'_>);
 
 /// A let-statement
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Let<'a> {
     /// The pattern being assigned to
     pub lhs: Pattern<'a>,
