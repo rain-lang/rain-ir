@@ -562,8 +562,8 @@ pub fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
     ))(input)
 }
 
-/// Parse a statement
-pub fn parse_statement(input: &str) -> IResult<&str, Let> {
+/// Parse a let-statement
+pub fn parse_let(input: &str) -> IResult<&str, Let> {
     map(
         tuple((
             tag(KEYWORD_LET),
@@ -578,6 +578,11 @@ pub fn parse_statement(input: &str) -> IResult<&str, Let> {
         )),
         |(_, _, lhs, _, _, _, rhs, _, _)| Let { lhs, rhs },
     )(input)
+}
+
+/// Parse a statement
+pub fn parse_statement(input: &str) -> IResult<&str, Statement> {
+    map(parse_let, Statement::Let)(input)
 }
 
 /// Parse a standalone `rain` expression

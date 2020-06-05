@@ -10,7 +10,7 @@ use nom::combinator::{map, opt};
 use nom::sequence::{delimited, preceded, separated_pair, terminated};
 use nom::{Err, IResult};
 use rain_lang::parser::{
-    ast::{Expr, Let},
+    ast::{Expr, Statement},
     builder::Builder,
     parse_bool, parse_expr, parse_statement,
 };
@@ -21,7 +21,7 @@ use std::io::BufReader;
 /// A repl statement
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ReplStatement<'a> {
-    Let(Let<'a>),
+    Statement(Statement<'a>),
     Expr(Expr<'a>),
     Command(Command),
 }
@@ -40,7 +40,7 @@ pub fn parse_repl_statement(input: &str) -> IResult<&str, ReplStatement> {
     terminated(
         alt((
             map(parse_expr, |e| ReplStatement::Expr(e)),
-            map(parse_statement, |l| ReplStatement::Let(l)),
+            map(parse_statement, |s| ReplStatement::Statement(s)),
             map(parse_command, |c| ReplStatement::Command(c)),
         )),
         multispace0,
@@ -156,14 +156,14 @@ impl Repl {
                 self.cursor = end;
                 match statement {
                     ReplStatement::Command(c) => Some(c),
-                    ReplStatement::Let(l) => {
-                        match self.builder.build_let(&l) {
+                    ReplStatement::Statement(s) => {
+                        match self.builder.build_statement(&s) {
                             Ok(_defs) => {
                                 if self.show_parse {
                                     println!(
-                                        "Parsed let: {:?} => {:?}",
+                                        "Parsed statement: {:?} => {:?}",
                                         &self.buffer[begin..end],
-                                        l
+                                        s
                                     )
                                 }
                                 /*
@@ -182,7 +182,7 @@ impl Repl {
                             }
                             Err(err) => println!(
                                 "Error building let IR: {:#?}\n===========\nAST:\n{:?}\n",
-                                err, l
+                                err, s
                             ),
                         }
                         None

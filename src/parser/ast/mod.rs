@@ -428,7 +428,7 @@ impl Display for Expr<'_> {
             Expr::Index(i) => Display::fmt(i, fmt),
             Expr::Lambda(l) => Display::fmt(l, fmt),
             Expr::Pi(p) => Display::fmt(p, fmt),
-            Expr::Product(p) => Display::fmt(p, fmt),   
+            Expr::Product(p) => Display::fmt(p, fmt),
         }
     }
 }
@@ -494,8 +494,25 @@ impl Display for Detuple<'_> {
 
 debug_from_display!(Detuple<'_>);
 
+/// A statement
+#[derive(Clone, Eq, PartialEq)]
+pub enum Statement<'a> {
+    /// A let-statement
+    Let(Let<'a>),
+}
+
+impl Display for Statement<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Statement::Let(l) => Display::fmt(l, fmt),
+        }
+    }
+}
+
+debug_from_display!(Statement<'_>);
+
 /// A let-statement
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Let<'a> {
     /// The pattern being assigned to
     pub lhs: Pattern<'a>,
@@ -508,3 +525,5 @@ impl Display for Let<'_> {
         write!(fmt, "{} {} {} {};", KEYWORD_LET, self.lhs, ASSIGN, self.rhs)
     }
 }
+
+debug_from_display!(Let<'_>);

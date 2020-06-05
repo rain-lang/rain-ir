@@ -4,7 +4,7 @@ A builder for `rain` expressions
 use super::ast::{
     Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, ParamArgs,
     Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr,
-    Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
+    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
 };
 use super::{parse_expr, parse_statement};
 use crate::util::symbol_table::SymbolTable;
@@ -230,6 +230,13 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         self.build_assign(&l.lhs, rhs)
     }
 
+    /// Build a statement
+    pub fn build_statement(&mut self, s: &Statement<'a>) -> Result<(), Error<'a>> {
+        match s {
+            Statement::Let(l) => self.build_let(l)
+        }
+    }
+
     /// Build an assignment
     pub fn build_assign(&mut self, p: &Pattern<'a>, v: ValId) -> Result<(), Error<'a>> {
         match p {
@@ -237,6 +244,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Pattern::Detuple(d) => self.build_detuple(d, v),
         }
     }
+    
     /// Build a simple assignment
     pub fn build_simple(&mut self, s: &Simple<'a>, v: ValId) -> Result<(), Error<'a>> {
         if let Some(_ty) = s.ty.as_ref() {
@@ -250,6 +258,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         }
         Ok(())
     }
+
     /// Build a tuple-destructure assignment
     pub fn build_detuple(&mut self, d: &Detuple<'a>, v: ValId) -> Result<(), Error<'a>> {
         match d.0.len() {
@@ -269,6 +278,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             )),
         }
     }
+
     /// Build a set of parameter arguments into a region, registering a new scope for them
     /// Push this region onto the region stack
     pub fn push_args(&mut self, args: &ParamArgs<'a>) -> Result<(), Error<'a>> {
@@ -298,10 +308,12 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         self.push_region(region);
         Ok(())
     }
+
     /// Push a region onto the region stack *without affecting the symbol table*
     pub fn push_region(&mut self, region: Region) {
         self.stack.push((region, self.symbols.depth()))
     }
+
     /// Pop the top region from the region stack, along with any scopes in the region. Return it, if any
     pub fn pop_region(&mut self) -> Option<Region> {
         if let Some((region, depth)) = self.stack.pop() {
@@ -311,18 +323,22 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             None
         }
     }
+
     /// Push a scope onto the symbol table
     pub fn push_scope(&mut self) {
         self.symbols.push()
     }
+
     /// Pop a scope from the symbol table
     pub fn pop_scope(&mut self) {
         self.symbols.pop()
     }
+
     /// Build a lambda function
     pub fn build_lambda(&mut self, lambda: &LambdaExpr<'a>) -> Result<Lambda, Error<'a>> {
         self.build_parametrized(lambda).map(Lambda::new)
     }
+
     /// Build a pi type
     pub fn build_pi(&mut self, pi: &PiExpr<'a>) -> Result<Pi, Error<'a>> {
         let result = self.build_parametrized(pi)?;
@@ -331,6 +347,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             .map_err(|_| Error::Message("Pi type must parametrize a valid type"))
             .map(Pi::new)
     }
+
     /// Build a parametrized value
     pub fn build_parametrized(
         &mut self,
@@ -344,16 +361,18 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         Parametrized::try_new(result?, region)
             .map_err(|err| Error::EvalError("Invalid parametrized value", err))
     }
+
     /// Parse an expression, and return it
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
         let (rest, expr) = parse_expr(expr).map_err(|_| Error::ParseError(expr))?;
         self.build_expr(&expr).map(|value| (rest, value))
     }
-    /// Parse and process a let statement
+
+    /// Parse and process a statement
     pub fn parse_statement(&mut self, statement: &'a str) -> Result<&'a str, Error<'a>> {
         let (rest, statement) =
             parse_statement(statement).map_err(|_| Error::ParseError(statement))?;
-        self.build_let(&statement)?;
+        self.build_statement(&statement)?;
         Ok(rest)
     }
 }
