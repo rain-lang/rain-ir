@@ -8,6 +8,9 @@ use super::{
     TypeId, ValId,
 };
 
+pub mod ctx;
+use ctx::EvalCtx;
+
 /// An evaluation error
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
@@ -54,10 +57,20 @@ pub trait Apply: Typed + Live {
     }
     /**
     Attempt to apply an object to a list of `rain` values, returning an `Application`, and optionally inlining.
+
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
-    fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
+    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
+        self.do_apply_in_ctx(args, inline, None)
+    }
+    /**
+    Attempt to apply an object to a list of `rain` values within an (optional) evaluation context
+
+    Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
+    Use a loop to be sure!
+    */
+    fn do_apply_in_ctx<'a>(&self, args: &'a [ValId], _inline: bool, _ctx: Option<EvalCtx>) -> Result<Application<'a>, Error> {
         if args.len() == 0 {
             Ok(Application::Complete(self.lifetime().clone_lifetime(), self.ty().clone_ty()))
         } else {

@@ -9,7 +9,7 @@ use crate::value::{
     NormalValue, ValRef, Value,
 };
 use crate::{debug_from_display, quick_display};
-use ahash::RandomState;
+use fxhash::FxBuildHasher;
 use smallvec::SmallVec;
 use std::default::Default;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -31,7 +31,7 @@ quick_display!(VirtualRegister, s, fmt => write!(fmt, "%{}", s.0));
 
 /// A prettyprinter for `rain` values
 #[derive(Clone)]
-pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = RandomState> {
+pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = FxBuildHasher> {
     symbols: SymbolTable<*const NormalValue, I, S>,
     unique: usize,
     scope: Vec<bool>,
