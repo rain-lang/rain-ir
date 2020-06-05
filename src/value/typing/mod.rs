@@ -100,9 +100,9 @@ impl Type for TypeValue {
     }
 }
 
-impl From<TypeValue> for TypeId {
-    fn from(_ty: TypeValue) -> TypeId {
-        panic!("Dummy!")
+impl From<TypeValue> for ValId {
+    fn from(ty: TypeValue) -> ValId {
+        ValId::direct_new(ty)
     }
 }
 

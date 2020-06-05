@@ -3,6 +3,7 @@ A `rain` evaluation context
 */
 
 use super::Error;
+use super::Substitute;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     lifetime::{Live, Region},
@@ -11,22 +12,21 @@ use crate::value::{
 };
 use fxhash::FxBuildHasher;
 use smallvec::{smallvec, SmallVec};
-use std::hash::BuildHasher;
 use std::iter::Iterator;
 
 /// A `rain` evaluation context
 #[derive(Debug, Clone, PartialEq)]
-pub struct EvalCtx<S: BuildHasher = FxBuildHasher> {
+pub struct EvalCtx {
     /// The cache for evaluated values
-    cache: SymbolTable<ValId, ValId, S>,
+    cache: SymbolTable<ValId, ValId, FxBuildHasher>,
     /// The minimum region depths at each scope level
     minimum_depths: SmallVec<[usize; 2]>,
 }
 
-impl<S: BuildHasher + Default> EvalCtx<S> {
+impl EvalCtx {
     /// Create a new, empty evaluation context with a given capacity
     #[inline]
-    pub fn with_capacity(n: usize) -> EvalCtx<S> {
+    pub fn with_capacity(n: usize) -> EvalCtx {
         EvalCtx {
             cache: SymbolTable::with_capacity(n),
             minimum_depths: smallvec![usize::MAX],
@@ -98,7 +98,7 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
                 //TODO: this
                 break;
             } else {
-                return Err(Error::NoInlineError)
+                return Err(Error::NoInlineError);
             }
         }
         Ok(None)
@@ -121,13 +121,14 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         I: Iterator<Item = ValId>,
     {
         self.push();
-        let result = self.substitute_region(region, values, check, inline)
+        let result = self
+            .substitute_region(region, values, check, inline)
             .map_err(|err| {
                 self.pop();
                 err
             });
         if result == Err(Error::NoInlineError) {
-            return Ok(None)
+            return Ok(None);
         }
         result
     }
@@ -136,7 +137,7 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     pub fn try_evaluate(&self, value: &ValId) -> Option<ValId> {
         // Check if the value's depth is too deep to have been touched by this context
         if value.lifetime().depth() > self.minimum_depth() {
-            return Some(value.clone())
+            return Some(value.clone());
         }
         // Check the cache
         if let Some(value) = self.cache.get(value) {
@@ -147,11 +148,8 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     /// Evaluate a given value in the current scope. Return an error on evaluation failure.
     #[inline]
     pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, Error> {
-        // Do a check to see if the value is cached or in a shallow region
-        if let Some(value) = self.try_evaluate(value) {
-            return Ok(value);
-        }
-        // Substitute the value (TODO: consider doing a DFS...)
-        unimplemented!()
+        // Substitute the value
+        // (TODO: depth first search to avoid stack overflow, maybe...)
+        value.substitute(self)
     }
 }
