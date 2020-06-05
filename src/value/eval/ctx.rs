@@ -60,9 +60,9 @@ impl EvalCtx {
     /// Return whether the substitution is already registred, in which case nothing happens.
     #[inline]
     pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, Error> {
-        let rlt = rhs.lifetime();
+        let llt = lhs.lifetime();
         if check {
-            if !(lhs.lifetime() >= rlt) {
+            if !(llt >= rhs.lifetime()) {
                 return Err(Error::LifetimeError);
             }
             if lhs.ty() != rhs.ty() {
@@ -70,7 +70,7 @@ impl EvalCtx {
                 return Err(Error::TypeMismatch);
             }
             if let Some(top) = self.minimum_depths.last_mut() {
-                *top = (*top).min(rlt.depth());
+                *top = (*top).min(llt.depth());
             }
         }
         Ok(self.cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
@@ -93,7 +93,7 @@ impl EvalCtx {
     {
         for param in region.borrow_params().map(ValId::from) {
             if let Some(value) = values.next() {
-                self.substitute(param, value, check)?;
+                self.substitute(param.clone(), value, check)?;
             } else if inline {
                 //TODO: this
                 break;
