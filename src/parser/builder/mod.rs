@@ -6,7 +6,7 @@ use super::ast::{
     Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Sexpr as SExpr, Simple,
     Tuple as TupleExpr, TypeOf,
 };
-use super::parse_expr;
+use super::{parse_statement, parse_expr};
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     eval::Error as EvalError,
@@ -337,5 +337,11 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
         let (rest, expr) = parse_expr(expr).map_err(|_| Error::ParseError(expr))?;
         self.build_expr(&expr).map(|value| (rest, value))
+    }
+    /// Parse and process a let statement
+    pub fn parse_statement(&mut self, statement: &'a str) -> Result<&'a str, Error<'a>> {
+        let (rest, statement) = parse_statement(statement).map_err(|_| Error::ParseError(statement))?;
+        self.build_let(&statement)?;
+        Ok(rest)
     }
 }

@@ -142,3 +142,21 @@ mod prettyprint_impl {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::builder::Builder;
+
+    #[test]
+    fn identity_bool_lambda_works_properly() {
+        let mut builder = Builder::<&str>::new();
+        assert_eq!(builder.parse_statement("#let id = |x: #bool| x;"), Ok(""));
+        assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
+        assert_eq!(builder.parse_expr("id #false"), Ok(("", ValId::from(false))));
+        // See if any stateful errors occur
+        assert_eq!(builder.parse_expr("id #false"), Ok(("", ValId::from(false))));
+        assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
+    }
+}
