@@ -18,8 +18,14 @@ pub enum Error {
     NotAFunction,
     /// Type mismatch
     TypeMismatch,
+    /// Lifetime error
+    LifetimeError,
+    /// Incomparable regions
+    IncomparableRegions,
+    /// Evaluation error
+    EvalError,
     /// Tuple length mismatch
-    TupleLengthMismatch
+    TupleLengthMismatch,
 }
 
 /// The result of a *valid* application. An invalid application should return an error!
@@ -70,9 +76,17 @@ pub trait Apply: Typed + Live {
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
     Use a loop to be sure!
     */
-    fn do_apply_in_ctx<'a>(&self, args: &'a [ValId], _inline: bool, _ctx: Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn do_apply_in_ctx<'a>(
+        &self,
+        args: &'a [ValId],
+        _inline: bool,
+        _ctx: Option<&mut EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         if args.len() == 0 {
-            Ok(Application::Complete(self.lifetime().clone_lifetime(), self.ty().clone_ty()))
+            Ok(Application::Complete(
+                self.lifetime().clone_lifetime(),
+                self.ty().clone_ty(),
+            ))
         } else {
             Err(Error::NotAFunction)
         }

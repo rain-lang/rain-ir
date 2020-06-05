@@ -11,6 +11,7 @@ use crate::value::{
 use fxhash::FxBuildHasher;
 use std::hash::BuildHasher;
 use std::iter::Iterator;
+use super::Error;
 
 /// A `rain` evaluation context
 #[derive(Debug, Clone, PartialEq)]
@@ -37,18 +38,24 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     pub fn pop(&mut self) {
         self.cache.pop()
     }
+    /// Check whether this is a pre-checked context
+    #[inline]
+    pub fn is_checked(&self) -> bool {
+        //TODO
+        false
+    }
     /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch.
     /// 
     /// Return whether the substitution is already registred, in which case nothing happens.
     #[inline]
-    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, ()> {
+    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, Error> {
         if check {
             if lhs.ty() != rhs.ty() {
                 //TODO: subtyping
-                return Err(());
+                return Err(Error::TypeMismatch);
             }
             if !(lhs.lifetime() >= rhs.lifetime()) {
-                return Err(());
+                return Err(Error::LifetimeError);
             }
         }
         Ok(self.cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
@@ -56,52 +63,55 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     /// Register substitutes values for each value in a region.
     ///
     /// Return an error on a type/lifetime mismatch.
-    /// Return how many region parameters were substituted, if any.
+    /// If `inline` is true, create a new region with any leftover parameters, and return it if made
+    /// If `inline` is false, return an error in this case.
     #[inline]
     pub fn substitute_region<I>(
         &mut self,
         region: &Region,
         mut values: I,
-        check: bool
-    ) -> Result<usize, ()>
+        check: bool,
+        inline: bool
+    ) -> Result<Option<Region>, Error>
     where
         I: Iterator<Item = ValId>,
     {
-        let mut sub = 0;
         for param in region.borrow_params().map(ValId::from) {
             if let Some(value) = values.next() {
                 self.substitute(param, value, check)?;
-                sub += 1;
-            } else {
+            } else if inline {
+                //TODO: this
                 break;
             }
         }
-        Ok(sub)
+        Ok(None)
     }
     /// Register substitutes values for each value in a region, in a new scope
     ///
     /// Return an error on a type/lifetime mismatch.
-    /// Return how many region parameters were substituted, if any.
+    /// If `inline` is true, create a new region with any leftover parameters, and return it if made
+    /// If `inline` is false, return an error in this case.
     /// On an error, undo all substitutions
     #[inline]
     pub fn push_region<I>(
         &mut self,
         region: &Region,
         values: I,
-        check: bool
-    ) -> Result<usize, ()>
+        check: bool,
+        inline: bool
+    ) -> Result<Option<Region>, Error>
     where
         I: Iterator<Item = ValId>,
     {
         self.push();
-        self.substitute_region(region, values, check).map_err(|err| {
+        self.substitute_region(region, values, check, inline).map_err(|err| {
             self.pop();
             err
         })
     }
     /// Evaluate a given value in the current scope. Return an error on evaluation failure.
     #[inline]
-    pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, ()> {
+    pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, Error> {
         if let Some(value) = self.cache.get(value) {
             return Ok(value.clone())
         } else {
