@@ -2,6 +2,7 @@
 A `rain` evaluation context
 */
 
+use super::Error;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     lifetime::{Live, Region},
@@ -9,15 +10,17 @@ use crate::value::{
     ValId,
 };
 use fxhash::FxBuildHasher;
+use smallvec::{smallvec, SmallVec};
 use std::hash::BuildHasher;
 use std::iter::Iterator;
-use super::Error;
 
 /// A `rain` evaluation context
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalCtx<S: BuildHasher = FxBuildHasher> {
     /// The cache for evaluated values
     cache: SymbolTable<ValId, ValId, S>,
+    /// The minimum region depths at each scope level
+    minimum_depths: SmallVec<[usize; 2]>,
 }
 
 impl<S: BuildHasher + Default> EvalCtx<S> {
@@ -26,17 +29,25 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     pub fn with_capacity(n: usize) -> EvalCtx<S> {
         EvalCtx {
             cache: SymbolTable::with_capacity(n),
+            minimum_depths: smallvec![usize::MAX],
         }
+    }
+    /// Get the current minimum depth
+    #[inline]
+    pub fn minimum_depth(&self) -> usize {
+        self.minimum_depths.last().copied().unwrap_or(usize::MAX)
     }
     /// Push a new (empty) scope onto the evaluation context
     #[inline]
     pub fn push(&mut self) {
-        self.cache.push()
+        self.cache.push();
+        self.minimum_depths.push(self.minimum_depth());
     }
     /// Pop a scope from the evaluation context
     #[inline]
     pub fn pop(&mut self) {
-        self.cache.pop()
+        self.cache.pop();
+        self.minimum_depths.pop();
     }
     /// Check whether this is a pre-checked context
     #[inline]
@@ -45,17 +56,21 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         false
     }
     /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch.
-    /// 
+    ///
     /// Return whether the substitution is already registred, in which case nothing happens.
     #[inline]
     pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, Error> {
+        let rlt = rhs.lifetime();
         if check {
+            if !(lhs.lifetime() >= rlt) {
+                return Err(Error::LifetimeError);
+            }
             if lhs.ty() != rhs.ty() {
                 //TODO: subtyping
                 return Err(Error::TypeMismatch);
             }
-            if !(lhs.lifetime() >= rhs.lifetime()) {
-                return Err(Error::LifetimeError);
+            if let Some(top) = self.minimum_depths.last_mut() {
+                *top = (*top).min(rlt.depth());
             }
         }
         Ok(self.cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
@@ -71,7 +86,7 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         region: &Region,
         mut values: I,
         check: bool,
-        inline: bool
+        inline: bool,
     ) -> Result<Option<Region>, Error>
     where
         I: Iterator<Item = ValId>,
@@ -82,6 +97,8 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
             } else if inline {
                 //TODO: this
                 break;
+            } else {
+                return Err(Error::NoInlineError)
             }
         }
         Ok(None)
@@ -98,24 +115,43 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         region: &Region,
         values: I,
         check: bool,
-        inline: bool
+        inline: bool,
     ) -> Result<Option<Region>, Error>
     where
         I: Iterator<Item = ValId>,
     {
         self.push();
-        self.substitute_region(region, values, check, inline).map_err(|err| {
-            self.pop();
-            err
-        })
+        let result = self.substitute_region(region, values, check, inline)
+            .map_err(|err| {
+                self.pop();
+                err
+            });
+        if result == Err(Error::NoInlineError) {
+            return Ok(None)
+        }
+        result
+    }
+    /// Try to quickly evaluate a given value in the current scope. Return None on failure
+    #[inline]
+    pub fn try_evaluate(&self, value: &ValId) -> Option<ValId> {
+        // Check if the value's depth is too deep to have been touched by this context
+        if value.lifetime().depth() > self.minimum_depth() {
+            return Some(value.clone())
+        }
+        // Check the cache
+        if let Some(value) = self.cache.get(value) {
+            return Some(value.clone());
+        }
+        None
     }
     /// Evaluate a given value in the current scope. Return an error on evaluation failure.
     #[inline]
     pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, Error> {
-        if let Some(value) = self.cache.get(value) {
-            return Ok(value.clone())
-        } else {
-            unimplemented!()
+        // Do a check to see if the value is cached or in a shallow region
+        if let Some(value) = self.try_evaluate(value) {
+            return Ok(value);
         }
+        // Substitute the value (TODO: consider doing a DFS...)
+        unimplemented!()
     }
 }

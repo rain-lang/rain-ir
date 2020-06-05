@@ -28,6 +28,8 @@ pub enum Error {
     TupleLengthMismatch,
     /// Empty sexpr application
     EmptySexprApp,
+    /// No inlining violation
+    NoInlineError
 }
 
 /// The result of a *valid* application. An invalid application should return an error!
