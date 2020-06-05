@@ -165,7 +165,7 @@ impl Substitute for ValId {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
         if let Some(value) = ctx.try_evaluate(self) {
-            return Ok(value)
+            return Ok(value);
         }
         let result: ValId = self.deref().substitute(ctx)?;
         ctx.substitute(self.clone(), result.clone(), false)?;
@@ -212,21 +212,26 @@ impl Substitute<ValId> for NormalValue {
 
 impl Substitute for ValueEnum {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValueEnum, eval::Error> {
-        unimplemented!()
+        forv! { match(self) {
+            v => v.substitute(ctx),
+        } }
     }
 }
 
 impl Substitute<NormalValue> for ValueEnum {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, eval::Error> {
-        self.substitute(ctx).map(|v: ValueEnum| NormalValue::from(v))
+        self.substitute(ctx)
+            .map(|v: ValueEnum| NormalValue::from(v))
     }
 }
 
 impl Substitute<ValId> for ValueEnum {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
-        unimplemented!()
+        forv! { match(self) {
+            v => v.substitute(ctx),
+        } }
     }
 }
 
@@ -298,7 +303,11 @@ impl Typed for ValRef<'_> {
 }
 
 impl Apply for ValRef<'_> {
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, eval::Error> {
+    fn do_apply<'a>(
+        &self,
+        args: &'a [ValId],
+        inline: bool,
+    ) -> Result<Application<'a>, eval::Error> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -518,7 +527,11 @@ impl<V: Typed> Typed for VarId<V> {
 
 impl<V: Value> Apply for VarId<V> {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, eval::Error> {
+    fn do_apply<'a>(
+        &self,
+        args: &'a [ValId],
+        inline: bool,
+    ) -> Result<Application<'a>, eval::Error> {
         self.ptr.do_apply(args, inline)
     }
 }
@@ -749,7 +762,11 @@ impl<V: Value> Live for VarRef<'_, V> {
 
 impl<V: Value> Apply for VarRef<'_, V> {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, eval::Error> {
+    fn do_apply<'a>(
+        &self,
+        args: &'a [ValId],
+        inline: bool,
+    ) -> Result<Application<'a>, eval::Error> {
         self.ptr.do_apply(args, inline)
     }
 }
@@ -842,7 +859,11 @@ impl Typed for NormalValue {
 
 impl Apply for NormalValue {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, eval::Error> {
+    fn do_apply<'a>(
+        &self,
+        args: &'a [ValId],
+        inline: bool,
+    ) -> Result<Application<'a>, eval::Error> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -874,9 +895,7 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value:
-    Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply
-{
+pub trait Value: Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
@@ -968,7 +987,11 @@ pub enum ValueEnum {
 
 impl Apply for ValueEnum {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, eval::Error> {
+    fn do_apply<'a>(
+        &self,
+        args: &'a [ValId],
+        inline: bool,
+    ) -> Result<Application<'a>, eval::Error> {
         forv! {match (self) {
             v => v.do_apply(args, inline),
         }}

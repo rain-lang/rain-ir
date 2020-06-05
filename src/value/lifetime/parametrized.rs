@@ -2,6 +2,7 @@
 A parametrized `rain` value of a given type
 */
 
+use crate::value::eval::{self, EvalCtx, Substitute};
 use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
 use crate::value::{typing::Typed, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
@@ -25,14 +26,15 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     /**
     Attempt to create a new parametrized value. Return an error if the value does not lie in the desired region.
     */
-    pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, ()> {
+    pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, eval::Error> {
         use Ordering::*;
         match value.region().partial_cmp(region.deref()) {
-            None | Some(Greater) => Err(()),
+            None | Some(Greater) => Err(eval::Error::IncomparableRegions),
             Some(Equal) => {
                 let deps = value.deps().collect_deps(value.lifetime().depth());
-                let lifetime =
-                    Lifetime::default().intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))?;
+                let lifetime = Lifetime::default()
+                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .map_err(|_| eval::Error::LifetimeError)?;
                 Ok(Parametrized {
                     region,
                     value,
@@ -42,8 +44,9 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
             }
             Some(Less) => {
                 let deps = smallvec![value.clone().into()];
-                let lifetime =
-                    Lifetime::default().intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))?;
+                let lifetime = Lifetime::default()
+                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .map_err(|_| eval::Error::LifetimeError)?;
                 Ok(Parametrized {
                     region,
                     value,
@@ -127,10 +130,21 @@ impl<V: Value> Live for Parametrized<V> {
     }
 }
 
+impl<U, V> Substitute<Parametrized<U>> for Parametrized<V>
+where
+    V: Substitute<U> + Value,
+    U: Value + Clone,
+{
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Parametrized<U>, eval::Error> {
+        let value = self.value().substitute(ctx)?.into();
+        Parametrized::try_new(value, self.def_region().clone())
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{PrettyPrint, PrettyPrinter, tokens::*};
+    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
     use std::fmt::{self, Display, Formatter};
 
     impl<V> PrettyPrint for Parametrized<V>

@@ -2,13 +2,13 @@
 Pi types
 */
 use crate::value::{
-    eval::Apply,
+    eval::{self, Apply, EvalCtx, Substitute},
     lifetime::Parametrized,
     lifetime::{LifetimeBorrow, Live, Region},
     typing::{Type, Typed},
     TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
-use crate::{debug_from_display, pretty_display};
+use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -37,7 +37,7 @@ impl Pi {
             .union_all(param.def_region().iter().map(|ty| ty.universe()))
     }
     /// Attempt to create a new pi type from a region and type
-    pub fn try_new(value: TypeId, region: Region) -> Result<Pi, ()> {
+    pub fn try_new(value: TypeId, region: Region) -> Result<Pi, eval::Error> {
         Ok(Self::new(Parametrized::try_new(value, region)?))
     }
 }
@@ -86,6 +86,13 @@ impl Type for Pi {
     }
 }
 
+impl Substitute for Pi {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, eval::Error> {
+        Ok(Pi::new(self.result.substitute(ctx)?))
+    }
+}
+
+substitute_to_valid!(Pi);
 debug_from_display!(Pi);
 pretty_display!(Pi, "#pi|...| {...}");
 

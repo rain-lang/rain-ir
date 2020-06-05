@@ -70,8 +70,14 @@ macro_rules! trivial_substitute {
 #[macro_export]
 macro_rules! substitute_to_valid {
     ($T:ty) => {
-        impl $crate::value::eval::Substitute<ValId> for $T {
+        impl $crate::value::eval::Substitute<$crate::value::ValId> for $T where $T: Into<$crate::value::ValId> {
             fn substitute(&self, ctx: &mut $crate::value::eval::EvalCtx) -> Result<$crate::value::ValId, $crate::value::eval::Error> {
+                let sub: $T = self.substitute(ctx)?;
+                Ok(sub.into())
+            }
+        }
+        impl $crate::value::eval::Substitute<$crate::value::ValueEnum> for $T where $T: Into<$crate::value::ValueEnum> {
+            fn substitute(&self, ctx: &mut $crate::value::eval::EvalCtx) -> Result<$crate::value::ValueEnum, $crate::value::eval::Error> {
                 let sub: $T = self.substitute(ctx)?;
                 Ok(sub.into())
             }

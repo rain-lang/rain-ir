@@ -10,7 +10,7 @@ use super::{
     universe::FINITE_TY,
     NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{debug_from_display, quick_pretty};
+use crate::{debug_from_display, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
 use std::ops::Deref;
@@ -173,6 +173,8 @@ impl Value for () {
         )
     }
 }
+
+trivial_substitute!(());
 
 /**
 The unit type
@@ -337,6 +339,8 @@ impl Value for Unit {
         )
     }
 }
+
+trivial_substitute!(Unit);
 
 /// The empty type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]

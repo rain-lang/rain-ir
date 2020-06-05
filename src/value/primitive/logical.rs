@@ -10,7 +10,7 @@ use crate::value::{
     universe::FINITE_TY,
     TypeRef, UniverseRef, ValId, Value, VarId,
 };
-use crate::{debug_from_display, quick_pretty};
+use crate::{debug_from_display, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 
 /// The type of booleans
@@ -100,6 +100,9 @@ impl Value for bool {
         )
     }
 }
+
+trivial_substitute!(bool);
+trivial_substitute!(Bool);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

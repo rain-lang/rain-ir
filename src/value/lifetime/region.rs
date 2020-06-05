@@ -3,7 +3,7 @@
 */
 
 use super::{LifetimeBorrow, Live};
-use crate::quick_pretty;
+use crate::{trivial_substitute, quick_pretty};
 use crate::util::hash_cache::Cache;
 use crate::value::{
     eval::Apply,
@@ -351,6 +351,7 @@ pub struct Parameter {
 }
 
 quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.region().depth(), s.ix()));
+trivial_substitute!(Parameter);
 
 impl Parameter {
     /**

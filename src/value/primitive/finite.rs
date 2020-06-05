@@ -10,7 +10,7 @@ use crate::value::{
     universe::FINITE_TY,
     TypeRef, UniverseRef, ValId, Value, VarId, VarRef,
 };
-use crate::{debug_from_display, quick_pretty};
+use crate::{debug_from_display, quick_pretty, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::cmp::Ordering;
@@ -23,6 +23,7 @@ pub struct Finite(pub u128);
 
 debug_from_display!(Finite);
 quick_pretty!(Finite, s, fmt => write!(fmt, "{}({})", KEYWORD_FINITE, s.0));
+trivial_substitute!(Finite);
 
 impl Finite {
     /// Get an index into this type. Return an error if out of bounds
@@ -109,6 +110,7 @@ impl PartialOrd for Index {
 
 debug_from_display!(Index);
 quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty, s.ix));
+trivial_substitute!(Index);
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds

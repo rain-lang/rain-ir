@@ -3,13 +3,13 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::value::{
-    eval::{self, EvalCtx, Application, Apply},
+    eval::{self, EvalCtx, Application, Apply, Substitute},
     lifetime::Live,
     lifetime::{LifetimeBorrow, Parametrized, Region},
     typing::Typed,
     TypeRef, ValId, Value, VarId,
 };
-use crate::{debug_from_display, pretty_display};
+use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A lambda function
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -27,7 +27,7 @@ impl Lambda {
         Lambda { result, ty }
     }
     /// Attempt to create a new lambda function from a region and value
-    pub fn try_new(value: ValId, region: Region) -> Result<Lambda, ()> {
+    pub fn try_new(value: ValId, region: Region) -> Result<Lambda, eval::Error> {
         Ok(Self::new(Parametrized::try_new(value, region)?))
     }
     /// Get the defining region of this lambda function
@@ -116,6 +116,13 @@ impl Value for Lambda {
     }
 }
 
+impl Substitute for Lambda {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, eval::Error> {
+        Ok(Lambda::new(self.result.substitute(ctx)?))
+    }
+}
+
+substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
 pretty_display!(Lambda, "#lambda |...| {...}");
 

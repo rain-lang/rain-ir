@@ -1,7 +1,7 @@
 /*!
 Typing universes
 */
-use crate::quick_pretty;
+use crate::{trivial_substitute, quick_pretty};
 use crate::value::{
     eval::Apply,
     lifetime::{LifetimeBorrow, Live},
@@ -138,6 +138,7 @@ impl Universe {
 }
 
 quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.kind));
+trivial_substitute!(Universe);
 
 impl<'a> UniverseId {
     /// Take the union of this universe and another
