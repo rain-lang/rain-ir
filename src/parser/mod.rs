@@ -322,7 +322,7 @@ pub fn parse_sexpr(input: &str) -> IResult<&str, Sexpr> {
 }
 
 /**
-Parse a parse_tuple
+Parse a tuple
 */
 pub fn parse_tuple(input: &str) -> IResult<&str, Tuple> {
     map(

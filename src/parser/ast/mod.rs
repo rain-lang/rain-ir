@@ -205,7 +205,47 @@ impl Display for Tuple<'_> {
 
 debug_from_display!(Tuple<'_>);
 
-/// A tuple
+/// A product type
+#[derive(Clone, Eq, PartialEq, Hash, Default)]
+pub struct Product<'a>(pub Vec<Expr<'a>>);
+
+impl<'a> Tuple<'a> {
+    /// Create a new empty product type
+    pub fn unit_ty() -> Product<'a> {
+        Product(Vec::new())
+    }
+}
+
+impl<'a> Deref for Product<'a> {
+    type Target = Vec<Expr<'a>>;
+    #[inline]
+    fn deref(&self) -> &Vec<Expr<'a>> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Product<'a> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<Expr<'a>> {
+        &mut self.0
+    }
+}
+
+impl Display for Product<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}", TUPLE_OPEN)?;
+        let mut first = true;
+        for expr in self.iter() {
+            write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
+            first = false;
+        }
+        write!(fmt, "{}", TUPLE_CLOSE)
+    }
+}
+
+debug_from_display!(Product<'_>);
+
+/// A typeof expression
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct TypeOf<'a>(pub Box<Expr<'a>>);
 
@@ -261,7 +301,6 @@ impl<'a> DerefMut for ParamArgs<'a> {
         &mut self.0
     }
 }
- 
 impl Display for ParamArgs<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "|")?;
@@ -368,6 +407,8 @@ pub enum Expr<'a> {
     Lambda(Lambda<'a>),
     /// A pi type
     Pi(Pi<'a>),
+    /// A product type
+    Product(Product<'a>),
 }
 
 impl Display for Expr<'_> {
@@ -387,6 +428,7 @@ impl Display for Expr<'_> {
             Expr::Index(i) => Display::fmt(i, fmt),
             Expr::Lambda(l) => Display::fmt(l, fmt),
             Expr::Pi(p) => Display::fmt(p, fmt),
+            Expr::Product(p) => Display::fmt(p, fmt),   
         }
     }
 }

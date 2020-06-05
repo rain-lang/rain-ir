@@ -3,10 +3,10 @@ A builder for `rain` expressions
 */
 use super::ast::{
     Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, ParamArgs,
-    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Sexpr as SExpr, Simple,
-    Tuple as TupleExpr, TypeOf,
+    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr,
+    Sexpr as SExpr, Simple, Tuple as TupleExpr, TypeOf,
 };
-use super::{parse_statement, parse_expr};
+use super::{parse_expr, parse_statement};
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     eval::Error as EvalError,
@@ -17,7 +17,7 @@ use crate::value::{
         finite::{Finite, Index},
         Unit, UNIT,
     },
-    tuple::Tuple,
+    tuple::{Product, Tuple},
     typing::Typed,
     TypeId, ValId, ValueEnum,
 };
@@ -99,12 +99,12 @@ pub enum Error<'a> {
     /// An unimplemented `rain` IR build
     NotImplemented(&'a str),
     /// An evaluation error
-    EvalError(EvalError),
+    EvalError(&'a str, EvalError),
 }
 
 impl<'a> From<EvalError> for Error<'a> {
     fn from(error: EvalError) -> Error<'a> {
-        Error::EvalError(error)
+        Error::EvalError("Cast:", error)
     }
 }
 
@@ -123,6 +123,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Index(i) => self.build_index(*i)?.into(),
             Expr::Lambda(l) => self.build_lambda(l)?.into(),
             Expr::Pi(p) => self.build_pi(p)?.into(),
+            Expr::Product(p) => self.build_product(p)?.into(),
         };
         Ok(result_value)
     }
@@ -217,6 +218,12 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         Tuple::try_new(elems?).map_err(|_| Error::Message("Failed to build tuple"))
     }
 
+    /// Build a product type
+    pub fn build_product(&mut self, product: &ProductExpr<'a>) -> Result<Product, Error<'a>> {
+        let elems: Result<_, _> = product.0.iter().map(|elem| self.build_ty(elem)).collect();
+        Product::try_new(elems?).map_err(|_| Error::Message("Failed to build product"))
+    }
+
     /// Build a let-statement
     pub fn build_let(&mut self, l: &Let<'a>) -> Result<(), Error<'a>> {
         let rhs = self.build_expr(&l.rhs)?;
@@ -275,7 +282,11 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             match id.get_sym() {
                 Ok(Some(sym)) => self.symbols.def(
                     sym.into(),
-                    region.clone().param(i).expect("Index must be in bounds").into(),
+                    region
+                        .clone()
+                        .param(i)
+                        .expect("Index must be in bounds")
+                        .into(),
                 ),
                 Ok(None) => None,
                 Err(_) => {
@@ -331,7 +342,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             .pop_region()
             .expect("`push_args` should always push a region to the stack!");
         Parametrized::try_new(result?, region)
-            .map_err(|_| Error::Message("Invalid parametrized value!"))
+            .map_err(|err| Error::EvalError("Invalid parametrized value", err))
     }
     /// Parse an expression, and return it
     pub fn parse_expr(&mut self, expr: &'a str) -> Result<(&'a str, ValId), Error<'a>> {
@@ -340,7 +351,8 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     }
     /// Parse and process a let statement
     pub fn parse_statement(&mut self, statement: &'a str) -> Result<&'a str, Error<'a>> {
-        let (rest, statement) = parse_statement(statement).map_err(|_| Error::ParseError(statement))?;
+        let (rest, statement) =
+            parse_statement(statement).map_err(|_| Error::ParseError(statement))?;
         self.build_let(&statement)?;
         Ok(rest)
     }
