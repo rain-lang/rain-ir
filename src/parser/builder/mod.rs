@@ -2,7 +2,7 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Index as IndexExpr, Lambda as LambdaExpr, Let, Member, ParamArgs,
+    Detuple, Expr, Ident, Index as IndexExpr, Jeq, Lambda as LambdaExpr, Let, Member, ParamArgs,
     Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr,
     Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
 };
@@ -124,6 +124,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Lambda(l) => self.build_lambda(l)?.into(),
             Expr::Pi(p) => self.build_pi(p)?.into(),
             Expr::Product(p) => self.build_product(p)?.into(),
+            Expr::Jeq(j) => self.build_jeq(j)?.into(),
         };
         Ok(result_value)
     }
@@ -139,6 +140,21 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     pub fn build_typeof(&mut self, ty: &TypeOf<'a>) -> Result<TypeId, Error<'a>> {
         let expr = self.build_expr(&ty.0)?;
         Ok(expr.ty().clone_ty())
+    }
+
+    /// Build a judgemental equality comparison between a set of `rain` types, returning whether they are all equal
+    pub fn build_jeq(&mut self, j: &Jeq<'a>) -> Result<bool, Error<'a>> {
+        let mut iter = j.iter().map(|e| self.build_expr(e));
+        let mut result = true;
+        if let Some(first) = iter.next() {
+            let first = first?;
+            while let Some(next) = iter.next() {
+                if first != next? {
+                    result = false
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Build a `rain` ident
@@ -233,7 +249,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Build a statement
     pub fn build_statement(&mut self, s: &Statement<'a>) -> Result<(), Error<'a>> {
         match s {
-            Statement::Let(l) => self.build_let(l)
+            Statement::Let(l) => self.build_let(l),
         }
     }
 
@@ -244,7 +260,6 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Pattern::Detuple(d) => self.build_detuple(d, v),
         }
     }
-    
     /// Build a simple assignment
     pub fn build_simple(&mut self, s: &Simple<'a>, v: ValId) -> Result<(), Error<'a>> {
         if let Some(_ty) = s.ty.as_ref() {

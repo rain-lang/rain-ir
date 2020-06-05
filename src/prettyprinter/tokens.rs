@@ -26,6 +26,9 @@ pub const KEYWORD_BOOL: &str = "#bool";
 /// The `rain` keyword for `true`
 pub const KEYWORD_TRUE: &str = "#true";
 
+/// The `rain` keyword for judgemental equality
+pub const KEYWORD_JEQ: &str = "#jeq";
+
 /// The `rain` keyword for `false`
 pub const KEYWORD_FALSE: &str = "#false";
 

@@ -364,6 +364,20 @@ pub fn parse_typeof(input: &str) -> IResult<&str, TypeOf> {
 }
 
 /**
+Parse a judgemental equality check
+*/
+pub fn parse_jeq(input: &str) -> IResult<&str, Jeq> {
+    map(
+        delimited(
+            preceded(tag(KEYWORD_JEQ), tag(TUPLE_OPEN)),
+            opt(|input| parse_expr_list(false, input)),
+            preceded(opt(ws), tag(TUPLE_CLOSE)),
+        ),
+        |s| s.map(Jeq).unwrap_or_default(),
+    )(input)
+}
+
+/**
 Parse a 128-bit integer
 */
 pub fn parse_u128(input: &str) -> IResult<&str, u128> {
@@ -452,6 +466,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_finite, Expr::Finite),
                 map(parse_ix, Expr::Index),
                 map(parse_product, Expr::Product),
+                map(parse_jeq, Expr::Jeq),
             )),
             opt(parse_path),
         )),

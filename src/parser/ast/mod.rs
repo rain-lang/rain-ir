@@ -209,7 +209,7 @@ debug_from_display!(Tuple<'_>);
 #[derive(Clone, Eq, PartialEq, Hash, Default)]
 pub struct Product<'a>(pub Vec<Expr<'a>>);
 
-impl<'a> Tuple<'a> {
+impl<'a> Product<'a> {
     /// Create a new empty product type
     pub fn unit_ty() -> Product<'a> {
         Product(Vec::new())
@@ -233,7 +233,7 @@ impl<'a> DerefMut for Product<'a> {
 
 impl Display for Product<'_> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "{}", TUPLE_OPEN)?;
+        write!(fmt, "{}{}", KEYWORD_PROD, TUPLE_OPEN)?;
         let mut first = true;
         for expr in self.iter() {
             write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
@@ -263,6 +263,39 @@ impl Display for TypeOf<'_> {
 }
 
 debug_from_display!(TypeOf<'_>);
+
+/// A judgemental equality test
+#[derive(Clone, Eq, PartialEq, Hash, Default)]
+pub struct Jeq<'a>(pub Vec<Expr<'a>>);
+
+impl<'a> Deref for Jeq<'a> {
+    type Target = Vec<Expr<'a>>;
+    #[inline]
+    fn deref(&self) -> &Vec<Expr<'a>> {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for Jeq<'a> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<Expr<'a>> {
+        &mut self.0
+    }
+}
+
+impl Display for Jeq<'_> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}{}", KEYWORD_JEQ, TUPLE_OPEN)?;
+        let mut first = true;
+        for expr in self.iter() {
+            write!(fmt, "{}{}", if first { "" } else { " " }, expr)?;
+            first = false;
+        }
+        write!(fmt, "{}", TUPLE_CLOSE)
+    }
+}
+
+debug_from_display!(Jeq<'_>);
 
 /// An index into a finite type
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -399,6 +432,8 @@ pub enum Expr<'a> {
     BoolTy(Bool),
     /// A typeof expression
     TypeOf(TypeOf<'a>),
+    /// A judgemental equality check
+    Jeq(Jeq<'a>),
     /// A finite type
     Finite(Finite),
     /// An index into a finite type
@@ -429,6 +464,7 @@ impl Display for Expr<'_> {
             Expr::Lambda(l) => Display::fmt(l, fmt),
             Expr::Pi(p) => Display::fmt(p, fmt),
             Expr::Product(p) => Display::fmt(p, fmt),
+            Expr::Jeq(j) => Display::fmt(j, fmt),
         }
     }
 }
