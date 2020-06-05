@@ -2,8 +2,9 @@
 Gamma nodes, representing pattern matching and primitive recursion
 */
 
+use crate::value::{data::Constructor, function::pi::Pi, lifetime::Region, TypeId, ValId, VarId};
 use crate::{debug_from_display, pretty_display};
-use crate::value::{ValId, VarId, lifetime::Region, function::pi::Pi};
+use std::fmt::{self, Debug, Formatter};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -13,11 +14,25 @@ pub struct Gamma {
     /// The dependencies of this gamma node, taken as a whole
     deps: Box<[ValId]>,
     /// The type of this gamma node
-    ty: VarId<Pi>
+    ty: VarId<Pi>,
+}
+
+impl Gamma {
+    /// Try to create a new gamma node from a set of branches and a source type
+    pub fn try_new(_branches: CompleteBranches) -> Result<Gamma, ()> {
+        unimplemented!()
+    }
 }
 
 debug_from_display!(Gamma);
 pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
+
+/// A complete set of branches over a source type
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct CompleteBranches {
+    branches: Vec<Branch>,
+    source_ty: TypeId,
+}
 
 /// A branch of a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -25,7 +40,14 @@ pub struct Branch {
     /// The region corresponding to this branch
     region: Region,
     /// The pattern of this branch
-    pattern: Pattern
+    pattern: Pattern,
+}
+
+impl Branch {
+    /// Create a new branch from a given pattern, generating the region for it
+    pub fn new(_pattern: Pattern) -> Pattern {
+        unimplemented!()
+    }
 }
 
 /// A pattern for a gamma node branch
@@ -73,9 +95,27 @@ pub struct Recognize(pub Box<Pattern>);
 pub struct Not(pub Box<Pattern>);
 
 /// A pattern corresponding to matching a variant
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Variant {
-    //TODO: this
+    variant: VarId<Constructor>,
+    args: Box<[Pattern]>,
+}
+
+impl Variant {
+    /// Attempt to create a new variant pattern
+    pub fn try_new(variant: VarId<Constructor>, args: Box<[Pattern]>) -> Result<Variant, ()> {
+        //TODO: check correspondence between arguments and variant...
+        Ok(Variant {
+            variant,
+            args
+        })
+    }
+}
+
+impl Debug for Variant {
+    fn fmt(&self, _fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        unimplemented!()
+    }
 }
 
 /// A pattern corresponding to the conjunction of a set of patterns.
@@ -83,31 +123,29 @@ pub struct Variant {
 pub struct And(pub Box<[Pattern]>);
 
 /// A pattern corresponding to the disjunction of a set of patterns.
-/// 
+///
 /// All patterns must have the *same* bound variables of the *same* type in the *same* order!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Or(Box<[Pattern]>);
+pub struct Or(pub Box<[Pattern]>);
 
 /// A pattern corresponding to using a multiset of the parameters of a pattern, in a given order
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Select {
     pattern: Box<Pattern>,
-    parameters: Box<[usize]>
+    parameters: Box<[usize]>,
 }
 
 /// A pattern corresponding to the failure of a set of branch numbers
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Failure {
-    //TODO: this
-}
+pub struct Failure(pub std::ops::Range<usize>);
 
 /// A pattern corresponding to the success of a given pattern
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Success(Box<Pattern>);
+pub struct Success(pub Box<Pattern>);
 
 /// A pattern corresponding to taking a reference of a given pattern
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Ref(Box<Pattern>);
+pub struct Ref(pub Box<Pattern>);
 
 /// Bind a given pattern as a reference
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
