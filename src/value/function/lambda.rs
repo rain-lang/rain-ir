@@ -3,7 +3,7 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::value::{
-    eval::{self, ctx::EvalCtx, Application, Apply},
+    eval::{self, EvalCtx, Application, Apply},
     lifetime::Live,
     lifetime::{LifetimeBorrow, Parametrized, Region},
     typing::Typed,

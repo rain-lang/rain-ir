@@ -7,9 +7,9 @@ use super::{
     typing::Typed,
     TypeId, ValId,
 };
-
-pub mod ctx;
-use ctx::EvalCtx;
+ 
+mod ctx;
+pub use ctx::EvalCtx;
 
 /// An evaluation error
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -41,6 +41,22 @@ pub enum Application<'a, V = ValId> {
     Incomplete(Lifetime, TypeId),
     /// A successful evaluation to a value
     Success(&'a [ValId], V),
+}
+
+/// An object which can have its components substituted to yield another (of type `S`)
+pub trait Substitute<S=Self> {
+    /// Substitute this object in the given context
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<S, Error>;
+}
+
+/// Implement `Substitute<ValId>` via `Substitute<Self>`
+pub trait SubstituteToValId {}
+
+impl<T> Substitute<ValId> for T where T: Into<ValId> + Substitute + SubstituteToValId {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
+        let sub: T = self.substitute(ctx)?;
+        Ok(sub.into())
+    }
 }
 
 /// An object which can be applied to a list of `rain` values
