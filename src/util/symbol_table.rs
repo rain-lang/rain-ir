@@ -92,6 +92,21 @@ impl<K: Hash + Eq, V, S: BuildHasher> SymbolTable<K, V, S> {
         self.scopes.last_mut().unwrap().push(index);
         None
     }
+    /// Try to register a given symbol at the current depth. Fail if the symbol is already defined
+    pub fn try_def(&mut self, key: K, value: V) -> Result<(), V> {
+        let depth = self.depth();
+        let entry = self.symbols.entry(key);
+        let index = entry.index();
+        let v = entry.or_insert_with(Vec::new);
+        if let Some((_, old_depth)) = v.last_mut() {
+            if depth == *old_depth {
+                return Err(value)
+            }
+        }
+        v.push((value, depth));
+        self.scopes.last_mut().unwrap().push(index);
+        Ok(())
+    }
     /// Get the definition of a current symbol, along with its depth, if any
     pub fn get_full<Q>(&self, key: &Q) -> Option<(&V, usize)>
     where

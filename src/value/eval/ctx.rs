@@ -37,19 +37,21 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
     pub fn pop(&mut self) {
         self.cache.pop()
     }
-    /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch
+    /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch.
+    /// 
+    /// Return whether the substitution is already registred, in which case nothing happens.
     #[inline]
-    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<Option<ValId>, (ValId, ValId)> {
+    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, ()> {
         if check {
             if lhs.ty() != rhs.ty() {
                 //TODO: subtyping
-                return Err((lhs, rhs));
+                return Err(());
             }
             if !(lhs.lifetime() >= rhs.lifetime()) {
-                return Err((lhs, rhs));
+                return Err(());
             }
         }
-        Ok(self.cache.def(lhs, rhs))
+        Ok(self.cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
     }
     /// Register substitutes values for each value in a region.
     ///
@@ -61,7 +63,7 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         region: &Region,
         mut values: I,
         check: bool
-    ) -> Result<usize, (ValId, ValId)>
+    ) -> Result<usize, ()>
     where
         I: Iterator<Item = ValId>,
     {
@@ -87,7 +89,7 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
         region: &Region,
         values: I,
         check: bool
-    ) -> Result<usize, (ValId, ValId)>
+    ) -> Result<usize, ()>
     where
         I: Iterator<Item = ValId>,
     {
@@ -96,5 +98,14 @@ impl<S: BuildHasher + Default> EvalCtx<S> {
             self.pop();
             err
         })
+    }
+    /// Evaluate a given value in the current scope. Return an error on evaluation failure.
+    #[inline]
+    pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, ()> {
+        if let Some(value) = self.cache.get(value) {
+            return Ok(value.clone())
+        } else {
+            unimplemented!()
+        }
     }
 }
