@@ -50,7 +50,9 @@ pub enum Pattern {
     /// Specify the failure to match a given branch number *as a predicate*
     Failure(usize),
     /// Specify the success of a given pattern *as a predicate*
-    Success(Box<Pattern>)
+    Success(Box<Pattern>),
+    /// Bind a given pattern *as a reference*
+    Ref(Box<Pattern>),
 }
 
 /// A pattern which recognizes its sub-pattern, and binds it to a parameter
@@ -69,23 +71,23 @@ pub struct Variant {
 
 /// A pattern corresponding to the conjunction of a set of patterns.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct And {
-    //TODO: this
-}
+pub struct And(pub Vec<Pattern>);
 
 /// A pattern corresponding to the disjunction of a set of patterns.
 /// 
 /// All patterns must have the *same* bound variables of the *same* type in the *same* order!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Or {
-    //TODO: this
-}
+pub struct Or(Vec<Pattern>);
 
 /// A pattern corresponding to using a multiset of the parameters of a pattern, in a given order
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Select {
     //TODO: this
 }
+
+/// Bind a given pattern as a reference
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Reference(pub Box<Pattern>);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
