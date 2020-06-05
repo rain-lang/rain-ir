@@ -10,15 +10,12 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::ops::Deref;
 
-/// The size of a small list of parameter dependencies
-pub const SMALL_PARAM_DEPS: usize = 2;
-
 /// A parametrized value
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Parametrized<V> {
     region: Region,
     value: V,
-    deps: SmallVec<[ValId; SMALL_PARAM_DEPS]>,
+    deps: Option<Box<[ValId]>>,
     lifetime: Lifetime,
 }
 
@@ -31,10 +28,12 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
         match value.region().partial_cmp(region.deref()) {
             None | Some(Greater) => Err(eval::Error::IncomparableRegions),
             Some(Equal) => {
-                let deps = value.deps().collect_deps(value.lifetime().depth());
+                let mut deps: SmallVec<[ValId; 0]> = value.deps().collect_deps(value.lifetime().depth());
+                deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| eval::Error::LifetimeError)?;
+                let deps = if deps.len() > 0 { Some(deps.into_boxed_slice()) } else { None };
                 Ok(Parametrized {
                     region,
                     value,
@@ -43,14 +42,16 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 })
             }
             Some(Less) => {
-                let deps = smallvec![value.clone().into()];
+                let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into()];
+                deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| eval::Error::LifetimeError)?;
+                let deps = if deps.len() > 0 { Some(deps.into_boxed_slice()) } else { None };
                 Ok(Parametrized {
                     region,
                     value,
-                    deps,
+                    deps: deps,
                     lifetime,
                 })
             }
@@ -62,6 +63,7 @@ impl<V: Typed> Parametrized<V> {
     /**
     Get the parametrized type of this parametrized value
     */
+    #[inline]
     pub fn ty(&self) -> Parametrized<TypeId> {
         let ty = self.value.ty().clone_ty();
         Parametrized::try_new(ty, self.region.clone())
@@ -74,18 +76,21 @@ impl<V> Parametrized<V> {
     /**
     Get the value being parametrized
     */
+    #[inline]
     pub fn value(&self) -> &V {
         &self.value
     }
     /**
     Get the dependencies of this value
     */
+    #[inline]
     pub fn deps(&self) -> &[ValId] {
-        &self.deps
+        self.deps.as_ref().map(|deps| &deps[..]).unwrap_or(&[])
     }
     /**
     Get the region in which this parametrized value is defined
     */
+    #[inline]
     pub fn def_region(&self) -> &Region {
         &self.region
     }
