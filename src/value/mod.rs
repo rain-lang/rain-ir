@@ -167,7 +167,9 @@ impl Substitute for ValId {
         if let Some(value) = ctx.try_evaluate(self) {
             return Ok(value)
         }
-        self.deref().substitute(ctx)
+        let result: ValId = self.deref().substitute(ctx)?;
+        ctx.substitute(self.clone(), result.clone(), false)?;
+        Ok(result)
     }
 }
 

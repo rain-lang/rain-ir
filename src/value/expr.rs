@@ -2,7 +2,7 @@
 `rain` expressions
 */
 use super::{
-    eval::{Application, Apply, Error},
+    eval::{Application, Apply, Error, EvalCtx, Substitute, SubstituteToValId},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
@@ -45,7 +45,7 @@ impl Sexpr {
         match args[0].as_enum() {
             ValueEnum::Sexpr(s) => {
                 if s.len() == 0 {
-                    return Err(Error::EmptySexprApp) // Special error for unit application
+                    return Err(Error::EmptySexprApp); // Special error for unit application
                 }
                 let mut new_args = SexprArgs::with_capacity(args.len() + s.len());
                 new_args.extend(s.iter().cloned());
@@ -105,8 +105,9 @@ impl Sexpr {
     }
     /// Create an S-expression corresponding to a singleton value
     pub fn singleton(value: ValId) -> Sexpr {
-        if let ValueEnum::Sexpr(s) = value.as_enum() { // Edge case
-            return s.clone()
+        if let ValueEnum::Sexpr(s) = value.as_enum() {
+            // Edge case
+            return s.clone();
         }
         let ty = value.ty().clone_ty();
         Sexpr {
@@ -157,6 +158,20 @@ impl Deref for Sexpr {
 }
 
 impl Apply for Sexpr {}
+
+impl Substitute for Sexpr {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Sexpr, Error> {
+        let args: Result<_, _> = self
+            .args
+            .iter()
+            .cloned()
+            .map(|val| val.substitute(ctx))
+            .collect();
+        Sexpr::try_new(args?)
+    }
+}
+
+impl SubstituteToValId for Sexpr {}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
