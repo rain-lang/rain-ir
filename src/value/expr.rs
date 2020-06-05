@@ -6,7 +6,7 @@ use super::{
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
-    TypeId, TypeRef, ValId, Value,
+    TypeId, TypeRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use smallvec::{smallvec, SmallVec};
@@ -41,11 +41,22 @@ impl Sexpr {
             1 => return Ok(Self::singleton(args.swap_remove(0))),
             _ => {}
         }
+        // Expand sexprs in the first argument
+        match args[0].as_enum() {
+            ValueEnum::Sexpr(s) => {
+                if s.len() == 0 {
+                    return Err(Error::EmptySexprApp) // Special error for unit application
+                }
+                let mut new_args = SexprArgs::with_capacity(args.len() + s.len());
+                new_args.extend(s.iter().cloned());
+                new_args.extend(args.drain(1..));
+                args = new_args;
+            }
+            _ => {}
+        }
         // General case
         let (lifetime, ty) = match args[0].apply(&args[1..])? {
-            Application::Success(rest, valid) => {
-                return Self::applied_with(valid, rest)
-            }
+            Application::Success(rest, valid) => return Self::applied_with(valid, rest),
             Application::Complete(lifetime, ty)
             | Application::Incomplete(lifetime, ty)
             | Application::Stop(lifetime, ty) => (lifetime, ty),
@@ -56,7 +67,7 @@ impl Sexpr {
     pub fn eval(args: &[ValId]) -> Result<Sexpr, Error> {
         match args.len() {
             0 => return Ok(Self::unit()),
-            _ => Self::applied_with(args[0].clone(), &args[..])
+            _ => Self::applied_with(args[0].clone(), &args[..]),
         }
     }
     /// Attempt to create an S-expression by applying an argument to an argument list, evaluating as necessary.
@@ -74,7 +85,11 @@ impl Sexpr {
                     let mut a = SexprArgs::with_capacity(1 + args.len());
                     a.push(f);
                     a.clone_from_slice(args);
-                    return Ok(Sexpr { args: a, lifetime, ty })
+                    return Ok(Sexpr {
+                        args: a,
+                        lifetime,
+                        ty,
+                    });
                 }
             };
         }
@@ -90,6 +105,9 @@ impl Sexpr {
     }
     /// Create an S-expression corresponding to a singleton value
     pub fn singleton(value: ValId) -> Sexpr {
+        if let ValueEnum::Sexpr(s) = value.as_enum() { // Edge case
+            return s.clone()
+        }
         let ty = value.ty().clone_ty();
         Sexpr {
             args: smallvec![value],

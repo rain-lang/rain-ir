@@ -26,6 +26,8 @@ pub enum Error {
     EvalError,
     /// Tuple length mismatch
     TupleLengthMismatch,
+    /// Empty sexpr application
+    EmptySexprApp,
 }
 
 /// The result of a *valid* application. An invalid application should return an error!
