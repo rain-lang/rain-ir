@@ -10,7 +10,7 @@ use nom::{
     character::complete::{digit1, hex_digit1, oct_digit1},
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, map_res, opt},
-    multi::{many1, separated_list, separated_nonempty_list},
+    multi::{many0, many1, separated_list, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
     Err, IResult,
 };
@@ -449,6 +449,33 @@ pub fn parse_ix(input: &str) -> IResult<&str, Index> {
 }
 
 /**
+Parse an inner scope
+*/
+pub fn parse_inner_scope(input: &str) -> IResult<&str, Scope> {
+    map(
+        tuple((
+            preceded(opt(ws), many0(parse_statement)),
+            preceded(opt(ws), opt(parse_expr)),
+        )),
+        |(statements, expr)| Scope {
+            statements,
+            retv: expr.map(Box::new),
+        },
+    )(input)
+}
+
+/**
+Parse a scope
+*/
+pub fn parse_scope(input: &str) -> IResult<&str, Scope> {
+    delimited(
+        preceded(tag(SCOPE_OPEN), opt(ws)),
+        parse_inner_scope,
+        preceded(tag(SCOPE_CLOSE), opt(ws)),
+    )(input)
+}
+
+/**
 Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
 
 These expressions can have paths attached
@@ -459,6 +486,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
             alt((
                 map(parse_sexpr, Expr::Sexpr),
                 map(parse_tuple, Expr::Tuple),
+                map(parse_scope, Expr::Scope),
                 map(parse_ident, Expr::Ident),
                 map(parse_bool, Expr::Bool),
                 map(parse_bool_ty, Expr::BoolTy),

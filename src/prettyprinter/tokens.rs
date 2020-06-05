@@ -3,7 +3,7 @@ The basic tokens making up the standard `rain` representation
 */
 
 /// The `rain` special characters, including whitespace
-pub const SPECIAL_CHARACTERS: &str = " \t\r\n#()[]|\"\':.;/";
+pub const SPECIAL_CHARACTERS: &str = " \t\r\n#()[]{}|\"\':.;/=";
 
 /// The `rain` whitespace characters
 pub const WHITESPACE: &str = " \t\r\n";
