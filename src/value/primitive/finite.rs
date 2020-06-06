@@ -198,6 +198,18 @@ mod tests {
         assert_ne!(ix20, ix10);
         assert_ne!(ix21, ix10);
 
+        // Indices into unequal types are incomparable
+        assert_eq!(ix20.partial_cmp(&ix10), None);
+        assert_eq!(ix21.partial_cmp(&ix10), None);
+        assert_eq!(ix10.partial_cmp(&ix20), None);
+        assert_eq!(ix10.partial_cmp(&ix21), None);
+
+        // Indices into the same type compare properly
+        assert_eq!(ix20.partial_cmp(&ix20), Some(Ordering::Equal));
+        assert_eq!(ix20.partial_cmp(&ix21), Some(Ordering::Less));
+        assert_eq!(ix21.partial_cmp(&ix20), Some(Ordering::Greater));
+        assert_eq!(ix21.partial_cmp(&ix21), Some(Ordering::Equal));
+
         let f2 = VarId::<Finite>::from(Finite(2));
         let f1 = VarId::<Finite>::from(Finite(1));
 
