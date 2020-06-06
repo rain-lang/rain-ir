@@ -109,7 +109,7 @@ impl PartialOrd for Index {
 }
 
 debug_from_display!(Index);
-quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty, s.ix));
+quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty.0, s.ix));
 trivial_substitute!(Index);
 
 impl Index {
@@ -186,13 +186,18 @@ mod tests {
         }
     }
     #[test]
-    fn index_making_works() {
+    fn indices_work() {
         // Index construction
         let ix20 = Finite(2).ix(0).unwrap();
         let ix21 = Finite(2).ix(1).unwrap();
         assert!(Finite(2).ix(2).is_err());
         let ix10 = Finite(1).ix(0).unwrap();
         assert!(Finite(1).ix(1).is_err());
+
+        // Index printing
+        assert_eq!(format!("{}", ix20), "#ix(2)[0]");
+        assert_eq!(format!("{}", ix21), "#ix(2)[1]");
+        assert_eq!(format!("{}", ix10), "#ix(1)[0]");
 
         // Indices into unequal types are unequal
         assert_ne!(ix20, ix10);
