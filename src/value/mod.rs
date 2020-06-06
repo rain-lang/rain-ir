@@ -29,7 +29,7 @@ pub mod universe;
 pub use error::*;
 use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
-use function::{gamma::Gamma, lambda::Lambda, pi::Pi};
+use function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
@@ -990,6 +990,8 @@ pub enum ValueEnum {
     Lambda(Lambda),
     /// A gamma node
     Gamma(Gamma),
+    /// A phi node
+    Phi(Phi),
 }
 
 impl Apply for ValueEnum {
@@ -1043,6 +1045,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Pi {}
     impl InjectionRef<ValueEnum> for Lambda {}
     impl InjectionRef<ValueEnum> for Gamma {}
+    impl InjectionRef<ValueEnum> for Phi {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -1074,6 +1077,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
     impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
     impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
+    impl TryFrom<NormalValue> for Phi { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1252,6 +1257,12 @@ impl From<Gamma> for NormalValue {
     }
 }
 
+impl From<Phi> for NormalValue {
+    fn from(p: Phi) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Phi(p))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1276,6 +1287,7 @@ macro_rules! forv {
             ValueEnum::Pi($i) => $e,
             ValueEnum::Lambda($i) => $e,
             ValueEnum::Gamma($i) => $e,
+            ValueEnum::Phi($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1341,6 +1353,7 @@ normal_valid!(Pi);
 normal_valid!(Lambda);
 normal_valid!(Parameter);
 normal_valid!(Gamma);
+normal_valid!(Phi);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types

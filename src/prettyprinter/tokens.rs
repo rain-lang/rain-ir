@@ -94,3 +94,6 @@ pub const KEYWORD_PI: &str = "#pi";
 
 /// The keyword for gamma nodes
 pub const KEYWORD_GAMMA: &str = "#gamma";
+
+/// The keyword for phi nodes
+pub const KEYWORD_PHI: &str = "#phi";
