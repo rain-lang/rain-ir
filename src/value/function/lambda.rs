@@ -147,11 +147,26 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
+    use crate::value::primitive::logical::Bool;
 
     #[test]
     fn identity_bool_lambda_works_properly() {
         let mut builder = Builder::<&str>::new();
+        // Build the identity
         assert_eq!(builder.parse_statement("#let id = |x: #bool| x;"), Ok(""));
+        // Build the unary type
+        assert_eq!(builder.parse_statement("#let unary = #pi|_: #bool| #bool;"), Ok(""));
+
+        // Check dependencies and type
+        let (rest, id) = builder.parse_expr("id").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(id.deps().len(), 0);
+        let (rest, unary) = builder.parse_expr("unary").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(unary.deps().len(), 1);
+        assert_eq!(unary.deps()[0], ValId::from(Bool));
+        assert_eq!(id.ty(), unary);
+        // Check evaluations
         assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
         assert_eq!(
             builder.parse_expr("id #false"),

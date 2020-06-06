@@ -557,7 +557,7 @@ impl<V: Value> Substitute<ValId> for VarId<V> {
 impl<V: Value> Value for VarId<V> {
     #[inline]
     fn no_deps(&self) -> usize {
-        self.deref().no_deps()
+        self.as_norm().no_deps()
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
