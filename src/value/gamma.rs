@@ -2,7 +2,7 @@
 Gamma nodes, representing pattern matching and primitive recursion
 */
 
-use crate::value::{function::pi::Pi, lifetime::Region, ValId, VarId};
+use crate::value::{function::pi::Pi, lifetime::Region, typing::Typed, lifetime::{Live, Lifetime, LifetimeBorrow}, eval::Apply, TypeRef, ValId, VarId};
 use crate::{debug_from_display, pretty_display};
 
 /// A gamma node, representing pattern matching and primitive recursion
@@ -12,7 +12,10 @@ pub struct Gamma {
     branches: Box<[Branch]>,
     /// The dependencies of this gamma node, taken as a whole
     deps: Box<[ValId]>,
+    /// The lifetime of this gamma node
+    lifetime: Lifetime,
     /// The type of this gamma node
+    //TODO: GammaPi?
     ty: VarId<Pi>,
 }
 
@@ -21,6 +24,27 @@ impl Gamma {
     pub fn branches(&self) -> &[Branch] {
         &self.branches
     }
+}
+
+impl Typed for Gamma {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+}
+
+impl Live for Gamma {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.borrow_lifetime()
+    }
+}
+
+impl Apply for Gamma {
+    //TODO: again, pretty important, right?
 }
 
 debug_from_display!(Gamma);
@@ -78,10 +102,14 @@ pub struct BranchBuilder<'a> {
 impl<'a> BranchBuilder<'a> {
     /// Get the region of this branch builder
     #[inline]
-    pub fn region(&self) -> &Region { &self.region }
+    pub fn region(&self) -> &Region {
+        &self.region
+    }
     /// Get the pattern of this branch builder
     #[inline]
-    pub fn pattern(&self) -> &Pattern { &self.pattern }
+    pub fn pattern(&self) -> &Pattern {
+        &self.pattern
+    }
     /// Finish constructing branch with a given value, returning it's index in the builder on success.
     /// On failure, return an unchanged object to try again
     pub fn finish(self, value: ValId) -> Result<usize, BranchBuilder<'a>> {
@@ -90,7 +118,7 @@ impl<'a> BranchBuilder<'a> {
         self.builder.branches.push(Branch {
             region: self.region,
             pattern: self.pattern,
-            value //TODO: check type, lifetimes, etc.
+            value, //TODO: check type, lifetimes, etc.
         });
         Ok(ix)
     }
