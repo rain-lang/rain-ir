@@ -104,12 +104,13 @@ impl GammaBuilder {
     }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
-    /// Dependencies are returned sorted by address
+    /// Dependencies are returned sorted by address, and deduplicated
     pub fn deps(&self) -> Vec<ValId> {
         self.branches
             .iter()
             .map(|branch| branch.deps().into_iter())
             .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
+            .dedup()
             .collect()
     }
     /// Finish constructing this gamma node
