@@ -185,4 +185,53 @@ mod tests {
             assert_eq!(rest, "");
         }
     }
+    #[test]
+    fn index_making_works() {
+        // Index construction
+        let ix20 = Finite(2).ix(0).unwrap();
+        let ix21 = Finite(2).ix(1).unwrap();
+        assert!(Finite(2).ix(2).is_err());
+        let ix10 = Finite(1).ix(0).unwrap();
+        assert!(Finite(1).ix(1).is_err());
+
+        // Indices into unequal types are unequal
+        assert_ne!(ix20, ix10);
+        assert_ne!(ix21, ix10);
+
+        let f2 = VarId::<Finite>::from(Finite(2));
+        let f1 = VarId::<Finite>::from(Finite(1));
+
+        // Finite types have the right types
+        assert_eq!(ix20.get_ty(), f2);
+        assert_eq!(ix20.ty(), f2);
+        assert_eq!(ix21.get_ty(), f2);
+        assert_eq!(ix21.ty(), f2);
+        assert_eq!(ix10.get_ty(), f1);
+        assert_eq!(ix10.ty(), f1);
+        assert_ne!(f1, f2);
+
+        // Finite types and indices have no dependences
+        assert_eq!(f1.no_deps(), 0);
+        assert_eq!(Finite(1).no_deps(), 0);
+        assert_eq!(ix10.no_deps(), 0);
+        assert_eq!(f2.no_deps(), 0);
+        assert_eq!(Finite(2).no_deps(), 0);
+        assert_eq!(ix20.no_deps(), 0);
+        assert_eq!(ix21.no_deps(), 0);
+
+        // Finite types are types but not universes, indices are not types
+        assert!(f1.is_ty());
+        assert!(!ix10.is_ty());
+        assert!(!f1.is_universe());
+        assert_eq!(f1.universe(), FINITE_TY.borrow_var());
+
+        // Finite types and indices live for the static lifetime
+        assert_eq!(f1.lifetime(), LifetimeBorrow::default());
+        assert_eq!(f2.lifetime(), LifetimeBorrow::default());
+        assert_eq!(Finite(1).lifetime(), LifetimeBorrow::default());
+        assert_eq!(Finite(2).lifetime(), LifetimeBorrow::default());
+        assert_eq!(ix10.lifetime(), LifetimeBorrow::default());
+        assert_eq!(ix20.lifetime(), LifetimeBorrow::default());
+        assert_eq!(ix21.lifetime(), LifetimeBorrow::default());
+    }
 }
