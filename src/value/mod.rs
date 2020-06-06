@@ -19,16 +19,17 @@ pub mod data;
 pub mod eval;
 pub mod expr;
 pub mod function;
+pub mod gamma;
 pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
 pub mod typing;
 pub mod universe;
-pub mod gamma;
 
 use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
 use function::{lambda::Lambda, pi::Pi};
+use gamma::Gamma;
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
@@ -917,7 +918,9 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value: Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply + Substitute<ValId> {
+pub trait Value:
+    Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply + Substitute<ValId>
+{
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
@@ -1005,6 +1008,8 @@ pub enum ValueEnum {
     Pi(Pi),
     /// A lambda function
     Lambda(Lambda),
+    /// A gamma node
+    Gamma(Gamma),
 }
 
 impl Apply for ValueEnum {
@@ -1061,6 +1066,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Index {}
     impl InjectionRef<ValueEnum> for Pi {}
     impl InjectionRef<ValueEnum> for Lambda {}
+    impl InjectionRef<ValueEnum> for Gamma {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -1090,6 +1096,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
     impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
     impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
+    impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1262,6 +1270,12 @@ impl From<Lambda> for NormalValue {
     }
 }
 
+impl From<Gamma> for NormalValue {
+    fn from(g: Gamma) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Gamma(g))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1285,6 +1299,7 @@ macro_rules! forv {
             ValueEnum::Index($i) => $e,
             ValueEnum::Pi($i) => $e,
             ValueEnum::Lambda($i) => $e,
+            ValueEnum::Gamma($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1349,6 +1364,7 @@ normal_valid!(Index); //TODO: unit?
 normal_valid!(Pi);
 normal_valid!(Lambda);
 normal_valid!(Parameter);
+normal_valid!(Gamma);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types

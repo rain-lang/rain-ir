@@ -2,8 +2,15 @@
 Gamma nodes, representing pattern matching and primitive recursion
 */
 
-use crate::value::{function::pi::Pi, lifetime::Region, typing::Typed, lifetime::{Live, Lifetime, LifetimeBorrow}, eval::Apply, TypeRef, ValId, VarId};
-use crate::{debug_from_display, pretty_display};
+use crate::value::{
+    eval::{Apply, Error, EvalCtx, Substitute},
+    function::pi::Pi,
+    lifetime::Region,
+    lifetime::{Lifetime, LifetimeBorrow, Live},
+    typing::Typed,
+    TypeRef, ValId, Value, VarId,
+};
+use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -15,7 +22,7 @@ pub struct Gamma {
     /// The lifetime of this gamma node
     lifetime: Lifetime,
     /// The type of this gamma node
-    //TODO: GammaPi?
+    //TODO: GammaPi? Replace Lambda with Gamma?
     ty: VarId<Pi>,
 }
 
@@ -46,6 +53,23 @@ impl Live for Gamma {
 impl Apply for Gamma {
     //TODO: again, pretty important, right?
 }
+
+impl Substitute for Gamma {
+    fn substitute(&self, _ctx: &mut EvalCtx) -> Result<Gamma, Error> {
+        unimplemented!()
+    }
+}
+
+impl Value for Gamma {
+    fn no_deps(&self) -> usize {
+        self.deps.len()
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        &self.deps[ix]
+    }
+}
+
+substitute_to_valid!(Gamma);
 
 debug_from_display!(Gamma);
 pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
