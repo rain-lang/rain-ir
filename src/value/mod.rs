@@ -6,7 +6,6 @@ use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
-use smallvec::Array;
 use smallvec::SmallVec;
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
@@ -77,6 +76,11 @@ impl ValId {
     #[inline]
     pub fn as_norm(&self) -> &NormalValue {
         &self.0
+    }
+    /// Get the pointer behind this `ValId`
+    #[inline]
+    pub fn as_ptr(&self) -> *const NormalValue {
+        self.as_norm() as *const NormalValue
     }
 }
 
@@ -249,10 +253,15 @@ impl<'a> ValRef<'a> {
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.0.get()
     }
-    /// Get this `TypeRef` as a `NormalValue`
+    /// Get this `ValRef` as a `NormalValue`
     #[inline]
     pub fn as_norm(&self) -> &'a NormalValue {
         self.0.get()
+    }
+    /// Get the pointer behind this `ValRef`
+    #[inline]
+    pub fn as_ptr(&self) -> *const NormalValue {
+        self.as_norm() as *const NormalValue
     }
 }
 
@@ -463,6 +472,11 @@ impl<'a, V> VarId<V> {
             variant: std::marker::PhantomData,
         }
     }
+    /// Get the pointer behind this `VarId`
+    #[inline]
+    pub fn as_ptr(&self) -> *const NormalValue {
+        self.as_norm() as *const NormalValue
+    }
 }
 
 impl<V> From<VarId<V>> for ValId {
@@ -666,6 +680,11 @@ impl<'a, V> VarRef<'a, V> {
             ptr: self.ptr.clone_arc(),
             variant: self.variant,
         }
+    }
+    /// Get the pointer behind this `VarRef`
+    #[inline]
+    pub fn as_ptr(&self) -> *const NormalValue {
+        self.as_norm() as *const NormalValue
     }
 }
 
@@ -933,11 +952,9 @@ impl<V: Value> Deps<V> {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
     /// Collect the immediate dependencies of this value below a given depth.
-    pub fn collect_deps<A>(&self, below: usize) -> SmallVec<A>
-    where
-        A: Array<Item = ValId>,
+    pub fn collect_deps(&self, below: usize) -> Vec<ValId>
     {
-        let mut result: SmallVec<A> = SmallVec::new();
+        let mut result = Vec::new();
         // Simple edge case
         if below == 0 {
             return result;

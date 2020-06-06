@@ -11,13 +11,15 @@ use crate::value::{
     Error, TypeRef, ValId, Value, VarId,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use std::ops::Deref;
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Gamma {
     /// The branches of this gamma node
     branches: Box<[Branch]>,
-    /// The dependencies of this gamma node, taken as a whole
+    /// The dependencies of this gamma node, taken as a whole.
+    /// Sorted by address
     deps: Box<[ValId]>,
     /// The lifetime of this gamma node
     lifetime: Lifetime,
@@ -99,6 +101,11 @@ impl GammaBuilder {
             pattern,
         })
     }
+    /// Finish constructing this gamma node
+    /// On failure, return an unchanged object to try again, along with a reason
+    pub fn finish(self) -> Result<Gamma, (GammaBuilder, Error)> {
+        unimplemented!()
+    }
 }
 
 /// A branch of a gamma node
@@ -110,6 +117,29 @@ pub struct Branch {
     pattern: Pattern,
     /// The value of this branch
     value: ValId,
+}
+
+impl Branch {
+    /// Return the dependencies of this branch
+    pub fn deps(&self) -> Vec<ValId> {
+        use std::cmp::Ordering::*;
+        match self.value.region().partial_cmp(self.region.deref()) {
+            None | Some(Greater) => panic!(
+                "Impossible: region mismatch should have been caught by BranchBuilder as error"
+            ),
+            Some(Equal) => self
+                .value
+                .deps()
+                .collect_deps(self.value.lifetime().depth()),
+            Some(Less) => vec![self.value.clone()],
+        }
+    }
+    /// Return the dependencies of this branch, sorted by address
+    pub fn sorted_deps(&self) -> Vec<ValId> {
+        let mut deps = self.deps();
+        deps.sort_unstable_by_key(|v| v.as_ptr());
+        deps
+    }
 }
 
 /// A builder for a branch of a gamma node
@@ -135,8 +165,8 @@ impl<'a> BranchBuilder<'a> {
         &self.pattern
     }
     /// Finish constructing branch with a given value, returning it's index in the builder on success.
-    /// On failure, return an unchanged object to try again
-    pub fn finish(self, value: ValId) -> Result<usize, BranchBuilder<'a>> {
+    /// On failure, return an unchanged object to try again, along with a reason
+    pub fn finish(self, value: ValId) -> Result<usize, (BranchBuilder<'a>, Error)> {
         let ix = self.builder.branches.len();
         //TODO: region check...
         self.builder.branches.push(Branch {
