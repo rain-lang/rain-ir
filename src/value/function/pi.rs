@@ -40,6 +40,16 @@ impl Pi {
     pub fn try_new(value: TypeId, region: Region) -> Result<Pi, Error> {
         Ok(Self::new(Parametrized::try_new(value, region)?))
     }
+    /// Get the result of this pi type
+    #[inline]
+    pub fn result(&self) -> &TypeId {
+        self.result.value()
+    }
+    /// Get the defining region of this pi type
+    #[inline]
+    pub fn def_region(&self) -> &Region {
+        self.result.def_region()
+    }
 }
 
 impl Typed for Pi {
