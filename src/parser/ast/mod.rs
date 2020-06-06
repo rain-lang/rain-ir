@@ -477,6 +477,8 @@ pub enum Expr<'a> {
     Product(Product<'a>),
     /// A scope
     Scope(Scope<'a>),
+    /// The unit token
+    Unit,
 }
 
 impl Display for Expr<'_> {
@@ -499,6 +501,7 @@ impl Display for Expr<'_> {
             Expr::Product(p) => Display::fmt(p, fmt),
             Expr::Jeq(j) => Display::fmt(j, fmt),
             Expr::Scope(s) => Display::fmt(s, fmt),
+            Expr::Unit => write!(fmt, "{}", KEYWORD_UNIT),
         }
     }
 }

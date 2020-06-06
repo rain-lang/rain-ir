@@ -126,6 +126,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Product(p) => self.build_product(p)?.into(),
             Expr::Jeq(j) => self.build_jeq(j)?.into(),
             Expr::Scope(s) => self.build_scope(s)?,
+            Expr::Unit => Unit.into()
         };
         Ok(result_value)
     }
@@ -405,5 +406,17 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             parse_statement(statement).map_err(|_| Error::ParseError(statement))?;
         self.build_statement(&statement)?;
         Ok(rest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn units_build_properly() {
+        let mut builder = Builder::<&str>::new();
+        assert_eq!(builder.parse_expr("#unit").unwrap(), ("", ValId::from(Unit)));
+        assert_eq!(builder.parse_expr("()").unwrap(), ("", ValId::from(())));
+        assert_eq!(builder.parse_expr("[]").unwrap(), ("", ValId::from(())));
     }
 }

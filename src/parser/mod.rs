@@ -495,6 +495,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_ix, Expr::Index),
                 map(parse_product, Expr::Product),
                 map(parse_jeq, Expr::Jeq),
+                map(tag(KEYWORD_UNIT), |_| Expr::Unit),
             )),
             opt(parse_path),
         )),

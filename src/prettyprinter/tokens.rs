@@ -35,6 +35,9 @@ pub const KEYWORD_FALSE: &str = "#false";
 /// The `rain` keyword for `typeof`
 pub const KEYWORD_TYPEOF: &str = "#typeof";
 
+/// The `rain` keyword for the unit type
+pub const KEYWORD_UNIT: &str = "#unit";
+
 /// The `rain` keyword for finite types
 pub const KEYWORD_FINITE: &str = "#finite";
 
