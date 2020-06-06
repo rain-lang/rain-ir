@@ -126,7 +126,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Product(p) => self.build_product(p)?.into(),
             Expr::Jeq(j) => self.build_jeq(j)?.into(),
             Expr::Scope(s) => self.build_scope(s)?,
-            Expr::Unit => Unit.into()
+            Expr::Unit => Unit.into(),
         };
         Ok(result_value)
     }
@@ -415,8 +415,25 @@ mod tests {
     #[test]
     fn units_build_properly() {
         let mut builder = Builder::<&str>::new();
-        assert_eq!(builder.parse_expr("#unit").unwrap(), ("", ValId::from(Unit)));
+        assert_eq!(
+            builder.parse_expr("#unit").unwrap(),
+            ("", ValId::from(Unit))
+        );
         assert_eq!(builder.parse_expr("()").unwrap(), ("", ValId::from(())));
         assert_eq!(builder.parse_expr("[]").unwrap(), ("", ValId::from(())));
+    }
+    #[test]
+    fn bad_indices_fail_properly() {
+        let mut builder = Builder::<&str>::new();
+        // Unit cannot be indexed
+        assert!(builder.parse_expr("[] #ix(1)[0]").is_err());
+        // Unit has no second index
+        assert!(builder.parse_expr("#ix(1)[1]").is_err());
+        // Empty type has no index
+        assert!(builder.parse_expr("#ix(0)[0]").is_err());
+        // Index out of bounds
+        assert!(builder.parse_expr("[#true #false] #ix(2)[2]").is_err());
+        // Index type out of bounds
+        assert!(builder.parse_expr("[#true #false] #ix(3)[2]").is_err());
     }
 }
