@@ -3,11 +3,11 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::value::{
-    eval::{self, EvalCtx, Application, Apply, Substitute},
+    eval::{Application, Apply, EvalCtx, Substitute},
     lifetime::Live,
     lifetime::{LifetimeBorrow, Parametrized, Region},
     typing::Typed,
-    TypeRef, ValId, Value, VarId,
+    Error, TypeRef, ValId, Value, VarId,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
@@ -27,7 +27,7 @@ impl Lambda {
         Lambda { result, ty }
     }
     /// Attempt to create a new lambda function from a region and value
-    pub fn try_new(value: ValId, region: Region) -> Result<Lambda, eval::Error> {
+    pub fn try_new(value: ValId, region: Region) -> Result<Lambda, Error> {
         Ok(Self::new(Parametrized::try_new(value, region)?))
     }
     /// Get the defining region of this lambda function
@@ -66,7 +66,7 @@ impl Apply for Lambda {
         args: &'a [ValId],
         inline: bool,
         ctx: Option<&mut EvalCtx>,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         let ctx = if let Some(ctx) = ctx {
             ctx
         } else {
@@ -98,7 +98,7 @@ impl Apply for Lambda {
         if let Some(region) = region {
             Lambda::try_new(result, region)
                 .map(|lambda| Application::Success(rest_args, lambda.into()))
-                .map_err(|_| eval::Error::IncomparableRegions)
+                .map_err(|_| Error::IncomparableRegions)
         } else {
             Ok(Application::Success(rest_args, result))
         }
@@ -117,7 +117,7 @@ impl Value for Lambda {
 }
 
 impl Substitute for Lambda {
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
         Ok(Lambda::new(self.result.substitute(ctx)?))
     }
 }
@@ -143,7 +143,6 @@ mod prettyprint_impl {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,9 +153,15 @@ mod tests {
         let mut builder = Builder::<&str>::new();
         assert_eq!(builder.parse_statement("#let id = |x: #bool| x;"), Ok(""));
         assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
-        assert_eq!(builder.parse_expr("id #false"), Ok(("", ValId::from(false))));
+        assert_eq!(
+            builder.parse_expr("id #false"),
+            Ok(("", ValId::from(false)))
+        );
         // See if any stateful errors occur
-        assert_eq!(builder.parse_expr("id #false"), Ok(("", ValId::from(false))));
+        assert_eq!(
+            builder.parse_expr("id #false"),
+            Ok(("", ValId::from(false)))
+        );
         assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
     }
 }

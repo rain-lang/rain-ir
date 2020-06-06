@@ -2,11 +2,11 @@
 `rain` expressions
 */
 use super::{
-    eval::{Application, Apply, Error, EvalCtx, Substitute},
+    eval::{Application, Apply, EvalCtx, Substitute},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
-    TypeId, TypeRef, ValId, Value, ValueEnum,
+    Error, TypeId, TypeRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::{smallvec, SmallVec};

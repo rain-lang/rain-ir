@@ -2,9 +2,9 @@
 The `rain` type system
 */
 use super::{
-    eval::{self, Apply, EvalCtx, Substitute},
+    eval::{Apply, EvalCtx, Substitute},
     lifetime::{LifetimeBorrow, Live},
-    NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+    Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
@@ -56,15 +56,15 @@ impl Live for TypeValue {
 
 impl Substitute for TypeId {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<TypeId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<TypeId, Error> {
         let v: ValId = self.as_val().substitute(ctx)?;
-        v.try_into().map_err(|_| eval::Error::NotATypeError)
+        v.try_into().map_err(|_| Error::NotATypeError)
     }
 }
 
 impl Substitute<ValId> for TypeValue {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.deref().substitute(ctx)
     }
 }

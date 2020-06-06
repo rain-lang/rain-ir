@@ -2,9 +2,9 @@
 A parametrized `rain` value of a given type
 */
 
-use crate::value::eval::{self, EvalCtx, Substitute};
+use crate::value::eval::{EvalCtx, Substitute};
 use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
-use crate::value::{typing::Typed, TypeId, ValId, Value};
+use crate::value::{typing::Typed, Error, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -23,17 +23,22 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     /**
     Attempt to create a new parametrized value. Return an error if the value does not lie in the desired region.
     */
-    pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, eval::Error> {
+    pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
         match value.region().partial_cmp(region.deref()) {
-            None | Some(Greater) => Err(eval::Error::IncomparableRegions),
+            None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
-                let mut deps: SmallVec<[ValId; 0]> = value.deps().collect_deps(value.lifetime().depth());
+                let mut deps: SmallVec<[ValId; 0]> =
+                    value.deps().collect_deps(value.lifetime().depth());
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
-                    .map_err(|_| eval::Error::LifetimeError)?;
-                let deps = if deps.len() > 0 { Some(deps.into_boxed_slice()) } else { None };
+                    .map_err(|_| Error::LifetimeError)?;
+                let deps = if deps.len() > 0 {
+                    Some(deps.into_boxed_slice())
+                } else {
+                    None
+                };
                 Ok(Parametrized {
                     region,
                     value,
@@ -46,8 +51,12 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
-                    .map_err(|_| eval::Error::LifetimeError)?;
-                let deps = if deps.len() > 0 { Some(deps.into_boxed_slice()) } else { None };
+                    .map_err(|_| Error::LifetimeError)?;
+                let deps = if deps.len() > 0 {
+                    Some(deps.into_boxed_slice())
+                } else {
+                    None
+                };
                 Ok(Parametrized {
                     region,
                     value,
@@ -140,7 +149,7 @@ where
     V: Substitute<U> + Value,
     U: Value + Clone,
 {
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Parametrized<U>, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Parametrized<U>, Error> {
         let value: U = self.value().substitute(ctx)?;
         Parametrized::try_new(value, self.def_region().clone())
     }

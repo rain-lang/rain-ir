@@ -9,7 +9,7 @@ use super::ast::{
 use super::{parse_expr, parse_statement};
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
-    eval::Error as EvalError,
+    self,
     expr::Sexpr,
     function::{lambda::Lambda, pi::Pi},
     lifetime::{Parametrized, Region, RegionData},
@@ -98,13 +98,13 @@ pub enum Error<'a> {
     Message(&'a str),
     /// An unimplemented `rain` IR build
     NotImplemented(&'a str),
-    /// An evaluation error
-    EvalError(&'a str, EvalError),
+    /// A value error
+    ValueError(&'a str, value::Error),
 }
 
-impl<'a> From<EvalError> for Error<'a> {
-    fn from(error: EvalError) -> Error<'a> {
-        Error::EvalError("Cast:", error)
+impl<'a> From<value::Error> for Error<'a> {
+    fn from(error: value::Error) -> Error<'a> {
+        Error::ValueError("Cast:", error)
     }
 }
 
@@ -390,7 +390,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             .pop_region()
             .expect("`push_args` should always push a region to the stack!");
         Parametrized::try_new(result?, region)
-            .map_err(|err| Error::EvalError("Invalid parametrized value", err))
+            .map_err(|err| Error::ValueError("Invalid parametrized value", err))
     }
 
     /// Parse an expression, and return it

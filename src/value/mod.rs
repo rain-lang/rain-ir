@@ -16,6 +16,7 @@ use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
 
 pub mod data;
+mod error;
 pub mod eval;
 pub mod expr;
 pub mod function;
@@ -26,6 +27,7 @@ pub mod tuple;
 pub mod typing;
 pub mod universe;
 
+pub use error::*;
 use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
 use function::{lambda::Lambda, pi::Pi};
@@ -158,14 +160,14 @@ impl Apply for ValId {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         self.deref().do_apply(args, inline)
     }
 }
 
 impl Substitute for ValId {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         if let Some(value) = ctx.try_evaluate(self) {
             return Ok(value);
         }
@@ -200,20 +202,20 @@ impl From<ValId> for NormalValue {
 
 impl Substitute for NormalValue {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
         self.deref().substitute(ctx)
     }
 }
 
 impl Substitute<ValId> for NormalValue {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.deref().substitute(ctx)
     }
 }
 
 impl Substitute for ValueEnum {
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValueEnum, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValueEnum, Error> {
         forv! { match(self) {
             v => v.substitute(ctx),
         } }
@@ -222,7 +224,7 @@ impl Substitute for ValueEnum {
 
 impl Substitute<NormalValue> for ValueEnum {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
         self.substitute(ctx)
             .map(|v: ValueEnum| NormalValue::from(v))
     }
@@ -230,7 +232,7 @@ impl Substitute<NormalValue> for ValueEnum {
 
 impl Substitute<ValId> for ValueEnum {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         forv! { match(self) {
             v => v.substitute(ctx),
         } }
@@ -309,7 +311,7 @@ impl Apply for ValRef<'_> {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -359,7 +361,7 @@ impl Borrow<ValueEnum> for ValRef<'_> {
 
 impl<'a> Substitute<ValId> for ValRef<'a> {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.clone_val().substitute(ctx)
     }
 }
@@ -540,14 +542,14 @@ impl<V: Value> Apply for VarId<V> {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         self.ptr.do_apply(args, inline)
     }
 }
 
 impl<V: Value> Substitute<ValId> for VarId<V> {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.as_val().substitute(ctx)
     }
 }
@@ -760,7 +762,7 @@ impl<V: Typed> Typed for VarRef<'_, V> {
 
 impl<'a, V: Value> Substitute<ValId> for VarRef<'a, V> {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, eval::Error> {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.clone_val().substitute(ctx)
     }
 }
@@ -789,7 +791,7 @@ impl<V: Value> Apply for VarRef<'_, V> {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         self.ptr.do_apply(args, inline)
     }
 }
@@ -886,7 +888,7 @@ impl Apply for NormalValue {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         self.deref().do_apply(args, inline)
     }
 }
@@ -1018,7 +1020,7 @@ impl Apply for ValueEnum {
         &self,
         args: &'a [ValId],
         inline: bool,
-    ) -> Result<Application<'a>, eval::Error> {
+    ) -> Result<Application<'a>, Error> {
         forv! {match (self) {
             v => v.do_apply(args, inline),
         }}

@@ -2,12 +2,12 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    eval::{Application, Apply, Error, Substitute, EvalCtx},
+    eval::{Application, Apply, EvalCtx, Substitute},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     primitive::UNIT_TY,
     typing::{Type, Typed},
     universe::FINITE_TY,
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+    Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::SmallVec;

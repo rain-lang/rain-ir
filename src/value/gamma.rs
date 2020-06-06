@@ -3,12 +3,12 @@ Gamma nodes, representing pattern matching and primitive recursion
 */
 
 use crate::value::{
-    eval::{Apply, Error, EvalCtx, Substitute},
+    eval::{Apply, EvalCtx, Substitute},
     function::pi::Pi,
     lifetime::Region,
     lifetime::{Lifetime, LifetimeBorrow, Live},
     typing::Typed,
-    TypeRef, ValId, Value, VarId,
+    Error, TypeRef, ValId, Value, VarId,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 

@@ -5,34 +5,10 @@
 use super::{
     lifetime::{Lifetime, Live},
     typing::Typed,
-    TypeId, ValId,
+    Error, TypeId, ValId,
 };
- 
 mod ctx;
 pub use ctx::EvalCtx;
-
-/// An evaluation error
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Error {
-    /// Attempting to apply a non-function
-    NotAFunction,
-    /// Type mismatch
-    TypeMismatch,
-    /// Lifetime error
-    LifetimeError,
-    /// Incomparable regions
-    IncomparableRegions,
-    /// Evaluation error
-    EvalError,
-    /// Tuple length mismatch
-    TupleLengthMismatch,
-    /// Empty sexpr application
-    EmptySexprApp,
-    /// No inlining violation
-    NoInlineError,
-    /// A value is no longer a type after substitution
-    NotATypeError,
-}
 
 /// The result of a *valid* application. An invalid application should return an error!
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -48,7 +24,7 @@ pub enum Application<'a, V = ValId> {
 }
 
 /// An object which can have its components substituted to yield another (of type `S`)
-pub trait Substitute<S=Self> {
+pub trait Substitute<S = Self> {
     /// Substitute this object in the given context
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<S, Error>;
 }
@@ -59,30 +35,45 @@ macro_rules! trivial_substitute {
     ($T:ty) => {
         impl<U: From<$T>> crate::value::eval::Substitute<U> for $T {
             /// Substitute this object in the given context: this is always a no-op
-            fn substitute(&self, _ctx: &mut $crate::value::eval::EvalCtx) -> Result<U, $crate::value::eval::Error> {
+            fn substitute(
+                &self,
+                _ctx: &mut $crate::value::eval::EvalCtx,
+            ) -> Result<U, $crate::value::Error> {
                 Ok(self.clone().into())
             }
         }
-    }
+    };
 }
 
 /// Implemented `Substitute<ValId>` for a type implementing `Substitute<Self>`
 #[macro_export]
 macro_rules! substitute_to_valid {
     ($T:ty) => {
-        impl $crate::value::eval::Substitute<$crate::value::ValId> for $T where $T: Into<$crate::value::ValId> {
-            fn substitute(&self, ctx: &mut $crate::value::eval::EvalCtx) -> Result<$crate::value::ValId, $crate::value::eval::Error> {
+        impl $crate::value::eval::Substitute<$crate::value::ValId> for $T
+        where
+            $T: Into<$crate::value::ValId>,
+        {
+            fn substitute(
+                &self,
+                ctx: &mut $crate::value::eval::EvalCtx,
+            ) -> Result<$crate::value::ValId, $crate::value::Error> {
                 let sub: $T = self.substitute(ctx)?;
                 Ok(sub.into())
             }
         }
-        impl $crate::value::eval::Substitute<$crate::value::ValueEnum> for $T where $T: Into<$crate::value::ValueEnum> {
-            fn substitute(&self, ctx: &mut $crate::value::eval::EvalCtx) -> Result<$crate::value::ValueEnum, $crate::value::eval::Error> {
+        impl $crate::value::eval::Substitute<$crate::value::ValueEnum> for $T
+        where
+            $T: Into<$crate::value::ValueEnum>,
+        {
+            fn substitute(
+                &self,
+                ctx: &mut $crate::value::eval::EvalCtx,
+            ) -> Result<$crate::value::ValueEnum, $crate::value::Error> {
                 let sub: $T = self.substitute(ctx)?;
                 Ok(sub.into())
             }
         }
-    }
+    };
 }
 
 /// An object which can be applied to a list of `rain` values
