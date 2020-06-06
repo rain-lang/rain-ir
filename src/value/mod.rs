@@ -20,7 +20,6 @@ mod error;
 pub mod eval;
 pub mod expr;
 pub mod function;
-pub mod gamma;
 pub mod lifetime;
 pub mod primitive;
 pub mod tuple;
@@ -30,8 +29,7 @@ pub mod universe;
 pub use error::*;
 use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
-use function::{lambda::Lambda, pi::Pi};
-use gamma::Gamma;
+use function::{gamma::Gamma, lambda::Lambda, pi::Pi};
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
