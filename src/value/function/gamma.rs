@@ -115,8 +115,24 @@ impl GammaBuilder {
     }
     /// Finish constructing this gamma node
     /// On failure, return an unchanged object to try again, along with a reason
-    pub fn finish(self) -> Result<Gamma, (GammaBuilder, Error)> {
-        unimplemented!()
+    pub fn finish(mut self) -> Result<Gamma, (GammaBuilder, Error)> {
+        let mut deps = self.deps();
+        deps.shrink_to_fit();
+        let lifetime = Lifetime::default()
+            .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+            .map_err(|_| Error::LifetimeError);
+        let lifetime = match lifetime {
+            Ok(lifetime) => lifetime,
+            Err(err) => return Err((self, err)),
+        };
+        self.branches.shrink_to_fit();
+        //TODO: completion check
+        Ok(Gamma {
+            deps: deps.into_boxed_slice(),
+            branches: self.branches.into_boxed_slice(),
+            lifetime,
+            ty: self.ty,
+        })
     }
 }
 
