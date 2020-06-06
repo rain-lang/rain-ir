@@ -17,6 +17,7 @@ once_cell = "^1.4"
 either = "^1.5"
 num = "^0.2"
 fxhash = "^0.2"
+itertools = "^0.9"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }

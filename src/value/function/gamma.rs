@@ -11,6 +11,7 @@ use crate::value::{
     Error, TypeRef, ValId, Value, VarId,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use itertools::Itertools;
 use std::ops::Deref;
 
 /// A gamma node, representing pattern matching and primitive recursion
@@ -100,6 +101,16 @@ impl GammaBuilder {
             builder: self,
             pattern,
         })
+    }
+    /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
+    ///
+    /// Dependencies are returned sorted by address
+    pub fn deps(&self) -> Vec<ValId> {
+        self.branches
+            .iter()
+            .map(|branch| branch.deps().into_iter())
+            .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
+            .collect()
     }
     /// Finish constructing this gamma node
     /// On failure, return an unchanged object to try again, along with a reason
