@@ -296,7 +296,9 @@ mod prettyprint_impl {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use crate::parser::builder::Builder;
         use smallvec::smallvec;
+
         #[test]
         fn nested_units_print_properly() {
             let unit = Tuple::unit();
@@ -316,6 +318,19 @@ mod prettyprint_impl {
                     "{}{}{} {}{}",
                     KEYWORD_PROD, TUPLE_OPEN, Unit, Unit, TUPLE_CLOSE
                 )
+            );
+        }
+
+        #[test]
+        fn simple_projections_normalize_properly() {
+            let mut builder = Builder::<&str>::new();
+            assert_eq!(
+                builder.parse_expr("[#true #false].0").unwrap(),
+                ("", ValId::from(true))
+            );
+            assert_eq!(
+                builder.parse_expr("[#true #false].1").unwrap(),
+                ("", ValId::from(false))
             );
         }
     }
