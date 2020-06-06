@@ -129,8 +129,8 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::value::ValId;
     use crate::parser::builder::Builder;
+    use crate::value::ValId;
     #[test]
     fn booleans_parse_properly() {
         let mut builder = Builder::<&str>::new();
@@ -148,6 +148,4 @@ mod tests {
 
         assert!(builder.parse_expr("#fals").is_err());
     }
-
-
 }

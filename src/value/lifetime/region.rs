@@ -3,13 +3,13 @@
 */
 
 use super::{LifetimeBorrow, Live};
-use crate::{trivial_substitute, quick_pretty};
 use crate::util::hash_cache::Cache;
 use crate::value::{
     eval::Apply,
     typing::{Type, Typed},
     TypeId, TypeRef, ValId, Value,
 };
+use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
 use std::cmp::Ordering;
@@ -55,13 +55,13 @@ impl Region {
     }
     /// Iterate over the parameters of this `Region`.
     #[inline]
-    pub fn params(self) -> impl Iterator<Item=Parameter> {
+    pub fn params(self) -> impl Iterator<Item = Parameter> {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
     /// Iterate over the parameters of this `Region`, borrowing a reference
     #[inline]
-    pub fn borrow_params(&self) -> impl '_ + Iterator<Item=Parameter> {
+    pub fn borrow_params(&self) -> impl '_ + Iterator<Item = Parameter> {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }

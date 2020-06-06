@@ -6,8 +6,7 @@ use crate::value::{
     lifetime::Parametrized,
     lifetime::{LifetimeBorrow, Live, Region},
     typing::{Type, Typed},
-    TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
-    Error,
+    Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 

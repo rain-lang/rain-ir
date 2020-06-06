@@ -133,13 +133,15 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 let name: I = self.unique.into();
                 let ty = top.ty();
                 // If the current scope is not open, open it. If not in a scope, ignore.
-                if let Some(top) = self.scope.last() { // Immutable printing
+                if let Some(top) = self.scope.last() {
+                    // Immutable printing
                     if !top {
                         self.print_tabs(fmt)?;
                         writeln!(fmt, "{{")?;
                     }
                 }
-                if let Some(top) = self.scope.last_mut() { // Mutable editing
+                if let Some(top) = self.scope.last_mut() {
+                    // Mutable editing
                     if !(*top) {
                         *top = true;
                         self.open_scopes += 1;

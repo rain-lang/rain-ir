@@ -1,13 +1,13 @@
 /*!
 Typing universes
 */
-use crate::{trivial_substitute, quick_pretty};
 use crate::value::{
     eval::Apply,
     lifetime::{LifetimeBorrow, Live},
     typing::{Type, Typed},
     TypeRef, UniverseId, UniverseRef, ValId, Value,
 };
+use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use std::cmp::Ordering;

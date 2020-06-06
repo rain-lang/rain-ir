@@ -3,8 +3,8 @@ A builder for `rain` expressions
 */
 use super::ast::{
     Detuple, Expr, Ident, Index as IndexExpr, Jeq, Lambda as LambdaExpr, Let, Member, ParamArgs,
-    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr,
-    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf, Scope
+    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr, Scope,
+    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
 };
 use super::{parse_expr, parse_statement};
 use crate::util::symbol_table::SymbolTable;

@@ -47,7 +47,7 @@ impl Lifetime {
                 }
             } else {
                 //TODO: lifetime intersections where possible...
-                return Err(()) // Incompatible regions!
+                return Err(()); // Incompatible regions!
             }
         }
         Ok(base.clone_lifetime())
@@ -134,5 +134,7 @@ pub trait Live {
     /// Get the lifetime of this value
     fn lifetime(&self) -> LifetimeBorrow;
     /// Get the region of this value, or `None` if the value is global
-    fn region(&self) -> Option<RegionBorrow> { self.lifetime().region() }
+    fn region(&self) -> Option<RegionBorrow> {
+        self.lifetime().region()
+    }
 }

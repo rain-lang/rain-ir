@@ -100,7 +100,7 @@ impl<K: Hash + Eq, V, S: BuildHasher> SymbolTable<K, V, S> {
         let v = entry.or_insert_with(Vec::new);
         if let Some((_, old_depth)) = v.last_mut() {
             if depth == *old_depth {
-                return Err(value)
+                return Err(value);
             }
         }
         v.push((value, depth));
