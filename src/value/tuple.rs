@@ -332,6 +332,10 @@ mod prettyprint_impl {
                 builder.parse_expr("[#true #false].1").unwrap(),
                 ("", ValId::from(false))
             );
+            assert_eq!(
+                builder.parse_expr("[[#true #false] [#false #true] []].1.0").unwrap(),
+                ("", ValId::from(false))
+            );
         }
     }
 }
