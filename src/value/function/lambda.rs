@@ -40,6 +40,11 @@ impl Lambda {
     pub fn result(&self) -> &ValId {
         self.result.value()
     }
+    /// Get the type of this lambda function as a guaranteed pi type
+    #[inline]
+    pub fn get_ty(&self) -> &VarId<Pi> {
+        &self.ty
+    }
 }
 
 impl Typed for Lambda {
@@ -155,7 +160,10 @@ mod tests {
         // Build the identity
         assert_eq!(builder.parse_statement("#let id = |x: #bool| x;"), Ok(""));
         // Build the unary type
-        assert_eq!(builder.parse_statement("#let unary = #pi|_: #bool| #bool;"), Ok(""));
+        assert_eq!(
+            builder.parse_statement("#let unary = #pi|_: #bool| #bool;"),
+            Ok("")
+        );
 
         // Check dependencies and type
         let (rest, id) = builder.parse_expr("id").unwrap();
