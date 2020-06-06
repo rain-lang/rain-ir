@@ -2,7 +2,7 @@
 Gamma nodes, representing pattern matching and primitive recursion
 */
 
-use crate::value::{function::pi::Pi, lifetime::Region, TypeId, ValId, VarId};
+use crate::value::{function::pi::Pi, lifetime::Region, ValId, VarId};
 use crate::{debug_from_display, pretty_display};
 
 /// A gamma node, representing pattern matching and primitive recursion
@@ -17,20 +17,40 @@ pub struct Gamma {
 }
 
 impl Gamma {
-    /// Try to create a new gamma node from a set of branches and a source type
-    pub fn try_new(_branches: CompleteBranches) -> Result<Gamma, ()> {
-        unimplemented!()
+    /// Get the branches of this gamma node
+    pub fn branches(&self) -> &[Branch] {
+        &self.branches
     }
 }
 
 debug_from_display!(Gamma);
 pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
 
-/// A complete set of branches over a source type
+/// A builder for a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct CompleteBranches {
+pub struct GammaBuilder {
+    /// The branches of this gamma node
     branches: Vec<Branch>,
-    source_ty: TypeId,
+    /// The desired type of this gamma node
+    ty: VarId<Pi>,
+    //TODO: completion check, etc...
+}
+
+impl GammaBuilder {
+    /// Get the current branch-set of this gamma builder
+    pub fn branches(&self) -> &[Branch] {
+        &self.branches
+    }
+    /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
+    /// Return an error on a mismatch between branch parameters and the desired gamma node type
+    pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, ()> {
+        //TODO: type checking
+        Ok(BranchBuilder {
+            region: pattern.region(&self.branches),
+            builder: self,
+            pattern,
+        })
+    }
 }
 
 /// A branch of a gamma node
@@ -40,18 +60,53 @@ pub struct Branch {
     region: Region,
     /// The pattern of this branch
     pattern: Pattern,
+    /// The value of this branch
+    value: ValId,
 }
 
-impl Branch {
-    /// Create a new branch from a given pattern, generating the region for it
-    pub fn new(_pattern: Pattern) -> Pattern {
-        unimplemented!()
+/// A builder for a branch of a gamma node
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub struct BranchBuilder<'a> {
+    /// The region corresponding to this branch's pattern
+    region: Region,
+    /// The pattern corresponding to this branch
+    pattern: Pattern,
+    /// The builder for this branch
+    builder: &'a mut GammaBuilder,
+}
+
+impl<'a> BranchBuilder<'a> {
+    /// Get the region of this branch builder
+    #[inline]
+    pub fn region(&self) -> &Region { &self.region }
+    /// Get the pattern of this branch builder
+    #[inline]
+    pub fn pattern(&self) -> &Pattern { &self.pattern }
+    /// Finish constructing branch with a given value, returning it's index in the builder on success.
+    /// On failure, return an unchanged object to try again
+    pub fn finish(self, value: ValId) -> Result<usize, BranchBuilder<'a>> {
+        let ix = self.builder.branches.len();
+        //TODO: region check...
+        self.builder.branches.push(Branch {
+            region: self.region,
+            pattern: self.pattern,
+            value //TODO: check type, lifetimes, etc.
+        });
+        Ok(ix)
     }
 }
 
 /// A pattern for a gamma node branch
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Pattern {
+pub enum Pattern {}
+
+impl Pattern {
+    /// Create the region for a given pattern given the current branch-set
+    pub fn region(&self, _branches: &[Branch]) -> Region {
+        match self {
+            _ => unimplemented!(),
+        }
+    }
 }
 
 #[cfg(feature = "prettyprinter")]
