@@ -110,54 +110,42 @@ trivial_substitute!(Bool);
 
 lazy_static! {
     /// Regions corresponding to primitive logical operations
-    static ref LOGICAL_OP_REGIONS: [Region; 7] = [
+    static ref LOGICAL_OP_REGIONS: [Region; 3] = [
         Region::new(RegionData::with(smallvec![Bool.into(); 1], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 2], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 3], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 4], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 5], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 6], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 7], None)),
     ];
     /// Types corresponding to primitive logical operations
-    static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
+    static ref LOGICAL_OP_TYS: [VarId<Pi>; 3] = [
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone()).unwrap().into(),
     ];
 }
 
 /// Masks corresponding to what bits must be set for operations of a given arity
-pub const LOGICAL_OP_ARITY_MASKS: [u128; 8] = [
-    0b1,                                // Nullary
-    0b11,                               // Unary
-    0xF,                                // Binary
-    0xFF,                               // Ternary
-    0xFFFF,                             // Arity 4,
-    0xFFFFFFFF,                         // Arity 5,
-    0xFFFFFFFFFFFFFFFF,                 // Arity 6,
-    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, // Arity 7
+pub const LOGICAL_OP_ARITY_MASKS: [u8; 4] = [
+    0b1,        // Nullary
+    0b11,       // Unary
+    0b1111,     // Binary
+    0b11111111, // Ternary
 ];
 
-/// A boolean operation, operating on up to seven booleans
-#[derive(Clone, PartialEq, Eq, Hash)]
+/// A boolean operation, operating on up to three
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LogicalOperation {
     /// The data backing this logical operation
-    data: u128,
+    data: u8,
     /// The arity of this logical operation
     arity: u8,
 }
 
 impl LogicalOperation {
     /// Create a new logical operation with a given type and data set.
-    /// Return an error if the arity is zero, or greater than seven, or
+    /// Return an error if the arity is zero, or greater than three, or
     /// if there are nonzero bits corresponding to higher arities
     #[inline]
-    pub fn try_new(arity: u8, data: u128) -> Result<LogicalOperation, ()> {
+    pub fn try_new(arity: u8, data: u8) -> Result<LogicalOperation, ()> {
         if arity == 0 || arity > 7 || !LOGICAL_OP_ARITY_MASKS[arity as usize] & data != 0 {
             Err(())
         } else {
@@ -165,10 +153,10 @@ impl LogicalOperation {
         }
     }
     /// Create a constant logical operation with a given arity.
-    /// Return an error if the arity is zero, or greater than seven
+    /// Return an error if the arity is zero, or greater than three
     #[inline]
     pub fn try_const(arity: u8, value: bool) -> Result<LogicalOperation, ()> {
-        if arity == 0 || arity > 7 {
+        if arity == 0 || arity > 3 {
             Err(())
         } else {
             Ok(LogicalOperation {
@@ -184,22 +172,27 @@ impl LogicalOperation {
     /// Create a new unary logical operation
     #[inline]
     pub fn unary(low: bool, high: bool) -> LogicalOperation {
-        let low = low as u128;
-        let high = (high as u128) << 1;
+        let low = low as u8;
+        let high = (high as u8) << 1;
         Self::try_new(1, low | high).expect("Unary operations are valid")
     }
     /// Create a new binary logical operation.
     #[inline]
     pub fn binary(ff: bool, ft: bool, tf: bool, tt: bool) -> LogicalOperation {
-        let data = ff as u128 + ((ft as u128) << 1) + ((tf as u128) << 2) + ((tt as u128) << 3);
+        let data = ff as u8 + ((ft as u8) << 1) + ((tf as u8) << 2) + ((tt as u8) << 3);
         Self::try_new(2, data).expect("Binary operations are valid")
+    }
+    /// Create a new ternary logical operation
+    #[inline]
+    pub fn ternary(data: u8) -> LogicalOperation {
+        Self::try_new(3, data).expect("Ternary operations are valid")
     }
     /// Get the number of bits of this logical operation
     #[inline]
     pub fn no_bits(&self) -> usize {
         1 << self.arity
     }
-    /// Get a bit of this logical operation.
+    /// Get a bit of this logical operation. Can also be viewed as completely evaluating it.
     #[inline]
     pub fn get_bit(&self, bit: u8) -> bool {
         self.data & (1 << bit) != 0
@@ -223,7 +216,23 @@ impl LogicalOperation {
 
 impl Display for LogicalOperation {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "{}({}, {:#b})", KEYWORD_LOGICAL, self.arity, self.data)
+        match self.arity {
+            1 => write!(
+                fmt,
+                "{}({}, {:#04b})",
+                KEYWORD_LOGICAL, self.arity, self.data
+            ),
+            2 => write!(
+                fmt,
+                "{}({}, {:#06b})",
+                KEYWORD_LOGICAL, self.arity, self.data
+            ),
+            _ => write!(
+                fmt,
+                "{}({}, {:#010b})",
+                KEYWORD_LOGICAL, self.arity, self.data
+            ),
+        }
     }
 }
 
@@ -356,8 +365,9 @@ mod tests {
 
         assert!(builder.parse_expr("#fals").is_err());
     }
+
     #[test]
-    fn logical_operations_work_properly() {
+    fn logical_operations_sanity_check() {
         // Sanity checks: (in)equality
         assert_ne!(LogicalOperation::from(And), LogicalOperation::from(Or));
         assert_ne!(LogicalOperation::from(And), LogicalOperation::from(Not));
@@ -383,12 +393,91 @@ mod tests {
             Either::Right(LogicalOperation::try_const(1, false).unwrap())
         );
         assert_eq!(
-            LogicalOperation::from(And).apply(true).right().unwrap().apply(false),
+            LogicalOperation::from(And)
+                .apply(true)
+                .right()
+                .unwrap()
+                .apply(false),
             Either::Left(false)
         );
         assert_eq!(
-            LogicalOperation::from(And).apply(true).right().unwrap().apply(true),
+            LogicalOperation::from(And)
+                .apply(true)
+                .right()
+                .unwrap()
+                .apply(true),
             Either::Left(true)
         );
+    }
+
+    /// Test a binary operation exhaustively
+    fn test_binary_operation(
+        op: LogicalOperation,
+        partial_table: &[LogicalOperation; 2],
+        truth_table: &[bool; 4],
+    ) {
+        for left in [true, false].iter().copied() {
+            for right in [true, false].iter().copied() {
+                let ix = left as u8 | (right as u8) << 1;
+                assert_eq!(op.get_bit(ix), truth_table[ix as usize]);
+                let partial = op
+                    .apply(left)
+                    .right()
+                    .expect("Expected binary operation, got unary!");
+                assert_eq!(
+                    partial, partial_table[left as usize],
+                    "Incorrect partial evaluation of ({} {})",
+                    op, left
+                );
+                let fin = partial
+                    .apply(right)
+                    .left()
+                    .expect("Expected binary operation, got arity > 2!");
+                assert_eq!(
+                    fin, truth_table[ix as usize],
+                    "Incorrect total evaluation of ({} {} {}) == ({} {})",
+                    op, left, right, partial, right
+                );
+            }
+        }
+    }
+
+    fn cl(b: bool) -> LogicalOperation {
+        LogicalOperation::try_const(1, b).unwrap()
+    }
+
+    #[test]
+    fn test_binary_operations() {
+        let binary_ops: &[(LogicalOperation, [LogicalOperation; 2], [bool; 4])] = &[
+            (
+                And.into(),
+                [cl(false), Id.into()],
+                [false, false, false, true],
+            ),
+            (Or.into(), [Id.into(), cl(true)], [false, true, true, true]),
+            (
+                Xor.into(),
+                [Id.into(), Not.into()],
+                [false, true, true, false],
+            ),
+            (
+                Nor.into(),
+                [Not.into(), cl(false)],
+                [true, false, false, false],
+            ),
+            (
+                Nand.into(),
+                [cl(true), Not.into()],
+                [true, true, true, false],
+            ),
+            (
+                Iff.into(),
+                [Not.into(), Id.into()],
+                [true, false, false, true],
+            ),
+        ];
+        for (op, partial_table, truth_table) in binary_ops.iter() {
+            test_binary_operation(*op, partial_table, truth_table);
+        }
     }
 }
