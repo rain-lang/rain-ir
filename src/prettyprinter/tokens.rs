@@ -98,8 +98,14 @@ pub const KEYWORD_PI: &str = "#pi";
 /// The keyword for gamma nodes
 pub const KEYWORD_GAMMA: &str = "#gamma";
 
+/// The keyword for a logical operation
+pub const KEYWORD_LOGICAL: &str = "#logical";
+
 /// The keyword for phi nodes
 pub const KEYWORD_PHI: &str = "#phi";
+
+/// The keyword for logical identity
+pub const KEYWORD_LOGICAL_ID: &str = "#bool_id";
 
 /// The keyword for logical not
 pub const KEYWORD_NOT: &str = "#not";
@@ -112,9 +118,6 @@ pub const KEYWORD_OR: &str = "#or";
 
 /// The keyword for logical xor
 pub const KEYWORD_XOR: &str = "#xor";
-
-/// The keyword for logical xnor
-pub const KEYWORD_XNOR: &str = "#xnor";
 
 /// The keyword for logical nor
 pub const KEYWORD_NOR: &str = "#nor";
