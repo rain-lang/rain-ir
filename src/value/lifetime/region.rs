@@ -51,7 +51,7 @@ impl Region {
     /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
     #[inline]
     pub fn param(self, ix: usize) -> Result<Parameter, ()> {
-        Parameter::new(self, ix)
+        Parameter::try_new(self, ix)
     }
     /// Iterate over the parameters of this `Region`.
     #[inline]
@@ -312,7 +312,7 @@ impl PartialOrd for RegionData {
         while other_p.depth > self.depth {
             other_p = other.parent().expect("Impossible: self.depth < other_p.depth implies other.depth >= 2, i.e. other has a parent");
         }
-        return other_p.deref() == self;
+        other_p.deref() == self
     }
     /**
     Check whether the left region is a parent of the right region
@@ -362,11 +362,11 @@ impl Parameter {
     ```rust
     use rain_lang::value::lifetime::{Region, RegionData, Parameter};
     let empty_region = Region::new(RegionData::new(None));
-    assert_eq!(Parameter::new(empty_region, 1), Err(()));
+    assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```
     */
     #[inline]
-    pub fn new(region: Region, ix: usize) -> Result<Parameter, ()> {
+    pub fn try_new(region: Region, ix: usize) -> Result<Parameter, ()> {
         if ix >= region.len() {
             Err(())
         } else {

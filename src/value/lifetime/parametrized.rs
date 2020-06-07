@@ -59,7 +59,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 Ok(Parametrized {
                     region,
                     value,
-                    deps: deps,
+                    deps,
                     lifetime,
                 })
             }

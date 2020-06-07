@@ -66,7 +66,7 @@ impl Sexpr {
     /// Attempt to create an S-expression from an un-owned argument-list, evaluating as necessary
     pub fn eval(args: &[ValId]) -> Result<Sexpr, Error> {
         match args.len() {
-            0 => return Ok(Self::unit()),
+            0 => Ok(Self::unit()),
             _ => Self::applied_with(args[0].clone(), &args[..]),
         }
     }
