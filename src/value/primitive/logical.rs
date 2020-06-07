@@ -4,17 +4,18 @@ Boolean types and logical operations
 
 use crate::prettyprinter::tokens::*;
 use crate::value::{
-    eval::Apply,
+    eval::{Application, Apply, EvalCtx},
     function::pi::Pi,
     lifetime::{LifetimeBorrow, Live, Region, RegionData},
     typing::{Type, Typed},
     universe::FINITE_TY,
-    TypeRef, UniverseRef, ValId, Value, VarId,
+    Error, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{debug_from_display, display_pretty, quick_pretty, trivial_substitute};
+use crate::{debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_substitute};
 use either::Either;
 use lazy_static::lazy_static;
 use smallvec::smallvec;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 
 /// The type of booleans
@@ -133,33 +134,33 @@ pub const LOGICAL_OP_ARITY_MASKS: [u8; 4] = [
 
 /// A boolean operation, operating on up to three
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LogicalOperation {
+pub struct Logical {
     /// The data backing this logical operation
     data: u8,
     /// The arity of this logical operation
     arity: u8,
 }
 
-impl LogicalOperation {
+impl Logical {
     /// Create a new logical operation with a given type and data set.
     /// Return an error if the arity is zero, or greater than three, or
     /// if there are nonzero bits corresponding to higher arities
     #[inline]
-    pub fn try_new(arity: u8, data: u8) -> Result<LogicalOperation, ()> {
+    pub fn try_new(arity: u8, data: u8) -> Result<Logical, ()> {
         if arity == 0 || arity > 7 || !LOGICAL_OP_ARITY_MASKS[arity as usize] & data != 0 {
             Err(())
         } else {
-            Ok(LogicalOperation { arity, data })
+            Ok(Logical { arity, data })
         }
     }
     /// Create a constant logical operation with a given arity.
     /// Return an error if the arity is zero, or greater than three
     #[inline]
-    pub fn try_const(arity: u8, value: bool) -> Result<LogicalOperation, ()> {
+    pub fn try_const(arity: u8, value: bool) -> Result<Logical, ()> {
         if arity == 0 || arity > 3 {
             Err(())
         } else {
-            Ok(LogicalOperation {
+            Ok(Logical {
                 arity,
                 data: if value {
                     LOGICAL_OP_ARITY_MASKS[arity as usize]
@@ -171,20 +172,20 @@ impl LogicalOperation {
     }
     /// Create a new unary logical operation
     #[inline]
-    pub fn unary(low: bool, high: bool) -> LogicalOperation {
+    pub fn unary(low: bool, high: bool) -> Logical {
         let low = low as u8;
         let high = (high as u8) << 1;
         Self::try_new(1, low | high).expect("Unary operations are valid")
     }
     /// Create a new binary logical operation.
     #[inline]
-    pub fn binary(ff: bool, ft: bool, tf: bool, tt: bool) -> LogicalOperation {
+    pub fn binary(ff: bool, ft: bool, tf: bool, tt: bool) -> Logical {
         let data = ff as u8 + ((ft as u8) << 1) + ((tf as u8) << 2) + ((tt as u8) << 3);
         Self::try_new(2, data).expect("Binary operations are valid")
     }
     /// Create a new ternary logical operation
     #[inline]
-    pub fn ternary(data: u8) -> LogicalOperation {
+    pub fn ternary(data: u8) -> Logical {
         Self::try_new(3, data).expect("Ternary operations are valid")
     }
     /// Get the number of bits of this logical operation
@@ -199,14 +200,14 @@ impl LogicalOperation {
     }
     /// Evaluate a logical operation, getting either a result or a partial evaluation
     #[inline]
-    pub fn apply(&self, value: bool) -> Either<bool, LogicalOperation> {
+    pub fn apply(&self, value: bool) -> Either<bool, Logical> {
         if self.arity == 1 {
             Either::Left(self.get_bit(value as u8))
         } else {
             let arity = self.arity - 1;
             let shift = if value { 1 << arity } else { 0 };
             let mask = LOGICAL_OP_ARITY_MASKS[arity as usize] << shift;
-            Either::Right(LogicalOperation {
+            Either::Right(Logical {
                 arity: arity,
                 data: (self.data & mask) >> shift,
             })
@@ -214,7 +215,7 @@ impl LogicalOperation {
     }
 }
 
-impl Display for LogicalOperation {
+impl Display for Logical {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self.arity {
             1 => write!(
@@ -236,31 +237,172 @@ impl Display for LogicalOperation {
     }
 }
 
-debug_from_display!(LogicalOperation);
-display_pretty!(LogicalOperation);
+impl Typed for Logical {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        LOGICAL_OP_TYS[self.arity as usize - 1].borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
+    }
+}
+
+impl Apply for Logical {}
+
+trivial_substitute!(Logical);
+
+impl Value for Logical {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Logical operation {} has no dependencies (asked for dependency #{})",
+            self, ix
+        )
+    }
+}
+
+impl Live for Logical {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::default()
+    }
+}
+
+debug_from_display!(Logical);
+display_pretty!(Logical);
 
 macro_rules! make_logical {
-    ($t:ty[$arity:expr] = $tt:expr) => {
-        impl From<$t> for LogicalOperation {
+    ($t:ident[$arity:expr] = $tt:expr) => {
+        impl From<$t> for Logical {
             #[inline]
-            fn from(_: $t) -> LogicalOperation {
-                LogicalOperation::try_new($arity, $tt).unwrap()
+            fn from(_: $t) -> Logical {
+                Logical::try_new($arity, $tt).unwrap()
             }
         }
-        impl PartialEq<LogicalOperation> for $t {
+        impl PartialEq<Logical> for $t {
             #[inline]
-            fn eq(&self, l: &LogicalOperation) -> bool {
-                LogicalOperation::from(*self).eq(l)
+            fn eq(&self, l: &Logical) -> bool {
+                Logical::from(*self).eq(l)
             }
         }
-        impl PartialEq<$t> for LogicalOperation {
+        impl PartialEq<$t> for Logical {
             #[inline]
             fn eq(&self, t: &$t) -> bool {
-                LogicalOperation::from(*t).eq(self)
+                Logical::from(*t).eq(self)
+            }
+        }
+        impl Typed for $t {
+            #[inline]
+            fn ty(&self) -> TypeRef {
+                LOGICAL_OP_TYS[$arity - 1].borrow_ty()
+            }
+            #[inline]
+            fn is_ty(&self) -> bool {
+                false
+            }
+        }
+        impl Live for $t {
+            #[inline]
+            fn lifetime(&self) -> LifetimeBorrow {
+                LifetimeBorrow::default()
+            }
+        }
+        trivial_substitute!($t);
+        normal_valid!($t);
+        impl Apply for $t {
+            fn do_apply_in_ctx<'a>(
+                &self,
+                args: &'a [ValId],
+                inline: bool,
+                ctx: Option<&mut EvalCtx>,
+            ) -> Result<Application<'a>, Error> {
+                Logical::from(*self).do_apply_in_ctx(args, inline, ctx)
+            }
+        }
+        impl Value for $t {
+            fn no_deps(&self) -> usize {
+                0
+            }
+            fn get_dep(&self, ix: usize) -> &ValId {
+                panic!(
+                    "Logical operation {} has no dependencies (tried to get dep #{})",
+                    self, ix
+                )
+            }
+        }
+        impl From<$t> for ValueEnum {
+            fn from(t: $t) -> ValueEnum {
+                Logical::from(t).into()
+            }
+        }
+        impl From<$t> for NormalValue {
+            fn from(t: $t) -> NormalValue {
+                Logical::from(t).into()
+            }
+        }
+        impl TryFrom<Logical> for $t {
+            type Error = Logical;
+            fn try_from(l: Logical) -> Result<$t, Logical> {
+                if l == $t {
+                    Ok($t)
+                } else {
+                    Err(l)
+                }
+            }
+        }
+        impl TryFrom<ValueEnum> for $t {
+            type Error = ValueEnum;
+            fn try_from(v: ValueEnum) -> Result<$t, ValueEnum> {
+                let l = Logical::try_from(v)?;
+                Ok($t::try_from(l)?)
+            }
+        }
+        impl TryFrom<NormalValue> for $t {
+            type Error = NormalValue;
+            fn try_from(v: NormalValue) -> Result<$t, NormalValue> {
+                let l = Logical::try_from(v)?;
+                Ok($t::try_from(l)?)
+            }
+        }
+        impl<'a, 'b> TryFrom<&'a Logical> for &'b $t {
+            type Error = &'a Logical;
+            fn try_from(l: &'a Logical) -> Result<&'b $t, &'a Logical> {
+                if l == &$t {
+                    Ok(&$t)
+                } else {
+                    Err(l)
+                }
+            }
+        }
+        impl<'a, 'b> TryFrom<&'a ValueEnum> for &'b $t {
+            type Error = &'a ValueEnum;
+            fn try_from(v: &'a ValueEnum) -> Result<&'b $t, &'a ValueEnum> {
+                let l: &'a Logical = v.try_into()?;
+                if l == &$t {
+                    Ok(&$t)
+                } else {
+                    Err(v)
+                }
+            }
+        }
+        impl<'a, 'b> TryFrom<&'a NormalValue> for &'b $t {
+            type Error = &'a NormalValue;
+            fn try_from(v: &'a NormalValue) -> Result<&'b $t, &'a NormalValue> {
+                let l: &'a Logical = v.try_into()?;
+                if l == &$t {
+                    Ok(&$t)
+                } else {
+                    Err(v)
+                }
             }
         }
     };
-    ($t:ty = $tt:expr) => {
+    ($t:ident = $tt:expr) => {
         make_logical!($t[2] = $tt);
     };
 }
@@ -369,53 +511,38 @@ mod tests {
     #[test]
     fn logical_operations_sanity_check() {
         // Sanity checks: (in)equality
-        assert_ne!(LogicalOperation::from(And), LogicalOperation::from(Or));
-        assert_ne!(LogicalOperation::from(And), LogicalOperation::from(Not));
-        assert_ne!(LogicalOperation::from(Not), LogicalOperation::from(Id));
+        assert_ne!(Logical::from(And), Logical::from(Or));
+        assert_ne!(Logical::from(And), Logical::from(Not));
+        assert_ne!(Logical::from(Not), Logical::from(Id));
 
         // Sanity checks: construction
+        assert_eq!(Logical::unary(false, true), Logical::from(Id));
         assert_eq!(
-            LogicalOperation::unary(false, true),
-            LogicalOperation::from(Id)
-        );
-        assert_eq!(
-            LogicalOperation::binary(false, true, true, false),
-            LogicalOperation::from(Xor)
+            Logical::binary(false, true, true, false),
+            Logical::from(Xor)
         );
 
         // Application works
         assert_eq!(
-            LogicalOperation::from(And).apply(true),
-            Either::Right(LogicalOperation::from(Id)),
+            Logical::from(And).apply(true),
+            Either::Right(Logical::from(Id)),
         );
         assert_eq!(
-            LogicalOperation::from(And).apply(false),
-            Either::Right(LogicalOperation::try_const(1, false).unwrap())
+            Logical::from(And).apply(false),
+            Either::Right(Logical::try_const(1, false).unwrap())
         );
         assert_eq!(
-            LogicalOperation::from(And)
-                .apply(true)
-                .right()
-                .unwrap()
-                .apply(false),
+            Logical::from(And).apply(true).right().unwrap().apply(false),
             Either::Left(false)
         );
         assert_eq!(
-            LogicalOperation::from(And)
-                .apply(true)
-                .right()
-                .unwrap()
-                .apply(true),
+            Logical::from(And).apply(true).right().unwrap().apply(true),
             Either::Left(true)
         );
     }
 
     /// Test a binary operation exhaustively
-    fn test_binary_operation(
-        op: LogicalOperation,
-        partial_table: &[LogicalOperation; 2],
-        truth_table: &[bool; 4],
-    ) {
+    fn test_binary_operation(op: Logical, partial_table: &[Logical; 2], truth_table: &[bool; 4]) {
         for left in [true, false].iter().copied() {
             for right in [true, false].iter().copied() {
                 let ix = left as u8 | (right as u8) << 1;
@@ -442,13 +569,13 @@ mod tests {
         }
     }
 
-    fn cl(b: bool) -> LogicalOperation {
-        LogicalOperation::try_const(1, b).unwrap()
+    fn cl(b: bool) -> Logical {
+        Logical::try_const(1, b).unwrap()
     }
 
     #[test]
     fn test_binary_operations() {
-        let binary_ops: &[(LogicalOperation, [LogicalOperation; 2], [bool; 4])] = &[
+        let binary_ops: &[(Logical, [Logical; 2], [bool; 4])] = &[
             (
                 And.into(),
                 [cl(false), Id.into()],

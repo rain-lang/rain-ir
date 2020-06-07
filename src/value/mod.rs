@@ -32,7 +32,7 @@ use function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
 use lifetime::{LifetimeBorrow, Live, Parameter};
 use primitive::{
     finite::{Finite, Index},
-    logical::Bool,
+    logical::{Bool, Logical},
     Unit,
 };
 use tuple::{Product, Tuple};
@@ -952,8 +952,7 @@ impl<V: Value> Deps<V> {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
     /// Collect the immediate dependencies of this value below a given depth.
-    pub fn collect_deps(&self, below: usize) -> Vec<ValId>
-    {
+    pub fn collect_deps(&self, below: usize) -> Vec<ValId> {
         let mut result = Vec::new();
         // Simple edge case
         if below == 0 {
@@ -1009,6 +1008,8 @@ pub enum ValueEnum {
     Gamma(Gamma),
     /// A phi node
     Phi(Phi),
+    /// Logical operations on booleans
+    Logical(Logical),
 }
 
 impl Apply for ValueEnum {
@@ -1063,6 +1064,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Lambda {}
     impl InjectionRef<ValueEnum> for Gamma {}
     impl InjectionRef<ValueEnum> for Phi {}
+    impl InjectionRef<ValueEnum> for Logical {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -1096,6 +1098,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
     impl TryFrom<NormalValue> for Phi { as ValueEnum, }
     impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
+    impl TryFrom<NormalValue> for Logical { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Logical { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -1280,6 +1284,12 @@ impl From<Phi> for NormalValue {
     }
 }
 
+impl From<Logical> for NormalValue {
+    fn from(l: Logical) -> NormalValue {
+        NormalValue::assert_new(ValueEnum::Logical(l))
+    }
+}
+
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {
@@ -1305,6 +1315,7 @@ macro_rules! forv {
             ValueEnum::Lambda($i) => $e,
             ValueEnum::Gamma($i) => $e,
             ValueEnum::Phi($i) => $e,
+            ValueEnum::Logical($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -1371,6 +1382,7 @@ normal_valid!(Lambda);
 normal_valid!(Parameter);
 normal_valid!(Gamma);
 normal_valid!(Phi);
+normal_valid!(Logical);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
