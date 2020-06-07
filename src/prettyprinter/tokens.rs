@@ -100,3 +100,27 @@ pub const KEYWORD_GAMMA: &str = "#gamma";
 
 /// The keyword for phi nodes
 pub const KEYWORD_PHI: &str = "#phi";
+
+/// The keyword for logical not
+pub const KEYWORD_NOT: &str = "#not";
+
+/// The keyword for logical and
+pub const KEYWORD_AND: &str = "#and";
+
+/// The keyword for logical or
+pub const KEYWORD_OR: &str = "#or";
+
+/// The keyword for logical xor
+pub const KEYWORD_XOR: &str = "#xor";
+
+/// The keyword for logical xnor
+pub const KEYWORD_XNOR: &str = "#xnor";
+
+/// The keyword for logical nor
+pub const KEYWORD_NOR: &str = "#nor";
+
+/// The keyword for logical nand
+pub const KEYWORD_NAND: &str = "#nand";
+
+/// The keyword for logical equality (iff)
+pub const KEYWORD_IFF: &str = "#iff";
