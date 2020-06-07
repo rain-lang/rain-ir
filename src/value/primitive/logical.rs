@@ -9,7 +9,7 @@ use crate::value::{
     lifetime::{LifetimeBorrow, Live, Region, RegionData},
     typing::{Type, Typed},
     universe::FINITE_TY,
-    Error, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
+    Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
 use crate::{debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_substitute};
 use either::Either;
@@ -248,7 +248,58 @@ impl Typed for Logical {
     }
 }
 
-impl Apply for Logical {}
+impl Apply for Logical {
+    fn do_apply_in_ctx<'a>(
+        &self,
+        args: &'a [ValId],
+        _inline: bool,
+        _ctx: Option<&mut EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        // Null evaluation
+        if args.len() == 0 {
+            return Ok(Application::Stop(
+                self.lifetime().clone_lifetime(),
+                self.ty().clone_ty(),
+            ));
+        }
+        // Over-evaluation
+        if args.len() > self.arity as usize {
+            return Err(Error::TooManyArgs);
+        }
+        let mut l = *self;
+        let mut cut_ix = 0;
+        // Evaluate
+        for (i, arg) in args.iter().enumerate() {
+            if arg.ty() != TypeId::from(Bool) {
+                return Err(Error::TypeMismatch);
+            }
+            let ap = if cut_ix == i {
+                match arg.as_enum() {
+                    ValueEnum::Bool(b) => Some(l.apply(*b)),
+                    _ => {
+                        let l_t = l.apply(true);
+                        let l_f = l.apply(false);
+                        if l_t == l_f {
+                            Some(l_t)
+                        } else {
+                            None
+                        }
+                    }
+                }
+            } else {
+                None
+            };
+            if let Some(ap) = ap {
+                cut_ix += 1;
+                match ap {
+                    Either::Left(b) => return Ok(Application::Success(&args[cut_ix..], b.into())),
+                    Either::Right(f) => l = f,
+                }
+            }
+        }
+        return Ok(Application::Success(&args[cut_ix..], l.into()));
+    }
+}
 
 trivial_substitute!(Logical);
 

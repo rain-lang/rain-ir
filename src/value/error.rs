@@ -19,4 +19,7 @@ pub enum Error {
     NoInlineError,
     /// A value is no longer a type after substitution
     NotATypeError,
+    /// Too many arguments for a (non-curried!) function 
+    /// (or sometimes an object which *may* be a function)
+    TooManyArgs,
 }
