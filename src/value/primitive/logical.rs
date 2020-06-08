@@ -194,10 +194,21 @@ impl Logical {
     pub fn data(&self) -> u128 {
         self.data
     }
+    /// Get the constant value of this logical operation, if it is indeed a constant
+    #[inline]
+    pub fn get_const(&self) -> Option<bool> {
+        if self.data == LOGICAL_OP_ARITY_MASKS[self.arity as usize] {
+            Some(true)
+        } else if self.data == 0 {
+            Some(false)
+        } else {
+            None
+        }
+    }
     /// Check if this value is a constant
     #[inline]
     pub fn is_const(&self) -> bool {
-        self.data == LOGICAL_OP_ARITY_MASKS[self.arity as usize] || self.data == 0
+        self.get_const().is_some()
     }
     /// Create a new unary logical operation
     #[inline]
@@ -923,6 +934,9 @@ mod tests {
             assert!(tc.is_const());
             assert!(fc.is_const());
             assert!(!nc.is_const());
+            assert_eq!(tc.get_const(), Some(true));
+            assert_eq!(fc.get_const(), Some(false));
+            assert_eq!(nc.get_const(), None);
             assert_eq!(fc | fc, Ok(fc));
             assert_eq!(fc | tc, Ok(tc));
             assert_eq!(tc | fc, Ok(tc));
