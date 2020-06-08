@@ -1,0 +1,188 @@
+/*!
+A parametrized `rain` value of a given type
+*/
+
+use super::Region;
+use crate::eval::{EvalCtx, Substitute};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::typing::Typed;
+use crate::value::{Error, TypeId, ValId, Value};
+use smallvec::{smallvec, SmallVec};
+use std::cmp::Ordering;
+use std::convert::TryInto;
+use std::ops::Deref;
+
+/// A parametrized value
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Parametrized<V> {
+    region: Region,
+    value: V,
+    deps: Option<Box<[ValId]>>,
+    lifetime: Lifetime,
+}
+
+impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
+    /**
+    Attempt to create a new parametrized value. Return an error if the value does not lie in the desired region.
+    */
+    pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
+        use Ordering::*;
+        match value.region().partial_cmp(region.deref()) {
+            None | Some(Greater) => Err(Error::IncomparableRegions),
+            Some(Equal) => {
+                let mut deps = value.deps().collect_deps(value.lifetime().depth());
+                deps.shrink_to_fit();
+                let lifetime = Lifetime::default()
+                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .map_err(|_| Error::LifetimeError)?;
+                let deps = if deps.len() > 0 {
+                    Some(deps.into_boxed_slice())
+                } else {
+                    None
+                };
+                Ok(Parametrized {
+                    region,
+                    value,
+                    deps,
+                    lifetime,
+                })
+            }
+            Some(Less) => {
+                let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into()];
+                deps.shrink_to_fit();
+                let lifetime = Lifetime::default()
+                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .map_err(|_| Error::LifetimeError)?;
+                let deps = if deps.len() > 0 {
+                    Some(deps.into_boxed_slice())
+                } else {
+                    None
+                };
+                Ok(Parametrized {
+                    region,
+                    value,
+                    deps,
+                    lifetime,
+                })
+            }
+        }
+    }
+}
+
+impl<V: Typed> Parametrized<V> {
+    /**
+    Get the parametrized type of this parametrized value
+    */
+    #[inline]
+    pub fn ty(&self) -> Parametrized<TypeId> {
+        let ty = self.value.ty().clone_ty();
+        Parametrized::try_new(ty, self.region.clone())
+            //TODO: think about this...
+            .expect("A type should never be in a region a value is not!")
+    }
+}
+
+impl<V> Parametrized<V> {
+    /**
+    Get the value being parametrized
+    */
+    #[inline]
+    pub fn value(&self) -> &V {
+        &self.value
+    }
+    /**
+    Get the dependencies of this value
+    */
+    #[inline]
+    pub fn deps(&self) -> &[ValId] {
+        self.deps.as_ref().map(|deps| &deps[..]).unwrap_or(&[])
+    }
+    /**
+    Get the region in which this parametrized value is defined
+    */
+    #[inline]
+    pub fn def_region(&self) -> &Region {
+        &self.region
+    }
+}
+
+impl<V: Value> Parametrized<V> {
+    /**
+    Convert a parametrized value into another
+    */
+    pub fn into_value<U>(self) -> Parametrized<U>
+    where
+        U: Value,
+        V: Into<U>,
+    {
+        Parametrized {
+            region: self.region,
+            value: self.value.into(),
+            deps: self.deps,
+            lifetime: self.lifetime,
+        }
+    }
+    /**
+    Try to convert a parametrized value into another
+    */
+    pub fn try_into_value<U>(self) -> Result<Parametrized<U>, V::Error>
+    where
+        U: Value,
+        V: TryInto<U>,
+    {
+        Ok(Parametrized {
+            region: self.region,
+            value: self.value.try_into()?,
+            deps: self.deps,
+            lifetime: self.lifetime,
+        })
+    }
+}
+
+impl<V: Value> Live for Parametrized<V> {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.borrow_lifetime()
+    }
+}
+
+impl<U, V> Substitute<Parametrized<U>> for Parametrized<V>
+where
+    V: Substitute<U> + Value,
+    U: Value + Clone,
+{
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Parametrized<U>, Error> {
+        let value: U = self.value().substitute(ctx)?;
+        Parametrized::try_new(value, self.def_region().clone())
+    }
+}
+
+#[cfg(feature = "prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use std::fmt::{self, Display, Formatter};
+
+    impl<V> PrettyPrint for Parametrized<V>
+    where
+        V: PrettyPrint + Value,
+    {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "{}", PARAM_OPEN)?;
+            let mut first = true;
+            for param in self.region.borrow_params() {
+                if !first {
+                    write!(fmt, " ")?;
+                }
+                first = false;
+                printer.prettyprint_index(fmt, ValId::from(param).borrow_val())?;
+            }
+            write!(fmt, "{} ", PARAM_CLOSE)?;
+            printer.scoped_print(fmt, &self.value)?;
+            Ok(())
+        }
+    }
+}
