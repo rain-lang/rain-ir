@@ -184,6 +184,11 @@ impl Logical {
             })
         }
     }
+    /// Check if this value is a constant
+    #[inline]
+    pub fn is_const(&self) -> bool {
+        self.data == LOGICAL_OP_ARITY_MASKS[self.arity as usize] || self.data == 0
+    }
     /// Create a new unary logical operation
     #[inline]
     pub fn unary(low: bool, high: bool) -> Logical {
@@ -877,8 +882,7 @@ mod tests {
 
     #[test]
     fn bitwise_on_binary_operations_work() {
-        let binary_ops = (0b0000..=0b1111)
-            .map(|b| Logical::try_new(2, b).unwrap());
+        let binary_ops = (0b0000..=0b1111).map(|b| Logical::try_new(2, b).unwrap());
         for op in binary_ops {
             assert_eq!(op | op, Ok(op));
             assert_eq!(op & op, Ok(op));
@@ -889,6 +893,51 @@ mod tests {
             assert_eq!(op | !op, Ok(Logical::try_const(2, true).unwrap()));
             assert_eq!(op & !op, Ok(Logical::try_const(2, false).unwrap()));
             assert_eq!(op ^ !op, Ok(Logical::try_const(2, true).unwrap()));
+        }
+    }
+
+    #[test]
+    fn is_const_works() {
+        for arity in 1..=7 {
+            let tc = Logical::try_const(arity, true).unwrap();
+            let fc = Logical::try_const(arity, false).unwrap();
+            let nc = Logical::try_new(
+                arity,
+                0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA & LOGICAL_OP_ARITY_MASKS[arity as usize],
+            )
+            .unwrap();
+            assert!(tc.is_const());
+            assert!(fc.is_const());
+            assert!(!nc.is_const());
+            assert_eq!(fc | fc, Ok(fc));
+            assert_eq!(fc | tc, Ok(tc));
+            assert_eq!(tc | fc, Ok(tc));
+            assert_eq!(tc | tc, Ok(tc));
+            assert_eq!(fc | nc, Ok(nc));
+            assert_eq!(tc | nc, Ok(tc));
+            assert_eq!(nc | fc, Ok(nc));
+            assert_eq!(nc | tc, Ok(tc));
+            assert_eq!(nc | nc, Ok(nc));
+            assert_eq!(fc & fc, Ok(fc));
+            assert_eq!(fc & tc, Ok(fc));
+            assert_eq!(tc & fc, Ok(fc));
+            assert_eq!(tc & tc, Ok(tc));
+            assert_eq!(fc & nc, Ok(fc));
+            assert_eq!(tc & nc, Ok(nc));
+            assert_eq!(nc & fc, Ok(fc));
+            assert_eq!(nc & tc, Ok(nc));
+            assert_eq!(nc & nc, Ok(nc));
+            assert_eq!(fc ^ fc, Ok(fc));
+            assert_eq!(fc ^ tc, Ok(tc));
+            assert_eq!(tc ^ fc, Ok(tc));
+            assert_eq!(tc ^ tc, Ok(fc));
+            assert_eq!(fc ^ nc, Ok(nc));
+            assert_eq!(tc ^ nc, Ok(!nc));
+            assert_eq!(nc ^ fc, Ok(nc));
+            assert_eq!(nc ^ tc, Ok(!nc));
+            assert_eq!(nc ^ nc, Ok(fc));
+            assert_eq!(!tc, fc);
+            assert_eq!(!fc, tc);
         }
     }
 }
