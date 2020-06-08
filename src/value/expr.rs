@@ -1,13 +1,11 @@
 /*!
 `rain` expressions
 */
-use super::{
-    eval::{Application, Apply, EvalCtx, Substitute},
-    lifetime::{Lifetime, LifetimeBorrow, Live},
-    primitive::UNIT_TY,
-    typing::{Type, Typed},
-    Error, TypeId, TypeRef, ValId, Value, ValueEnum,
-};
+use super::{Error, TypeId, TypeRef, ValId, Value, ValueEnum};
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::primitive::UNIT_TY;
+use crate::typing::{Type, Typed};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::{smallvec, SmallVec};
 use std::ops::Deref;

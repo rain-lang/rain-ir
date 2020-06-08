@@ -2,9 +2,10 @@
 A parametrized `rain` value of a given type
 */
 
-use crate::value::eval::{EvalCtx, Substitute};
-use crate::value::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
-use crate::value::{typing::Typed, Error, TypeId, ValId, Value};
+use crate::eval::{EvalCtx, Substitute};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
+use crate::typing::Typed;
+use crate::value::{Error, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::convert::TryInto;

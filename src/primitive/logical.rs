@@ -2,14 +2,14 @@
 Boolean types and logical operations
 */
 
+use crate::eval::{Application, Apply, EvalCtx};
+use crate::function::pi::Pi;
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live, Region, RegionData};
 use crate::prettyprinter::tokens::*;
+use crate::typing::{Type, Typed};
 use crate::value::{
-    eval::{Application, Apply, EvalCtx},
-    function::pi::Pi,
-    lifetime::{LifetimeBorrow, Live, Region, Lifetime, RegionData},
-    typing::{Type, Typed},
-    universe::FINITE_TY,
-    Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
+    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+    VarId,
 };
 use crate::{debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_substitute};
 use either::Either;
@@ -477,8 +477,10 @@ impl Apply for Logical {
             return Ok(Application::Success(&[], l.into()));
         } else {
             let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
-            let lifetime = Lifetime::default().intersect(lifetimes).map_err(|_| Error::LifetimeError)?;
-            return Ok(Application::Incomplete(lifetime, Bool.into()))
+            let lifetime = Lifetime::default()
+                .intersect(lifetimes)
+                .map_err(|_| Error::LifetimeError)?;
+            return Ok(Application::Incomplete(lifetime, Bool.into()));
         }
     }
 }

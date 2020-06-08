@@ -5,8 +5,8 @@
 use super::{
     lifetime::{Lifetime, Live},
     typing::Typed,
-    Error, TypeId, ValId,
 };
+use crate::value::{Error, TypeId, ValId};
 mod ctx;
 pub use ctx::EvalCtx;
 
@@ -33,11 +33,11 @@ pub trait Substitute<S = Self> {
 #[macro_export]
 macro_rules! trivial_substitute {
     ($T:ty) => {
-        impl<U: From<$T>> crate::value::eval::Substitute<U> for $T {
+        impl<U: From<$T>> crate::eval::Substitute<U> for $T {
             /// Substitute this object in the given context: this is always a no-op
             fn substitute(
                 &self,
-                _ctx: &mut $crate::value::eval::EvalCtx,
+                _ctx: &mut $crate::eval::EvalCtx,
             ) -> Result<U, $crate::value::Error> {
                 Ok(self.clone().into())
             }
@@ -49,25 +49,25 @@ macro_rules! trivial_substitute {
 #[macro_export]
 macro_rules! substitute_to_valid {
     ($T:ty) => {
-        impl $crate::value::eval::Substitute<$crate::value::ValId> for $T
+        impl $crate::eval::Substitute<$crate::value::ValId> for $T
         where
             $T: Into<$crate::value::ValId>,
         {
             fn substitute(
                 &self,
-                ctx: &mut $crate::value::eval::EvalCtx,
+                ctx: &mut $crate::eval::EvalCtx,
             ) -> Result<$crate::value::ValId, $crate::value::Error> {
                 let sub: $T = self.substitute(ctx)?;
                 Ok(sub.into())
             }
         }
-        impl $crate::value::eval::Substitute<$crate::value::ValueEnum> for $T
+        impl $crate::eval::Substitute<$crate::value::ValueEnum> for $T
         where
             $T: Into<$crate::value::ValueEnum>,
         {
             fn substitute(
                 &self,
-                ctx: &mut $crate::value::eval::EvalCtx,
+                ctx: &mut $crate::eval::EvalCtx,
             ) -> Result<$crate::value::ValueEnum, $crate::value::Error> {
                 let sub: $T = self.substitute(ctx)?;
                 Ok(sub.into())

@@ -4,7 +4,9 @@ The `rain` type system
 use super::{
     eval::{Apply, EvalCtx, Substitute},
     lifetime::{LifetimeBorrow, Live},
-    Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+    value::{
+        Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+    },
 };
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;

@@ -2,7 +2,7 @@
 A simple parser, and AST for a textual representation of `rain` programs
 */
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::{
+use crate::primitive::{
     finite::Finite,
     logical::{And, Bool, Id as LogicalId, Iff, Logical, Nand, Nor, Not, Or, Xor},
 };

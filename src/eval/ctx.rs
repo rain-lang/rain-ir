@@ -4,12 +4,10 @@ A `rain` evaluation context
 
 use super::Error;
 use super::Substitute;
+use crate::lifetime::{Live, Region};
+use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
-use crate::value::{
-    lifetime::{Live, Region},
-    typing::Typed,
-    ValId,
-};
+use crate::value::ValId;
 use fxhash::FxBuildHasher;
 use smallvec::{smallvec, SmallVec};
 use std::iter::Iterator;

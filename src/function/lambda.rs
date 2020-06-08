@@ -2,13 +2,11 @@
 Lambda functions
 */
 use super::pi::Pi;
-use crate::value::{
-    eval::{Application, Apply, EvalCtx, Substitute},
-    lifetime::Live,
-    lifetime::{LifetimeBorrow, Parametrized, Region},
-    typing::Typed,
-    Error, TypeRef, ValId, Value, VarId,
-};
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::Live;
+use crate::lifetime::{LifetimeBorrow, Parametrized, Region};
+use crate::typing::Typed;
+use crate::value::{Error, TypeRef, ValId, Value, VarId};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A lambda function
@@ -153,7 +151,7 @@ mod tests {
     use super::*;
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
-    use crate::value::primitive::logical::{Bool, Not};
+    use crate::primitive::logical::{Bool, Not};
 
     #[test]
     fn bool_identity_lambda_works_properly() {

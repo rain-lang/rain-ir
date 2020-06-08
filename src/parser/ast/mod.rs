@@ -3,7 +3,7 @@ An AST for `rain` programs
 */
 use super::{parse_ident, parse_u128};
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::{
+use crate::primitive::{
     finite::Finite,
     logical::{Bool, Logical},
 };

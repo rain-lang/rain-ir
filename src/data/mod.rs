@@ -1,7 +1,7 @@
 /*!
 `rain` data declarations and compound/inductive types
 */
-use super::{NormalValue, PrivateValue};
+use crate::value::{NormalValue, PrivateValue};
 use crate::{debug_from_display, pretty_display};
 use ref_cast::RefCast;
 use std::ops::Deref;

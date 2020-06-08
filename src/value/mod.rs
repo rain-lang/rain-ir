@@ -1,6 +1,15 @@
 /*!
 `rain` values
 */
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
+use crate::lifetime::{LifetimeBorrow, Live, Parameter};
+use crate::primitive::{
+    finite::{Finite, Index},
+    logical::{Bool, Logical},
+    Unit,
+};
+use crate::typing::{Type, TypeValue, Typed};
 use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use fxhash::FxHashSet;
@@ -14,29 +23,14 @@ use std::hash::Hash;
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
 
-pub mod data;
 mod error;
-pub mod eval;
 pub mod expr;
-pub mod function;
-pub mod lifetime;
-pub mod primitive;
 pub mod tuple;
-pub mod typing;
 pub mod universe;
 
 pub use error::*;
-use eval::{Application, Apply, EvalCtx, Substitute};
 use expr::Sexpr;
-use function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
-use lifetime::{LifetimeBorrow, Live, Parameter};
-use primitive::{
-    finite::{Finite, Index},
-    logical::{Bool, Logical},
-    Unit,
-};
 use tuple::{Product, Tuple};
-use typing::{Type, TypeValue, Typed};
 use universe::Universe;
 
 lazy_static! {
@@ -831,11 +825,11 @@ type NormRef<'a> = PrivateByAddr<ArcBorrow<'a, NormalValue>, Private>;
 /// A normalized `rain` value
 #[derive(Clone, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
-pub struct NormalValue(PrivateValue);
+pub struct NormalValue(pub(crate) PrivateValue);
 
 impl NormalValue {
     /// Assert a given value is normalized
-    fn assert_new(value: ValueEnum) -> NormalValue {
+    pub(crate) fn assert_new(value: ValueEnum) -> NormalValue {
         NormalValue(PrivateValue(value))
     }
 }
@@ -911,7 +905,7 @@ impl Live for NormalValue {
 /// A wrapper around a `rain` value to assert refinement conditions.
 /// Implementation detail: library consumers should not be able to construct this!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct PrivateValue(ValueEnum);
+pub struct PrivateValue(pub(crate) ValueEnum);
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
@@ -1390,8 +1384,8 @@ normal_valid!(Logical);
 macro_rules! impl_to_type {
     ($T:ty) => {
         impl From<$T> for crate::value::TypeValue {
-            fn from(v: $T) -> crate::value::typing::TypeValue {
-                crate::value::typing::TypeValue::try_from(crate::value::NormalValue::from(v))
+            fn from(v: $T) -> crate::typing::TypeValue {
+                crate::typing::TypeValue::try_from(crate::value::NormalValue::from(v))
                     .expect("Impossible")
             }
         }

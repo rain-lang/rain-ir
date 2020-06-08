@@ -15,6 +15,12 @@ Contributions, ideas and collaboration proposals are welcome: please make an iss
 */
 #![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
 
+pub mod data;
+pub mod eval;
+pub mod function;
+pub mod lifetime;
+pub mod primitive;
+pub mod typing;
 pub mod util;
 pub mod value;
 

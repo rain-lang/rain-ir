@@ -2,13 +2,13 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    eval::{Application, Apply, EvalCtx, Substitute},
-    lifetime::{Lifetime, LifetimeBorrow, Live},
-    primitive::UNIT_TY,
-    typing::{Type, Typed},
     universe::FINITE_TY,
     Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
 };
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::primitive::UNIT_TY;
+use crate::typing::{Type, Typed};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 use smallvec::SmallVec;
 use std::ops::Deref;
@@ -246,7 +246,7 @@ impl Value for Product {
 mod prettyprint_impl {
     use super::*;
     use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
-    use crate::value::primitive::Unit;
+    use crate::primitive::Unit;
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Tuple {

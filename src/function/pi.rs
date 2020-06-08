@@ -1,13 +1,11 @@
 /*!
 Pi types
 */
-use crate::value::{
-    eval::{Apply, EvalCtx, Substitute},
-    lifetime::Parametrized,
-    lifetime::{LifetimeBorrow, Live, Region},
-    typing::{Type, Typed},
-    Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
-};
+use crate::eval::{Apply, EvalCtx, Substitute};
+use crate::lifetime::Parametrized;
+use crate::lifetime::{LifetimeBorrow, Live, Region};
+use crate::typing::{Type, Typed};
+use crate::value::{Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A pi type

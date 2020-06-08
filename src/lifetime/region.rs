@@ -4,11 +4,9 @@
 
 use super::{LifetimeBorrow, Live};
 use crate::util::hash_cache::Cache;
-use crate::value::{
-    eval::Apply,
-    typing::{Type, Typed},
-    TypeId, TypeRef, ValId, Value,
-};
+use crate::eval::Apply;
+use crate::typing::{Type, Typed};
+use crate::value::{TypeId, TypeRef, ValId, Value};
 use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use smallvec::SmallVec;
@@ -360,7 +358,7 @@ impl Parameter {
     # Examples
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
-    use rain_lang::value::lifetime::{Region, RegionData, Parameter};
+    use rain_lang::lifetime::{Region, RegionData, Parameter};
     let empty_region = Region::new(RegionData::new(None));
     assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```

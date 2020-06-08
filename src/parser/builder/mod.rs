@@ -7,18 +7,18 @@ use super::ast::{
     Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
 };
 use super::{parse_expr, parse_statement};
+use crate::function::{lambda::Lambda, pi::Pi};
+use crate::lifetime::{Parametrized, Region, RegionData};
+use crate::primitive::{
+    finite::{Finite, Index},
+    Unit, UNIT,
+};
+use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
     self,
     expr::Sexpr,
-    function::{lambda::Lambda, pi::Pi},
-    lifetime::{Parametrized, Region, RegionData},
-    primitive::{
-        finite::{Finite, Index},
-        Unit, UNIT,
-    },
     tuple::{Product, Tuple},
-    typing::Typed,
     TypeId, ValId, ValueEnum,
 };
 use ahash::RandomState;

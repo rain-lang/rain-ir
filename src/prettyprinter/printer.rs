@@ -3,11 +3,9 @@ The actual, conditionally compiled prettyprinter implementation
 */
 
 use super::tokens::*;
+use crate::typing::{Type, Typed};
 use crate::util::symbol_table::SymbolTable;
-use crate::value::{
-    typing::{Type, Typed},
-    NormalValue, ValRef, Value,
-};
+use crate::value::{NormalValue, ValRef, Value};
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
 use ref_cast::RefCast;

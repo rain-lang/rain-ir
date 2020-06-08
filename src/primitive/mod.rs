@@ -3,10 +3,12 @@ Primitive `rain` values and associated value descriptors
 */
 use super::{
     eval::Apply,
-    expr::Sexpr,
     lifetime::{LifetimeBorrow, Live},
-    tuple::{Product, Tuple},
     typing::{Type, Typed},
+};
+use crate::value::{
+    expr::Sexpr,
+    tuple::{Product, Tuple},
     universe::FINITE_TY,
     NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };

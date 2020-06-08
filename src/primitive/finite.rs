@@ -4,12 +4,12 @@ Finite-valued types
 
 use crate::prettyprinter::tokens::*;
 use crate::value::{
-    eval::Apply,
-    lifetime::{LifetimeBorrow, Live},
-    typing::{Type, Typed},
     universe::FINITE_TY,
     TypeRef, UniverseRef, ValId, Value, VarId, VarRef,
 };
+use crate::eval::Apply;
+use crate::lifetime::{LifetimeBorrow, Live};
+use crate::typing::{Type, Typed};
 use crate::{debug_from_display, quick_pretty, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
