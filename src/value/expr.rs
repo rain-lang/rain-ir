@@ -191,7 +191,7 @@ mod prettyprint_impl {
                 if !first {
                     write!(fmt, " ")?;
                 }
-                first = true;
+                first = false;
                 value.prettyprint(printer, fmt)?;
             }
             write!(fmt, "{}", SEXPR_CLOSE)
