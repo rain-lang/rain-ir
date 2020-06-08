@@ -251,7 +251,7 @@ pub trait PrettyPrint {
         fmt: &mut Formatter,
     ) -> Result<(), fmt::Error>;
     /// Create a pretty-printable object from this one
-    fn prettyprintable(&self) -> &PrettyPrintable<Self>
+    fn prp(&self) -> &PrettyPrintable<Self>
     where
         Self: Sized,
     {

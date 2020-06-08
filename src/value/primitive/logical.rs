@@ -592,19 +592,37 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
+    use crate::prettyprinter::PrettyPrint;
     use crate::value::ValId;
     #[test]
     fn booleans_parse_properly() {
         let mut builder = Builder::<&str>::new();
-        let (rest, expr) = builder.parse_expr("#true").expect("#true");
+        let f_true = format!("{}", true.prp());
+        let f_false = format!("{}", false.prp());
+        let f_bool = format!("{}", Bool);
+        let f_bool_prp = format!("{}", Bool.prp());
+
+        let (rest, expr) = builder.parse_expr(&f_true).expect(KEYWORD_TRUE);
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(true));
+        let (rest, expr) = builder.parse_expr(&KEYWORD_TRUE).expect(KEYWORD_TRUE);
         assert_eq!(rest, "");
         assert_eq!(expr, ValId::from(true));
 
-        let (rest, expr) = builder.parse_expr("#false").expect("#false");
+        let (rest, expr) = builder.parse_expr(&f_false).expect(KEYWORD_FALSE);
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(false));
+        let (rest, expr) = builder.parse_expr(&KEYWORD_FALSE).expect(KEYWORD_FALSE);
         assert_eq!(rest, "");
         assert_eq!(expr, ValId::from(false));
 
-        let (rest, expr) = builder.parse_expr("#bool").expect("#bool");
+        let (rest, expr) = builder.parse_expr(&f_bool).expect(KEYWORD_BOOL);
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(Bool));
+        let (rest, expr) = builder.parse_expr(&f_bool_prp).expect(KEYWORD_BOOL);
+        assert_eq!(rest, "");
+        assert_eq!(expr, ValId::from(Bool));
+        let (rest, expr) = builder.parse_expr(&KEYWORD_BOOL).expect(KEYWORD_BOOL);
         assert_eq!(rest, "");
         assert_eq!(expr, ValId::from(Bool));
 

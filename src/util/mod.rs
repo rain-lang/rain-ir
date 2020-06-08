@@ -223,7 +223,7 @@ macro_rules! pretty_display {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 #[cfg(feature = "prettyprinter")]
                 {
-                    std::fmt::Display::fmt($crate::prettyprinter::PrettyPrint::prettyprintable(self), fmt)
+                    std::fmt::Display::fmt($crate::prettyprinter::PrettyPrint::prp(self), fmt)
                 }
                 #[cfg(not(feature = "prettyprinter"))]
                 {
