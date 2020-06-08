@@ -30,7 +30,7 @@ lazy_static! {
 }
 
 /// A `rain` region
-#[derive(Debug, Clone, Eq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Default)]
 pub struct Region(Option<Arc<RegionData>>);
 
 impl Region {
@@ -92,6 +92,56 @@ impl PartialEq for Region {
     }
 }
 
+impl PartialEq<RegionBorrow<'_>> for Region {
+    fn eq(&self, other: &RegionBorrow) -> bool {
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
+    }
+}
+
+impl PartialEq<RegionData> for Region {
+    fn eq(&self, other: &RegionData) -> bool {
+        self.deref() == other
+    }
+}
+
+impl PartialOrd for Region {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
+        self.deref().partial_cmp(other.deref())
+    }
+}
+
+impl PartialOrd<RegionData> for Region {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
+        self.deref().partial_cmp(other)
+    }
+}
+
+impl PartialOrd<RegionBorrow<'_>> for Region {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &RegionBorrow) -> Option<Ordering> {
+        self.deref().partial_cmp(other)
+    }
+}
+
 impl Hash for Region {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
@@ -99,7 +149,7 @@ impl Hash for Region {
 }
 
 /// A borrow of a `rain` region
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone, Eq, Default)]
 pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 
 impl<'a> RegionBorrow<'a> {
@@ -147,6 +197,13 @@ impl PartialEq<Region> for RegionBorrow<'_> {
     }
 }
 
+impl PartialEq<RegionData> for RegionBorrow<'_> {
+    fn eq(&self, other: &RegionData) -> bool {
+        //TODO: pointer check?
+        self.deref() == other
+    }
+}
+
 impl Hash for RegionBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
@@ -165,12 +222,36 @@ impl PartialOrd for RegionBorrow<'_> {
     }
 }
 
+impl PartialOrd<RegionData> for RegionBorrow<'_> {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
+        self.deref().partial_cmp(other)
+    }
+}
+
+impl PartialOrd<Region> for RegionBorrow<'_> {
+    /**
+    We define a region to be a subregion of another region if every value in one region lies in the other,
+    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
+    ordering on the set of regions.
+    */
+    #[inline]
+    fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
+        self.deref().partial_cmp(other)
+    }
+}
+
 /// A vector of parameter types
 pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
 
 /// The null region
 pub static NULL_REGION: RegionData = RegionData {
-    parent: None,
+    parent: Region(None),
     param_tys: None,
     depth: 0,
 };
@@ -179,7 +260,7 @@ pub static NULL_REGION: RegionData = RegionData {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RegionData {
     /// The parent of this region
-    parent: Option<Region>,
+    parent: Region,
     /// The parameter types of this region
     param_tys: Option<ParamTyVec>,
     /// The depth of this region above the null region
@@ -210,10 +291,10 @@ impl DerefMut for RegionData {
 }
 
 impl RegionData {
-    /// Create data for a new region with a given parameter type vector and an optional parent region.
+    /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: ParamTyVec, parent: Option<Region>) -> RegionData {
-        let depth = parent.as_ref().map(|parent| parent.depth).unwrap_or(0) + 1;
+    pub fn with(param_tys: ParamTyVec, parent: Region) -> RegionData {
+        let depth = parent.depth + 1;
         RegionData {
             param_tys: Some(param_tys),
             parent,
@@ -222,7 +303,7 @@ impl RegionData {
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
-    pub fn new(parent: Option<Region>) -> RegionData {
+    pub fn new(parent: Region) -> RegionData {
         Self::with(SmallVec::new(), parent)
     }
     /// Get the depth of this region
@@ -233,76 +314,16 @@ impl RegionData {
     /// Get the parent of this region
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
-        self.parent.as_ref()
+        if self.is_null() {
+            None
+        } else {
+            Some(&self.parent)
+        }
     }
     /// Check if this region is the null region
     #[inline]
     pub fn is_null(&self) -> bool {
         self.depth == 0
-    }
-}
-
-impl PartialEq<Option<RegionBorrow<'_>>> for RegionData {
-    #[inline]
-    fn eq(&self, other: &Option<RegionBorrow<'_>>) -> bool {
-        self.eq(&other.map(|b| b.get()))
-    }
-}
-
-impl PartialOrd<Option<RegionBorrow<'_>>> for RegionData {
-    #[inline]
-    fn partial_cmp(&self, other: &Option<RegionBorrow<'_>>) -> Option<Ordering> {
-        self.partial_cmp(&other.map(|b| b.get()))
-    }
-}
-
-impl PartialEq<RegionData> for Option<RegionBorrow<'_>> {
-    #[inline]
-    fn eq(&self, other: &RegionData) -> bool {
-        other.eq(self)
-    }
-}
-
-impl PartialOrd<RegionData> for Option<RegionBorrow<'_>> {
-    #[inline]
-    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        other.partial_cmp(self).map(Ordering::reverse)
-    }
-}
-
-impl PartialEq<Option<&'_ RegionData>> for RegionData {
-    #[inline]
-    fn eq(&self, other: &Option<&'_ RegionData>) -> bool {
-        if let Some(other) = *other {
-            self.eq(other)
-        } else {
-            false
-        }
-    }
-}
-
-impl PartialOrd<Option<&'_ RegionData>> for RegionData {
-    #[inline]
-    fn partial_cmp(&self, other: &Option<&'_ RegionData>) -> Option<Ordering> {
-        if let Some(other) = *other {
-            self.partial_cmp(other)
-        } else {
-            Some(Ordering::Greater)
-        }
-    }
-}
-
-impl PartialEq<RegionData> for Option<&'_ RegionData> {
-    #[inline]
-    fn eq(&self, other: &RegionData) -> bool {
-        other.eq(self)
-    }
-}
-
-impl PartialOrd<RegionData> for Option<&'_ RegionData> {
-    #[inline]
-    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        other.partial_cmp(self).map(Ordering::reverse)
     }
 }
 
@@ -400,7 +421,7 @@ impl Parameter {
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
     use rain_lang::region::{Region, RegionData, Parameter};
-    let empty_region = Region::new(RegionData::new(None));
+    let empty_region = Region::new(RegionData::new(Region::default()));
     assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```
     */

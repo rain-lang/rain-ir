@@ -115,13 +115,13 @@ trivial_substitute!(Bool);
 lazy_static! {
     /// Regions corresponding to primitive logical operations
     pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
-        Region::new(RegionData::with(smallvec![Bool.into(); 1], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 2], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 3], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 4], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 5], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 6], None)),
-        Region::new(RegionData::with(smallvec![Bool.into(); 7], None)),
+        Region::new(RegionData::with(smallvec![Bool.into(); 1], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 2], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 3], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 4], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 5], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 6], Region::default())),
+        Region::new(RegionData::with(smallvec![Bool.into(); 7], Region::default())),
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [

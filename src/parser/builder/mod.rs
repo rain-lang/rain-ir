@@ -8,11 +8,11 @@ use super::ast::{
 };
 use super::{parse_expr, parse_statement};
 use crate::function::{lambda::Lambda, pi::Pi};
-use crate::region::{Parametrized, Region, RegionData};
 use crate::primitive::{
     finite::{Finite, Index},
     Unit, UNIT,
 };
+use crate::region::{Parametrized, Region, RegionData};
 use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::{
@@ -318,7 +318,10 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         let tys: Result<_, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
         let region = Region::new(RegionData::with(
             tys?,
-            self.stack.last().map(|(r, _)| r.clone()),
+            self.stack
+                .last()
+                .map(|(r, _)| r.clone())
+                .unwrap_or(Region::default()),
         ));
         self.push_scope();
         for (i, (id, _)) in args.iter().enumerate() {

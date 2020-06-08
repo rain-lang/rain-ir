@@ -10,7 +10,6 @@ use crate::value::{Error, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::ops::Deref;
 
 /// A parametrized value
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -27,7 +26,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     */
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
-        match value.region().partial_cmp(region.deref()) {
+        match value.region().partial_cmp(&region) {
             None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
                 let mut deps = value.deps().collect_deps(value.lifetime().depth());
