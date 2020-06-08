@@ -113,7 +113,7 @@ trivial_substitute!(Bool);
 
 lazy_static! {
     /// Regions corresponding to primitive logical operations
-    static ref LOGICAL_OP_REGIONS: [Region; 7] = [
+    pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
         Region::new(RegionData::with(smallvec![Bool.into(); 1], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 2], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 3], None)),
@@ -123,7 +123,7 @@ lazy_static! {
         Region::new(RegionData::with(smallvec![Bool.into(); 7], None)),
     ];
     /// Types corresponding to primitive logical operations
-    static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
+    pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone()).unwrap().into(),
