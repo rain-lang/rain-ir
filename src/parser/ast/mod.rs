@@ -3,7 +3,10 @@ An AST for `rain` programs
 */
 use super::{parse_ident, parse_u128};
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::{finite::Finite, logical::Bool};
+use crate::value::primitive::{
+    finite::Finite,
+    logical::{Bool, Logical},
+};
 use crate::{debug_from_display, quick_display};
 use smallvec::SmallVec;
 use std::convert::TryFrom;
@@ -477,6 +480,8 @@ pub enum Expr<'a> {
     Product(Product<'a>),
     /// A scope
     Scope(Scope<'a>),
+    /// A logical operation
+    Logical(Logical),
     /// The unit token
     Unit,
 }
@@ -501,6 +506,7 @@ impl Display for Expr<'_> {
             Expr::Product(p) => Display::fmt(p, fmt),
             Expr::Jeq(j) => Display::fmt(j, fmt),
             Expr::Scope(s) => Display::fmt(s, fmt),
+            Expr::Logical(l) => Display::fmt(l, fmt),
             Expr::Unit => write!(fmt, "{}", KEYWORD_UNIT),
         }
     }

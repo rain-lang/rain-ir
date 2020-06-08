@@ -47,6 +47,9 @@ pub const KEYWORD_IX: &str = "#ix";
 /// The delimiter for `rain` statements
 pub const STATEMENT_DELIM: &str = ";";
 
+/// The delimiter for special arguments
+pub const SPECIAL_DELIM: &str = ",";
+
 /// The null `rain` symbol
 pub const NULL_SYMBOL: &str = "_";
 

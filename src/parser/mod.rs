@@ -2,7 +2,10 @@
 A simple parser, and AST for a textual representation of `rain` programs
 */
 use crate::prettyprinter::tokens::*;
-use crate::value::primitive::{finite::Finite, logical::Bool};
+use crate::value::primitive::{
+    finite::Finite,
+    logical::{And, Bool, Iff, Logical, Nand, Nor, Not, Or, Xor},
+};
 use nom::{
     branch::alt,
     bytes::complete::{is_a as is_a_c, is_not, tag},
@@ -11,10 +14,11 @@ use nom::{
     character::streaming::{line_ending, not_line_ending},
     combinator::{map, map_res, opt},
     multi::{many0, many1, separated_list, separated_nonempty_list},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, preceded, separated_pair, tuple},
     Err, IResult,
 };
 use smallvec::SmallVec;
+use std::convert::TryFrom;
 
 pub mod ast;
 use ast::*;
@@ -399,18 +403,14 @@ pub fn parse_u128(input: &str) -> IResult<&str, u128> {
 Parse a `usize`
 */
 pub fn parse_usize(input: &str) -> IResult<&str, usize> {
-    alt((
-        map_res(preceded(tag("0x"), hex_digit1), |input| {
-            usize::from_str_radix(input, 16)
-        }),
-        map_res(preceded(tag("0o"), oct_digit1), |input| {
-            usize::from_str_radix(input, 8)
-        }),
-        map_res(preceded(tag("0b"), is_a_c("01")), |input| {
-            usize::from_str_radix(input, 2)
-        }),
-        map_res(digit1, |input| usize::from_str_radix(input, 10)),
-    ))(input)
+    map_res(parse_u128, TryFrom::try_from)(input)
+}
+
+/**
+Parse a `u8`
+*/
+pub fn parse_u8(input: &str) -> IResult<&str, u8> {
+    map_res(parse_u128, TryFrom::try_from)(input)
 }
 
 /**
@@ -476,6 +476,43 @@ pub fn parse_scope(input: &str) -> IResult<&str, Scope> {
 }
 
 /**
+Parse a raw logical operation
+*/
+pub fn parse_raw_logical(input: &str) -> IResult<&str, Logical> {
+    map_res(
+        delimited(
+            preceded(tag(KEYWORD_LOGICAL), tag(SEXPR_OPEN)),
+            preceded(
+                opt(ws),
+                separated_pair(
+                    parse_u8,
+                    delimited(opt(ws), tag(SPECIAL_DELIM), opt(ws)),
+                    parse_u8,
+                ),
+            ),
+            preceded(opt(ws), tag(SEXPR_CLOSE)),
+        ),
+        |(arity, data)| Logical::try_new(arity, data),
+    )(input)
+}
+
+/**
+Parse a logical operation
+*/
+pub fn parse_logical(input: &str) -> IResult<&str, Logical> {
+    alt((
+        parse_raw_logical,
+        map(tag(KEYWORD_AND), |_| And.into()),
+        map(tag(KEYWORD_OR), |_| Or.into()),
+        map(tag(KEYWORD_XOR), |_| Xor.into()),
+        map(tag(KEYWORD_NOT), |_| Not.into()),
+        map(tag(KEYWORD_NAND), |_| Nand.into()),
+        map(tag(KEYWORD_NOR), |_| Nor.into()),
+        map(tag(KEYWORD_IFF), |_| Iff.into()),
+    ))(input)
+}
+
+/**
 Parse an atomic `rain` expression. Does *not* consume whitespace before the expression!
 
 These expressions can have paths attached
@@ -495,6 +532,7 @@ pub fn parse_atom(input: &str) -> IResult<&str, Expr> {
                 map(parse_ix, Expr::Index),
                 map(parse_product, Expr::Product),
                 map(parse_jeq, Expr::Jeq),
+                map(parse_logical, Expr::Logical),
                 map(tag(KEYWORD_UNIT), |_| Expr::Unit),
             )),
             opt(parse_path),
