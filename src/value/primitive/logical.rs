@@ -184,6 +184,16 @@ impl Logical {
             })
         }
     }
+    /// Get the arity of this logical value
+    #[inline]
+    pub fn arity(&self) -> u8 {
+        self.arity
+    }
+    /// Get the data of this logical value
+    #[inline]
+    pub fn data(&self) -> u128 {
+        self.data
+    }
     /// Check if this value is a constant
     #[inline]
     pub fn is_const(&self) -> bool {
@@ -901,11 +911,15 @@ mod tests {
         for arity in 1..=7 {
             let tc = Logical::try_const(arity, true).unwrap();
             let fc = Logical::try_const(arity, false).unwrap();
-            let nc = Logical::try_new(
-                arity,
-                0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA & LOGICAL_OP_ARITY_MASKS[arity as usize],
-            )
-            .unwrap();
+            let nc_data =
+                0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA & LOGICAL_OP_ARITY_MASKS[arity as usize];
+            let nc = Logical::try_new(arity, nc_data).unwrap();
+            assert_eq!(tc.arity(), arity);
+            assert_eq!(tc.data(), LOGICAL_OP_ARITY_MASKS[arity as usize]);
+            assert_eq!(fc.arity(), arity);
+            assert_eq!(fc.data(), 0);
+            assert_eq!(nc.arity(), arity);
+            assert_eq!(nc.data(), nc_data);
             assert!(tc.is_const());
             assert!(fc.is_const());
             assert!(!nc.is_const());
