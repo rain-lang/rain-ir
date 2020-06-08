@@ -9,6 +9,7 @@ use crate::util::hash_cache::Cache;
 use crate::value::{TypeId, TypeRef, ValId, Value};
 use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
+use smallvec::smallvec;
 use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -150,29 +151,44 @@ impl PartialOrd for RegionBorrow<'_> {
 /// A vector of parameter types
 pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
 
+/// The null region
+pub static NULL_REGION: RegionData = RegionData {
+    parent: None,
+    param_tys: smallvec![],
+    depth: 0,
+};
+
 /// The data composing a `rain` region
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RegionData {
     /// The parent of this region
     parent: Option<Region>,
     /// The parameter types of this region
-    param_tys: ParamTyVec,
+    param_tys: Option<ParamTyVec>,
     /// The depth of this region above the null region
     depth: usize,
 }
 
 impl Deref for RegionData {
-    type Target = ParamTyVec;
+    type Target = [TypeId];
     #[inline]
-    fn deref(&self) -> &ParamTyVec {
-        &self.param_tys
+    fn deref(&self) -> &[TypeId] {
+        if let Some(params) = &self.param_tys {
+            params
+        } else {
+            &[]
+        }
     }
 }
 
 impl DerefMut for RegionData {
     #[inline]
-    fn deref_mut(&mut self) -> &mut ParamTyVec {
-        &mut self.param_tys
+    fn deref_mut(&mut self) -> &mut [TypeId] {
+        if let Some(params) = &mut self.param_tys {
+            params
+        } else {
+            &mut []
+        }
     }
 }
 
@@ -182,7 +198,7 @@ impl RegionData {
     pub fn with(param_tys: ParamTyVec, parent: Option<Region>) -> RegionData {
         let depth = parent.as_ref().map(|parent| parent.depth).unwrap_or(0) + 1;
         RegionData {
-            param_tys,
+            param_tys: Some(param_tys),
             parent,
             depth,
         }
@@ -201,6 +217,11 @@ impl RegionData {
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
         self.parent.as_ref()
+    }
+    /// Check if this region is the null region
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.depth == 0
     }
 }
 
