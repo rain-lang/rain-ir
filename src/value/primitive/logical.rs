@@ -18,7 +18,7 @@ use ref_cast::RefCast;
 use smallvec::smallvec;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
-use std::ops::Deref;
+use std::ops::{BitAnd, BitOr, BitXor, Deref, Index, Not as NotOp};
 
 /// The type of booleans
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
@@ -202,6 +202,26 @@ impl Logical {
     pub fn ternary(data: u8) -> Logical {
         Self::try_new(3, data as u128).expect("Ternary operations are valid")
     }
+    /// Create a new arity-4 logical operation
+    #[inline]
+    pub fn arity_4(data: u16) -> Logical {
+        Self::try_new(4, data as u128).expect("Arity-4 operations are valid")
+    }
+    /// Create a new arity-5 logical operation
+    #[inline]
+    pub fn arity_5(data: u32) -> Logical {
+        Self::try_new(5, data as u128).expect("Arity-5 operations are valid")
+    }
+    /// Create a new arity-6 logical operation
+    #[inline]
+    pub fn arity_6(data: u64) -> Logical {
+        Self::try_new(6, data as u128).expect("Arity-6 operations are valid")
+    }
+    /// Create a new arity-7 logical operation
+    #[inline]
+    pub fn arity_7(data: u128) -> Logical {
+        Self::try_new(7, data).expect("Arity-7 operations are valid")
+    }
     /// Get the number of bits of this logical operation
     #[inline]
     pub fn no_bits(&self) -> usize {
@@ -231,6 +251,71 @@ impl Logical {
     #[inline]
     pub fn print_raw(&self) -> &RawLogical {
         RefCast::ref_cast(self)
+    }
+}
+
+impl<T: Into<u8>> Index<T> for Logical {
+    type Output = bool;
+    #[inline]
+    fn index(&self, ix: T) -> &bool {
+        if self.get_bit(ix.try_into().unwrap()) {
+            &true
+        } else {
+            &false
+        }
+    }
+}
+
+impl BitAnd for Logical {
+    type Output = Result<Logical, ()>;
+
+    fn bitand(self, other: Self) -> Result<Logical, ()> {
+        if self.arity != other.arity {
+            return Err(());
+        }
+        Ok(Logical {
+            data: self.data & other.data,
+            arity: self.arity,
+        })
+    }
+}
+
+impl BitOr for Logical {
+    type Output = Result<Logical, ()>;
+
+    fn bitor(self, other: Self) -> Result<Logical, ()> {
+        if self.arity != other.arity {
+            return Err(());
+        }
+        Ok(Logical {
+            data: self.data | other.data,
+            arity: self.arity,
+        })
+    }
+}
+
+impl BitXor for Logical {
+    type Output = Result<Logical, ()>;
+
+    fn bitxor(self, other: Self) -> Result<Logical, ()> {
+        if self.arity != other.arity {
+            return Err(());
+        }
+        Ok(Logical {
+            data: self.data ^ other.data,
+            arity: self.arity,
+        })
+    }
+}
+
+impl NotOp for Logical {
+    type Output = Logical;
+
+    fn not(self) -> Logical {
+        Logical {
+            data: !self.data & LOGICAL_OP_ARITY_MASKS[self.arity as usize],
+            arity: self.arity,
+        }
     }
 }
 
@@ -787,6 +872,23 @@ mod tests {
         ];
         for (op, partial_table, truth_table) in binary_ops.iter() {
             test_binary_operation(*op, partial_table, truth_table, &mut builder);
+        }
+    }
+
+    #[test]
+    fn bitwise_on_binary_operations_work() {
+        let binary_ops = (0b0000..=0b1111)
+            .map(|b| Logical::try_new(2, b).unwrap());
+        for op in binary_ops {
+            assert_eq!(op | op, Ok(op));
+            assert_eq!(op & op, Ok(op));
+            assert_eq!(op ^ op, Ok(Logical::try_const(2, false).unwrap()));
+            assert_eq!(!op | op, Ok(Logical::try_const(2, true).unwrap()));
+            assert_eq!(!op & op, Ok(Logical::try_const(2, false).unwrap()));
+            assert_eq!(!op ^ op, Ok(Logical::try_const(2, true).unwrap()));
+            assert_eq!(op | !op, Ok(Logical::try_const(2, true).unwrap()));
+            assert_eq!(op & !op, Ok(Logical::try_const(2, false).unwrap()));
+            assert_eq!(op ^ !op, Ok(Logical::try_const(2, true).unwrap()));
         }
     }
 }
