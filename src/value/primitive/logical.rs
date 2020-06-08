@@ -14,9 +14,11 @@ use crate::value::{
 use crate::{debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_substitute};
 use either::Either;
 use lazy_static::lazy_static;
+use ref_cast::RefCast;
 use smallvec::smallvec;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
+use std::ops::Deref;
 
 /// The type of booleans
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
@@ -213,9 +215,57 @@ impl Logical {
             })
         }
     }
+    /// Print this as a raw logical operation
+    #[inline]
+    pub fn print_raw(&self) -> &RawLogical {
+        RefCast::ref_cast(self)
+    }
 }
 
 impl Display for Logical {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        if *self == Id {
+            return write!(fmt, "{}", Id);
+        }
+        if *self == Not {
+            return write!(fmt, "{}", Not);
+        }
+        if *self == And {
+            return write!(fmt, "{}", And);
+        }
+        if *self == Or {
+            return write!(fmt, "{}", Or);
+        }
+        if *self == Xor {
+            return write!(fmt, "{}", Xor);
+        }
+        if *self == Nor {
+            return write!(fmt, "{}", Nor);
+        }
+        if *self == Nand {
+            return write!(fmt, "{}", Nand);
+        }
+        if *self == Iff {
+            return write!(fmt, "{}", Iff);
+        }
+        write!(fmt, "{}", self.print_raw())
+    }
+}
+
+/// Format a logical operation with `print_raw`
+#[derive(Copy, Clone, PartialEq, Eq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct RawLogical(pub Logical);
+
+impl Deref for RawLogical {
+    type Target = Logical;
+    #[inline]
+    fn deref(&self) -> &Logical {
+        &self.0
+    }
+}
+
+impl Display for RawLogical {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         match self.arity {
             1 => write!(
@@ -236,6 +286,8 @@ impl Display for Logical {
         }
     }
 }
+
+debug_from_display!(RawLogical);
 
 impl Typed for Logical {
     #[inline]
@@ -593,7 +645,22 @@ mod tests {
     }
 
     /// Test a binary operation exhaustively
-    fn test_binary_operation(op: Logical, partial_table: &[Logical; 2], truth_table: &[bool; 4]) {
+    fn test_binary_operation(
+        op: Logical,
+        partial_table: &[Logical; 2],
+        truth_table: &[bool; 4],
+        builder: &mut Builder<String>,
+    ) {
+        // Test parsing:
+        assert_eq!(
+            builder.parse_expr(&format!("{}", op)).unwrap(),
+            ("", op.into())
+        );
+        assert_eq!(
+            builder.parse_expr(&format!("{}", op.print_raw())).unwrap(),
+            ("", op.into())
+        );
+
         for left in [true, false].iter().copied() {
             for right in [true, false].iter().copied() {
                 let ix = left as u8 | (right as u8) << 1;
@@ -607,6 +674,20 @@ mod tests {
                     "Incorrect partial evaluation of ({} {})",
                     op, left
                 );
+                assert_eq!(
+                    builder.parse_expr(&format!("{} #{}", op, left)).unwrap(),
+                    ("", partial.into())
+                );
+                assert_eq!(
+                    builder.parse_expr(&format!("{}", partial)).unwrap(),
+                    ("", partial.into())
+                );
+                assert_eq!(
+                    builder
+                        .parse_expr(&format!("{}", partial.print_raw()))
+                        .unwrap(),
+                    ("", partial.into())
+                );
                 let fin = partial
                     .apply(right)
                     .left()
@@ -615,6 +696,24 @@ mod tests {
                     fin, truth_table[ix as usize],
                     "Incorrect total evaluation of ({} {} {}) == ({} {})",
                     op, left, right, partial, right
+                );
+                assert_eq!(
+                    builder
+                        .parse_expr(&format!("{} #{} #{}", op, left, right))
+                        .unwrap(),
+                    ("", fin.into())
+                );
+                assert_eq!(
+                    builder
+                        .parse_expr(&format!("({} #{}) #{}", op, left, right))
+                        .unwrap(),
+                    ("", fin.into())
+                );
+                assert_eq!(
+                    builder
+                        .parse_expr(&format!("{} #{}", partial, right))
+                        .unwrap(),
+                    ("", fin.into())
                 );
             }
         }
@@ -626,6 +725,7 @@ mod tests {
 
     #[test]
     fn test_binary_operations() {
+        let mut builder = Builder::<String>::new();
         let binary_ops: &[(Logical, [Logical; 2], [bool; 4])] = &[
             (
                 And.into(),
@@ -655,7 +755,7 @@ mod tests {
             ),
         ];
         for (op, partial_table, truth_table) in binary_ops.iter() {
-            test_binary_operation(*op, partial_table, truth_table);
+            test_binary_operation(*op, partial_table, truth_table, &mut builder);
         }
     }
 }

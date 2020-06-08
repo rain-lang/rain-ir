@@ -108,7 +108,7 @@ pub const KEYWORD_LOGICAL: &str = "#logical";
 pub const KEYWORD_PHI: &str = "#phi";
 
 /// The keyword for logical identity
-pub const KEYWORD_LOGICAL_ID: &str = "#bool_id";
+pub const KEYWORD_LOGICAL_ID: &str = "#log_id";
 
 /// The keyword for logical not
 pub const KEYWORD_NOT: &str = "#not";

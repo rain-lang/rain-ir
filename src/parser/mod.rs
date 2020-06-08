@@ -4,7 +4,7 @@ A simple parser, and AST for a textual representation of `rain` programs
 use crate::prettyprinter::tokens::*;
 use crate::value::primitive::{
     finite::Finite,
-    logical::{And, Bool, Iff, Logical, Nand, Nor, Not, Or, Xor},
+    logical::{And, Bool, Id as LogicalId, Iff, Logical, Nand, Nor, Not, Or, Xor},
 };
 use nom::{
     branch::alt,
@@ -506,6 +506,7 @@ pub fn parse_logical(input: &str) -> IResult<&str, Logical> {
         map(tag(KEYWORD_OR), |_| Or.into()),
         map(tag(KEYWORD_XOR), |_| Xor.into()),
         map(tag(KEYWORD_NOT), |_| Not.into()),
+        map(tag(KEYWORD_LOGICAL_ID), |_| LogicalId.into()),
         map(tag(KEYWORD_NAND), |_| Nand.into()),
         map(tag(KEYWORD_NOR), |_| Nor.into()),
         map(tag(KEYWORD_IFF), |_| Iff.into()),
