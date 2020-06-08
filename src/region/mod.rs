@@ -31,23 +31,27 @@ lazy_static! {
 
 /// A `rain` region
 #[derive(Debug, Clone, Eq, PartialOrd)]
-pub struct Region(Arc<RegionData>);
+pub struct Region(Option<Arc<RegionData>>);
 
 impl Region {
     /// Create a new reference from a given `RegionData`, caching if possible
     #[inline]
     pub fn new(data: RegionData) -> Region {
-        Region(REGION_CACHE.cache(data))
+        if data.is_null() {
+            Region(None)
+        } else {
+            Region(Some(REGION_CACHE.cache(data)))
+        }
     }
     /// Get a reference to a borrow of this region. More efficient than taking an `&Region`.
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
-        RegionBorrow(self.0.borrow_arc())
+        RegionBorrow(self.0.as_ref().map(|v| v.borrow_arc()))
     }
-    /// Get the underlying `Arc` of this `Region`.
+    /// Get the underlying `Arc` of this `Region`, if any
     #[inline]
-    pub fn get_arc(&self) -> &Arc<RegionData> {
-        &self.0
+    pub fn get_arc(&self) -> Option<&Arc<RegionData>> {
+        self.0.as_ref()
     }
     /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
     #[inline]
@@ -72,13 +76,19 @@ impl Deref for Region {
     type Target = RegionData;
     #[inline]
     fn deref(&self) -> &RegionData {
-        self.0.deref()
+        if let Some(region) = &self.0 {
+            region.deref()
+        } else {
+            &NULL_REGION
+        }
     }
 }
 
 impl PartialEq for Region {
     fn eq(&self, other: &Region) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
     }
 }
 
@@ -90,21 +100,25 @@ impl Hash for Region {
 
 /// A borrow of a `rain` region
 #[derive(Debug, Copy, Clone, Eq)]
-pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
+pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 
 impl<'a> RegionBorrow<'a> {
     /// Like `deref`, but using the lifetime of the `RegionBorrow` (which is incompatible with the `Deref` trait).
     #[inline]
     pub fn get(&self) -> &'a RegionData {
-        self.0.get()
+        if let Some(region) = self.0 {
+            region.get()
+        } else {
+            &NULL_REGION
+        }
     }
     /// Clone this region. This bumps the refcount
     #[inline]
     pub fn clone_region(&self) -> Region {
-        Region(self.0.clone_arc())
+        Region(self.0.map(|r| r.clone_arc()))
     }
-    /// Get the underlying `ArcBorrow` of this `RegionData`
-    pub fn get_borrow(&self) -> ArcBorrow<'a, RegionData> {
+    /// Get the underlying `ArcBorrow` of this `RegionData`, if any
+    pub fn get_borrow(&self) -> Option<ArcBorrow<'a, RegionData>> {
         self.0
     }
 }
@@ -113,19 +127,23 @@ impl Deref for RegionBorrow<'_> {
     type Target = RegionData;
     #[inline]
     fn deref(&self) -> &RegionData {
-        self.0.deref()
+        self.0.as_ref().map(|r| r.deref()).unwrap_or(&NULL_REGION)
     }
 }
 
 impl PartialEq for RegionBorrow<'_> {
     fn eq(&self, other: &RegionBorrow) -> bool {
-        ArcBorrow::ptr_eq(&self.0, &other.0)
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
     }
 }
 
 impl PartialEq<Region> for RegionBorrow<'_> {
     fn eq(&self, other: &Region) -> bool {
-        ArcBorrow::ptr_eq(&self.0, &other.0.borrow_arc())
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
     }
 }
 
