@@ -9,7 +9,6 @@ use crate::util::hash_cache::Cache;
 use crate::value::{TypeId, TypeRef, ValId, Value};
 use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
-use smallvec::smallvec;
 use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -154,7 +153,7 @@ pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
 /// The null region
 pub static NULL_REGION: RegionData = RegionData {
     parent: None,
-    param_tys: smallvec![],
+    param_tys: None,
     depth: 0,
 };
 
