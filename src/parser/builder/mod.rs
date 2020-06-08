@@ -8,7 +8,7 @@ use super::ast::{
 };
 use super::{parse_expr, parse_statement};
 use crate::function::{lambda::Lambda, pi::Pi};
-use crate::lifetime::{Parametrized, Region, RegionData};
+use crate::region::{Parametrized, Region, RegionData};
 use crate::primitive::{
     finite::{Finite, Index},
     Unit, UNIT,

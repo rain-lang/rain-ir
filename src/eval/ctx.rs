@@ -4,7 +4,8 @@ A `rain` evaluation context
 
 use super::Error;
 use super::Substitute;
-use crate::lifetime::{Live, Region};
+use crate::lifetime::Live;
+use crate::region::Region;
 use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::ValId;

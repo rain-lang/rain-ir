@@ -3,10 +3,7 @@
 */
 use std::cmp::Ordering;
 
-mod region;
-pub use region::*;
-mod parametrized;
-pub use parametrized::*;
+use crate::region::{Region, RegionBorrow};
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]

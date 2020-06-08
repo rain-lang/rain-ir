@@ -2,7 +2,8 @@
 Phi nodes, representing mutual recursion
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live, Region};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::region::Region;
 use crate::typing::Typed;
 use crate::value::{tuple::Product, Error, TypeRef, ValId, Value, VarId};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};

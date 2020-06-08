@@ -20,6 +20,7 @@ pub mod eval;
 pub mod function;
 pub mod lifetime;
 pub mod primitive;
+pub mod region;
 pub mod typing;
 pub mod util;
 pub mod value;

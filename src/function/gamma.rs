@@ -4,7 +4,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::function::pi::Pi;
-use crate::lifetime::Region;
+use crate::region::Region;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::Typed;
 use crate::value::{Error, TypeRef, ValId, Value, VarId};

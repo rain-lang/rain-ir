@@ -4,8 +4,9 @@ Boolean types and logical operations
 
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live, Region, RegionData};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::prettyprinter::tokens::*;
+use crate::region::{Region, RegionData};
 use crate::typing::{Type, Typed};
 use crate::value::{
     universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,

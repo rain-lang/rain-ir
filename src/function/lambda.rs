@@ -3,8 +3,9 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::LifetimeBorrow;
 use crate::lifetime::Live;
-use crate::lifetime::{LifetimeBorrow, Parametrized, Region};
+use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
 use crate::value::{Error, TypeRef, ValId, Value, VarId};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};

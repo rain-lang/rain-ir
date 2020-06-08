@@ -3,12 +3,13 @@
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
-use crate::lifetime::{LifetimeBorrow, Live, Parameter};
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
     Unit,
 };
+use crate::region::Parameter;
 use crate::typing::{Type, TypeValue, Typed};
 use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
