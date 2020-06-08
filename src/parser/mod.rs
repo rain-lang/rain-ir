@@ -487,7 +487,7 @@ pub fn parse_raw_logical(input: &str) -> IResult<&str, Logical> {
                 separated_pair(
                     parse_u8,
                     delimited(opt(ws), tag(SPECIAL_DELIM), opt(ws)),
-                    parse_u8,
+                    parse_u128,
                 ),
             ),
             preceded(opt(ws), tag(SEXPR_CLOSE)),

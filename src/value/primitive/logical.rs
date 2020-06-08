@@ -113,42 +113,54 @@ trivial_substitute!(Bool);
 
 lazy_static! {
     /// Regions corresponding to primitive logical operations
-    static ref LOGICAL_OP_REGIONS: [Region; 3] = [
+    static ref LOGICAL_OP_REGIONS: [Region; 7] = [
         Region::new(RegionData::with(smallvec![Bool.into(); 1], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 2], None)),
         Region::new(RegionData::with(smallvec![Bool.into(); 3], None)),
+        Region::new(RegionData::with(smallvec![Bool.into(); 4], None)),
+        Region::new(RegionData::with(smallvec![Bool.into(); 5], None)),
+        Region::new(RegionData::with(smallvec![Bool.into(); 6], None)),
+        Region::new(RegionData::with(smallvec![Bool.into(); 7], None)),
     ];
     /// Types corresponding to primitive logical operations
-    static ref LOGICAL_OP_TYS: [VarId<Pi>; 3] = [
+    static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone()).unwrap().into(),
         Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone()).unwrap().into(),
     ];
 }
 
 /// Masks corresponding to what bits must be set for operations of a given arity
-pub const LOGICAL_OP_ARITY_MASKS: [u8; 4] = [
-    0b1,        // Nullary
-    0b11,       // Unary
-    0b1111,     // Binary
-    0b11111111, // Ternary
+pub const LOGICAL_OP_ARITY_MASKS: [u128; 8] = [
+    0b1,                                // Nullary
+    0b11,                               // Unary
+    0xF,                                // Binary
+    0xFF,                               // Ternary
+    0xFFFF,                             // Arity 4
+    0xFFFFFFFF,                         // Arity 5,
+    0xFFFFFFFFFFFFFFFF,                 // Arity 6
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, // Arity 7
 ];
 
-/// A boolean operation, operating on up to three
+/// A boolean operation, operating on up to seven booleans
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Logical {
     /// The data backing this logical operation
-    data: u8,
+    data: u128,
     /// The arity of this logical operation
     arity: u8,
 }
 
 impl Logical {
     /// Create a new logical operation with a given type and data set.
-    /// Return an error if the arity is zero, or greater than three, or
+    /// Return an error if the arity is zero, or greater than seven, or
     /// if there are nonzero bits corresponding to higher arities
     #[inline]
-    pub fn try_new(arity: u8, data: u8) -> Result<Logical, ()> {
+    pub fn try_new(arity: u8, data: u128) -> Result<Logical, ()> {
         if arity == 0 || arity > 7 || !LOGICAL_OP_ARITY_MASKS[arity as usize] & data != 0 {
             Err(())
         } else {
@@ -156,10 +168,10 @@ impl Logical {
         }
     }
     /// Create a constant logical operation with a given arity.
-    /// Return an error if the arity is zero, or greater than three
+    /// Return an error if the arity is zero, or greater than seven
     #[inline]
     pub fn try_const(arity: u8, value: bool) -> Result<Logical, ()> {
-        if arity == 0 || arity > 3 {
+        if arity == 0 || arity > 7 {
             Err(())
         } else {
             Ok(Logical {
@@ -175,20 +187,20 @@ impl Logical {
     /// Create a new unary logical operation
     #[inline]
     pub fn unary(low: bool, high: bool) -> Logical {
-        let low = low as u8;
-        let high = (high as u8) << 1;
+        let low = low as u128;
+        let high = (high as u128) << 1;
         Self::try_new(1, low | high).expect("Unary operations are valid")
     }
     /// Create a new binary logical operation.
     #[inline]
     pub fn binary(ff: bool, ft: bool, tf: bool, tt: bool) -> Logical {
-        let data = ff as u8 + ((ft as u8) << 1) + ((tf as u8) << 2) + ((tt as u8) << 3);
+        let data = ff as u128 + ((ft as u128) << 1) + ((tf as u128) << 2) + ((tt as u128) << 3);
         Self::try_new(2, data).expect("Binary operations are valid")
     }
     /// Create a new ternary logical operation
     #[inline]
     pub fn ternary(data: u8) -> Logical {
-        Self::try_new(3, data).expect("Ternary operations are valid")
+        Self::try_new(3, data as u128).expect("Ternary operations are valid")
     }
     /// Get the number of bits of this logical operation
     #[inline]
@@ -278,11 +290,12 @@ impl Display for RawLogical {
                 "{}({}, {:#06b})",
                 KEYWORD_LOGICAL, self.arity, self.data
             ),
-            _ => write!(
+            3 => write!(
                 fmt,
                 "{}({}, {:#010b})",
                 KEYWORD_LOGICAL, self.arity, self.data
             ),
+            _ => write!(fmt, "{}({}, {:#x})", KEYWORD_LOGICAL, self.arity, self.data),
         }
     }
 }
