@@ -6,7 +6,7 @@ use crate::prettyprinter::tokens::*;
 use crate::value::{
     eval::{Application, Apply, EvalCtx},
     function::pi::Pi,
-    lifetime::{LifetimeBorrow, Live, Region, RegionData},
+    lifetime::{LifetimeBorrow, Live, Region, Lifetime, RegionData},
     typing::{Type, Typed},
     universe::FINITE_TY,
     Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
@@ -468,12 +468,18 @@ impl Apply for Logical {
             if let Some(ap) = ap {
                 cut_ix += 1;
                 match ap {
-                    Either::Left(b) => return Ok(Application::Success(&args[cut_ix..], b.into())),
+                    Either::Left(b) => return Ok(Application::Success(&[], b.into())),
                     Either::Right(f) => l = f,
                 }
             }
         }
-        return Ok(Application::Success(&args[cut_ix..], l.into()));
+        if cut_ix == args.len() {
+            return Ok(Application::Success(&[], l.into()));
+        } else {
+            let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
+            let lifetime = Lifetime::default().intersect(lifetimes).map_err(|_| Error::LifetimeError)?;
+            return Ok(Application::Incomplete(lifetime, Bool.into()))
+        }
     }
 }
 
