@@ -152,10 +152,10 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
-    use crate::value::primitive::logical::Bool;
+    use crate::value::primitive::logical::{Bool};
 
     #[test]
-    fn identity_bool_lambda_works_properly() {
+    fn bool_identity_lambda_works_properly() {
         let mut builder = Builder::<&str>::new();
         // Build the identity
         assert_eq!(builder.parse_statement("#let id = |x: #bool| x;"), Ok(""));
@@ -174,12 +174,19 @@ mod tests {
         assert_eq!(unary.deps().len(), 1);
         assert_eq!(unary.deps()[0], ValId::from(Bool));
         assert_eq!(id.ty(), unary);
+
+        // Check type internally
+        let (rest, jeq) = builder.parse_expr("#jeq[#typeof(id) unary]").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(jeq, ValId::from(true));
+
         // Check evaluations
         assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
         assert_eq!(
             builder.parse_expr("id #false"),
             Ok(("", ValId::from(false)))
         );
+
         // See if any stateful errors occur
         assert_eq!(
             builder.parse_expr("id #false"),
@@ -187,4 +194,54 @@ mod tests {
         );
         assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
     }
+
+    /*
+    #[test]
+    fn bool_negation_lambda_works_properly() {
+        let mut builder = Builder::<&str>::new();
+        // Build logical not as a lambda
+        assert_eq!(
+            builder.parse_statement("#let not = |x: #bool| (#not x);"),
+            Ok("")
+        );
+        // Build the unary type
+        assert_eq!(
+            builder.parse_statement("#let unary = #pi|_: #bool| #bool;"),
+            Ok("")
+        );
+
+        // Check dependencies and type externally
+        let (rest, id) = builder.parse_expr("not").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(id.deps().len(), 1);
+        assert_eq!(id.deps()[0], ValId::from(Not));
+        let (rest, unary) = builder.parse_expr("unary").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(unary.deps().len(), 1);
+        assert_eq!(unary.deps()[0], ValId::from(Bool));
+        assert_eq!(id.ty(), unary);
+
+        // Check depdendencies and types internally
+
+        // Check evaluations
+        assert_eq!(
+            builder.parse_expr("not #true"),
+            Ok(("", ValId::from(false)))
+        );
+        assert_eq!(
+            builder.parse_expr("not #false"),
+            Ok(("", ValId::from(true)))
+        );
+
+        // See if any stateful errors occur
+        assert_eq!(
+            builder.parse_expr("not #false"),
+            Ok(("", ValId::from(true)))
+        );
+        assert_eq!(
+            builder.parse_expr("not #true"),
+            Ok(("", ValId::from(false)))
+        );
+    }
+    */
 }
