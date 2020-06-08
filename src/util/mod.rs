@@ -223,8 +223,7 @@ macro_rules! pretty_display {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 #[cfg(feature = "prettyprinter")]
                 {
-                    let mut printer = $crate::prettyprinter::PrettyPrinter::default();
-                    $crate::prettyprinter::PrettyPrint::prettyprint(self, &mut printer, fmt)
+                    std::fmt::Display::fmt($crate::prettyprinter::PrettyPrint::prettyprintable(self), fmt)
                 }
                 #[cfg(not(feature = "prettyprinter"))]
                 {

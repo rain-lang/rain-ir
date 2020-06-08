@@ -10,6 +10,7 @@ use crate::value::{
 };
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
+use ref_cast::RefCast;
 use smallvec::SmallVec;
 use std::default::Default;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -56,6 +57,11 @@ const PRETTYPRINTER_STACK_DEPTH: usize = 16;
 
 /// The default maximum number of tags for a prettyprinter
 pub const DEFAULT_MAX_TABS: u16 = 4;
+
+/// Display a value using an empty prettyprinter
+#[derive(Debug, Copy, Clone, RefCast, Eq, PartialEq, Hash)]
+#[repr(transparent)]
+pub struct PrettyPrintable<T>(T);
 
 impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     /// Create a new prettyprinter
@@ -244,6 +250,30 @@ pub trait PrettyPrint {
         printer: &mut PrettyPrinter<I>,
         fmt: &mut Formatter,
     ) -> Result<(), fmt::Error>;
+    /// Create a pretty-printable object from this one
+    fn prettyprintable(&self) -> &PrettyPrintable<Self>
+    where
+        Self: Sized,
+    {
+        RefCast::ref_cast(self)
+    }
+}
+
+impl<T: PrettyPrint> Display for PrettyPrintable<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        let mut printer = PrettyPrinter::default();
+        self.0.prettyprint(&mut printer, fmt)
+    }
+}
+
+impl<T: PrettyPrint> PrettyPrint for PrettyPrintable<T> {
+    fn prettyprint<I: From<usize> + Display>(
+        &self,
+        printer: &mut PrettyPrinter<I>,
+        fmt: &mut Formatter,
+    ) -> Result<(), fmt::Error> {
+        self.0.prettyprint(printer, fmt)
+    }
 }
 
 /// Implement `PrettyPrint` using `Display`
