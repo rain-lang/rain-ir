@@ -152,6 +152,7 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
+    use crate::prettyprinter::PrettyPrint;
     use crate::value::primitive::logical::{Bool, Not};
 
     #[test]
@@ -210,15 +211,15 @@ mod tests {
         );
 
         // Check dependencies and type externally
-        let (rest, id) = builder.parse_expr("not").unwrap();
+        let (rest, not) = builder.parse_expr("not").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(id.deps().len(), 1);
-        assert_eq!(id.deps()[0], ValId::from(Not));
+        assert_eq!(not.deps().len(), 1);
+        assert_eq!(not.deps()[0], ValId::from(Not));
         let (rest, unary) = builder.parse_expr("unary").unwrap();
         assert_eq!(rest, "");
         assert_eq!(unary.deps().len(), 1);
         assert_eq!(unary.deps()[0], ValId::from(Bool));
-        assert_eq!(id.ty(), unary);
+        assert_eq!(not.ty(), unary);
 
         // Check depdendencies and types internally
         let (rest, jeq) = builder.parse_expr("#jeq[#typeof(not) unary]").unwrap();
@@ -244,5 +245,54 @@ mod tests {
             builder.parse_expr("not #true"),
             Ok(("", ValId::from(false)))
         );
+    }
+
+    #[test]
+    fn mux_lambda_works_properly() {
+        // Get mux evaluation programs
+        let programs: Vec<_> = (0b000..=0b111)
+            .map(|v| {
+                let select = v & 0b100 != 0;
+                let high = v & 0b010 != 0;
+                let low = v & 0b001 != 0;
+                (
+                    format!("mux {} {} {}", select.prp(), high.prp(), low.prp()),
+                    if select { high } else { low },
+                )
+            })
+            .collect();
+
+        let mut builder = Builder::<&str>::new();
+        // Build mux as a lambda
+        let mux_program =
+            "#let mux = |select: #bool high: #bool low: #bool| (#or (#and select high) (#and (#not select) low));";
+        assert_eq!(builder.parse_statement(mux_program), Ok(""));
+        // Build the ternary type
+        assert_eq!(
+            builder.parse_statement("#let ternary = #pi|_: #bool _: #bool _: #bool| #bool;"),
+            Ok("")
+        );
+
+        // Check dependencies and type externally
+        let (rest, mux) = builder.parse_expr("mux").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(mux.deps().len(), 3); // and, or, not
+        let (rest, ternary) = builder.parse_expr("ternary").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(ternary.deps().len(), 1);
+        assert_eq!(ternary.deps()[0], ValId::from(Bool));
+        assert_eq!(mux.ty(), ternary);
+
+        // Check depdendencies and types internally
+        let (rest, jeq) = builder.parse_expr("#jeq[#typeof(mux) ternary]").unwrap();
+        assert_eq!(rest, "");
+        assert_eq!(jeq, ValId::from(true));
+
+        // Compute evaluations
+        for (program, desired_result) in programs.iter() {
+            let (rest, result) = builder.parse_expr(program).unwrap();
+            assert_eq!(rest, "");
+            assert_eq!(result, ValId::from(*desired_result));
+        }
     }
 }
