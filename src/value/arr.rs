@@ -27,6 +27,9 @@ pub struct VarArr<V> {
     variant: std::marker::PhantomData<V>,
 }
 
+/// The unique empty array of `ValId`s. Temporary hack...
+static UNIQUE_EMPTY_ARRAY: [ValId; 0] = [];
+
 impl<V> VarArr<V> {
     /// Get the length of this array
     #[inline]
@@ -46,6 +49,15 @@ impl<V> VarArr<V> {
     #[inline]
     pub fn as_vals(&self) -> &VarArr<ValIdMarker> {
         RefCast::ref_cast(&self.arr)
+    }
+    /// Get this array as a pointer to an array of ValIds
+    #[inline]
+    pub fn as_ptr(&self) -> *const [ValId] {
+        if let Some(arr) = &self.arr {
+            arr.deref()
+        } else {
+            &UNIQUE_EMPTY_ARRAY
+        }
     }
     /// Check if this array is address-sorted
     #[inline]
@@ -76,11 +88,12 @@ impl<V> VarArr<V> {
     /// Create a `VarArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
     #[inline]
     fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> VarArr<V> {
-        if vals.len() == 0 { // Avoid empty array bugs
+        if vals.len() == 0 {
+            // Avoid empty array bugs
             return VarArr {
                 arr: None,
-                variant: std::marker::PhantomData
-            }
+                variant: std::marker::PhantomData,
+            };
         }
         Self::dedup_and_assert(ArcValIdArr(Arc::from_header_and_iter(
             HeaderWithLength::new((), vals.len()),
@@ -218,7 +231,7 @@ impl Deref for VarArr<ValIdMarker> {
         if let Some(arr) = &self.arr {
             &arr
         } else {
-            &[]
+            &UNIQUE_EMPTY_ARRAY
         }
     }
 }
@@ -282,12 +295,12 @@ impl Hash for ArcValIdArr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::finite::Finite;
+    use crate::primitive::finite::{Finite, Index};
     use rand::{Rng, SeedableRng};
     use rand_xoshiro::Xoroshiro128PlusPlus as TestRng;
 
     #[test]
-    fn random_arrays_of_finite_construct_correctly() {
+    fn random_arrays_of_indices_construct_correctly() {
         const TEST_SEED: u64 = 0x56614ffa9e2a191d;
         const MAX_ARRAY_SIZE: usize = 100;
         const ARRAYS_TO_TEST: usize = 100;
@@ -298,31 +311,78 @@ mod tests {
                 (0..length)
                     .map(|_| {
                         let fin = Finite(rng.gen());
-                        fin.ix(rng.gen_range(0, fin.0)).unwrap().into()
+                        fin.ix(rng.gen_range(0, fin.0)).unwrap()
                     })
                     .collect()
             })
             .collect();
-        let finite_valarrs: Vec<_> = finite_arrays
+        let finite_valarrs_uncached: Vec<_> = finite_arrays
+            .iter()
+            .map(|arr| arr.iter().map(|ix| ix.clone().into()).collect_vec())
+            .collect();
+        let finite_valarrs: Vec<_> = finite_valarrs_uncached
             .iter()
             .map(|arr| ValArr::new(arr.iter().cloned()))
             .collect();
         let finite_valarrs_2: Vec<_> = finite_arrays
             .iter()
-            .map(|arr| ValArr::new(arr.iter().cloned()))
+            .map(|arr| ValArr::new(arr.iter().map(|ix| ix.clone().into())))
+            .collect();
+        let finite_valarrs_3: Vec<VarArr<Index>> = finite_arrays
+            .iter()
+            .map(|arr| arr.iter().cloned().collect())
             .collect();
         assert_eq!(finite_valarrs, finite_valarrs_2);
         assert_eq!(finite_valarrs.deref(), finite_valarrs_2.deref());
         for i in 0..finite_arrays.len() {
             assert_eq!(
                 finite_valarrs[i].deref() as *const [ValId],
-                finite_valarrs_2[i].deref() as *const [ValId]
+                finite_valarrs_2[i].deref() as *const [ValId],
+                "Failure at index {}",
+                i
+            );
+            assert_eq!(
+                finite_valarrs[i].as_ptr(),
+                finite_valarrs[i].deref() as *const [ValId],
+                "Failure at index {}",
+                i
+            );
+            assert_eq!(
+                finite_valarrs_2[i].deref() as *const [ValId],
+                finite_valarrs_2[i].as_ptr(),
+                "Failure at index {}",
+                i
+            );
+            assert_eq!(
+                finite_valarrs[i].as_ptr(),
+                finite_valarrs_3[i].as_ptr(),
+                "Failure at index {}",
+                i
+            );
+            assert_eq!(
+                finite_valarrs[i].as_ptr(),
+                finite_valarrs_3[i].as_vals().as_ptr(),
+                "Failure at index {}",
+                i
+            );
+            assert_eq!(
+                finite_valarrs[i].as_ptr(),
+                finite_valarrs_3[i].as_vals().deref(),
+                "Failure at index {}",
+                i
             );
             assert_ne!(
                 finite_valarrs[i].deref() as *const [ValId],
-                finite_arrays[i].deref() as *const [ValId]
+                finite_valarrs_uncached[i].deref() as *const [ValId],
+                "Failure at index {}",
+                i
             );
-            assert_eq!(finite_valarrs[i].deref(), finite_arrays[i].deref());
+            assert_eq!(
+                finite_valarrs[i].deref(),
+                finite_valarrs_uncached[i].deref(),
+                "Failure at index {}",
+                i
+            );
         }
     }
 }
