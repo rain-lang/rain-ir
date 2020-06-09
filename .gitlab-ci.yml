@@ -290,6 +290,7 @@ test:git-master:
         - build:cargo-stable
         
 deploy:pages:
+    stage: deploy
     only:
         - master
     script:
