@@ -33,6 +33,14 @@ lazy_static! {
 #[derive(Debug, Clone, Eq, Default)]
 pub struct Region(Option<Arc<RegionData>>);
 
+/// A trait for objects which have a region
+pub trait Regional {
+    /// Get the region of this object
+    fn region(&self) -> RegionBorrow {
+        RegionBorrow::default()
+    }
+}
+
 impl Region {
     /// Create a new reference from a given `RegionData`, caching if possible
     #[inline]
@@ -440,14 +448,20 @@ impl Parameter {
     }
     /// Get this parameter's region
     #[inline]
-    pub fn region(&self) -> &Region {
+    pub fn get_region(&self) -> &Region {
         &self.region
     }
 }
 
 impl Live for Parameter {
     fn lifetime(&self) -> LifetimeBorrow {
-        self.region().borrow_region().into()
+        self.region().into()
+    }
+}
+
+impl Regional for Parameter {
+    fn region(&self) -> RegionBorrow {
+        self.get_region().borrow_region()
     }
 }
 

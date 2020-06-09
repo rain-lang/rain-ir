@@ -2,9 +2,9 @@
 A parametrized `rain` value of a given type
 */
 
-use super::Region;
 use crate::eval::{EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
 use crate::value::{Error, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
@@ -26,7 +26,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     */
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
-        match value.region().partial_cmp(&region) {
+        match value.lifetime().region().partial_cmp(&region) {
             None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
                 let mut deps = value.deps().collect_deps(value.lifetime().depth());
@@ -141,6 +141,12 @@ impl<V: Value> Parametrized<V> {
 impl<V: Value> Live for Parametrized<V> {
     fn lifetime(&self) -> LifetimeBorrow {
         self.lifetime.borrow_lifetime()
+    }
+}
+
+impl<V: Value> Regional for Parametrized<V> {
+    fn region(&self) -> RegionBorrow {
+        self.lifetime().get_region()
     }
 }
 

@@ -3,7 +3,7 @@
 */
 use std::cmp::Ordering;
 
-use crate::region::{Region, RegionBorrow};
+use crate::region::{Region, RegionBorrow, Regional};
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
@@ -14,11 +14,6 @@ impl Lifetime {
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
         LifetimeBorrow(self.0.borrow_region())
-    }
-    /// Get the region of this lifetime
-    #[inline]
-    pub fn region(&self) -> RegionBorrow {
-        self.0.borrow_region()
     }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
@@ -48,6 +43,13 @@ impl Lifetime {
             }
         }
         Ok(base.clone_lifetime())
+    }
+}
+
+impl Regional for Lifetime {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.0.borrow_region()
     }
 }
 
@@ -90,7 +92,7 @@ impl<'a> LifetimeBorrow<'a> {
     }
     /// Get the region of this lifetime
     #[inline]
-    pub fn region(&self) -> RegionBorrow<'a> {
+    pub fn get_region(&self) -> RegionBorrow<'a> {
         self.0
     }
     /// Check whether this lifetime is the static (null) lifetime
@@ -105,6 +107,13 @@ impl<'a> LifetimeBorrow<'a> {
     }
 }
 
+impl Regional for LifetimeBorrow<'_> {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.0
+    }
+}
+
 impl<'a> From<RegionBorrow<'a>> for LifetimeBorrow<'a> {
     #[inline]
     fn from(borrow: RegionBorrow) -> LifetimeBorrow {
@@ -116,8 +125,19 @@ impl<'a> From<RegionBorrow<'a>> for LifetimeBorrow<'a> {
 pub trait Live {
     /// Get the lifetime of this value
     fn lifetime(&self) -> LifetimeBorrow;
-    /// Get the region of this value, or `None` if the value is global
-    fn region(&self) -> RegionBorrow {
-        self.lifetime().region()
+}
+
+/// Implement `Regional` using `Live`'s `lifetime` function
+#[macro_export]
+macro_rules! lifetime_region {
+    ($t:ty) => {
+        impl $crate::region::Regional for $t {
+            #[inline]
+            fn region(&self) -> $crate::region::RegionBorrow {
+                #[allow(unused_imports)]
+                use $crate::lifetime::Live;
+                self.lifetime().region()
+            }
+        }
     }
 }

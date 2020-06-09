@@ -4,8 +4,8 @@ Gamma nodes, representing pattern matching and primitive recursion
 
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::function::pi::Pi;
-use crate::region::Region;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{Error, TypeRef, ValId, Value, VarId};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
@@ -149,7 +149,12 @@ impl Branch {
     /// Return the dependencies of this branch
     pub fn deps(&self) -> Vec<ValId> {
         use std::cmp::Ordering::*;
-        match self.value.region().partial_cmp(self.region.deref()) {
+        match self
+            .value
+            .lifetime()
+            .region()
+            .partial_cmp(self.region.deref())
+        {
             None | Some(Greater) => panic!(
                 "Impossible: region mismatch should have been caught by BranchBuilder as error"
             ),
