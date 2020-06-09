@@ -19,12 +19,21 @@ lazy_static! {
 }
 
 /// A reference-counted, hash-consed, typed array of values
-#[derive(Debug, Clone, Eq, PartialEq, Hash, RefCast)]
+#[derive(Debug, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarArr<V> {
     //TODO: remove Option when I figure out how to support empty slices...
     arr: Option<PrivateValArr>,
     variant: std::marker::PhantomData<V>,
+}
+
+impl<V> Clone for VarArr<V> {
+    fn clone(&self) -> VarArr<V> {
+        VarArr {
+            arr: self.arr.clone(),
+            variant: self.variant,
+        }
+    }
 }
 
 /// The unique empty array of `ValId`s. Temporary hack...
@@ -109,6 +118,15 @@ impl<V> VarArr<V> {
             variant: std::marker::PhantomData,
         }
     }
+    /// Iterate over the `ValId`s in this container
+    #[inline]
+    fn iter_vals(&self) -> std::slice::Iter<ValId> {
+        if let Some(arr) = &self.arr {
+            arr.iter()
+        } else {
+            UNIQUE_EMPTY_ARRAY.iter()
+        }
+    }
 }
 
 /// A marker for an array of ValIds
@@ -132,6 +150,41 @@ pub type ValArr = VarArr<ValIdMarker>;
 
 /// A set (implemented as a sorted array) of `rain` values
 pub type VarSet<V> = VarArr<Sorted<V>>;
+
+impl<V> VarSet<V> {
+    /// Take the union of two `VarSet`s
+    pub fn union(&self, rhs: &VarSet<V>) -> VarSet<V> {
+        // Edge cases
+        if rhs.is_empty() {
+            return self.clone();
+        } else if self.is_empty() {
+            return rhs.clone();
+        }
+        let union: Vec<_> = self
+            .iter_vals()
+            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
+            .map(|v| v.reduce(|l, _| l))
+            .cloned()
+            .collect();
+        Self::assert_new(union.into_iter())
+    }
+    /// Take the intersection of two `VarSet`s
+    pub fn intersect(&self, rhs: &VarSet<V>) -> VarSet<V> {
+        // Edge cases
+        if rhs.is_empty() {
+            return rhs.clone();
+        } else if self.is_empty() {
+            return self.clone();
+        }
+        let intersection: Vec<_> = self
+            .iter_vals()
+            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
+            .filter_map(|v| v.both().map(|(l, _)| l))
+            .cloned()
+            .collect();
+        Self::assert_new(intersection.into_iter())
+    }
+}
 
 /// A set (implemented as a sorted array) of ValIds
 pub type ValSet = VarArr<Sorted<ValIdMarker>>;
@@ -305,6 +358,8 @@ mod tests {
         const MAX_ARRAY_SIZE: usize = 100;
         const ARRAYS_TO_TEST: usize = 100;
         let mut rng = TestRng::seed_from_u64(TEST_SEED);
+
+        // Data generation
         let finite_arrays: Vec<Vec<_>> = (0..ARRAYS_TO_TEST)
             .map(|_| {
                 let length = rng.gen_range(0, MAX_ARRAY_SIZE);
@@ -316,6 +371,8 @@ mod tests {
                     .collect()
             })
             .collect();
+
+        // Basic construction test
         let finite_valarrs_uncached: Vec<_> = finite_arrays
             .iter()
             .map(|arr| arr.iter().map(|ix| ix.clone().into()).collect_vec())
@@ -334,6 +391,8 @@ mod tests {
             .collect();
         assert_eq!(finite_valarrs, finite_valarrs_2);
         assert_eq!(finite_valarrs.deref(), finite_valarrs_2.deref());
+
+        // Basic identity tests
         for i in 0..finite_arrays.len() {
             assert_eq!(
                 finite_valarrs[i].deref() as *const [ValId],
@@ -384,5 +443,20 @@ mod tests {
                 i
             );
         }
+
+        // Sorting tests:
+        //TODO
+
+        // Set operation tests:
+        //TODO
+
+        // Identity
+        //TODO
+
+        // Binary DeMorgan's Law
+        //TODO
+
+        // n-ary DeMorgan's Law
+        //TODO
     }
 }
