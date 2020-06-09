@@ -79,7 +79,7 @@ impl<V> VarArr<V> {
     }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
-    pub fn try_sorted(&self) -> Result<&VarSet<V>, ()> {
+    pub fn try_sorted(&self) -> Result<&VarMultiSet<V>, ()> {
         if self.is_sorted() {
             Ok(RefCast::ref_cast(&self.arr))
         } else {
@@ -127,6 +127,18 @@ impl<V> VarArr<V> {
             UNIQUE_EMPTY_ARRAY.iter()
         }
     }
+    /// Address-sort this container *without* deduplicating
+    #[inline]
+    pub fn sorted(&self) -> VarMultiSet<V> {
+        // Special case (TODO: consider performance implications...)
+        if self.is_sorted() {
+            return VarMultiSet {
+                arr: self.arr.clone(),
+                variant: std::marker::PhantomData,
+            };
+        }
+        VarMultiSet::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
+    }
 }
 
 /// A marker for an array of ValIds
@@ -149,11 +161,11 @@ impl<T> Sorted<T> {
 pub type ValArr = VarArr<ValIdMarker>;
 
 /// A set (implemented as a sorted array) of `rain` values
-pub type VarSet<V> = VarArr<Sorted<V>>;
+pub type VarMultiSet<V> = VarArr<Sorted<V>>;
 
-impl<V> VarSet<V> {
-    /// Take the union of two `VarSet`s
-    pub fn union(&self, rhs: &VarSet<V>) -> VarSet<V> {
+impl<V> VarMultiSet<V> {
+    /// Take the union of two `VarMultiSet`s
+    pub fn union(&self, rhs: &VarMultiSet<V>) -> VarMultiSet<V> {
         // Edge cases
         if rhs.is_empty() {
             return self.clone();
@@ -162,14 +174,13 @@ impl<V> VarSet<V> {
         }
         let union: Vec<_> = self
             .iter_vals()
-            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
-            .map(|v| v.reduce(|l, _| l))
+            .merge_by(rhs.iter_vals(), |l, r| l.as_ptr() <= r.as_ptr())
             .cloned()
             .collect();
         Self::assert_new(union.into_iter())
     }
-    /// Take the intersection of two `VarSet`s
-    pub fn intersect(&self, rhs: &VarSet<V>) -> VarSet<V> {
+    /// Take the intersection of two `VarMultiSet`s
+    pub fn intersect(&self, rhs: &VarMultiSet<V>) -> VarMultiSet<V> {
         // Edge cases
         if rhs.is_empty() {
             return rhs.clone();
@@ -224,8 +235,8 @@ impl<V: Value> FromIterator<V> for VarArr<V> {
     }
 }
 
-impl<V: Value> FromIterator<V> for VarSet<V> {
-    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
+impl<V: Value> FromIterator<V> for VarMultiSet<V> {
+    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarMultiSet<V> {
         let v = iter
             .into_iter()
             .map(|v| v.into())
@@ -278,7 +289,18 @@ impl Index<usize> for VarArr<Sorted<ValIdMarker>> {
     }
 }
 
-impl Deref for VarArr<ValIdMarker> {
+impl Deref for ValArr {
+    type Target = [ValId];
+    fn deref(&self) -> &[ValId] {
+        if let Some(arr) = &self.arr {
+            &arr
+        } else {
+            &UNIQUE_EMPTY_ARRAY
+        }
+    }
+}
+
+impl Deref for ValSet {
     type Target = [ValId];
     fn deref(&self) -> &[ValId] {
         if let Some(arr) = &self.arr {
@@ -445,7 +467,29 @@ mod tests {
         }
 
         // Sorting tests:
-        //TODO
+        let sorted_valarrs: Vec<_> = finite_valarrs.iter().map(|v| v.sorted()).collect();
+        for (i, v) in sorted_valarrs.iter().enumerate() {
+            if v.len() > 2 {
+                for j in 0..(v.len() - 1) {
+                    assert!(
+                        v[j].as_ptr() <= v[j + 1].as_ptr(),
+                        "Array {} is not sorted: out-of-order elements {}@{:?}, {}@{:?} at index {}",
+                        i,
+                        v[j],
+                        v[j].as_ptr(),
+                        v[j + 1],
+                        v[j + 1].as_ptr(),
+                        j
+                    )
+                }
+            }
+            assert!(
+                v.is_sorted(),
+                "Array {} is sorted, but does not report itself sorted!\nINDEX:\n{:#?}",
+                i,
+                v
+            );
+        }
 
         // Set operation tests:
         //TODO
