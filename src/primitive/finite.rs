@@ -2,15 +2,11 @@
 Finite-valued types
 */
 
-use crate::prettyprinter::tokens::*;
-use crate::value::{
-    universe::FINITE_TY,
-    TypeRef, UniverseRef, ValId, Value, VarId, VarRef,
-};
 use crate::eval::Apply;
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::prettyprinter::tokens::*;
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, quick_pretty, trivial_substitute};
+use crate::value::{universe::FINITE_TY, TypeRef, UniverseRef, ValId, Value, VarId, VarRef};
+use crate::{debug_from_display, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::cmp::Ordering;
@@ -37,12 +33,7 @@ impl Finite {
     }
 }
 
-impl Live for Finite {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
+trivial_lifetime!(Finite);
 
 impl Typed for Finite {
     #[inline]
@@ -111,6 +102,7 @@ impl PartialOrd for Index {
 debug_from_display!(Index);
 quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty.0, s.ix));
 trivial_substitute!(Index);
+trivial_lifetime!(Index);
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds
@@ -145,13 +137,6 @@ impl Typed for Index {
 
 impl Apply for Index {}
 
-impl Live for Index {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
-
 impl Value for Index {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -169,6 +154,7 @@ impl Value for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lifetime::{LifetimeBorrow, Live};
     use crate::parser::builder::Builder;
     use crate::value::ValId;
     #[test]

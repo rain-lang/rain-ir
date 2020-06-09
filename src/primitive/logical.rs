@@ -4,7 +4,7 @@ Boolean types and logical operations
 
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::lifetime::{Lifetime, Live};
 use crate::prettyprinter::tokens::*;
 use crate::region::{Region, RegionData};
 use crate::typing::{Type, Typed};
@@ -12,7 +12,10 @@ use crate::value::{
     universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
     VarId,
 };
-use crate::{debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_substitute};
+use crate::{
+    debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
+    trivial_substitute,
+};
 use either::Either;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
@@ -68,12 +71,7 @@ impl Type for Bool {
     }
 }
 
-impl Live for Bool {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
+trivial_lifetime!(Bool);
 
 impl Typed for bool {
     #[inline]
@@ -88,12 +86,7 @@ impl Typed for bool {
 
 impl Apply for bool {}
 
-impl Live for bool {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
+trivial_lifetime!(bool);
 
 impl Value for bool {
     #[inline]
@@ -502,12 +495,7 @@ impl Value for Logical {
     }
 }
 
-impl Live for Logical {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
+trivial_lifetime!(Logical);
 
 debug_from_display!(Logical);
 display_pretty!(Logical);
@@ -542,12 +530,7 @@ macro_rules! make_logical {
                 false
             }
         }
-        impl Live for $t {
-            #[inline]
-            fn lifetime(&self) -> LifetimeBorrow {
-                LifetimeBorrow::default()
-            }
-        }
+        trivial_lifetime!($t);
         trivial_substitute!($t);
         normal_valid!($t);
         impl Apply for $t {

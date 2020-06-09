@@ -2,14 +2,13 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    universe::FINITE_TY,
-    Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+    universe::FINITE_TY, Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use smallvec::SmallVec;
 use std::ops::Deref;
 
@@ -64,6 +63,8 @@ impl Live for Tuple {
         self.lifetime.borrow_lifetime()
     }
 }
+
+lifetime_region!(Tuple);
 
 impl Deref for Tuple {
     type Target = TupleElems;
@@ -200,6 +201,8 @@ impl Live for Product {
         self.lifetime.borrow_lifetime()
     }
 }
+
+lifetime_region!(Product);
 
 impl Deref for Product {
     type Target = ProductElems;

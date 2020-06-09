@@ -8,7 +8,7 @@ use crate::lifetime::Live;
 use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
 use crate::value::{Error, TypeRef, ValId, Value, VarId};
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 
 /// A lambda function
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -63,6 +63,8 @@ impl Live for Lambda {
         self.result.lifetime()
     }
 }
+
+lifetime_region!(Lambda);
 
 impl Apply for Lambda {
     fn do_apply_in_ctx<'a>(

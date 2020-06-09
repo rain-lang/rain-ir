@@ -136,8 +136,27 @@ macro_rules! lifetime_region {
             fn region(&self) -> $crate::region::RegionBorrow {
                 #[allow(unused_imports)]
                 use $crate::lifetime::Live;
-                self.lifetime().region()
+                self.lifetime().get_region()
             }
         }
-    }
+    };
+}
+
+/// Implemented `Regional` and `Live` to return trivial values
+#[macro_export]
+macro_rules! trivial_lifetime {
+    ($t:ty) => {
+        impl $crate::region::Regional for $t {
+            #[inline]
+            fn region(&self) -> $crate::region::RegionBorrow {
+                $crate::region::RegionBorrow::default()
+            }
+        }
+        impl $crate::lifetime::Live for $t {
+            #[inline]
+            fn lifetime(&self) -> $crate::lifetime::LifetimeBorrow {
+                $crate::lifetime::LifetimeBorrow::default()
+            }
+        }
+    };
 }

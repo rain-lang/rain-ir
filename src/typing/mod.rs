@@ -4,6 +4,7 @@ The `rain` type system
 use super::{
     eval::{Apply, EvalCtx, Substitute},
     lifetime::{LifetimeBorrow, Live},
+    region::{RegionBorrow, Regional},
     value::{
         Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
     },
@@ -53,6 +54,13 @@ impl Live for TypeValue {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.deref().lifetime()
+    }
+}
+
+impl Regional for TypeValue {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.deref().region()
     }
 }
 

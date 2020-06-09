@@ -12,7 +12,7 @@ use crate::value::{
     universe::FINITE_TY,
     NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{debug_from_display, quick_pretty, trivial_substitute};
+use crate::{debug_from_display, lifetime_region, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
 use std::ops::Deref;
@@ -149,6 +149,8 @@ impl Live for () {
     }
 }
 
+lifetime_region!(());
+
 impl Typed for () {
     #[inline]
     fn ty(&self) -> TypeRef {
@@ -205,6 +207,8 @@ impl Live for Unit {
         LifetimeBorrow::default()
     }
 }
+
+lifetime_region!(Unit);
 
 impl Type for Unit {
     #[inline]

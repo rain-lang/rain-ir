@@ -6,7 +6,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::Region;
 use crate::typing::Typed;
 use crate::value::{tuple::Product, Error, TypeRef, ValId, Value, VarId};
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use smallvec::SmallVec;
 
 /// The size of a small set of mutually recursive values
@@ -32,6 +32,8 @@ impl Live for Phi {
         self.lifetime.borrow_lifetime()
     }
 }
+
+lifetime_region!(Phi);
 
 impl Typed for Phi {
     #[inline]

@@ -6,7 +6,7 @@ use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, pretty_display, substitute_to_valid, lifetime_region};
 use smallvec::{smallvec, SmallVec};
 use std::ops::Deref;
 
@@ -121,6 +121,8 @@ impl Live for Sexpr {
         self.lifetime.borrow_lifetime()
     }
 }
+
+lifetime_region!(Sexpr);
 
 impl Typed for Sexpr {
     #[inline]

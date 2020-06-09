@@ -9,7 +9,7 @@ use crate::primitive::{
     logical::{Bool, Logical},
     Unit,
 };
-use crate::region::Parameter;
+use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
 use crate::util::{hash_cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
@@ -137,6 +137,13 @@ impl Live for ValId {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.deref().lifetime()
+    }
+}
+
+impl Regional for ValId {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.deref().region()
     }
 }
 
@@ -290,6 +297,13 @@ impl Live for ValRef<'_> {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.deref().lifetime()
+    }
+}
+
+impl Regional for ValRef<'_> {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.deref().region()
     }
 }
 
@@ -549,6 +563,13 @@ impl<V: Value> Substitute<ValId> for VarId<V> {
     }
 }
 
+impl<V: Value> Regional for VarId<V> {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.as_val().region()
+    }
+}
+
 impl<V: Value> Value for VarId<V> {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -785,6 +806,13 @@ impl<V: Value> Live for VarRef<'_, V> {
     }
 }
 
+impl<V: Value> Regional for VarRef<'_, V> {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.ptr.region()
+    }
+}
+
 impl<V: Value> Apply for VarRef<'_, V> {
     #[inline]
     fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
@@ -903,6 +931,13 @@ impl Live for NormalValue {
     }
 }
 
+impl Regional for NormalValue {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.deref().region()
+    }
+}
+
 /// A wrapper around a `rain` value to assert refinement conditions.
 /// Implementation detail: library consumers should not be able to construct this!
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -913,7 +948,14 @@ pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
 pub trait Value:
-    Into<ValId> + Into<NormalValue> + Into<ValueEnum> + Typed + Live + Apply + Substitute<ValId>
+    Into<ValId>
+    + Into<NormalValue>
+    + Into<ValueEnum>
+    + Typed
+    + Live
+    + Apply
+    + Substitute<ValId>
+    + Regional
 {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
@@ -1331,6 +1373,15 @@ impl Live for ValueEnum {
     fn lifetime(&self) -> LifetimeBorrow {
         forv!(match (self) {
             s => s.lifetime(),
+        })
+    }
+}
+
+impl Regional for ValueEnum {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        forv!(match (self) {
+            s => s.region(),
         })
     }
 }

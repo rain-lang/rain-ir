@@ -3,7 +3,7 @@ Pi types
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{LifetimeBorrow, Live};
-use crate::region::{Parametrized, Region};
+use crate::region::{Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
@@ -65,6 +65,13 @@ impl Live for Pi {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
         self.result.lifetime()
+    }
+}
+
+impl Regional for Pi {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.result.region()
     }
 }
 

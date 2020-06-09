@@ -5,7 +5,7 @@ use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::value::{TypeRef, UniverseId, UniverseRef, ValId, Value};
-use crate::{quick_pretty, trivial_substitute};
+use crate::{lifetime_region, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use std::cmp::Ordering;
@@ -188,6 +188,8 @@ impl Live for Universe {
         LifetimeBorrow::default()
     }
 }
+
+lifetime_region!(Universe);
 
 impl Typed for Universe {
     #[inline]
