@@ -4,10 +4,12 @@ Reference-counted, hash-consed, typed arrays of values
 
 use super::{ValId, Value, VarId};
 use crate::util::hash_cache::{Cache, Caches};
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
+use std::iter::FromIterator;
 use std::ops::{Deref, Index};
 use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 
@@ -40,11 +42,42 @@ impl<V> VarArr<V> {
     pub fn as_vals(&self) -> &VarArr<ValIdMarker> {
         RefCast::ref_cast(&self.arr)
     }
+    /// Check if this array is address-sorted
+    #[inline]
+    pub fn is_sorted(&self) -> bool {
+        is_sorted::IsSorted::is_sorted_by_key(&mut self.arr.iter(), |v| v.as_ptr())
+    }
+    /// If this array is address-sorted, return it as a sorted array. If not, fail.
+    #[inline]
+    pub fn try_sorted(&self) -> Result<&VarSet<V>, ()> {
+        if self.is_sorted() {
+            Ok(RefCast::ref_cast(&self.arr))
+        } else {
+            Err(())
+        }
+    }
     /// Clone this array as an array of ValIds
     #[inline]
     pub fn clone_vals(&self) -> VarArr<ValIdMarker> {
         VarArr {
             arr: self.arr.clone(),
+            variant: std::marker::PhantomData,
+        }
+    }
+    /// Create a `VarArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
+    #[inline]
+    fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> VarArr<V> {
+        Self::dedup_and_assert(ArcValIdArr(Arc::from_header_and_iter(
+            HeaderWithLength::new((), vals.len()),
+            vals,
+        )))
+    }
+    /// Deduplicate an `Arc` to an array of `ValId`s, and assert this array is of the desired type
+    #[inline]
+    fn dedup_and_assert(ava: ArcValIdArr) -> VarArr<V> {
+        let dedup_ava = ARRAY_CACHE.cache(ava);
+        VarArr {
+            arr: PrivateValArr(Arc::into_thin(dedup_ava.0)),
             variant: std::marker::PhantomData,
         }
     }
@@ -54,24 +87,69 @@ impl<V> VarArr<V> {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ValIdMarker;
 
+/// A marker for a *sorted* array of a given value type
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Sorted<T>(pub std::marker::PhantomData<T>);
+
+impl<T> Sorted<T> {
+    /// Create a new sorted array marker
+    #[inline]
+    pub fn new() -> Sorted<T> {
+        Sorted(std::marker::PhantomData)
+    }
+}
+
 /// An array of ValIds
 pub type ValArr = VarArr<ValIdMarker>;
 
+/// A set (implemented as a sorted array) of `rain` values
+pub type VarSet<V> = VarArr<Sorted<V>>;
+
+/// A set (implemented as a sorted array) of ValIds
+pub type ValSet = VarArr<Sorted<ValIdMarker>>;
+
 impl ValArr {
-    /// Create a `ValArr` from (exact size) iterator over `ValId`s
+    /// Create a `ValArr` from an exact size iterator over `ValId`s
+    #[inline]
     pub fn new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> ValArr {
-        Self::dedup(ArcValIdArr(Arc::from_header_and_iter(
-            HeaderWithLength::new((), vals.len()),
-            vals,
-        )))
+        Self::assert_new(vals)
     }
     /// Deduplicate an `Arc` to an array of `ValId`s to get a `ValArr`
+    #[inline]
     pub fn dedup(ava: ArcValIdArr) -> ValArr {
-        let dedup_ava = ARRAY_CACHE.cache(ava);
-        ValArr {
-            arr: PrivateValArr(Arc::into_thin(dedup_ava.0)),
-            variant: std::marker::PhantomData,
-        }
+        Self::dedup_and_assert(ava)
+    }
+}
+
+impl FromIterator<ValId> for ValArr {
+    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValArr {
+        let v: Vec<_> = iter.into_iter().collect();
+        //TODO: optimize the case where size is known?
+        Self::new(v.into_iter())
+    }
+}
+
+impl FromIterator<ValId> for ValSet {
+    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValSet {
+        let v = iter.into_iter().sorted_by_key(ValId::as_ptr);
+        Self::assert_new(v)
+    }
+}
+
+impl<V: Value> FromIterator<V> for VarArr<V> {
+    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarArr<V> {
+        let v: Vec<ValId> = iter.into_iter().map(Into::into).collect();
+        Self::assert_new(v.into_iter())
+    }
+}
+
+impl<V: Value> FromIterator<V> for VarSet<V> {
+    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
+        let v = iter
+            .into_iter()
+            .map(|v| v.into())
+            .sorted_by_key(ValId::as_ptr);
+        Self::assert_new(v)
     }
 }
 
@@ -86,6 +164,13 @@ impl Index<usize> for VarArr<ValIdMarker> {
     type Output = ValId;
     fn index(&self, ix: usize) -> &ValId {
         &self.arr[ix]
+    }
+}
+
+impl Deref for VarArr<ValIdMarker> {
+    type Target = [ValId];
+    fn deref(&self) -> &[ValId] {
+        &self.arr
     }
 }
 
