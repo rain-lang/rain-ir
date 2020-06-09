@@ -28,6 +28,7 @@ mod error;
 pub mod expr;
 pub mod tuple;
 pub mod universe;
+pub mod arr;
 
 pub use error::*;
 use expr::Sexpr;
