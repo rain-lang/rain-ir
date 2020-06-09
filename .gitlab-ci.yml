@@ -174,7 +174,6 @@ stages:
     - prepare
     - build
     - test
-    - deploy
 
 prepare:cargo-cache-newest:
     <<:
@@ -289,8 +288,8 @@ test:git-master:
         - prepare:git
         - build:cargo-stable
         
-deploy:pages:
-    stage: deploy
+build:pages:
+    stage: build
     only:
         - master
     script:
