@@ -3,11 +3,18 @@ Reference-counted, hash-consed, typed arrays of values
 */
 
 use super::{ValId, Value, VarId};
+use crate::util::hash_cache::{Cache, Caches};
+use lazy_static::lazy_static;
 use ref_cast::RefCast;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, Index};
-use triomphe::ThinArc;
+use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
+
+lazy_static! {
+    /// A cache for arrays of values
+    pub static ref ARRAY_CACHE: Cache<ValId, ValArr> = Cache::default();
+}
 
 /// A reference-counted, hash-consed, typed array of values
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -70,5 +77,36 @@ impl Debug for PrivateValArr {
 impl Hash for PrivateValArr {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
+    }
+}
+
+/// A reference-counted array of values which is not necessarily hash-consed.
+/// This wrapper is for the `Hash` implementation
+#[derive(Clone, Eq, PartialEq)]
+pub struct ValArr(pub Arc<HeaderSlice<HeaderWithLength<()>, [ValId]>>);
+
+impl Caches<ValId> for ValArr {
+    #[inline]
+    fn can_collect(&self) -> bool {
+        self.0.is_unique()
+    }
+}
+
+impl Deref for ValArr {
+    type Target = [ValId];
+    fn deref(&self) -> &[ValId] {
+        &self.0.slice
+    }
+}
+
+impl Debug for ValArr {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
+        Debug::fmt(self.deref(), fmt)
+    }
+}
+
+impl Hash for ValArr {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.deref().hash(hasher)
     }
 }

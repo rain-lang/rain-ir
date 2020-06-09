@@ -8,31 +8,48 @@ use std::borrow::Borrow;
 use std::hash::{BuildHasher, Hash};
 use triomphe::Arc;
 
-/// A cache for values of type `T`
-#[derive(Debug)]
-pub struct Cache<T: Hash + Eq, S: BuildHasher + Clone = RandomState> {
-    /// The set of cached values
-    cache: DashMap<Arc<T>, (), S>,
+/// A container which can be used to cache values of type `T`
+pub trait Caches<T>: Hash + Eq + Clone {
+    /// Is this handle unique or, if weak references are allowed, destroyed (for garbage collection)
+    fn can_collect(&self) -> bool;
 }
 
-impl<T: Eq + Hash> Cache<T> {
+impl<T: Hash + Eq> Caches<T> for Arc<T> {
+    #[inline]
+    fn can_collect(&self) -> bool {
+        self.is_unique()
+    }
+}
+
+/// A cache for values of type `T`
+#[derive(Debug)]
+pub struct Cache<T, C: Caches<T> = Arc<T>, S: BuildHasher + Clone = RandomState> {
+    /// The set of cached values
+    cache: DashMap<C, (), S>,
+    /// The cached type
+    cached: std::marker::PhantomData<T>,
+}
+
+impl<T: Hash + Eq> Cache<T> {
     /// Create a new, empty cache
     pub fn new() -> Cache<T> {
         Cache {
             cache: DashMap::new(),
+            cached: std::marker::PhantomData,
         }
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Clone + Default> Default for Cache<T, S> {
-    fn default() -> Cache<T, S> {
+impl<T, C: Caches<T>, S: BuildHasher + Clone + Default> Default for Cache<T, C, S> {
+    fn default() -> Cache<T, C, S> {
         Cache {
             cache: DashMap::default(),
+            cached: std::marker::PhantomData,
         }
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
+impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
     /**
     Attempt to cache a value. If already cached, return the corresponding `Arc`
 
@@ -64,10 +81,10 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     assert!(Arc::ptr_eq(&arc_44, &dedup_44));
     ```
     */
-    pub fn cache<Q>(&self, value: Q) -> Arc<T>
+    pub fn cache<Q>(&self, value: Q) -> C
     where
-        Arc<T>: Borrow<Q>,
-        Q: Into<Arc<T>> + Hash + Eq,
+        C: Borrow<Q>,
+        Q: Into<C> + Hash + Eq,
     {
         // Read-lock first!
         // TODO: profile and see if this actually even helps efficiency at all
@@ -104,7 +121,7 @@ impl<T: Eq + Hash, S: BuildHasher + Clone> Cache<T, S> {
     pub fn gc(&self) -> usize {
         let mut collected = 0;
         self.cache.retain(|arc, _| {
-            if arc.is_unique() {
+            if arc.can_collect() {
                 collected += 1;
                 false
             } else {
