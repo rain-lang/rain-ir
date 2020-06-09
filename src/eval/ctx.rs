@@ -5,7 +5,7 @@ A `rain` evaluation context
 use super::Error;
 use super::Substitute;
 use crate::lifetime::Live;
-use crate::region::Region;
+use crate::region::{Regional, Region};
 use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
 use crate::value::ValId;
@@ -135,7 +135,7 @@ impl EvalCtx {
     #[inline]
     pub fn try_evaluate(&self, value: &ValId) -> Option<ValId> {
         // Check if the value's depth is too deep to have been touched by this context
-        if value.lifetime().depth() > self.minimum_depth() {
+        if value.depth() > self.minimum_depth() {
             return Some(value.clone());
         }
         // Check the cache

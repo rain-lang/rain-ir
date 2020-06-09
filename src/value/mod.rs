@@ -999,7 +999,7 @@ impl<V: Value> Deps<V> {
         let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
         while let Some(dep) = frontier.pop() {
             searched.insert(dep);
-            if dep.lifetime().depth() < below {
+            if dep.depth() < below {
                 result.push(dep.clone())
             } else {
                 frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))

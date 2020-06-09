@@ -36,8 +36,14 @@ pub struct Region(Option<Arc<RegionData>>);
 /// A trait for objects which have a region
 pub trait Regional {
     /// Get the region of this object
+    #[inline]
     fn region(&self) -> RegionBorrow {
         RegionBorrow::default()
+    }
+    /// Get the depth of this object's region
+    #[inline]
+    fn depth(&self) -> usize {
+        self.region().depth()
     }
 }
 
@@ -418,7 +424,7 @@ pub struct Parameter {
     ix: usize,
 }
 
-quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.region().depth(), s.ix()));
+quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
 trivial_substitute!(Parameter);
 
 impl Parameter {

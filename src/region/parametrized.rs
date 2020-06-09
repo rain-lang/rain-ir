@@ -26,10 +26,10 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
     */
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
-        match value.lifetime().region().partial_cmp(&region) {
+        match value.region().partial_cmp(&region) {
             None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
-                let mut deps = value.deps().collect_deps(value.lifetime().depth());
+                let mut deps = value.deps().collect_deps(value.depth());
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
