@@ -22,7 +22,8 @@ lazy_static! {
 #[derive(Debug, Clone, Eq, PartialEq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarArr<V> {
-    arr: PrivateValArr,
+    //TODO: remove Option when I figure out how to support empty slices...
+    arr: Option<PrivateValArr>,
     variant: std::marker::PhantomData<V>,
 }
 
@@ -30,12 +31,16 @@ impl<V> VarArr<V> {
     /// Get the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.arr.len()
+        if let Some(arr) = &self.arr {
+            arr.len()
+        } else {
+            0
+        }
     }
     /// Check whether this array is empty
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.arr.is_empty()
+        self.arr.is_none()
     }
     /// Get this array as an array of ValIds
     #[inline]
@@ -45,7 +50,11 @@ impl<V> VarArr<V> {
     /// Check if this array is address-sorted
     #[inline]
     pub fn is_sorted(&self) -> bool {
-        is_sorted::IsSorted::is_sorted_by_key(&mut self.arr.iter(), |v| v.as_ptr())
+        if let Some(arr) = &self.arr {
+            is_sorted::IsSorted::is_sorted_by_key(&mut arr.iter(), |v| v.as_ptr())
+        } else {
+            true
+        }
     }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
@@ -67,6 +76,12 @@ impl<V> VarArr<V> {
     /// Create a `VarArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
     #[inline]
     fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> VarArr<V> {
+        if vals.len() == 0 { // Avoid empty array bugs
+            return VarArr {
+                arr: None,
+                variant: std::marker::PhantomData
+            }
+        }
         Self::dedup_and_assert(ArcValIdArr(Arc::from_header_and_iter(
             HeaderWithLength::new((), vals.len()),
             vals,
@@ -77,7 +92,7 @@ impl<V> VarArr<V> {
     fn dedup_and_assert(ava: ArcValIdArr) -> VarArr<V> {
         let dedup_ava = ARRAY_CACHE.cache(ava);
         VarArr {
-            arr: PrivateValArr(Arc::into_thin(dedup_ava.0)),
+            arr: Some(PrivateValArr(Arc::into_thin(dedup_ava.0))),
             variant: std::marker::PhantomData,
         }
     }
@@ -156,21 +171,55 @@ impl<V: Value> FromIterator<V> for VarSet<V> {
 impl<V: Value> Index<usize> for VarArr<V> {
     type Output = VarId<V>;
     fn index(&self, ix: usize) -> &VarId<V> {
-        RefCast::ref_cast(&self.arr[ix].0)
+        if let Some(arr) = &self.arr {
+            RefCast::ref_cast(&arr[ix].0)
+        } else {
+            panic!("Indexed empty VarArr with index {}", ix)
+        }
     }
 }
 
 impl Index<usize> for VarArr<ValIdMarker> {
     type Output = ValId;
     fn index(&self, ix: usize) -> &ValId {
-        &self.arr[ix]
+        if let Some(arr) = &self.arr {
+            &arr[ix]
+        } else {
+            panic!("Indexed empty ValArr with index {}", ix)
+        }
+    }
+}
+
+impl<V: Value> Index<usize> for VarArr<Sorted<V>> {
+    type Output = VarId<V>;
+    fn index(&self, ix: usize) -> &VarId<V> {
+        if let Some(arr) = &self.arr {
+            RefCast::ref_cast(&arr[ix].0)
+        } else {
+            panic!("Indexed empty VarArr with index {}", ix)
+        }
+    }
+}
+
+impl Index<usize> for VarArr<Sorted<ValIdMarker>> {
+    type Output = ValId;
+    fn index(&self, ix: usize) -> &ValId {
+        if let Some(arr) = &self.arr {
+            &arr[ix]
+        } else {
+            panic!("Indexed empty ValArr with index {}", ix)
+        }
     }
 }
 
 impl Deref for VarArr<ValIdMarker> {
     type Target = [ValId];
     fn deref(&self) -> &[ValId] {
-        &self.arr
+        if let Some(arr) = &self.arr {
+            &arr
+        } else {
+            &[]
+        }
     }
 }
 
@@ -227,5 +276,53 @@ impl Debug for ArcValIdArr {
 impl Hash for ArcValIdArr {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.deref().hash(hasher)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primitive::finite::Finite;
+    use rand::{Rng, SeedableRng};
+    use rand_xoshiro::Xoroshiro128PlusPlus as TestRng;
+
+    #[test]
+    fn random_arrays_of_finite_construct_correctly() {
+        const TEST_SEED: u64 = 0x56614ffa9e2a191d;
+        const MAX_ARRAY_SIZE: usize = 100;
+        const ARRAYS_TO_TEST: usize = 100;
+        let mut rng = TestRng::seed_from_u64(TEST_SEED);
+        let finite_arrays: Vec<Vec<_>> = (0..ARRAYS_TO_TEST)
+            .map(|_| {
+                let length = rng.gen_range(0, MAX_ARRAY_SIZE);
+                (0..length)
+                    .map(|_| {
+                        let fin = Finite(rng.gen());
+                        fin.ix(rng.gen_range(0, fin.0)).unwrap().into()
+                    })
+                    .collect()
+            })
+            .collect();
+        let finite_valarrs: Vec<_> = finite_arrays
+            .iter()
+            .map(|arr| ValArr::new(arr.iter().cloned()))
+            .collect();
+        let finite_valarrs_2: Vec<_> = finite_arrays
+            .iter()
+            .map(|arr| ValArr::new(arr.iter().cloned()))
+            .collect();
+        assert_eq!(finite_valarrs, finite_valarrs_2);
+        assert_eq!(finite_valarrs.deref(), finite_valarrs_2.deref());
+        for i in 0..finite_arrays.len() {
+            assert_eq!(
+                finite_valarrs[i].deref() as *const [ValId],
+                finite_valarrs_2[i].deref() as *const [ValId]
+            );
+            assert_ne!(
+                finite_valarrs[i].deref() as *const [ValId],
+                finite_arrays[i].deref() as *const [ValId]
+            );
+            assert_eq!(finite_valarrs[i].deref(), finite_arrays[i].deref());
+        }
     }
 }
