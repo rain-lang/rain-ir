@@ -65,6 +65,15 @@ impl<V> VarArr<V> {
     pub fn as_vals(&self) -> &VarArr<ValIdMarker> {
         RefCast::ref_cast(&self.arr)
     }
+    /// Get this array as a slice of ValIds
+    #[inline]
+    pub fn as_slice(&self) -> &[ValId] {
+        if let Some(arr) = &self.arr {
+            &arr
+        } else {
+            &UNIQUE_EMPTY_ARRAY
+        }
+    }
     /// Get this array as a pointer to an array of ValIds
     #[inline]
     pub fn as_ptr(&self) -> *const [ValId] {

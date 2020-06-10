@@ -6,7 +6,7 @@ use crate::eval::{EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
-use crate::value::{Error, TypeId, ValId, Value};
+use crate::value::{arr::ValSet, Error, TypeId, ValId, Value};
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -16,7 +16,7 @@ use std::convert::TryInto;
 pub struct Parametrized<V> {
     region: Region,
     value: V,
-    deps: Option<Box<[ValId]>>,
+    deps: ValSet,
     lifetime: Lifetime,
 }
 
@@ -34,15 +34,10 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| Error::LifetimeError)?;
-                let deps = if deps.len() > 0 {
-                    Some(deps.into_boxed_slice())
-                } else {
-                    None
-                };
                 Ok(Parametrized {
                     region,
                     value,
-                    deps,
+                    deps: deps.into_iter().collect(),
                     lifetime,
                 })
             }
@@ -52,15 +47,10 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| Error::LifetimeError)?;
-                let deps = if deps.len() > 0 {
-                    Some(deps.into_boxed_slice())
-                } else {
-                    None
-                };
                 Ok(Parametrized {
                     region,
                     value,
-                    deps,
+                    deps: deps.into_iter().collect(),
                     lifetime,
                 })
             }
@@ -94,7 +84,7 @@ impl<V> Parametrized<V> {
     */
     #[inline]
     pub fn deps(&self) -> &[ValId] {
-        self.deps.as_ref().map(|deps| &deps[..]).unwrap_or(&[])
+        self.deps.as_slice()
     }
     /**
     Get the region in which this parametrized value is defined
