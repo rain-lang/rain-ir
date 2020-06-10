@@ -6,13 +6,12 @@ use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::util::hash_cache::Cache;
-use crate::value::{TypeId, TypeRef, ValId, Value};
+use crate::value::{arr::TyArr, TypeId, TypeRef, ValId, Value};
 use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
-use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
 
 mod parametrized;
@@ -260,13 +259,10 @@ impl PartialOrd<Region> for RegionBorrow<'_> {
     }
 }
 
-/// A vector of parameter types
-pub type ParamTyVec = SmallVec<[TypeId; SMALL_PARAMS]>;
-
 /// The null region
 pub static NULL_REGION: RegionData = RegionData {
     parent: Region(None),
-    param_tys: None,
+    param_tys: TyArr::EMPTY_SELF,
     depth: 0,
 };
 
@@ -276,7 +272,7 @@ pub struct RegionData {
     /// The parent of this region
     parent: Region,
     /// The parameter types of this region
-    param_tys: Option<ParamTyVec>,
+    param_tys: TyArr,
     /// The depth of this region above the null region
     depth: usize,
 }
@@ -285,32 +281,17 @@ impl Deref for RegionData {
     type Target = [TypeId];
     #[inline]
     fn deref(&self) -> &[TypeId] {
-        if let Some(params) = &self.param_tys {
-            params
-        } else {
-            &[]
-        }
-    }
-}
-
-impl DerefMut for RegionData {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut [TypeId] {
-        if let Some(params) = &mut self.param_tys {
-            params
-        } else {
-            &mut []
-        }
+        self.param_tys.deref()
     }
 }
 
 impl RegionData {
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: ParamTyVec, parent: Region) -> RegionData {
+    pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
         let depth = parent.depth + 1;
         RegionData {
-            param_tys: Some(param_tys),
+            param_tys,
             parent,
             depth,
         }
@@ -318,7 +299,7 @@ impl RegionData {
     /// Create data for a new, empty region with an optional parent region
     #[inline]
     pub fn new(parent: Region) -> RegionData {
-        Self::with(SmallVec::new(), parent)
+        Self::with(TyArr::default(), parent)
     }
     /// Get the depth of this region
     #[inline]

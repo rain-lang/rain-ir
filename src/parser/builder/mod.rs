@@ -315,9 +315,10 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Build a set of parameter arguments into a region, registering a new scope for them
     /// Push this region onto the region stack
     pub fn push_args(&mut self, args: &ParamArgs<'a>) -> Result<(), Error<'a>> {
-        let tys: Result<_, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
+        //TODO: more efficiency for type vector construction...
+        let tys: Result<Vec<_>, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
         let region = Region::new(RegionData::with(
-            tys?,
+            tys?.into_iter().collect(),
             self.stack
                 .last()
                 .map(|(r, _)| r.clone())

@@ -3,6 +3,7 @@ Reference-counted, hash-consed, typed arrays of values
 */
 
 use super::{ValId, Value, VarId};
+use crate::typing::TypeValue;
 use crate::util::hash_cache::{Cache, Caches};
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -16,6 +17,20 @@ use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 lazy_static! {
     /// A cache for arrays of values
     pub static ref ARRAY_CACHE: Cache<ValId, ArcValIdArr> = Cache::default();
+}
+
+#[macro_export]
+/// A macro to create a variable array
+macro_rules! vararr {
+    () => { $crate::value::arr::VarArr::EMPTY_SELF };
+    ($elem:expr; $n:expr) => {{
+        let v: Vec<VarId<_>> = vec![$elem; $n];
+        v.into_iter().collect()
+    }};
+    ($($x:expr),+ $(,)?) => {{
+        let v: Vec<VarId<_>> = vec![$($x,)+];
+        v.into_iter().collect()
+    }};
 }
 
 /// A reference-counted, hash-consed, typed array of values
@@ -36,6 +51,13 @@ impl<V> Clone for VarArr<V> {
     }
 }
 
+impl<V> Default for VarArr<V> {
+    /// Get an empty `VarArr`
+    fn default() -> VarArr<V> {
+        VarArr::EMPTY_SELF
+    }
+}
+
 impl<U, V> PartialEq<VarArr<U>> for VarArr<V> {
     fn eq(&self, other: &VarArr<U>) -> bool {
         self.arr == other.arr
@@ -46,6 +68,11 @@ impl<U, V> PartialEq<VarArr<U>> for VarArr<V> {
 static UNIQUE_EMPTY_ARRAY: [ValId; 0] = [];
 
 impl<V> VarArr<V> {
+    /// This type as an empty array, for use in `const` contexts
+    pub const EMPTY_SELF: VarArr<V> = VarArr {
+        arr: None,
+        variant: std::marker::PhantomData,
+    };
     /// Get the length of this array
     #[inline]
     pub fn len(&self) -> usize {
@@ -63,7 +90,7 @@ impl<V> VarArr<V> {
     /// Get this array as an array of ValIds
     #[inline]
     pub fn as_vals(&self) -> &VarArr<ValIdMarker> {
-        RefCast::ref_cast(&self.arr)
+        self.coerce()
     }
     /// Get this array as a slice of ValIds
     #[inline]
@@ -179,6 +206,24 @@ impl<V> VarArr<V> {
         source.dedup();
         VarSet::assert_new(source.into_iter().cloned())
     }
+    /// Coerce this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
+    #[inline]
+    fn coerce<U>(&self) -> &VarArr<U> {
+        RefCast::ref_cast(&self.arr)
+    }
+    /// Coerce this container into a slice of `VarId<V>`, asserting that the predicate holds *for each container element*!
+    /// While this method can be called incorrectly, it is *safe* as regardless of `V`, all `VarId<V>` are guaranteed to have
+    /// the same representation.
+    #[inline]
+    fn coerce_slice<U>(&self) -> &[VarId<U>] {
+        unsafe {
+            std::mem::transmute(if let Some(arr) = &self.arr {
+                arr.deref()
+            } else {
+                &UNIQUE_EMPTY_ARRAY[..]
+            })
+        }
+    }
 }
 
 /// A marker for an array of ValIds
@@ -223,6 +268,9 @@ impl<T> Uniq<T> {
 
 /// An array of ValIds
 pub type ValArr = VarArr<ValIdMarker>;
+
+/// An array of types
+pub type TyArr = VarArr<TypeValue>;
 
 /// A bag (implemented as a sorted array) of `rain` values
 pub type VarBag<V> = VarArr<Sorted<V>>;
@@ -279,11 +327,11 @@ impl<V: BagMarker> VarArr<V> {
 impl<V> VarSet<V> {
     /// Forget the information that this is in fact a `VarSet`, yielding a `VarArr`
     pub fn as_arr(&self) -> &VarArr<V> {
-        RefCast::ref_cast(&self.arr)
+        self.coerce()
     }
     /// Forget the information that this is in fact a `VarSet`, yielding a `VarBag`
     pub fn as_multiset(&self) -> &VarBag<V> {
-        RefCast::ref_cast(&self.arr)
+        self.coerce()
     }
 }
 
@@ -307,10 +355,16 @@ impl<V: SetMarker> VarArr<V> {
 }
 
 /// A bag, that is, a multiset (implemented as a sorted array) of ValIds
-pub type ValBag = VarArr<Sorted<ValIdMarker>>;
+pub type ValBag = VarBag<ValIdMarker>;
+
+/// A bag, that is, a multiset (implemented as a sorted array) of types
+pub type TyBag = VarBag<TypeValue>;
 
 /// A set (implemented as a sorted, unique array) of ValIds
-pub type ValSet = VarArr<Uniq<ValIdMarker>>;
+pub type ValSet = VarSet<ValIdMarker>;
+
+/// A set (implemented as a sorted, unique array) of types
+pub type TySet = VarSet<TypeValue>;
 
 impl ValArr {
     /// Create a `ValArr` from an exact size iterator over `ValId`s
@@ -370,6 +424,35 @@ impl<V: Value> FromIterator<V> for VarSet<V> {
         let mut v: Vec<_> = iter
             .into_iter()
             .map(|v| v.into())
+            .sorted_by_key(ValId::as_ptr)
+            .collect();
+        v.dedup();
+        Self::assert_new(v.into_iter())
+    }
+}
+
+impl<V: Value> FromIterator<VarId<V>> for VarArr<V> {
+    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarArr<V> {
+        let v: Vec<ValId> = iter.into_iter().map(Into::into).collect();
+        Self::assert_new(v.into_iter())
+    }
+}
+
+impl<V: Value> FromIterator<VarId<V>> for VarBag<V> {
+    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarBag<V> {
+        let v = iter
+            .into_iter()
+            .map(Into::into)
+            .sorted_by_key(ValId::as_ptr);
+        Self::assert_new(v)
+    }
+}
+
+impl<V: Value> FromIterator<VarId<V>> for VarSet<V> {
+    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarSet<V> {
+        let mut v: Vec<_> = iter
+            .into_iter()
+            .map(Into::into)
             .sorted_by_key(ValId::as_ptr)
             .collect();
         v.dedup();
@@ -451,6 +534,27 @@ impl Deref for ValSet {
         } else {
             &UNIQUE_EMPTY_ARRAY
         }
+    }
+}
+
+impl<V: Value> Deref for VarArr<V> {
+    type Target = [VarId<V>];
+    fn deref(&self) -> &[VarId<V>] {
+        self.coerce_slice()
+    }
+}
+
+impl<V: Value> Deref for VarBag<V> {
+    type Target = [VarId<V>];
+    fn deref(&self) -> &[VarId<V>] {
+        self.coerce_slice()
+    }
+}
+
+impl<V: Value> Deref for VarSet<V> {
+    type Target = [VarId<V>];
+    fn deref(&self) -> &[VarId<V>] {
+        self.coerce_slice()
     }
 }
 

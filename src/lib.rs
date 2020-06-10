@@ -13,7 +13,7 @@ design.
 
 Contributions, ideas and collaboration proposals are welcome: please make an issue or e-mail jad.ghalayini@mail.utoronto.ca.
 */
-#![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
+#![forbid(missing_docs, missing_debug_implementations)]
 
 pub mod data;
 pub mod eval;

@@ -14,12 +14,11 @@ use crate::value::{
 };
 use crate::{
     debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
-    trivial_substitute,
+    trivial_substitute, vararr
 };
 use either::Either;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
-use smallvec::smallvec;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 use std::ops::{BitAnd, BitOr, BitXor, Deref, Index, Not as NotOp};
@@ -108,13 +107,13 @@ trivial_substitute!(Bool);
 lazy_static! {
     /// Regions corresponding to primitive logical operations
     pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
-        Region::new(RegionData::with(smallvec![Bool.into(); 1], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 2], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 3], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 4], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 5], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 6], Region::default())),
-        Region::new(RegionData::with(smallvec![Bool.into(); 7], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 1], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 2], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 3], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 4], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 5], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 6], Region::default())),
+        Region::new(RegionData::with(vararr![Bool.into(); 7], Region::default())),
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
