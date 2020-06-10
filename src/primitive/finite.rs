@@ -5,7 +5,9 @@ Finite-valued types
 use crate::eval::Apply;
 use crate::prettyprinter::tokens::*;
 use crate::typing::{Type, Typed};
-use crate::value::{universe::FINITE_TY, TypeRef, UniverseRef, ValId, Value, VarId, VarRef};
+use crate::value::{
+    universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId, VarRef,
+};
 use crate::{debug_from_display, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
@@ -59,6 +61,14 @@ impl Value for Finite {
             "Tried to get dependency #{} of finite type {}, which has none",
             ix, self
         )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Finite(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 
@@ -148,6 +158,14 @@ impl Value for Index {
             "Tried to get dependency #{} of finite index {}, which has none",
             ix, self
         )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Index(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

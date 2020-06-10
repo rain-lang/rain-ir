@@ -5,10 +5,10 @@ A `rain` evaluation context
 use super::Error;
 use super::Substitute;
 use crate::lifetime::Live;
-use crate::region::{Regional, Region};
+use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
-use crate::value::ValId;
+use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
 use smallvec::{smallvec, SmallVec};
 use std::iter::Iterator;
@@ -90,7 +90,7 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
-        for param in region.borrow_params().map(ValId::from) {
+        for param in region.borrow_params().map(Value::into_val) {
             if let Some(value) = values.next() {
                 self.substitute(param.clone(), value, check)?;
             } else if inline {

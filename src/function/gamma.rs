@@ -7,7 +7,7 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
-use crate::value::{Error, TypeRef, ValId, Value, VarId};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use itertools::Itertools;
 use std::ops::Deref;
@@ -67,6 +67,14 @@ impl Value for Gamma {
     }
     fn get_dep(&self, ix: usize) -> &ValId {
         &self.deps[ix]
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Gamma(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

@@ -5,7 +5,9 @@ use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::region::{Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
-use crate::value::{Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value};
+use crate::value::{
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+};
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
 /// A pi type
@@ -87,6 +89,14 @@ impl Value for Pi {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         &self.result.deps()[ix]
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Pi(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

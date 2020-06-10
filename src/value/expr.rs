@@ -1,12 +1,12 @@
 /*!
 `rain` expressions
 */
-use super::{Error, TypeId, TypeRef, ValId, Value, ValueEnum};
+use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, pretty_display, substitute_to_valid, lifetime_region};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use smallvec::{smallvec, SmallVec};
 use std::ops::Deref;
 
@@ -147,6 +147,14 @@ impl Value for Sexpr {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         &self[ix]
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Sexpr(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

@@ -176,6 +176,10 @@ impl Value for () {
             ix
         )
     }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
 }
 
 trivial_substitute!(());
@@ -343,6 +347,10 @@ impl Value for Unit {
             "Attempted to get dependency {} of the unit type, but `Unit` has no dependencies!",
             ix
         )
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

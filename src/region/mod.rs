@@ -6,7 +6,7 @@ use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::util::hash_cache::Cache;
-use crate::value::{arr::TyArr, TypeId, TypeRef, ValId, Value};
+use crate::value::{arr::TyArr, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
@@ -471,5 +471,11 @@ impl Value for Parameter {
     }
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!("Attempted to get dependency {} of parameter #{} of a region, but parameters have no deps!", ix, self.ix)
+    }
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Parameter(self)
+    }
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }

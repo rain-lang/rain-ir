@@ -2,7 +2,7 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    universe::FINITE_TY, Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+    universe::FINITE_TY, Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum, NormalValue
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
@@ -93,6 +93,14 @@ impl Value for Tuple {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         &self[ix]
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Tuple(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 
@@ -242,6 +250,14 @@ impl Value for Product {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         (&self[ix]).into()
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Product(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

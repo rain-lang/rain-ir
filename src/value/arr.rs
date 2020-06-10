@@ -404,7 +404,7 @@ impl FromIterator<ValId> for ValSet {
 
 impl<V: Value> FromIterator<V> for VarArr<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarArr<V> {
-        let v: Vec<ValId> = iter.into_iter().map(Into::into).collect();
+        let v: Vec<ValId> = iter.into_iter().map(Value::into_val).collect();
         Self::assert_new(v.into_iter())
     }
 }
@@ -413,7 +413,7 @@ impl<V: Value> FromIterator<V> for VarBag<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarBag<V> {
         let v = iter
             .into_iter()
-            .map(|v| v.into())
+            .map(Value::into_val)
             .sorted_by_key(ValId::as_ptr);
         Self::assert_new(v)
     }
@@ -423,7 +423,7 @@ impl<V: Value> FromIterator<V> for VarSet<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
         let mut v: Vec<_> = iter
             .into_iter()
-            .map(|v| v.into())
+            .map(Value::into_val)
             .sorted_by_key(ValId::as_ptr)
             .collect();
         v.dedup();
@@ -464,7 +464,7 @@ impl<V: Value> Index<usize> for VarArr<V> {
     type Output = VarId<V>;
     fn index(&self, ix: usize) -> &VarId<V> {
         if let Some(arr) = &self.arr {
-            RefCast::ref_cast(&arr[ix].0)
+            RefCast::ref_cast(&arr[ix].ptr)
         } else {
             panic!("Indexed empty VarArr with index {}", ix)
         }
@@ -486,7 +486,7 @@ impl<V: Value> Index<usize> for VarArr<Sorted<V>> {
     type Output = VarId<V>;
     fn index(&self, ix: usize) -> &VarId<V> {
         if let Some(arr) = &self.arr {
-            RefCast::ref_cast(&arr[ix].0)
+            RefCast::ref_cast(&arr[ix].ptr)
         } else {
             panic!("Indexed empty VarArr with index {}", ix)
         }

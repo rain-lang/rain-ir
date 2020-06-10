@@ -90,6 +90,14 @@ impl Value for TypeValue {
     fn get_dep(&self, ix: usize) -> &ValId {
         self.deref().get_dep(ix)
     }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        self.into()
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
 }
 
 impl Type for TypeValue {
@@ -127,7 +135,7 @@ impl Type for TypeValue {
 
 impl From<TypeValue> for ValId {
     fn from(ty: TypeValue) -> ValId {
-        ValId::direct_new(ty)
+        ValId::<()>::direct_new(ty)
     }
 }
 

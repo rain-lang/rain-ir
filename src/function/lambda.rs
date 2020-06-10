@@ -7,7 +7,7 @@ use crate::lifetime::LifetimeBorrow;
 use crate::lifetime::Live;
 use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
-use crate::value::{Error, TypeRef, ValId, Value, VarId};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 
 /// A lambda function
@@ -120,6 +120,14 @@ impl Value for Lambda {
     fn get_dep(&self, ix: usize) -> &ValId {
         &self.result.deps()[ix]
     }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Lambda(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
 }
 
 impl Substitute for Lambda {
@@ -174,27 +182,27 @@ mod tests {
         let (rest, unary) = builder.parse_expr("unary").unwrap();
         assert_eq!(rest, "");
         assert_eq!(unary.deps().len(), 1);
-        assert_eq!(unary.deps()[0], ValId::from(Bool));
+        assert_eq!(unary.deps()[0], Bool.into_val());
         assert_eq!(id.ty(), unary);
 
         // Check type internally
         let (rest, jeq) = builder.parse_expr("#jeq[#typeof(id) unary]").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(jeq, ValId::from(true));
+        assert_eq!(jeq, true.into_val());
 
         // Check evaluations
-        assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
+        assert_eq!(builder.parse_expr("id #true"), Ok(("", true.into_val())));
         assert_eq!(
             builder.parse_expr("id #false"),
-            Ok(("", ValId::from(false)))
+            Ok(("", false.into_val()))
         );
 
         // See if any stateful errors occur
         assert_eq!(
             builder.parse_expr("id #false"),
-            Ok(("", ValId::from(false)))
+            Ok(("", false.into_val()))
         );
-        assert_eq!(builder.parse_expr("id #true"), Ok(("", ValId::from(true))));
+        assert_eq!(builder.parse_expr("id #true"), Ok(("", true.into_val())));
     }
 
     #[test]
@@ -215,36 +223,36 @@ mod tests {
         let (rest, not) = builder.parse_expr("not").unwrap();
         assert_eq!(rest, "");
         assert_eq!(not.deps().len(), 1);
-        assert_eq!(not.deps()[0], ValId::from(Not));
+        assert_eq!(not.deps()[0], Not.into_val());
         let (rest, unary) = builder.parse_expr("unary").unwrap();
         assert_eq!(rest, "");
         assert_eq!(unary.deps().len(), 1);
-        assert_eq!(unary.deps()[0], ValId::from(Bool));
+        assert_eq!(unary.deps()[0], Bool.into_val());
         assert_eq!(not.ty(), unary);
 
         // Check depdendencies and types internally
         let (rest, jeq) = builder.parse_expr("#jeq[#typeof(not) unary]").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(jeq, ValId::from(true));
+        assert_eq!(jeq, true.into_val());
 
         // Check evaluations
         assert_eq!(
             builder.parse_expr("not #true"),
-            Ok(("", ValId::from(false)))
+            Ok(("", false.into_val()))
         );
         assert_eq!(
             builder.parse_expr("not #false"),
-            Ok(("", ValId::from(true)))
+            Ok(("", true.into_val()))
         );
 
         // See if any stateful errors occur
         assert_eq!(
             builder.parse_expr("not #false"),
-            Ok(("", ValId::from(true)))
+            Ok(("", true.into_val()))
         );
         assert_eq!(
             builder.parse_expr("not #true"),
-            Ok(("", ValId::from(false)))
+            Ok(("", false.into_val()))
         );
     }
 
@@ -281,19 +289,19 @@ mod tests {
         let (rest, ternary) = builder.parse_expr("ternary").unwrap();
         assert_eq!(rest, "");
         assert_eq!(ternary.deps().len(), 1);
-        assert_eq!(ternary.deps()[0], ValId::from(Bool));
+        assert_eq!(ternary.deps()[0], Bool.into_val());
         assert_eq!(mux.ty(), ternary);
 
         // Check depdendencies and types internally
         let (rest, jeq) = builder.parse_expr("#jeq[#typeof(mux) ternary]").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(jeq, ValId::from(true));
+        assert_eq!(jeq, true.into_val());
 
         // Compute evaluations
         for (program, desired_result) in programs.iter() {
             let (rest, result) = builder.parse_expr(program).unwrap();
             assert_eq!(rest, "");
-            assert_eq!(result, ValId::from(*desired_result));
+            assert_eq!(result, desired_result.into_val());
         }
     }
 }

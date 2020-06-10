@@ -4,7 +4,7 @@ Typing universes
 use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
-use crate::value::{TypeRef, UniverseId, UniverseRef, ValId, Value};
+use crate::value::{NormalValue, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum};
 use crate::{lifetime_region, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
@@ -235,6 +235,14 @@ impl Value for Universe {
             "Attempted to get dependency {} of typing universe {}, but `Universe` has no dependencies!",
             ix, self
         )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Universe(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 

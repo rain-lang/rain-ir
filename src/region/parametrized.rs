@@ -20,7 +20,7 @@ pub struct Parametrized<V> {
     lifetime: Lifetime,
 }
 
-impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
+impl<V: Value + Clone> Parametrized<V> {
     /**
     Attempt to create a new parametrized value. Return an error if the value does not lie in the desired region.
     */
@@ -42,7 +42,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
                 })
             }
             Some(Less) => {
-                let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into()];
+                let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into_val()];
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
@@ -173,7 +173,7 @@ mod prettyprint_impl {
                     write!(fmt, " ")?;
                 }
                 first = false;
-                printer.prettyprint_index(fmt, ValId::from(param).borrow_val())?;
+                printer.prettyprint_index(fmt, ValId::<()>::from(param).borrow_val())?;
             }
             write!(fmt, "{} ", PARAM_CLOSE)?;
             printer.scoped_print(fmt, &self.value)?;

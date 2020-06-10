@@ -14,7 +14,7 @@ use crate::value::{
 };
 use crate::{
     debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
-    trivial_substitute, vararr
+    trivial_substitute, vararr,
 };
 use either::Either;
 use lazy_static::lazy_static;
@@ -57,6 +57,14 @@ impl Value for Bool {
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!("Bool has no dependencies (asked for dependency #{})", ix)
     }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::BoolTy(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
 }
 
 impl Type for Bool {
@@ -98,6 +106,14 @@ impl Value for bool {
             "Boolean #{} has no dependencies (asked for dependency #{})",
             self, ix
         )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Bool(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 
@@ -492,6 +508,14 @@ impl Value for Logical {
             self, ix
         )
     }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Logical(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
 }
 
 trivial_lifetime!(Logical);
@@ -551,6 +575,14 @@ macro_rules! make_logical {
                     "Logical operation {} has no dependencies (tried to get dep #{})",
                     self, ix
                 )
+            }
+            #[inline]
+            fn into_enum(self) -> ValueEnum {
+                self.into()
+            }
+            #[inline]
+            fn into_norm(self) -> NormalValue {
+                self.into()
             }
         }
         impl From<$t> for ValueEnum {
@@ -708,7 +740,6 @@ mod tests {
     use super::*;
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
-    use crate::value::ValId;
     #[test]
     fn booleans_parse_properly() {
         let mut builder = Builder::<&str>::new();
@@ -719,27 +750,27 @@ mod tests {
 
         let (rest, expr) = builder.parse_expr(&f_true).expect(KEYWORD_TRUE);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(true));
+        assert_eq!(expr, true.into_val());
         let (rest, expr) = builder.parse_expr(&KEYWORD_TRUE).expect(KEYWORD_TRUE);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(true));
+        assert_eq!(expr, true.into_val());
 
         let (rest, expr) = builder.parse_expr(&f_false).expect(KEYWORD_FALSE);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(false));
+        assert_eq!(expr, false.into_val());
         let (rest, expr) = builder.parse_expr(&KEYWORD_FALSE).expect(KEYWORD_FALSE);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(false));
+        assert_eq!(expr, false.into_val());
 
         let (rest, expr) = builder.parse_expr(&f_bool).expect(KEYWORD_BOOL);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(Bool));
+        assert_eq!(expr, Bool.into_val());
         let (rest, expr) = builder.parse_expr(&f_bool_prp).expect(KEYWORD_BOOL);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(Bool));
+        assert_eq!(expr, Bool.into_val());
         let (rest, expr) = builder.parse_expr(&KEYWORD_BOOL).expect(KEYWORD_BOOL);
         assert_eq!(rest, "");
-        assert_eq!(expr, ValId::from(Bool));
+        assert_eq!(expr, Bool.into_val());
 
         assert!(builder.parse_expr("#fals").is_err());
     }

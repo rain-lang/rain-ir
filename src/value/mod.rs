@@ -27,9 +27,10 @@ use triomphe::{Arc, ArcBorrow};
 pub mod arr;
 mod error;
 pub mod expr;
+pub mod predicate;
 pub mod tuple;
 pub mod universe;
-pub mod predicate;
+use predicate::Is;
 
 pub use error::*;
 use expr::Sexpr;
@@ -41,135 +42,27 @@ lazy_static! {
     pub static ref VALUE_CACHE: Cache<NormalValue> = Cache::new();
 }
 
-/// A reference-counted, hash-consed `rain` value
-#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
-#[repr(transparent)]
-pub struct ValId(NormAddr);
-
 impl ValId {
     /// Directly construct a `ValId` from a `NormalValue`, deduplicating but not performing any other transformation/caching.
     /// Useful to prevent infinite regress in e.g. cached constructors for `()`
     #[inline]
     pub fn direct_new<V: Into<NormalValue>>(v: V) -> ValId {
         let norm = v.into();
-        ValId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
+        ValId {
+            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            variant: std::marker::PhantomData,
+        }
     }
     /// Deduplicate an `Arc<NormalValue>` to yield a `ValId`
     #[inline]
     pub fn dedup(norm: Arc<NormalValue>) -> ValId {
-        ValId(NormAddr::make(VALUE_CACHE.cache(norm), Private {}))
+        ValId {
+            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            variant: std::marker::PhantomData,
+        }
     }
-    /// Borrow this value
-    #[inline]
-    pub fn borrow_val(&self) -> ValRef {
-        ValRef(self.0.borrow_arc())
-    }
-    /// Get this `ValId` as a `ValueEnum`
-    #[inline]
-    pub fn as_enum(&self) -> &ValueEnum {
-        &self.0
-    }
-    /// Get this `ValId` as a `NormalValue`
-    #[inline]
-    pub fn as_norm(&self) -> &NormalValue {
-        &self.0
-    }
-    /// Get the pointer behind this `ValId`
-    #[inline]
-    pub fn as_ptr(&self) -> *const NormalValue {
-        self.as_norm() as *const NormalValue
-    }
-}
-
-impl<'a, V> PartialEq<VarRef<'a, V>> for ValId {
-    fn eq(&self, other: &VarRef<'a, V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<V> PartialEq<VarId<V>> for ValId {
-    fn eq(&self, other: &VarId<V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<'a> PartialEq<ValRef<'a>> for ValId {
-    fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Deref for ValId {
-    type Target = NormalValue;
-    #[inline]
-    fn deref(&self) -> &NormalValue {
-        &self.0.addr
-    }
-}
-
-impl Borrow<NormalValue> for ValId {
-    #[inline]
-    fn borrow(&self) -> &NormalValue {
-        &self.0.addr
-    }
-}
-
-impl Borrow<ValueEnum> for ValId {
-    #[inline]
-    fn borrow(&self) -> &ValueEnum {
-        &self.0.addr
-    }
-}
-
-impl From<NormalValue> for ValId {
-    #[inline]
-    fn from(value: NormalValue) -> ValId {
-        ValId(NormAddr::make(VALUE_CACHE.cache(value), Private {}))
-    }
-}
-
-impl From<Arc<NormalValue>> for ValId {
-    #[inline]
-    fn from(value: Arc<NormalValue>) -> ValId {
-        ValId(NormAddr::make(VALUE_CACHE.cache(value), Private {}))
-    }
-}
-
-impl Live for ValId {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
-    }
-}
-
-impl Regional for ValId {
-    #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.deref().region()
-    }
-}
-
-impl Typed for ValId {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.deref().ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
-    }
-}
-
-impl Apply for ValId {
-    #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.deref().do_apply(args, inline)
-    }
-}
-
-impl Substitute for ValId {
-    #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
+    /// Perform a substitution. Here to avoid code duplication during monomorphization
+    pub fn substitute_impl(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         if let Some(value) = ctx.try_evaluate(self) {
             return Ok(value);
         }
@@ -179,14 +72,45 @@ impl Substitute for ValId {
     }
 }
 
-impl Value for ValId {
+impl Deref for ValId {
+    type Target = NormalValue;
     #[inline]
-    fn no_deps(&self) -> usize {
-        self.deref().no_deps()
+    fn deref(&self) -> &NormalValue {
+        &self.ptr
     }
+}
+
+impl Borrow<NormalValue> for ValId {
     #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
+    fn borrow(&self) -> &NormalValue {
+        &self.ptr
+    }
+}
+
+impl Borrow<ValueEnum> for ValId {
+    #[inline]
+    fn borrow(&self) -> &ValueEnum {
+        &self.ptr
+    }
+}
+
+impl From<NormalValue> for ValId {
+    #[inline]
+    fn from(value: NormalValue) -> ValId {
+        ValId {
+            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            variant: std::marker::PhantomData,
+        }
+    }
+}
+
+impl From<Arc<NormalValue>> for ValId {
+    #[inline]
+    fn from(value: Arc<NormalValue>) -> ValId {
+        ValId {
+            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            variant: std::marker::PhantomData,
+        }
     }
 }
 
@@ -241,78 +165,32 @@ impl Substitute<ValId> for ValueEnum {
     }
 }
 
-/// A reference to a `rain` value
-#[derive(Copy, Clone, Eq, PartialEq, Hash, RefCast)]
-#[repr(transparent)]
-pub struct ValRef<'a>(NormRef<'a>);
-
-impl<'a> ValRef<'a> {
-    /// Clone this value reference as a `ValId`
-    #[inline]
-    pub fn clone_val(&self) -> ValId {
-        ValId(self.0.clone_arc())
-    }
-    /// Get this `ValRef` as a `ValueEnum`
-    #[inline]
-    pub fn as_enum(&self) -> &'a ValueEnum {
-        self.0.get()
-    }
-    /// Get this `ValRef` as a `NormalValue`
-    #[inline]
-    pub fn as_norm(&self) -> &'a NormalValue {
-        self.0.get()
-    }
-    /// Get the pointer behind this `ValRef`
-    #[inline]
-    pub fn as_ptr(&self) -> *const NormalValue {
-        self.as_norm() as *const NormalValue
-    }
-}
-
-impl<'a, V> PartialEq<VarRef<'a, V>> for ValRef<'a> {
-    fn eq(&self, other: &VarRef<'a, V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<'a, V> PartialEq<VarId<V>> for ValRef<'a> {
-    fn eq(&self, other: &VarId<V>) -> bool {
-        self.0 == other.ptr
-    }
-}
-
-impl<'a> PartialEq<ValId> for ValRef<'a> {
-    fn eq(&self, other: &ValId) -> bool {
-        self.0 == other.0
-    }
-}
-
 impl<'a> Deref for ValRef<'a> {
     type Target = NormalValue;
     #[inline]
     fn deref(&self) -> &NormalValue {
-        &self.0.addr
+        &self.ptr
     }
 }
 
-impl Live for ValRef<'_> {
+impl<P> Live for ValRef<'_, P> {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
+        self.as_norm().lifetime()
     }
 }
 
-impl Regional for ValRef<'_> {
+impl<P> Regional for ValRef<'_, P> {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.deref().region()
+        self.as_norm().region()
     }
 }
 
-impl Typed for ValRef<'_> {
+impl<P> Typed for ValRef<'_, P> {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.deref().ty()
+        self.as_norm().ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -320,20 +198,26 @@ impl Typed for ValRef<'_> {
     }
 }
 
-impl Apply for ValRef<'_> {
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.deref().do_apply(args, inline)
-    }
-}
-
-impl Value for ValRef<'_> {
+impl<P> Value for ValRef<'_, P> {
     #[inline]
     fn no_deps(&self) -> usize {
-        self.deref().no_deps()
+        self.as_norm().no_deps()
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
+        self.as_norm().get_dep(ix)
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        self.as_enum().clone()
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.as_norm().clone()
+    }
+    #[inline]
+    fn into_val(self) -> ValId {
+        self.clone_val()
     }
 }
 
@@ -358,18 +242,18 @@ impl From<ValRef<'_>> for ValId {
 impl Borrow<NormalValue> for ValRef<'_> {
     #[inline]
     fn borrow(&self) -> &NormalValue {
-        &self.0.addr
+        &self.ptr
     }
 }
 
 impl Borrow<ValueEnum> for ValRef<'_> {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &self.0.addr
+        &self.ptr
     }
 }
 
-impl<'a> Substitute<ValId> for ValRef<'a> {
+impl<P> Substitute<ValId> for ValRef<'_, P> {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
         self.clone_val().substitute(ctx)
@@ -387,50 +271,100 @@ pub type TypeId = VarId<TypeValue>;
 /// A `rain` type reference
 pub type TypeRef<'a> = VarRef<'a, TypeValue>;
 
-/// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
-#[derive(Eq, Hash, RefCast)]
+/// A `rain` value, optionally asserted to satisfy a predicate `P`
+#[derive(Hash, RefCast)]
 #[repr(transparent)]
-pub struct VarId<Variant> {
+pub struct ValId<P = ()> {
     ptr: NormAddr,
-    variant: std::marker::PhantomData<Variant>,
+    variant: std::marker::PhantomData<P>,
 }
 
-impl<'a, U, V> PartialEq<VarRef<'a, U>> for VarId<V> {
-    fn eq(&self, other: &VarRef<'a, U>) -> bool {
+/// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+pub type VarId<V> = ValId<Is<V>>;
+
+/// A borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
+
+impl<'a, P, Q> PartialEq<ValRef<'a, P>> for ValId<Q> {
+    fn eq(&self, other: &ValRef<'a, P>) -> bool {
         self.ptr == other.ptr
     }
 }
 
-impl<U, V> PartialEq<VarId<U>> for VarId<V> {
-    fn eq(&self, other: &VarId<U>) -> bool {
+impl<P, Q> PartialEq<ValId<P>> for ValId<Q> {
+    fn eq(&self, other: &ValId<P>) -> bool {
         self.ptr == other.ptr
     }
 }
 
-impl<V> PartialEq<ValId> for VarId<V> {
-    fn eq(&self, other: &ValId) -> bool {
-        self.ptr == other.0
-    }
-}
+impl<P> Eq for ValId<P> {}
 
-impl<'a, V> PartialEq<ValRef<'a>> for VarId<V> {
-    fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<'a, V> Clone for VarId<V> {
+impl<P> Clone for ValId<P> {
     #[inline]
-    fn clone(&self) -> VarId<V> {
-        VarId {
+    fn clone(&self) -> ValId<P> {
+        ValId {
             ptr: self.ptr.clone(),
             variant: self.variant,
         }
     }
 }
 
+impl<P> ValId<P> {
+    /// Get this `ValId<P>` as a `NormalValue`
+    pub fn as_norm(&self) -> &NormalValue {
+        self.ptr.deref()
+    }
+    /// Get this `ValId<P>` as a `ValueEnum`
+    pub fn as_enum(&self) -> &ValueEnum {
+        self.ptr.deref()
+    }
+    /// Get this `ValId<P>` as a `ValId`
+    pub fn as_val(&self) -> &ValId {
+        RefCast::ref_cast(&self.ptr)
+    }
+    /// Get the pointer behind this `ValId`
+    #[inline]
+    pub fn as_ptr(&self) -> *const NormalValue {
+        self.as_norm() as *const NormalValue
+    }
+    /// Try to get this `ValId<P>` as a type
+    #[inline]
+    pub fn try_as_ty(&self) -> Result<&TypeId, &ValId<P>> {
+        if self.is_ty() {
+            Ok(self.coerce_ref())
+        } else {
+            Err(self)
+        }
+    }
+    /// Borrow this `ValId<P>` as a `ValRef`
+    pub fn borrow_val(&self) -> ValRef {
+        ValRef {
+            ptr: self.ptr.borrow_arc(),
+            variant: std::marker::PhantomData,
+        }
+    }
+    /// Borrow this `ValId<P>` as a `ValRef<P>`
+    pub fn borrow_var(&self) -> ValRef<P> {
+        ValRef {
+            ptr: self.ptr.borrow_arc(),
+            variant: self.variant,
+        }
+    }
+    /// Coerce this `ValId` into another predicated value
+    fn coerce<Q>(self) -> ValId<Q> {
+        ValId {
+            ptr: self.ptr,
+            variant: std::marker::PhantomData,
+        }
+    }
+    /// Coerce this `ValId` into a reference to another predicated value
+    fn coerce_ref<Q>(&self) -> &ValId<Q> {
+        RefCast::ref_cast(&self.ptr)
+    }
+}
+
 impl<'a, V> VarId<V> {
-    /// Directly construct a `ValId` from a `V`, deduplicating but not performing any other transformation/caching.
+    /// Directly construct a `VarId` from a `V`, deduplicating but not performing any other transformation/caching.
     /// Useful to prevent infinite regress in e.g. cached constructors for `()`
     #[inline]
     pub fn direct_new(v: V) -> VarId<V>
@@ -443,35 +377,12 @@ impl<'a, V> VarId<V> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Get this `VarId` as a `NormalValue`
-    pub fn as_norm(&self) -> &NormalValue {
-        self.ptr.deref()
-    }
-    /// Get this `VarId` as a `ValueEnum`
-    pub fn as_enum(&self) -> &ValueEnum {
-        self.ptr.deref()
-    }
-    /// Get this `VarId` as a `ValId`
-    pub fn as_val(&self) -> &ValId {
-        RefCast::ref_cast(&self.ptr)
-    }
     /// Get this `VarId` as a `TypeId`
     pub fn as_ty(&self) -> &TypeId
     where
         V: Type,
     {
         RefCast::ref_cast(&self.ptr)
-    }
-    /// Borrow this `VarId` as a `VarRef`
-    pub fn borrow_var(&self) -> VarRef<V> {
-        VarRef {
-            ptr: self.ptr.borrow_arc(),
-            variant: self.variant,
-        }
-    }
-    /// Borrow this `VarId` as a `ValRef`
-    pub fn borrow_val(&self) -> ValRef {
-        ValRef(self.ptr.borrow_arc())
     }
     /// Borrow this `VarId` as a `TypeRef`
     pub fn borrow_ty(&self) -> TypeRef
@@ -483,16 +394,14 @@ impl<'a, V> VarId<V> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Get the pointer behind this `VarId`
-    #[inline]
-    pub fn as_ptr(&self) -> *const NormalValue {
-        self.as_norm() as *const NormalValue
-    }
 }
 
 impl<V> From<VarId<V>> for ValId {
     fn from(v: VarId<V>) -> ValId {
-        ValId(v.ptr)
+        ValId {
+            ptr: v.ptr,
+            variant: std::marker::PhantomData,
+        }
     }
 }
 
@@ -517,7 +426,7 @@ where
     fn try_from(v: ValId) -> Result<VarId<V>, ValId> {
         if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
             Ok(VarId {
-                ptr: v.0,
+                ptr: v.ptr,
                 variant: std::marker::PhantomData,
             })
         } else {
@@ -534,13 +443,13 @@ where
     fn from(val: V) -> VarId<V> {
         let valid: ValId = val.into();
         VarId {
-            ptr: valid.0,
+            ptr: valid.ptr,
             variant: std::marker::PhantomData,
         }
     }
 }
 
-impl<V: Typed> Typed for VarId<V> {
+impl<P> Typed for ValId<P> {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.as_norm().ty()
@@ -551,28 +460,35 @@ impl<V: Typed> Typed for VarId<V> {
     }
 }
 
-impl<V: Value> Apply for VarId<V> {
+impl<P> Apply for ValId<P> {
     #[inline]
     fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
         self.ptr.do_apply(args, inline)
     }
 }
 
-impl<V: Value> Substitute<ValId> for VarId<V> {
+impl<P> Substitute<ValId> for ValId<P> {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        self.as_val().substitute(ctx)
+        self.as_val().substitute_impl(ctx)
     }
 }
 
-impl<V: Value> Regional for VarId<V> {
+impl<P> Regional for ValId<P> {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.as_val().region()
+        self.as_norm().region()
     }
 }
 
-impl<V: Value> Value for VarId<V> {
+impl<P> Live for ValId<P> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.ptr.lifetime()
+    }
+}
+
+impl<P> Value for ValId<P> {
     #[inline]
     fn no_deps(&self) -> usize {
         self.as_norm().no_deps()
@@ -581,12 +497,20 @@ impl<V: Value> Value for VarId<V> {
     fn get_dep(&self, ix: usize) -> &ValId {
         self.as_norm().get_dep(ix)
     }
-}
-
-impl<V: Value> Live for VarId<V> {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.ptr.lifetime()
+    fn into_enum(self) -> ValueEnum {
+        self.as_enum().clone()
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.as_norm().clone()
+    }
+    #[inline]
+    fn into_val(self) -> ValId {
+        ValId {
+            ptr: self.ptr,
+            variant: std::marker::PhantomData,
+        }
     }
 }
 
@@ -614,63 +538,64 @@ pub type UniverseId = VarId<Universe>;
 /// A pointer to a value guaranteed to be a typing universe
 pub type UniverseRef<'a> = VarRef<'a, Universe>;
 
-/// A (*normalized, consed*) borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant, e.g. `()` or `Unit`)
+/// A (*normalized, consed*) borrowed value, optionally guaranteed to satisfy a given predicate `P`
 #[derive(Eq, Hash, RefCast)]
 #[repr(transparent)]
-pub struct VarRef<'a, Variant> {
+pub struct ValRef<'a, P = ()> {
     ptr: NormRef<'a>,
-    variant: std::marker::PhantomData<Variant>,
+    variant: std::marker::PhantomData<P>,
 }
 
-impl<'a, U, V> PartialEq<VarRef<'a, U>> for VarRef<'a, V> {
-    fn eq(&self, other: &VarRef<'a, U>) -> bool {
+impl<'a, U, V> PartialEq<ValRef<'a, U>> for ValRef<'a, V> {
+    fn eq(&self, other: &ValRef<'a, U>) -> bool {
         self.ptr == other.ptr
     }
 }
 
-impl<'a, U, V> PartialEq<VarId<U>> for VarRef<'a, V> {
-    fn eq(&self, other: &VarId<U>) -> bool {
+impl<'a, U, V> PartialEq<ValId<U>> for ValRef<'a, V> {
+    fn eq(&self, other: &ValId<U>) -> bool {
         self.ptr == other.ptr
     }
 }
 
-impl<'a, V> PartialEq<ValId> for VarRef<'a, V> {
-    fn eq(&self, other: &ValId) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<'a, V> PartialEq<ValRef<'a>> for VarRef<'a, V> {
-    fn eq(&self, other: &ValRef<'a>) -> bool {
-        self.ptr == other.0
-    }
-}
-
-impl<'a, V> Clone for VarRef<'a, V> {
+impl<'a, P> Clone for ValRef<'a, P> {
     #[inline]
-    fn clone(&self) -> VarRef<'a, V> {
-        VarRef {
+    fn clone(&self) -> ValRef<'a, P> {
+        ValRef {
             ptr: self.ptr,
             variant: self.variant,
         }
     }
 }
 
-impl<'a, V> Copy for VarRef<'a, V> {}
+impl<'a, P> Copy for ValRef<'a, P> {}
 
-impl<'a, V> VarRef<'a, V> {
-    /// Get this `VarRef` as a `NormalValue`
+impl<'a, P> ValRef<'a, P> {
+    /// Get this `ValRef<P>` as a `NormalValue`
     pub fn as_norm(&self) -> &'a NormalValue {
         self.ptr.get()
     }
-    /// Get this `VarRef` as a `ValueEnum`
+    /// Get this `ValRef<P>` as a `ValueEnum`
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.ptr.get()
     }
-    /// Get this `VarRef` as a `ValRef`
+    /// Get this `ValRef<P>` as a `ValRef`
     pub fn as_val(&self) -> ValRef<'a> {
-        ValRef(self.ptr)
+        ValRef {
+            ptr: self.ptr,
+            variant: std::marker::PhantomData,
+        }
     }
+    /// Clone this `VarRef` as a `ValId`
+    pub fn clone_val(&self) -> ValId {
+        ValId {
+            ptr: self.ptr.clone_arc(),
+            variant: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, V> VarRef<'a, V> {
     /// Get this `VarRef` as a `TypeRef`
     pub fn as_ty(&self) -> TypeRef<'a>
     where
@@ -680,10 +605,6 @@ impl<'a, V> VarRef<'a, V> {
             ptr: self.ptr,
             variant: std::marker::PhantomData,
         }
-    }
-    /// Clone this `VarRef` as a `ValId`
-    pub fn clone_val(&self) -> ValId {
-        self.as_val().clone_val()
     }
     /// Clone this `VarRef` as a `TypeId`
     pub fn clone_ty(&self) -> TypeId
@@ -763,7 +684,7 @@ where
     fn try_from(v: ValRef<'a>) -> Result<VarRef<'a, V>, ValRef<'a>> {
         if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
             Ok(VarRef {
-                ptr: v.0,
+                ptr: v.ptr,
                 variant: std::marker::PhantomData,
             })
         } else {
@@ -772,50 +693,7 @@ where
     }
 }
 
-impl<V: Typed> Typed for VarRef<'_, V> {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.as_norm().ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
-    }
-}
-
-impl<'a, V: Value> Substitute<ValId> for VarRef<'a, V> {
-    #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        self.clone_val().substitute(ctx)
-    }
-}
-
-impl<'a, V: Value> Value for VarRef<'a, V> {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        self.deref().no_deps()
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        self.as_norm().get_dep(ix)
-    }
-}
-
-impl<V: Value> Live for VarRef<'_, V> {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.ptr.lifetime()
-    }
-}
-
-impl<V: Value> Regional for VarRef<'_, V> {
-    #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.ptr.region()
-    }
-}
-
-impl<V: Value> Apply for VarRef<'_, V> {
+impl<P> Apply for ValRef<'_, P> {
     #[inline]
     fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
         self.ptr.do_apply(args, inline)
@@ -924,6 +802,10 @@ impl Value for NormalValue {
     fn get_dep(&self, ix: usize) -> &ValId {
         self.deref().get_dep(ix)
     }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self
+    }
 }
 
 impl Live for NormalValue {
@@ -949,16 +831,7 @@ debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
 
 /// A trait implemented by `rain` values
-pub trait Value:
-    Into<ValId>
-    + Into<NormalValue>
-    + Into<ValueEnum>
-    + Typed
-    + Live
-    + Apply
-    + Substitute<ValId>
-    + Regional
-{
+pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
@@ -967,6 +840,24 @@ pub trait Value:
     #[inline]
     fn deps(&self) -> &Deps<Self> {
         RefCast::ref_cast(self)
+    }
+    /// Convert a value into a `NormalValue`
+    fn into_norm(self) -> NormalValue;
+    /// Convert a value into a `ValueEnum`
+    fn into_enum(self) -> ValueEnum {
+        self.into_norm().into()
+    }
+    /// Convert a value into a `ValId`
+    fn into_val(self) -> ValId {
+        self.into_norm().into()
+    }
+    /// Convert a value into a `TypeId`, if it is a type, otherwise return it
+    fn try_into_ty(self) -> Result<TypeId, Self> {
+        if self.is_ty() {
+            Ok(self.into_val().coerce())
+        } else {
+            Err(self)
+        }
     }
 }
 
@@ -1000,7 +891,7 @@ impl<V: Value> Deps<V> {
         let mut result = Vec::new();
         // Simple edge case
         if range.contains(&self.0.depth()) {
-            return vec![self.0.clone().into()];
+            return vec![self.0.clone().into_val()];
         }
         let mut searched = FxHashSet::<&ValId>::default();
         let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
@@ -1208,6 +1099,12 @@ impl Value for ValueEnum {
                 v => v.get_dep(ix),
             }
         }
+    }
+    fn into_enum(self) -> ValueEnum {
+        self
+    }
+    fn into_norm(self) -> NormalValue {
+        self.into()
     }
 }
 
@@ -1579,7 +1476,7 @@ macro_rules! impl_to_type {
         }
         impl From<$T> for crate::value::TypeId {
             fn from(v: $T) -> crate::value::TypeId {
-                crate::value::TypeId::try_from(crate::value::ValId::from(v)).expect("Impossible")
+                v.try_into_ty().expect("Infallible!")
             }
         }
     };
@@ -1609,55 +1506,25 @@ mod prettyprint_impl {
         }
     }
 
-    impl PrettyPrint for ValId {
+    impl<P> PrettyPrint for ValId<P> {
         #[inline]
         fn prettyprint<I: From<usize> + Display>(
             &self,
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            self.deref().prettyprint(printer, fmt)
+            self.as_norm().prettyprint(printer, fmt)
         }
     }
 
-    impl PrettyPrint for ValRef<'_> {
+    impl<P> PrettyPrint for ValRef<'_, P> {
         #[inline]
         fn prettyprint<I: From<usize> + Display>(
             &self,
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            self.deref().prettyprint(printer, fmt)
-        }
-    }
-
-    impl<V> PrettyPrint for VarId<V>
-    where
-        VarId<V>: Deref,
-        <VarId<V> as Deref>::Target: PrettyPrint,
-    {
-        #[inline]
-        fn prettyprint<I: From<usize> + Display>(
-            &self,
-            printer: &mut PrettyPrinter<I>,
-            fmt: &mut Formatter,
-        ) -> Result<(), fmt::Error> {
-            self.deref().prettyprint(printer, fmt)
-        }
-    }
-
-    impl<'a, V> PrettyPrint for VarRef<'a, V>
-    where
-        VarRef<'a, V>: Deref,
-        <VarRef<'a, V> as Deref>::Target: PrettyPrint,
-    {
-        #[inline]
-        fn prettyprint<I: From<usize> + Display>(
-            &self,
-            printer: &mut PrettyPrinter<I>,
-            fmt: &mut Formatter,
-        ) -> Result<(), fmt::Error> {
-            self.deref().prettyprint(printer, fmt)
+            self.as_norm().prettyprint(printer, fmt)
         }
     }
 
