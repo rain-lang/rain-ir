@@ -999,7 +999,7 @@ impl<V: Value> Deps<V> {
         let mut result = Vec::new();
         // Simple edge case
         if range.contains(&self.0.depth()) {
-            return vec![self.0.clone().into()]
+            return vec![self.0.clone().into()];
         }
         let mut searched = FxHashSet::<&ValId>::default();
         let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
@@ -1014,6 +1014,84 @@ impl<V: Value> Deps<V> {
             }
         }
         result
+    }
+}
+
+/// A depth-first search of a value's dependencies matching a given filter.
+/// This filter maps the results, and may morph their dependencies and/or assert a certain value type.
+/// Dependencies not matching the filter are ignored *along with all their descendants*.
+/// May repeat dependencies.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct DepDFS<B, F, V = B> {
+    /// The frontier of this search
+    frontier: Vec<(B, usize)>,
+    /// The filter to apply
+    filter: F,
+    /// The value type
+    value: std::marker::PhantomData<V>,
+}
+
+impl<V, F, B> Iterator for DepDFS<V, F>
+where
+    V: Value,
+    F: Fn(&ValId) -> Option<B>,
+    B: Borrow<V>,
+{
+    type Item = B;
+    fn next(&mut self) -> Option<B> {
+        unimplemented!()
+    }
+}
+
+/// A naive depth-first search of a value's dependencies matching a given filter.
+/// A depth-first search of a value's dependencies matching a given filter.
+/// This filter maps the results, and may morph their dependencies and/or assert a certain value type.
+/// Dependencies not matching the filter are ignored *along with all their descendants*.
+/// This search relies on the filter to mark nodes as already visited: if not, expect an explosion of memory use.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct NaiveDFS<B, F, V = B> {
+    /// The frontier of this search
+    frontier: Vec<B>,
+    /// The filter to apply
+    filter: F,
+    /// The value type
+    value: std::marker::PhantomData<V>,
+}
+
+impl<V, F, B> Iterator for NaiveDFS<V, F>
+where
+    V: Value,
+    F: Fn(&ValId) -> Option<B>,
+    B: Borrow<V>,
+{
+    type Item = B;
+    fn next(&mut self) -> Option<B> {
+        unimplemented!()
+    }
+}
+
+/// A breadth-first search of a value's dependencies matching a given filter.
+/// Dependencies not matching the filter are ignored *along with all their descendants*.
+/// May repeat dependencies.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct DepBFS<B, F, V = B> {
+    /// The frontier of this search
+    frontier: Vec<B>,
+    /// The filter to apply
+    filter: F,
+    /// The value type
+    value: std::marker::PhantomData<V>,
+}
+
+impl<V, F, B> Iterator for DepBFS<V, F>
+where
+    V: Value,
+    F: Fn(&ValId) -> Option<B>,
+    B: Borrow<V>,
+{
+    type Item = B;
+    fn next(&mut self) -> Option<B> {
+        unimplemented!()
     }
 }
 
