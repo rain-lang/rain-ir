@@ -94,7 +94,7 @@ impl<V> VarArr<V> {
     }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
-    pub fn try_sorted(&self) -> Result<&VarMultiSet<V>, ()> {
+    pub fn try_sorted(&self) -> Result<&VarBag<V>, ()> {
         if self.is_sorted() {
             Ok(RefCast::ref_cast(&self.arr))
         } else {
@@ -153,15 +153,15 @@ impl<V> VarArr<V> {
     }
     /// Address-sort this container *without* deduplicating
     #[inline]
-    pub fn sorted(&self) -> VarMultiSet<V> {
+    pub fn sorted(&self) -> VarBag<V> {
         // Special case (TODO: consider performance implications...)
         if self.is_sorted() {
-            return VarMultiSet {
+            return VarBag {
                 arr: self.arr.clone(),
                 variant: std::marker::PhantomData,
             };
         }
-        VarMultiSet::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
+        VarBag::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
     }
     /// Address-sort this container *with* deduplication, yielding a `VarSet`
     #[inline]
@@ -180,9 +180,21 @@ pub struct ValIdMarker;
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Sorted<T>(pub std::marker::PhantomData<T>);
 
+/// A trait implemented by markers which expose the `Bag` API
+pub trait BagMarker {}
+
+impl<T> BagMarker for Sorted<T> {}
+
 /// A marker for a sorted array of unique elements of a given value type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Uniq<T>(pub std::marker::PhantomData<T>);
+
+/// A trait implemented by markers which expose the `Set` API
+pub trait SetMarker: BagMarker {}
+
+impl<T> SetMarker for Uniq<T> {}
+
+impl<T> BagMarker for Uniq<T> {}
 
 impl<T> Sorted<T> {
     /// Create a new sorted array marker
@@ -204,23 +216,26 @@ impl<T> Uniq<T> {
 pub type ValArr = VarArr<ValIdMarker>;
 
 /// A bag (implemented as a sorted array) of `rain` values
-pub type VarMultiSet<V> = VarArr<Sorted<V>>;
+pub type VarBag<V> = VarArr<Sorted<V>>;
 
 /// A set (implemented as a sorted, unique array) of `rain` values
 pub type VarSet<V> = VarArr<Uniq<V>>;
 
-impl<V> VarMultiSet<V> {
-    /// Forget the information that this is in fact a `VarMultiSet`, yielding a `VarArr`
+impl<V> VarBag<V> {
+    /// Forget the information that this is in fact a `VarBag`, yielding a `VarArr`
     pub fn as_arr(&self) -> &VarArr<V> {
         RefCast::ref_cast(&self.arr)
     }
-    /// Deduplicate this `VarMultiSet` to yield a `VarSet`
+    /// Deduplicate this `VarBag` to yield a `VarSet`
     pub fn uniq(&self) -> VarSet<V> {
         let vals: Vec<_> = self.iter_vals().dedup().collect();
         VarSet::assert_new(vals.into_iter().cloned())
     }
-    /// Take the union of two `VarMultiSet`s
-    pub fn union(&self, rhs: &VarMultiSet<V>) -> VarMultiSet<V> {
+}
+
+impl<V: BagMarker> VarArr<V> {
+    /// Merge two `VarBag`s
+    pub fn merge(&self, rhs: &VarArr<V>) -> VarArr<V> {
         // Edge cases
         if rhs.is_empty() {
             return self.clone();
@@ -234,8 +249,8 @@ impl<V> VarMultiSet<V> {
             .collect();
         Self::assert_new(union.into_iter())
     }
-    /// Take the intersection of two `VarMultiSet`s
-    pub fn intersect(&self, rhs: &VarMultiSet<V>) -> VarMultiSet<V> {
+    /// Take the intersection of two `VarBag`s
+    pub fn intersect(&self, rhs: &VarArr<V>) -> VarArr<V> {
         // Edge cases
         if rhs.is_empty() {
             return rhs.clone();
@@ -257,12 +272,15 @@ impl<V> VarSet<V> {
     pub fn as_arr(&self) -> &VarArr<V> {
         RefCast::ref_cast(&self.arr)
     }
-    /// Forget the information that this is in fact a `VarSet`, yielding a `VarMultiSet`
-    pub fn as_multiset(&self) -> &VarMultiSet<V> {
+    /// Forget the information that this is in fact a `VarSet`, yielding a `VarBag`
+    pub fn as_multiset(&self) -> &VarBag<V> {
         RefCast::ref_cast(&self.arr)
     }
+}
+
+impl<V: SetMarker> VarArr<V> {
     /// Take the union of two `VarSet`s
-    pub fn union(&self, rhs: &VarSet<V>) -> VarSet<V> {
+    pub fn union(&self, rhs: &VarArr<V>) -> VarArr<V> {
         // Edge cases
         if rhs.is_empty() {
             return self.clone();
@@ -277,26 +295,10 @@ impl<V> VarSet<V> {
             .collect();
         Self::assert_new(union.into_iter())
     }
-    /// Take the intersection of two `VarSet`s
-    pub fn intersect(&self, rhs: &VarSet<V>) -> VarSet<V> {
-        // Edge cases
-        if rhs.is_empty() {
-            return rhs.clone();
-        } else if self.is_empty() {
-            return self.clone();
-        }
-        let intersection: Vec<_> = self
-            .iter_vals()
-            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
-            .filter_map(|v| v.both().map(|(l, _)| l))
-            .cloned()
-            .collect();
-        Self::assert_new(intersection.into_iter())
-    }
 }
 
 /// A bag, that is, a multiset (implemented as a sorted array) of ValIds
-pub type ValMultiSet = VarArr<Sorted<ValIdMarker>>;
+pub type ValBag = VarArr<Sorted<ValIdMarker>>;
 
 /// A set (implemented as a sorted, unique array) of ValIds
 pub type ValSet = VarArr<Uniq<ValIdMarker>>;
@@ -322,8 +324,8 @@ impl FromIterator<ValId> for ValArr {
     }
 }
 
-impl FromIterator<ValId> for ValMultiSet {
-    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValMultiSet {
+impl FromIterator<ValId> for ValBag {
+    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValBag {
         let v = iter.into_iter().sorted_by_key(ValId::as_ptr);
         Self::assert_new(v)
     }
@@ -344,8 +346,8 @@ impl<V: Value> FromIterator<V> for VarArr<V> {
     }
 }
 
-impl<V: Value> FromIterator<V> for VarMultiSet<V> {
-    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarMultiSet<V> {
+impl<V: Value> FromIterator<V> for VarBag<V> {
+    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarBag<V> {
         let v = iter
             .into_iter()
             .map(|v| v.into())
@@ -421,7 +423,7 @@ impl Deref for ValArr {
     }
 }
 
-impl Deref for ValMultiSet {
+impl Deref for ValBag {
     type Target = [ValId];
     fn deref(&self) -> &[ValId] {
         if let Some(arr) = &self.arr {
@@ -520,7 +522,6 @@ mod tests {
             .cycle()
             .take(35)
             .collect();
-        
 
         // Direct fully unsorted array construction
         let ua = ValArr::from_iter(fv.iter().cloned());
@@ -533,12 +534,12 @@ mod tests {
         assert_eq!(ua2.len(), 35);
 
         // Direct fully unsorted bag construction
-        let ub = ValMultiSet::from_iter(fv.iter().cloned());
+        let ub = ValBag::from_iter(fv.iter().cloned());
         assert_eq!(ub.len(), 25);
         assert_ne!(ub, ua);
         assert!(ub.is_sorted());
         assert!(!ub.is_set());
-        let ub2 = ValMultiSet::from_iter(fv2.iter().cloned());
+        let ub2 = ValBag::from_iter(fv2.iter().cloned());
         assert_eq!(ub2.len(), 35);
         assert_ne!(ub2, ua2);
         assert!(ub2.is_sorted());
@@ -568,19 +569,19 @@ mod tests {
 
         // Bag operations
         assert_eq!(ub.intersect(&ub), ub);
-        let ubdup = ub.union(&ub);
+        let ubdup = ub.merge(&ub);
         assert_eq!(ubdup.len(), 50);
         let ubu = ub.uniq();
         assert_eq!(ubu, us);
-        let ubdup2 = ub2.union(&ub2);
+        let ubdup2 = ub2.merge(&ub2);
         assert_eq!(ubdup2.len(), 70);
         let ubu2 = ub2.uniq();
         assert_eq!(ubu2, us2);
-        let ub3 = ub.union(&ub2);
+        let ub3 = ub.merge(&ub2);
         assert_eq!(ub3.len(), 60);
-        let ubdup3 = ubdup.union(&ubdup2);
+        let ubdup3 = ubdup.merge(&ubdup2);
         assert_eq!(ubdup3.len(), 120);
-        let ub3dup = ub3.union(&ub3);
+        let ub3dup = ub3.merge(&ub3);
         assert_eq!(ubdup3, ub3dup);
         assert_eq!(ub3dup.uniq(), us4);
     }
