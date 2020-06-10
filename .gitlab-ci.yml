@@ -288,15 +288,15 @@ test:git-master:
         - prepare:git
         - build:cargo-stable
         
-build:pages:
-    stage: build
-    only:
-        - master
-    script:
-        - cargo doc --no-deps --document-private-items
-        - rm -rf public
-        - mv target/doc/ public
-    artifacts:
-        expire_in: 1 week
-        paths:
-            - public
+#build:pages:
+#    stage: build
+#    only:
+#        - master
+#    script:
+#        - cargo doc --no-deps --document-private-items
+#        - rm -rf public
+#        - mv target/doc/ public
+#    artifacts:
+#        expire_in: 1 week
+#        paths:
+#            - public
