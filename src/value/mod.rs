@@ -1017,29 +1017,80 @@ impl<V: Value> Deps<V> {
     }
 }
 
+/// A wrapper for a reference
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, RefCast)]
+#[repr(transparent)]
+pub struct Borrowed<'a, V>(&'a V);
+
 /// A depth-first search of a value's dependencies matching a given filter.
 /// This filter maps the results, and may morph their dependencies and/or assert a certain value type.
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
 /// May repeat dependencies.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct DepDFS<B, F, V = B> {
+pub struct DepDFS<V, F> {
     /// The frontier of this search
-    frontier: Vec<(B, usize)>,
+    frontier: Vec<(V, usize)>,
     /// The filter to apply
     filter: F,
-    /// The value type
-    value: std::marker::PhantomData<V>,
 }
 
-impl<V, F, B> Iterator for DepDFS<V, F>
+impl<V, F> Iterator for DepDFS<V, F>
 where
     V: Value,
-    F: Fn(&ValId) -> Option<B>,
-    B: Borrow<V>,
+    F: FnMut(&ValId) -> Option<V>,
 {
-    type Item = B;
-    fn next(&mut self) -> Option<B> {
-        unimplemented!()
+    type Item = V;
+    fn next(&mut self) -> Option<V> {
+        loop {
+            let mut push_to_top = None;
+            {
+                let (top, ix) = self.frontier.last_mut()?;
+                while *ix < top.no_deps() {
+                    *ix += 1;
+                    if let Some(dep) = (self.filter)(top.get_dep(*ix - 1)) {
+                        push_to_top = Some(dep);
+                        break; // Push this to the top of the dependency stack, repeat
+                    }
+                }
+            }
+            if let Some(to_push) = push_to_top {
+                self.frontier.push((to_push, 0));
+                continue;
+            } else {
+                break;
+            }
+        }
+        self.frontier.pop().map(|(b, _)| b)
+    }
+}
+
+impl<'a, V, F> Iterator for DepDFS<Borrowed<'a, V>, F>
+where
+    V: Value,
+    F: FnMut(&'a ValId) -> Option<&'a V>,
+{
+    type Item = &'a V;
+    fn next(&mut self) -> Option<&'a V> {
+        loop {
+            let mut push_to_top = None;
+            {
+                let (top, ix) = self.frontier.last_mut()?;
+                while *ix < top.0.no_deps() {
+                    *ix += 1;
+                    if let Some(dep) = (self.filter)(top.0.get_dep(*ix - 1)) {
+                        push_to_top = Some(Borrowed(dep));
+                        break; // Push this to the top of the dependency stack, repeat
+                    }
+                }
+            }
+            if let Some(to_push) = push_to_top {
+                self.frontier.push((to_push, 0));
+                continue;
+            } else {
+                break;
+            }
+        }
+        self.frontier.pop().map(|(b, _)| b.0)
     }
 }
 
@@ -1049,23 +1100,22 @@ where
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
 /// This search relies on the filter to mark nodes as already visited: if not, expect an explosion of memory use.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct NaiveDFS<B, F, V = B> {
+pub struct NaiveDFS<V, F> {
     /// The frontier of this search
-    frontier: Vec<B>,
+    frontier: Vec<V>,
     /// The filter to apply
     filter: F,
     /// The value type
     value: std::marker::PhantomData<V>,
 }
 
-impl<V, F, B> Iterator for NaiveDFS<V, F>
+impl<V, F> Iterator for NaiveDFS<V, F>
 where
     V: Value,
-    F: Fn(&ValId) -> Option<B>,
-    B: Borrow<V>,
+    F: FnMut(&ValId) -> Option<V>,
 {
-    type Item = B;
-    fn next(&mut self) -> Option<B> {
+    type Item = V;
+    fn next(&mut self) -> Option<V> {
         unimplemented!()
     }
 }
@@ -1074,23 +1124,22 @@ where
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
 /// May repeat dependencies.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct DepBFS<B, F, V = B> {
+pub struct DepBFS<V, F> {
     /// The frontier of this search
-    frontier: Vec<B>,
+    frontier: Vec<V>,
     /// The filter to apply
     filter: F,
     /// The value type
     value: std::marker::PhantomData<V>,
 }
 
-impl<V, F, B> Iterator for DepBFS<V, F>
+impl<V, F> Iterator for DepBFS<V, F>
 where
     V: Value,
-    F: Fn(&ValId) -> Option<B>,
-    B: Borrow<V>,
+    F: FnMut(&ValId) -> Option<V>,
 {
-    type Item = B;
-    fn next(&mut self) -> Option<B> {
+    type Item = V;
+    fn next(&mut self) -> Option<V> {
         unimplemented!()
     }
 }
