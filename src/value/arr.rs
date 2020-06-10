@@ -337,6 +337,21 @@ impl<A: SetMarker, P> ValArr<A, P> {
             .collect();
         ValSet::assert_new(union.into_iter())
     }
+    /// Take the symmetric difference of two `VarSet`s
+    pub fn diff<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
+        if rhs.is_empty() {
+            return self.clone().coerce();
+        } else if self.is_empty() {
+            return rhs.clone().coerce();
+        }
+        let diff: Vec<_> = self
+            .iter_vals()
+            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
+            .filter_map(|v| v.map_any(Some, Some).reduce(|_, _| None))
+            .cloned()
+            .collect();
+        ValSet::assert_new(diff.into_iter())
+    }
 }
 
 /// A bag, that is, a multiset (implemented as a sorted array) of ValIds
