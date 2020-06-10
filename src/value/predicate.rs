@@ -34,6 +34,15 @@ impl<V> Hash for Is<V> {
     fn hash<H: Hasher>(&self, _hasher: &mut H) {}
 }
 
+impl<V> PartialEq for Is<V> {
+    #[inline]
+    fn eq(&self, _other: &Is<V>) -> bool {
+        true
+    }
+}
+
+impl<V> Eq for Is<V> {}
+
 /// A predicate which allows borrowing a given value type
 pub trait BorrowPredicate {
     /// The value type which can be borrowed
@@ -49,6 +58,9 @@ where
     type Borrows = V;
     #[inline]
     fn borrow_value(v: &ValId) -> &V {
-        v.as_norm().try_into().ok().expect("This predicate has been asserted valid!")
+        v.as_norm()
+            .try_into()
+            .ok()
+            .expect("This predicate has been asserted valid!")
     }
 }

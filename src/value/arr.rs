@@ -2,6 +2,7 @@
 Reference-counted, hash-consed, typed arrays of values
 */
 
+use super::predicate::Is;
 use super::{ValId, Value, VarId};
 use crate::typing::TypeValue;
 use crate::util::hash_cache::{Cache, Caches};
@@ -36,30 +37,32 @@ macro_rules! vararr {
 /// A reference-counted, hash-consed, typed array of values
 #[derive(Debug, Eq, Hash, RefCast)]
 #[repr(transparent)]
-pub struct VarArr<V> {
-    //TODO: remove Option when I figure out how to support empty slices...
+pub struct ValArr<A = (), P = ()> {
     arr: Option<PrivateValArr>,
-    variant: std::marker::PhantomData<V>,
+    variant: std::marker::PhantomData<(A, P)>,
 }
 
-impl<V> Clone for VarArr<V> {
-    fn clone(&self) -> VarArr<V> {
-        VarArr {
+/// A reference-counted, hash-consed, typed array of values guaranteed to be a given variant.
+pub type VarArr<V> = ValArr<(), Is<V>>;
+
+impl<A, P> Clone for ValArr<A, P> {
+    fn clone(&self) -> ValArr<A, P> {
+        ValArr {
             arr: self.arr.clone(),
             variant: self.variant,
         }
     }
 }
 
-impl<V> Default for VarArr<V> {
+impl<A, P> Default for ValArr<A, P> {
     /// Get an empty `VarArr`
-    fn default() -> VarArr<V> {
-        VarArr::EMPTY_SELF
+    fn default() -> ValArr<A, P> {
+        ValArr::EMPTY_SELF
     }
 }
 
-impl<U, V> PartialEq<VarArr<U>> for VarArr<V> {
-    fn eq(&self, other: &VarArr<U>) -> bool {
+impl<A, B, P, Q> PartialEq<ValArr<A, P>> for ValArr<B, Q> {
+    fn eq(&self, other: &ValArr<A, P>) -> bool {
         self.arr == other.arr
     }
 }
@@ -67,9 +70,9 @@ impl<U, V> PartialEq<VarArr<U>> for VarArr<V> {
 /// The unique empty array of `ValId`s. Temporary hack...
 static UNIQUE_EMPTY_ARRAY: [ValId; 0] = [];
 
-impl<V> VarArr<V> {
+impl<A, P> ValArr<A, P> {
     /// This type as an empty array, for use in `const` contexts
-    pub const EMPTY_SELF: VarArr<V> = VarArr {
+    pub const EMPTY_SELF: ValArr<A, P> = ValArr {
         arr: None,
         variant: std::marker::PhantomData,
     };
@@ -89,8 +92,8 @@ impl<V> VarArr<V> {
     }
     /// Get this array as an array of ValIds
     #[inline]
-    pub fn as_vals(&self) -> &VarArr<ValIdMarker> {
-        self.coerce()
+    pub fn as_vals(&self) -> &ValArr {
+        self.coerce_ref()
     }
     /// Get this array as a slice of ValIds
     #[inline]
@@ -130,7 +133,7 @@ impl<V> VarArr<V> {
     }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
-    pub fn try_sorted(&self) -> Result<&VarBag<V>, ()> {
+    pub fn try_sorted(&self) -> Result<&ValBag<P>, ()> {
         if self.is_sorted() {
             Ok(RefCast::ref_cast(&self.arr))
         } else {
@@ -139,7 +142,7 @@ impl<V> VarArr<V> {
     }
     /// If this array is strictly address-sorted, return it as a set. If not, fail.
     #[inline]
-    pub fn try_set(&self) -> Result<&VarSet<V>, ()> {
+    pub fn try_set(&self) -> Result<&ValSet<P>, ()> {
         if self.is_set() {
             Ok(RefCast::ref_cast(&self.arr))
         } else {
@@ -148,18 +151,18 @@ impl<V> VarArr<V> {
     }
     /// Clone this array as an array of ValIds
     #[inline]
-    pub fn clone_vals(&self) -> VarArr<ValIdMarker> {
-        VarArr {
+    pub fn clone_vals(&self) -> ValArr {
+        ValArr {
             arr: self.arr.clone(),
             variant: std::marker::PhantomData,
         }
     }
     /// Create a `VarArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
     #[inline]
-    fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> VarArr<V> {
+    fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> ValArr<A, P> {
         if vals.len() == 0 {
             // Avoid empty array bugs
-            return VarArr {
+            return ValArr {
                 arr: None,
                 variant: std::marker::PhantomData,
             };
@@ -171,9 +174,9 @@ impl<V> VarArr<V> {
     }
     /// Deduplicate an `Arc` to an array of `ValId`s, and assert this array is of the desired type
     #[inline]
-    fn dedup_and_assert(ava: ArcValIdArr) -> VarArr<V> {
+    fn dedup_and_assert(ava: ArcValIdArr) -> ValArr<A, P> {
         let dedup_ava = ARRAY_CACHE.cache(ava);
-        VarArr {
+        ValArr {
             arr: Some(PrivateValArr(Arc::into_thin(dedup_ava.0))),
             variant: std::marker::PhantomData,
         }
@@ -189,33 +192,38 @@ impl<V> VarArr<V> {
     }
     /// Address-sort this container *without* deduplicating
     #[inline]
-    pub fn sorted(&self) -> VarBag<V> {
+    pub fn sorted(&self) -> ValBag<P> {
         // Special case (TODO: consider performance implications...)
         if self.is_sorted() {
-            return VarBag {
-                arr: self.arr.clone(),
-                variant: std::marker::PhantomData,
-            };
+            return self.clone().coerce();
         }
-        VarBag::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
+        ValBag::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
     }
     /// Address-sort this container *with* deduplication, yielding a `VarSet`
     #[inline]
-    pub fn set(&self) -> VarSet<V> {
+    pub fn set(&self) -> ValSet<P> {
         let mut source: Vec<_> = self.iter_vals().sorted_by_key(|v| v.as_ptr()).collect();
         source.dedup();
-        VarSet::assert_new(source.into_iter().cloned())
+        ValSet::assert_new(source.into_iter().cloned())
     }
     /// Coerce this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
-    fn coerce<U>(&self) -> &VarArr<U> {
+    fn coerce<B, Q>(self) -> ValArr<B, Q> {
+        ValArr {
+            arr: self.arr,
+            variant: std::marker::PhantomData,
+        }
+    }
+    /// Coerce a reference to this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
+    #[inline]
+    fn coerce_ref<B, Q>(&self) -> &ValArr<B, Q> {
         RefCast::ref_cast(&self.arr)
     }
     /// Coerce this container into a slice of `VarId<V>`, asserting that the predicate holds *for each container element*!
     /// While this method can be called incorrectly, it is *safe* as regardless of `V`, all `VarId<V>` are guaranteed to have
     /// the same representation.
     #[inline]
-    fn coerce_slice<U>(&self) -> &[VarId<U>] {
+    fn coerce_slice<U>(&self) -> &[ValId<U>] {
         unsafe {
             std::mem::transmute(if let Some(arr) = &self.arr {
                 arr.deref()
@@ -226,93 +234,70 @@ impl<V> VarArr<V> {
     }
 }
 
-/// A marker for an array of ValIds
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct ValIdMarker;
-
 /// A marker for a sorted array of a given value type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Sorted<T>(pub std::marker::PhantomData<T>);
+pub struct Sorted;
 
 /// A trait implemented by markers which expose the `Bag` API
 pub trait BagMarker {}
 
-impl<T> BagMarker for Sorted<T> {}
+impl BagMarker for Sorted {}
 
 /// A marker for a sorted array of unique elements of a given value type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Uniq<T>(pub std::marker::PhantomData<T>);
+pub struct Uniq;
 
 /// A trait implemented by markers which expose the `Set` API
 pub trait SetMarker: BagMarker {}
 
-impl<T> SetMarker for Uniq<T> {}
+impl SetMarker for Uniq {}
 
-impl<T> BagMarker for Uniq<T> {}
-
-impl<T> Sorted<T> {
-    /// Create a new sorted array marker
-    #[inline]
-    pub fn new() -> Sorted<T> {
-        Sorted(std::marker::PhantomData)
-    }
-}
-
-impl<T> Uniq<T> {
-    /// Create a new sorted array marker
-    #[inline]
-    pub fn new() -> Sorted<T> {
-        Sorted(std::marker::PhantomData)
-    }
-}
-
-/// An array of ValIds
-pub type ValArr = VarArr<ValIdMarker>;
+impl BagMarker for Uniq {}
 
 /// An array of types
 pub type TyArr = VarArr<TypeValue>;
 
 /// A bag (implemented as a sorted array) of `rain` values
-pub type VarBag<V> = VarArr<Sorted<V>>;
+pub type VarBag<V> = ValArr<Sorted, Is<V>>;
 
 /// A set (implemented as a sorted, unique array) of `rain` values
-pub type VarSet<V> = VarArr<Uniq<V>>;
+pub type VarSet<V> = ValArr<Uniq, Is<V>>;
 
-impl<V> VarBag<V> {
-    /// Forget the information that this is in fact a `VarBag`, yielding a `VarArr`
-    pub fn as_arr(&self) -> &VarArr<V> {
+impl<P> ValBag<P> {
+    /// Forget the information that this is in fact a `ValBag`, yielding a `ValcarArr`
+    pub fn as_arr(&self) -> &ValArr<P> {
         RefCast::ref_cast(&self.arr)
     }
-    /// Deduplicate this `VarBag` to yield a `VarSet`
-    pub fn uniq(&self) -> VarSet<V> {
+    /// Deduplicate this `ValBag` to yield a `ValSet`
+    pub fn uniq(&self) -> ValSet<P> {
         let vals: Vec<_> = self.iter_vals().dedup().collect();
-        VarSet::assert_new(vals.into_iter().cloned())
+        ValSet::assert_new(vals.into_iter().cloned())
     }
 }
 
-impl<V: BagMarker> VarArr<V> {
+impl<A: BagMarker, P> ValArr<A, P> {
     /// Merge two `VarBag`s
-    pub fn merge(&self, rhs: &VarArr<V>) -> VarArr<V> {
+    pub fn merge<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValBag<P> {
         // Edge cases
         if rhs.is_empty() {
-            return self.clone();
+            return self.clone().coerce();
         } else if self.is_empty() {
-            return rhs.clone();
+            return rhs.clone().coerce();
         }
         let union: Vec<_> = self
             .iter_vals()
             .merge_by(rhs.iter_vals(), |l, r| l.as_ptr() <= r.as_ptr())
             .cloned()
             .collect();
-        Self::assert_new(union.into_iter())
+        ValBag::assert_new(union.into_iter())
     }
     /// Take the intersection of two `VarBag`s
-    pub fn intersect(&self, rhs: &VarArr<V>) -> VarArr<V> {
+    pub fn intersect<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValArr<A, P> {
         // Edge cases
         if rhs.is_empty() {
-            return rhs.clone();
+            return rhs.clone().coerce();
         } else if self.is_empty() {
-            return self.clone();
+            return self.clone().coerce();
         }
         let intersection: Vec<_> = self
             .iter_vals()
@@ -320,29 +305,29 @@ impl<V: BagMarker> VarArr<V> {
             .filter_map(|v| v.both().map(|(l, _)| l))
             .cloned()
             .collect();
-        Self::assert_new(intersection.into_iter())
+        ValArr::assert_new(intersection.into_iter())
     }
 }
 
 impl<V> VarSet<V> {
     /// Forget the information that this is in fact a `VarSet`, yielding a `VarArr`
     pub fn as_arr(&self) -> &VarArr<V> {
-        self.coerce()
+        self.coerce_ref()
     }
     /// Forget the information that this is in fact a `VarSet`, yielding a `VarBag`
     pub fn as_multiset(&self) -> &VarBag<V> {
-        self.coerce()
+        self.coerce_ref()
     }
 }
 
-impl<V: SetMarker> VarArr<V> {
+impl<A: SetMarker, P> ValArr<A, P> {
     /// Take the union of two `VarSet`s
-    pub fn union(&self, rhs: &VarArr<V>) -> VarArr<V> {
+    pub fn union<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
         // Edge cases
         if rhs.is_empty() {
-            return self.clone();
+            return self.clone().coerce();
         } else if self.is_empty() {
-            return rhs.clone();
+            return rhs.clone().coerce();
         }
         let union: Vec<_> = self
             .iter_vals()
@@ -350,18 +335,18 @@ impl<V: SetMarker> VarArr<V> {
             .map(|v| v.reduce(|l, _| l))
             .cloned()
             .collect();
-        Self::assert_new(union.into_iter())
+        ValSet::assert_new(union.into_iter())
     }
 }
 
 /// A bag, that is, a multiset (implemented as a sorted array) of ValIds
-pub type ValBag = VarBag<ValIdMarker>;
+pub type ValBag<P = ()> = ValArr<Sorted, P>;
 
 /// A bag, that is, a multiset (implemented as a sorted array) of types
 pub type TyBag = VarBag<TypeValue>;
 
 /// A set (implemented as a sorted, unique array) of ValIds
-pub type ValSet = VarSet<ValIdMarker>;
+pub type ValSet<P = ()> = ValArr<Uniq, P>;
 
 /// A set (implemented as a sorted, unique array) of types
 pub type TySet = VarSet<TypeValue>;
@@ -460,9 +445,9 @@ impl<V: Value> FromIterator<VarId<V>> for VarSet<V> {
     }
 }
 
-impl<V: Value> Index<usize> for VarArr<V> {
-    type Output = VarId<V>;
-    fn index(&self, ix: usize) -> &VarId<V> {
+impl<A, P> Index<usize> for ValArr<A, P> {
+    type Output = ValId<P>;
+    fn index(&self, ix: usize) -> &ValId<P> {
         if let Some(arr) = &self.arr {
             RefCast::ref_cast(&arr[ix].ptr)
         } else {
@@ -471,89 +456,10 @@ impl<V: Value> Index<usize> for VarArr<V> {
     }
 }
 
-impl Index<usize> for VarArr<ValIdMarker> {
-    type Output = ValId;
-    fn index(&self, ix: usize) -> &ValId {
-        if let Some(arr) = &self.arr {
-            &arr[ix]
-        } else {
-            panic!("Indexed empty ValArr with index {}", ix)
-        }
-    }
-}
-
-impl<V: Value> Index<usize> for VarArr<Sorted<V>> {
-    type Output = VarId<V>;
-    fn index(&self, ix: usize) -> &VarId<V> {
-        if let Some(arr) = &self.arr {
-            RefCast::ref_cast(&arr[ix].ptr)
-        } else {
-            panic!("Indexed empty VarArr with index {}", ix)
-        }
-    }
-}
-
-impl Index<usize> for VarArr<Sorted<ValIdMarker>> {
-    type Output = ValId;
-    fn index(&self, ix: usize) -> &ValId {
-        if let Some(arr) = &self.arr {
-            &arr[ix]
-        } else {
-            panic!("Indexed empty ValArr with index {}", ix)
-        }
-    }
-}
-
-impl Deref for ValArr {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
-        if let Some(arr) = &self.arr {
-            &arr
-        } else {
-            &UNIQUE_EMPTY_ARRAY
-        }
-    }
-}
-
-impl Deref for ValBag {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
-        if let Some(arr) = &self.arr {
-            &arr
-        } else {
-            &UNIQUE_EMPTY_ARRAY
-        }
-    }
-}
-
-impl Deref for ValSet {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
-        if let Some(arr) = &self.arr {
-            &arr
-        } else {
-            &UNIQUE_EMPTY_ARRAY
-        }
-    }
-}
-
-impl<V: Value> Deref for VarArr<V> {
-    type Target = [VarId<V>];
-    fn deref(&self) -> &[VarId<V>] {
-        self.coerce_slice()
-    }
-}
-
-impl<V: Value> Deref for VarBag<V> {
-    type Target = [VarId<V>];
-    fn deref(&self) -> &[VarId<V>] {
-        self.coerce_slice()
-    }
-}
-
-impl<V: Value> Deref for VarSet<V> {
-    type Target = [VarId<V>];
-    fn deref(&self) -> &[VarId<V>] {
+impl<A, P> Deref for ValArr<A, P> {
+    type Target = [ValId<P>];
+    #[inline]
+    fn deref(&self) -> &[ValId<P>] {
         self.coerce_slice()
     }
 }
@@ -637,33 +543,33 @@ mod tests {
             .collect();
 
         // Direct fully unsorted array construction
-        let ua = ValArr::from_iter(fv.iter().cloned());
+        let ua = ValArr::<()>::from_iter(fv.iter().cloned());
         ua.try_sorted().expect_err("This array is not sorted!");
         ua.try_set().expect_err("This array is not a set!");
         assert_eq!(ua.len(), 25);
-        let ua2 = ValArr::from_iter(fv2.iter().cloned());
+        let ua2 = ValArr::<()>::from_iter(fv2.iter().cloned());
         ua2.try_sorted().expect_err("This array is not sorted!");
         ua2.try_set().expect_err("This array is not a set!");
         assert_eq!(ua2.len(), 35);
 
         // Direct fully unsorted bag construction
-        let ub = ValBag::from_iter(fv.iter().cloned());
+        let ub = ValBag::<()>::from_iter(fv.iter().cloned());
         assert_eq!(ub.len(), 25);
         assert_ne!(ub, ua);
         assert!(ub.is_sorted());
         assert!(!ub.is_set());
-        let ub2 = ValBag::from_iter(fv2.iter().cloned());
+        let ub2 = ValBag::<()>::from_iter(fv2.iter().cloned());
         assert_eq!(ub2.len(), 35);
         assert_ne!(ub2, ua2);
         assert!(ub2.is_sorted());
         assert!(!ub2.is_set());
 
         // Direct fully unsorted set construction
-        let us = ValSet::from_iter(fv.iter().cloned());
+        let us = ValSet::<()>::from_iter(fv.iter().cloned());
         assert_eq!(us.len(), 10);
         assert!(us.is_sorted());
         assert!(us.is_set());
-        let us2 = ValSet::from_iter(fv2.iter().cloned());
+        let us2 = ValSet::<()>::from_iter(fv2.iter().cloned());
         assert_eq!(us2.len(), 11);
         assert!(us2.is_sorted());
         assert!(us2.is_set());
