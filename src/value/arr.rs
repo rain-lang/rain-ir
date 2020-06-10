@@ -19,7 +19,7 @@ lazy_static! {
 }
 
 /// A reference-counted, hash-consed, typed array of values
-#[derive(Debug, Eq, PartialEq, Hash, RefCast)]
+#[derive(Debug, Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct VarArr<V> {
     //TODO: remove Option when I figure out how to support empty slices...
@@ -33,6 +33,12 @@ impl<V> Clone for VarArr<V> {
             arr: self.arr.clone(),
             variant: self.variant,
         }
+    }
+}
+
+impl<U, V> PartialEq<VarArr<U>> for VarArr<V> {
+    fn eq(&self, other: &VarArr<U>) -> bool {
+        self.arr == other.arr
     }
 }
 
@@ -77,10 +83,28 @@ impl<V> VarArr<V> {
             true
         }
     }
+    /// Check that this array is address-sorted in a strictly increasing fashion
+    #[inline]
+    pub fn is_set(&self) -> bool {
+        if let Some(arr) = &self.arr {
+            arr.windows(2).all(|w| w[0].as_ptr() < w[1].as_ptr())
+        } else {
+            true
+        }
+    }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
     pub fn try_sorted(&self) -> Result<&VarMultiSet<V>, ()> {
         if self.is_sorted() {
+            Ok(RefCast::ref_cast(&self.arr))
+        } else {
+            Err(())
+        }
+    }
+    /// If this array is strictly address-sorted, return it as a set. If not, fail.
+    #[inline]
+    pub fn try_set(&self) -> Result<&VarSet<V>, ()> {
+        if self.is_set() {
             Ok(RefCast::ref_cast(&self.arr))
         } else {
             Err(())
@@ -179,7 +203,7 @@ impl<T> Uniq<T> {
 /// An array of ValIds
 pub type ValArr = VarArr<ValIdMarker>;
 
-/// A multiset (implemented as a sorted array) of `rain` values
+/// A bag (implemented as a sorted array) of `rain` values
 pub type VarMultiSet<V> = VarArr<Sorted<V>>;
 
 /// A set (implemented as a sorted, unique array) of `rain` values
@@ -271,7 +295,7 @@ impl<V> VarSet<V> {
     }
 }
 
-/// A multiset (implemented as a sorted array) of ValIds
+/// A bag, that is, a multiset (implemented as a sorted array) of ValIds
 pub type ValMultiSet = VarArr<Sorted<ValIdMarker>>;
 
 /// A set (implemented as a sorted, unique array) of ValIds
@@ -482,6 +506,86 @@ mod tests {
     use rand::{Rng, SeedableRng};
     use rand_xoshiro::Xoroshiro128PlusPlus as TestRng;
 
+    /// Basic set operations and construction
+    #[test]
+    fn basic_set_test() {
+        // Data generation
+        let fv: Vec<ValId> = (0..10)
+            .map(|f| ValId::from(Finite(f)))
+            .cycle()
+            .take(25)
+            .collect();
+        let fv2: Vec<ValId> = (5..16)
+            .map(|f| ValId::from(Finite(f)))
+            .cycle()
+            .take(35)
+            .collect();
+        
+
+        // Direct fully unsorted array construction
+        let ua = ValArr::from_iter(fv.iter().cloned());
+        ua.try_sorted().expect_err("This array is not sorted!");
+        ua.try_set().expect_err("This array is not a set!");
+        assert_eq!(ua.len(), 25);
+        let ua2 = ValArr::from_iter(fv2.iter().cloned());
+        ua2.try_sorted().expect_err("This array is not sorted!");
+        ua2.try_set().expect_err("This array is not a set!");
+        assert_eq!(ua2.len(), 35);
+
+        // Direct fully unsorted bag construction
+        let ub = ValMultiSet::from_iter(fv.iter().cloned());
+        assert_eq!(ub.len(), 25);
+        assert_ne!(ub, ua);
+        assert!(ub.is_sorted());
+        assert!(!ub.is_set());
+        let ub2 = ValMultiSet::from_iter(fv2.iter().cloned());
+        assert_eq!(ub2.len(), 35);
+        assert_ne!(ub2, ua2);
+        assert!(ub2.is_sorted());
+        assert!(!ub2.is_set());
+
+        // Direct fully unsorted set construction
+        let us = ValSet::from_iter(fv.iter().cloned());
+        assert_eq!(us.len(), 10);
+        assert!(us.is_sorted());
+        assert!(us.is_set());
+        let us2 = ValSet::from_iter(fv2.iter().cloned());
+        assert_eq!(us2.len(), 11);
+        assert!(us2.is_sorted());
+        assert!(us2.is_set());
+
+        // Set operations
+        assert_eq!(us.intersect(&us), us);
+        assert_eq!(us.union(&us), us);
+        assert_eq!(us2.intersect(&us2), us2);
+        assert_eq!(us2.union(&us2), us2);
+        let us3 = us.intersect(&us2);
+        let us4 = us.union(&us2);
+        assert_eq!(us2.intersect(&us), us3);
+        assert_eq!(us2.union(&us), us4);
+        assert_eq!(us4.intersect(&us), us);
+        assert_eq!(us4.intersect(&us2), us2);
+
+        // Bag operations
+        assert_eq!(ub.intersect(&ub), ub);
+        let ubdup = ub.union(&ub);
+        assert_eq!(ubdup.len(), 50);
+        let ubu = ub.uniq();
+        assert_eq!(ubu, us);
+        let ubdup2 = ub2.union(&ub2);
+        assert_eq!(ubdup2.len(), 70);
+        let ubu2 = ub2.uniq();
+        assert_eq!(ubu2, us2);
+        let ub3 = ub.union(&ub2);
+        assert_eq!(ub3.len(), 60);
+        let ubdup3 = ubdup.union(&ubdup2);
+        assert_eq!(ubdup3.len(), 120);
+        let ub3dup = ub3.union(&ub3);
+        assert_eq!(ubdup3, ub3dup);
+        assert_eq!(ub3dup.uniq(), us4);
+    }
+
+    /// A stress-test of the `ValArr` family of structs on large arrays of random indices
     #[test]
     fn random_arrays_of_indices_construct_correctly() {
         const TEST_SEED: u64 = 0x56614ffa9e2a191d;
@@ -598,17 +702,5 @@ mod tests {
                 v
             );
         }
-
-        // Set operation tests:
-        //TODO
-
-        // Identity
-        //TODO
-
-        // Binary DeMorgan's Law
-        //TODO
-
-        // n-ary DeMorgan's Law
-        //TODO
     }
 }
