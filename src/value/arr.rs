@@ -3,7 +3,7 @@ Reference-counted, hash-consed, typed arrays of values
 */
 
 use super::predicate::Is;
-use super::{ValId, Value, VarId};
+use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
 use crate::util::hash_cache::{Cache, Caches};
 use itertools::Itertools;
@@ -92,7 +92,15 @@ impl<A, P> ValArr<A, P> {
     }
     /// Get this array as an array of ValIds
     #[inline]
-    pub fn as_vals(&self) -> &ValArr {
+    pub fn as_valarr(&self) -> &ValArr {
+        self.coerce_ref()
+    }
+    /// Forget any additional value information, yielding just a container of raw `ValId`s
+    pub fn as_vals(&self) -> &ValArr<A, ()> {
+        self.coerce_ref()
+    }
+    /// Forget any additional array information, yielding just a raw `ValArr`
+    pub fn as_arr(&self) -> &ValArr<(), P> {
         self.coerce_ref()
     }
     /// Get this array as a slice of ValIds
@@ -157,7 +165,7 @@ impl<A, P> ValArr<A, P> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Create a `VarArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
+    /// Create a `ValArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
     #[inline]
     fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> ValArr<A, P> {
         if vals.len() == 0 {
@@ -263,26 +271,23 @@ pub type VarBag<V> = ValArr<Sorted, Is<V>>;
 /// A set (implemented as a sorted, unique array) of `rain` values
 pub type VarSet<V> = ValArr<Uniq, Is<V>>;
 
-impl<P> ValBag<P> {
-    /// Forget the information that this is in fact a `ValBag`, yielding a `ValcarArr`
-    pub fn as_arr(&self) -> &ValArr<P> {
-        RefCast::ref_cast(&self.arr)
+impl ValBag {
+    /// Check whether an item is in this bag. If it is, return a reference.
+    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValId<Q>` pair.
+    pub fn contains_impl(&self, item: *const NormalValue) -> Option<&ValId> {
+        self.as_slice()
+            .binary_search_by_key(&item, ValId::as_ptr)
+            .ok()
+            .map(|ix| &self.as_slice()[ix])
     }
-    /// Deduplicate this `ValBag` to yield a `ValSet`
-    pub fn uniq(&self) -> ValSet<P> {
-        let vals: Vec<_> = self.iter_vals().dedup().collect();
-        ValSet::assert_new(vals.into_iter().cloned())
-    }
-}
-
-impl<A: BagMarker, P> ValArr<A, P> {
-    /// Merge two `VarBag`s
-    pub fn merge<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValBag<P> {
+    /// Merge two bags
+    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValArr<B, Q>` pair.
+    pub fn merge_impl(&self, rhs: &ValBag) -> ValBag {
         // Edge cases
         if rhs.is_empty() {
-            return self.clone().coerce();
+            return self.clone();
         } else if self.is_empty() {
-            return rhs.clone().coerce();
+            return rhs.clone();
         }
         let union: Vec<_> = self
             .iter_vals()
@@ -291,13 +296,14 @@ impl<A: BagMarker, P> ValArr<A, P> {
             .collect();
         ValBag::assert_new(union.into_iter())
     }
-    /// Take the intersection of two `VarBag`s
-    pub fn intersect<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValArr<A, P> {
+    /// Take the intersection of two bags
+    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValArr<B, Q>` pair.
+    pub fn intersect_impl(&self, rhs: &ValBag) -> ValBag {
         // Edge cases
         if rhs.is_empty() {
-            return rhs.clone().coerce();
+            return rhs.clone();
         } else if self.is_empty() {
-            return self.clone().coerce();
+            return self.clone();
         }
         let intersection: Vec<_> = self
             .iter_vals()
@@ -305,23 +311,51 @@ impl<A: BagMarker, P> ValArr<A, P> {
             .filter_map(|v| v.both().map(|(l, _)| l))
             .cloned()
             .collect();
-        ValArr::assert_new(intersection.into_iter())
+        ValBag::assert_new(intersection.into_iter())
     }
 }
 
-impl<V> VarSet<V> {
-    /// Forget the information that this is in fact a `VarSet`, yielding a `VarArr`
-    pub fn as_arr(&self) -> &VarArr<V> {
+impl<A: BagMarker, P> ValArr<A, P> {
+    /// Forget any additional array type information, yielding a `ValBag`
+    pub fn as_bag(&self) -> &ValBag<P> {
         self.coerce_ref()
     }
-    /// Forget the information that this is in fact a `VarSet`, yielding a `VarBag`
-    pub fn as_multiset(&self) -> &VarBag<V> {
-        self.coerce_ref()
+    /// Check whether an item is in this bag. If it is, return a reference.
+    #[inline]
+    pub fn contains<Q>(&self, item: *const NormalValue) -> Option<&ValId<Q>> {
+        self.as_bag()
+            .as_vals()
+            .contains_impl(item)
+            .map(ValId::coerce_ref)
+    }
+    /// Deduplicate this bag to yield a `ValSet`
+    pub fn uniq(&self) -> ValSet<P> {
+        let vals: Vec<_> = self.iter_vals().dedup().collect();
+        ValSet::assert_new(vals.into_iter().cloned())
+    }
+    /// Merge two bags
+    #[inline]
+    pub fn merge<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValBag<P> {
+        self.as_bag()
+            .as_vals()
+            .merge_impl(rhs.coerce_ref())
+            .coerce()
+    }
+    /// Take the intersection of two bags
+    pub fn intersect<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValArr<A, P> {
+        self.as_bag()
+            .as_vals()
+            .intersect_impl(rhs.coerce_ref())
+            .coerce()
     }
 }
 
 impl<A: SetMarker, P> ValArr<A, P> {
-    /// Take the union of two `VarSet`s
+    /// Forget any additional array information, yielding a `ValSet`
+    pub fn as_set(&self) -> &ValSet<P> {
+        self.coerce_ref()
+    }
+    /// Take the union of two `ValSet`s
     pub fn union<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
         // Edge cases
         if rhs.is_empty() {
@@ -337,7 +371,7 @@ impl<A: SetMarker, P> ValArr<A, P> {
             .collect();
         ValSet::assert_new(union.into_iter())
     }
-    /// Take the symmetric difference of two `VarSet`s
+    /// Take the symmetric difference of two `ValSet`s
     pub fn diff<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
         if rhs.is_empty() {
             return self.clone().coerce();
@@ -689,13 +723,13 @@ mod tests {
             );
             assert_eq!(
                 finite_valarrs[i].as_ptr(),
-                finite_valarrs_3[i].as_vals().as_ptr(),
+                finite_valarrs_3[i].as_valarr().as_ptr(),
                 "Failure at index {}",
                 i
             );
             assert_eq!(
                 finite_valarrs[i].as_ptr(),
-                finite_valarrs_3[i].as_vals().deref(),
+                finite_valarrs_3[i].as_valarr().deref(),
                 "Failure at index {}",
                 i
             );
