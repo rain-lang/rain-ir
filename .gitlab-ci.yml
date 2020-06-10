@@ -287,3 +287,16 @@ test:git-master:
     needs:
         - prepare:git
         - build:cargo-stable
+        
+build:pages:
+    stage: build
+    only:
+        - master
+    script:
+        - cargo doc --no-deps --document-private-items
+        - rm -rf public
+        - mv target/doc/ public
+    artifacts:
+        expire_in: 1 week
+        paths:
+            - public
