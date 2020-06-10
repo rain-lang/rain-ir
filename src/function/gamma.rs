@@ -163,7 +163,7 @@ impl Branch {
             Some(Equal) => self
                 .value
                 .deps()
-                .collect_deps(self.value.depth()),
+                .collect_deps(..self.value.depth(), |_| true),
             Some(Less) => vec![self.value.clone()],
         }
     }

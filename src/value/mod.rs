@@ -21,14 +21,14 @@ use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
-use std::ops::Deref;
+use std::ops::{Deref, RangeBounds};
 use triomphe::{Arc, ArcBorrow};
 
+pub mod arr;
 mod error;
 pub mod expr;
 pub mod tuple;
 pub mod universe;
-pub mod arr;
 
 pub use error::*;
 use expr::Sexpr;
@@ -989,19 +989,26 @@ impl<V: Value> Deps<V> {
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
-    /// Collect the immediate dependencies of this value below a given depth.
-    pub fn collect_deps(&self, below: usize) -> Vec<ValId> {
+    /// Collect the immediate dependencies of this value within a given depth range which match a given filter
+    pub fn collect_deps<R, F>(&self, range: R, filter: F) -> Vec<ValId>
+    where
+        V: Clone,
+        R: RangeBounds<usize>,
+        F: Fn(&ValId) -> bool,
+    {
         let mut result = Vec::new();
         // Simple edge case
-        if below == 0 {
-            return result;
+        if range.contains(&self.0.depth()) {
+            return vec![self.0.clone().into()]
         }
         let mut searched = FxHashSet::<&ValId>::default();
         let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
         while let Some(dep) = frontier.pop() {
             searched.insert(dep);
-            if dep.depth() < below {
-                result.push(dep.clone())
+            if range.contains(&dep.depth()) {
+                if filter(dep) {
+                    result.push(dep.clone())
+                }
             } else {
                 frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
             }

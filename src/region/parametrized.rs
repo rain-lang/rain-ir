@@ -29,7 +29,7 @@ impl<V: Value + Clone + Into<ValId>> Parametrized<V> {
         match value.region().partial_cmp(&region) {
             None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
-                let mut deps = value.deps().collect_deps(value.depth());
+                let mut deps = value.deps().collect_deps(..value.depth(), |_| true);
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
                     .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
