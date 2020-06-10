@@ -139,17 +139,36 @@ impl<V> VarArr<V> {
         }
         VarMultiSet::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
     }
+    /// Address-sort this container *with* deduplication, yielding a `VarSet`
+    #[inline]
+    pub fn set(&self) -> VarSet<V> {
+        let mut source: Vec<_> = self.iter_vals().sorted_by_key(|v| v.as_ptr()).collect();
+        source.dedup();
+        VarSet::assert_new(source.into_iter().cloned())
+    }
 }
 
 /// A marker for an array of ValIds
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct ValIdMarker;
 
-/// A marker for a *sorted* array of a given value type
+/// A marker for a sorted array of a given value type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Sorted<T>(pub std::marker::PhantomData<T>);
 
+/// A marker for a sorted array of unique elements of a given value type
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Uniq<T>(pub std::marker::PhantomData<T>);
+
 impl<T> Sorted<T> {
+    /// Create a new sorted array marker
+    #[inline]
+    pub fn new() -> Sorted<T> {
+        Sorted(std::marker::PhantomData)
+    }
+}
+
+impl<T> Uniq<T> {
     /// Create a new sorted array marker
     #[inline]
     pub fn new() -> Sorted<T> {
@@ -160,10 +179,22 @@ impl<T> Sorted<T> {
 /// An array of ValIds
 pub type ValArr = VarArr<ValIdMarker>;
 
-/// A set (implemented as a sorted array) of `rain` values
+/// A multiset (implemented as a sorted array) of `rain` values
 pub type VarMultiSet<V> = VarArr<Sorted<V>>;
 
+/// A set (implemented as a sorted, unique array) of `rain` values
+pub type VarSet<V> = VarArr<Uniq<V>>;
+
 impl<V> VarMultiSet<V> {
+    /// Forget the information that this is in fact a `VarMultiSet`, yielding a `VarArr`
+    pub fn as_arr(&self) -> &VarArr<V> {
+        RefCast::ref_cast(&self.arr)
+    }
+    /// Deduplicate this `VarMultiSet` to yield a `VarSet`
+    pub fn uniq(&self) -> VarSet<V> {
+        let vals: Vec<_> = self.iter_vals().dedup().collect();
+        VarSet::assert_new(vals.into_iter().cloned())
+    }
     /// Take the union of two `VarMultiSet`s
     pub fn union(&self, rhs: &VarMultiSet<V>) -> VarMultiSet<V> {
         // Edge cases
@@ -197,8 +228,54 @@ impl<V> VarMultiSet<V> {
     }
 }
 
-/// A set (implemented as a sorted array) of ValIds
-pub type ValSet = VarArr<Sorted<ValIdMarker>>;
+impl<V> VarSet<V> {
+    /// Forget the information that this is in fact a `VarSet`, yielding a `VarArr`
+    pub fn as_arr(&self) -> &VarArr<V> {
+        RefCast::ref_cast(&self.arr)
+    }
+    /// Forget the information that this is in fact a `VarSet`, yielding a `VarMultiSet`
+    pub fn as_multiset(&self) -> &VarMultiSet<V> {
+        RefCast::ref_cast(&self.arr)
+    }
+    /// Take the union of two `VarSet`s
+    pub fn union(&self, rhs: &VarSet<V>) -> VarSet<V> {
+        // Edge cases
+        if rhs.is_empty() {
+            return self.clone();
+        } else if self.is_empty() {
+            return rhs.clone();
+        }
+        let union: Vec<_> = self
+            .iter_vals()
+            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
+            .map(|v| v.reduce(|l, _| l))
+            .cloned()
+            .collect();
+        Self::assert_new(union.into_iter())
+    }
+    /// Take the intersection of two `VarSet`s
+    pub fn intersect(&self, rhs: &VarSet<V>) -> VarSet<V> {
+        // Edge cases
+        if rhs.is_empty() {
+            return rhs.clone();
+        } else if self.is_empty() {
+            return self.clone();
+        }
+        let intersection: Vec<_> = self
+            .iter_vals()
+            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
+            .filter_map(|v| v.both().map(|(l, _)| l))
+            .cloned()
+            .collect();
+        Self::assert_new(intersection.into_iter())
+    }
+}
+
+/// A multiset (implemented as a sorted array) of ValIds
+pub type ValMultiSet = VarArr<Sorted<ValIdMarker>>;
+
+/// A set (implemented as a sorted, unique array) of ValIds
+pub type ValSet = VarArr<Uniq<ValIdMarker>>;
 
 impl ValArr {
     /// Create a `ValArr` from an exact size iterator over `ValId`s
@@ -221,10 +298,18 @@ impl FromIterator<ValId> for ValArr {
     }
 }
 
-impl FromIterator<ValId> for ValSet {
-    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValSet {
+impl FromIterator<ValId> for ValMultiSet {
+    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValMultiSet {
         let v = iter.into_iter().sorted_by_key(ValId::as_ptr);
         Self::assert_new(v)
+    }
+}
+
+impl FromIterator<ValId> for ValSet {
+    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValSet {
+        let mut v: Vec<_> = iter.into_iter().sorted_by_key(ValId::as_ptr).collect();
+        v.dedup();
+        Self::assert_new(v.into_iter())
     }
 }
 
@@ -242,6 +327,18 @@ impl<V: Value> FromIterator<V> for VarMultiSet<V> {
             .map(|v| v.into())
             .sorted_by_key(ValId::as_ptr);
         Self::assert_new(v)
+    }
+}
+
+impl<V: Value> FromIterator<V> for VarSet<V> {
+    fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
+        let mut v: Vec<_> = iter
+            .into_iter()
+            .map(|v| v.into())
+            .sorted_by_key(ValId::as_ptr)
+            .collect();
+        v.dedup();
+        Self::assert_new(v.into_iter())
     }
 }
 
@@ -290,6 +387,17 @@ impl Index<usize> for VarArr<Sorted<ValIdMarker>> {
 }
 
 impl Deref for ValArr {
+    type Target = [ValId];
+    fn deref(&self) -> &[ValId] {
+        if let Some(arr) = &self.arr {
+            &arr
+        } else {
+            &UNIQUE_EMPTY_ARRAY
+        }
+    }
+}
+
+impl Deref for ValMultiSet {
     type Target = [ValId];
     fn deref(&self) -> &[ValId] {
         if let Some(arr) = &self.arr {
