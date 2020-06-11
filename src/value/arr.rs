@@ -498,7 +498,7 @@ impl<A, P> Index<usize> for ValArr<A, P> {
     type Output = ValId<P>;
     fn index(&self, ix: usize) -> &ValId<P> {
         if let Some(arr) = &self.arr {
-            RefCast::ref_cast(&arr[ix].ptr)
+            arr[ix].coerce_ref()
         } else {
             panic!("Indexed empty VarArr with index {}", ix)
         }
