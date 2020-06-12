@@ -1,7 +1,7 @@
 /*!
 `rain` expressions
 */
-use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum};
+use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, ValueData};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
@@ -121,6 +121,8 @@ impl Live for Sexpr {
         self.lifetime.borrow_lifetime()
     }
 }
+
+impl ValueData for Sexpr {}
 
 lifetime_region!(Sexpr);
 

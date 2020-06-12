@@ -6,7 +6,8 @@ use super::{
     lifetime::{LifetimeBorrow, Live},
     region::{RegionBorrow, Regional},
     value::{
-        Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
+        Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
+        ValueEnum,
     },
 };
 use crate::{debug_from_display, pretty_display};
@@ -99,6 +100,8 @@ impl Value for TypeValue {
         self.into()
     }
 }
+
+impl ValueData for TypeValue {}
 
 impl Type for TypeValue {
     #[inline]

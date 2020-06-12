@@ -498,14 +498,10 @@ where
     }
 }
 
-impl<V> From<V> for VarId<V>
-where
-    V: Into<ValId>,
-    for<'a> &'a NormalValue: TryInto<&'a V>,
+impl<V: ValueData> From<V> for VarId<V>
 {
-    fn from(val: V) -> VarId<V> {
-        let valid: ValId = val.into();
-        valid.coerce()
+    fn from(v: V) -> VarId<V> {
+        v.into_val().coerce()
     }
 }
 

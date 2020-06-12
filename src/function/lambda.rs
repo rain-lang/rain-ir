@@ -7,7 +7,7 @@ use crate::lifetime::LifetimeBorrow;
 use crate::lifetime::Live;
 use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
-use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 
 /// A lambda function
@@ -136,6 +136,8 @@ impl Substitute for Lambda {
     }
 }
 
+impl ValueData for Lambda {}
+
 substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
 pretty_display!(Lambda, "#lambda |...| {...}");
@@ -192,16 +194,10 @@ mod tests {
 
         // Check evaluations
         assert_eq!(builder.parse_expr("id #true"), Ok(("", true.into_val())));
-        assert_eq!(
-            builder.parse_expr("id #false"),
-            Ok(("", false.into_val()))
-        );
+        assert_eq!(builder.parse_expr("id #false"), Ok(("", false.into_val())));
 
         // See if any stateful errors occur
-        assert_eq!(
-            builder.parse_expr("id #false"),
-            Ok(("", false.into_val()))
-        );
+        assert_eq!(builder.parse_expr("id #false"), Ok(("", false.into_val())));
         assert_eq!(builder.parse_expr("id #true"), Ok(("", true.into_val())));
     }
 
@@ -236,24 +232,12 @@ mod tests {
         assert_eq!(jeq, true.into_val());
 
         // Check evaluations
-        assert_eq!(
-            builder.parse_expr("not #true"),
-            Ok(("", false.into_val()))
-        );
-        assert_eq!(
-            builder.parse_expr("not #false"),
-            Ok(("", true.into_val()))
-        );
+        assert_eq!(builder.parse_expr("not #true"), Ok(("", false.into_val())));
+        assert_eq!(builder.parse_expr("not #false"), Ok(("", true.into_val())));
 
         // See if any stateful errors occur
-        assert_eq!(
-            builder.parse_expr("not #false"),
-            Ok(("", true.into_val()))
-        );
-        assert_eq!(
-            builder.parse_expr("not #true"),
-            Ok(("", false.into_val()))
-        );
+        assert_eq!(builder.parse_expr("not #false"), Ok(("", true.into_val())));
+        assert_eq!(builder.parse_expr("not #true"), Ok(("", false.into_val())));
     }
 
     #[test]

@@ -144,6 +144,9 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     }
 }
 
+/// A trait implemented by non-pointer `rain` values
+pub trait ValueData: Value {}
+
 // Utilities:
 
 /// The dependencies of a value
@@ -849,7 +852,7 @@ macro_rules! normal_valid {
         impl From<$T> for $crate::value::ValId {
             #[inline]
             fn from(v: $T) -> $crate::value::ValId {
-                $crate::value::NormalValue::from(v).into()
+                v.into_val()
             }
         }
     };

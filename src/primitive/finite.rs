@@ -6,7 +6,8 @@ use crate::eval::Apply;
 use crate::prettyprinter::tokens::*;
 use crate::typing::{Type, Typed};
 use crate::value::{
-    universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId, VarRef,
+    universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum,
+    VarId, VarRef,
 };
 use crate::{debug_from_display, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
@@ -71,6 +72,8 @@ impl Value for Finite {
         self.into()
     }
 }
+
+impl ValueData for Finite {}
 
 impl Type for Finite {
     #[inline]
@@ -168,6 +171,8 @@ impl Value for Index {
         self.into()
     }
 }
+
+impl ValueData for Index {}
 
 #[cfg(test)]
 mod tests {

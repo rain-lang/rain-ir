@@ -9,8 +9,8 @@ use crate::prettyprinter::tokens::*;
 use crate::region::{Region, RegionData};
 use crate::typing::{Type, Typed};
 use crate::value::{
-    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum,
-    VarId,
+    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
+    ValueEnum, VarId,
 };
 use crate::{
     debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
@@ -67,6 +67,8 @@ impl Value for Bool {
     }
 }
 
+impl ValueData for Bool {}
+
 impl Type for Bool {
     #[inline]
     fn is_universe(&self) -> bool {
@@ -116,6 +118,8 @@ impl Value for bool {
         self.into()
     }
 }
+
+impl ValueData for bool {}
 
 trivial_substitute!(bool);
 trivial_substitute!(Bool);
@@ -518,6 +522,9 @@ impl Value for Logical {
     }
 }
 
+
+impl ValueData for Logical {}
+
 trivial_lifetime!(Logical);
 
 debug_from_display!(Logical);
@@ -585,6 +592,7 @@ macro_rules! make_logical {
                 self.into()
             }
         }
+        impl ValueData for $t {}
         impl From<$t> for ValueEnum {
             fn from(t: $t) -> ValueEnum {
                 Logical::from(t).into()

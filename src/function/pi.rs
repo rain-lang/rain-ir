@@ -6,7 +6,8 @@ use crate::lifetime::{LifetimeBorrow, Live};
 use crate::region::{Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
+    ValueEnum,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
@@ -99,6 +100,8 @@ impl Value for Pi {
         self.into()
     }
 }
+
+impl ValueData for Pi {}
 
 impl Type for Pi {
     #[inline]

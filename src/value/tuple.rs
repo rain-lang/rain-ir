@@ -2,7 +2,8 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    universe::FINITE_TY, Error, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum, NormalValue
+    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId,
+    Value, ValueData, ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
@@ -103,6 +104,8 @@ impl Value for Tuple {
         self.into()
     }
 }
+
+impl ValueData for Tuple {}
 
 impl Apply for Tuple {
     /**
@@ -260,6 +263,8 @@ impl Value for Product {
         self.into()
     }
 }
+
+impl ValueData for Product {}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

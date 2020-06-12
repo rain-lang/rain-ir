@@ -5,7 +5,7 @@ use super::{Region, RegionBorrow, Regional};
 use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
-use crate::value::{NormalValue, TypeRef, ValId, Value, ValueEnum};
+use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 
 /**
@@ -95,3 +95,5 @@ impl Value for Parameter {
         self.into()
     }
 }
+
+impl ValueData for Parameter {}
