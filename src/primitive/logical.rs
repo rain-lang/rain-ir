@@ -740,6 +740,22 @@ mod tests {
     use super::*;
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
+
+    #[test]
+    fn basic_boolean_properties() {
+        assert!(Bool.is_ty());
+        assert!(!true.is_ty());
+        assert!(!false.is_ty());
+        assert_eq!(true.ty(), Bool.into_val());
+        assert_eq!(false.ty(), Bool.into_val());
+        assert_eq!(Bool.into_val(), Bool.into_val());
+        assert_eq!(true.into_val(), true.into_val());
+        assert_eq!(false.into_val(), false.into_val());
+        assert_eq!(Bool.no_deps(), 0);
+        assert_eq!(true.no_deps(), 0);
+        assert_eq!(false.no_deps(), 0);
+    }
+
     #[test]
     fn booleans_parse_properly() {
         let mut builder = Builder::<&str>::new();
