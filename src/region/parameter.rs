@@ -1,0 +1,97 @@
+/*!
+Parameters to a `rain` region
+*/
+use super::{Region, RegionBorrow, Regional};
+use crate::eval::Apply;
+use crate::lifetime::{LifetimeBorrow, Live};
+use crate::typing::{Type, Typed};
+use crate::value::{NormalValue, TypeRef, ValId, Value, ValueEnum};
+use crate::{quick_pretty, trivial_substitute};
+
+/**
+A parameter to a `rain` region.
+
+Note that the uniqueness of `ValId`s corresponding to a given parameter is enforced by the hash-consing algorithm.
+*/
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Parameter {
+    /// The region this is a parameter for
+    region: Region,
+    /// The index of this parameter in the region's type vector
+    ix: usize,
+}
+
+quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
+trivial_substitute!(Parameter);
+
+impl Parameter {
+    /**
+     Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
+
+    # Examples
+    Trying to make a parameter out of bounds returns `Err`:
+    ```rust
+    use rain_lang::region::{Region, RegionData, Parameter};
+    let empty_region = Region::new(RegionData::new(Region::default()));
+    assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
+    ```
+    */
+    #[inline]
+    pub fn try_new(region: Region, ix: usize) -> Result<Parameter, ()> {
+        if ix >= region.len() {
+            Err(())
+        } else {
+            Ok(Parameter { region, ix })
+        }
+    }
+    /// Get the index of this parameter
+    #[inline]
+    pub fn ix(&self) -> usize {
+        self.ix
+    }
+    /// Get this parameter's region
+    #[inline]
+    pub fn get_region(&self) -> &Region {
+        &self.region
+    }
+}
+
+impl Live for Parameter {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.region().into()
+    }
+}
+
+impl Regional for Parameter {
+    fn region(&self) -> RegionBorrow {
+        self.get_region().borrow_region()
+    }
+}
+
+impl Typed for Parameter {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.region[self.ix].borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        self.ty().is_universe()
+    }
+}
+
+impl Apply for Parameter {}
+
+impl Value for Parameter {
+    fn no_deps(&self) -> usize {
+        0
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!("Attempted to get dependency {} of parameter #{} of a region, but parameters have no deps!", ix, self.ix)
+    }
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Parameter(self)
+    }
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
+}
