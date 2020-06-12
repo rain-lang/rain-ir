@@ -34,6 +34,16 @@ use crate::region::{Region, RegionBorrow, Regional};
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct Lifetime(Region);
 
+/// A borrow of a `rain` lifetime
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
+pub struct LifetimeBorrow<'a>(RegionBorrow<'a>);
+
+/// The data describing a `rain` lifetime
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum LifetimeData {
+    //TODO: this
+}
+
 impl Lifetime {
     /// Borrow this lifetime
     #[inline]
@@ -89,10 +99,6 @@ impl PartialOrd for Lifetime {
         self.0.partial_cmp(&other.0)
     }
 }
-
-/// A borrow of a `rain` lifetime
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
-pub struct LifetimeBorrow<'a>(RegionBorrow<'a>);
 
 impl PartialOrd for LifetimeBorrow<'_> {
     /**
