@@ -14,20 +14,24 @@ pub use parametrized::*;
 mod parameter;
 pub use parameter::*;
 
-/// The size of a small set of parameters to a `rain` region
-pub const SMALL_PARAMS: usize = 2;
-
-lazy_static! {
-    /// The global cache of constructed regions.
-    ///
-    /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
-    /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
-    pub static ref REGION_CACHE: Cache<RegionData> = Cache::new();
-}
-
 /// A `rain` region
 #[derive(Debug, Clone, Eq, Default)]
 pub struct Region(Option<Arc<RegionData>>);
+
+/// A borrow of a `rain` region
+#[derive(Debug, Copy, Clone, Eq, Default)]
+pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
+
+/// The data composing a `rain` region
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct RegionData {
+    /// The parent of this region
+    parent: Region,
+    /// The parameter types of this region
+    param_tys: TyArr,
+    /// The depth of this region above the null region
+    depth: usize,
+}
 
 /// A trait for objects which have a region
 pub trait Regional {
@@ -41,6 +45,21 @@ pub trait Regional {
     fn depth(&self) -> usize {
         self.region().depth()
     }
+}
+
+/// The null region
+pub static NULL_REGION: RegionData = RegionData {
+    parent: Region(None),
+    param_tys: TyArr::EMPTY_SELF,
+    depth: 0,
+};
+
+lazy_static! {
+    /// The global cache of constructed regions.
+    ///
+    /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
+    /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
+    pub static ref REGION_CACHE: Cache<RegionData> = Cache::new();
 }
 
 impl Region {
@@ -158,10 +177,6 @@ impl Hash for Region {
     }
 }
 
-/// A borrow of a `rain` region
-#[derive(Debug, Copy, Clone, Eq, Default)]
-pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
-
 impl<'a> RegionBorrow<'a> {
     /// Like `deref`, but using the lifetime of the `RegionBorrow` (which is incompatible with the `Deref` trait).
     #[inline]
@@ -254,24 +269,6 @@ impl PartialOrd<Region> for RegionBorrow<'_> {
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
         self.deref().partial_cmp(other)
     }
-}
-
-/// The null region
-pub static NULL_REGION: RegionData = RegionData {
-    parent: Region(None),
-    param_tys: TyArr::EMPTY_SELF,
-    depth: 0,
-};
-
-/// The data composing a `rain` region
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RegionData {
-    /// The parent of this region
-    parent: Region,
-    /// The parameter types of this region
-    param_tys: TyArr,
-    /// The depth of this region above the null region
-    depth: usize,
 }
 
 impl Deref for RegionData {
