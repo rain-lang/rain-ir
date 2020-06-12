@@ -180,13 +180,13 @@ prepare:cargo-cache-newest:
         - *cargo_fetch_job
         - *rust_stable
 
-#prepare:cargo-cache-mindeps:
-#    <<:
-#        - *cargo_fetch_job
-#        - *rust_nightly
-#    variables:
-#        GENERATE_LOCKFILE_ARGS: "-Z minimal-versions"
-#        CARGO_UPDATE_POLICY: mindeps
+prepare:cargo-cache-mindeps:
+    <<:
+        - *cargo_fetch_job
+        - *rust_nightly
+    variables:
+        GENERATE_LOCKFILE_ARGS: "-Z minimal-versions"
+        CARGO_UPDATE_POLICY: mindeps
 
 .cargo_cache_newest: &cargo_cache_newest
     dependencies:
