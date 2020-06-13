@@ -8,6 +8,8 @@ use std::borrow::Borrow;
 use std::hash::{BuildHasher, Hash};
 use triomphe::Arc;
 
+pub mod arr;
+
 /// A container which can be used to cache values of type `T`
 pub trait Caches<T>: Hash + Eq + Clone {
     /// Is this handle unique or, if weak references are allowed, destroyed (for garbage collection)
@@ -55,7 +57,7 @@ impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
 
     # Example
     ```rust
-    use rain_lang::util::hash_cache::Cache;
+    use rain_lang::util::cache::Cache;
     use triomphe::Arc;
     let int_cache = Cache::<u64>::new();
 
@@ -98,7 +100,7 @@ impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
 
     # Example
     ```rust
-    use rain_lang::util::hash_cache::Cache;
+    use rain_lang::util::cache::Cache;
     use triomphe::Arc;
     let int_cache = Cache::<u64>::new();
 
@@ -136,7 +138,7 @@ impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
 
     # Example
     ```rust
-    use rain_lang::util::hash_cache::Cache;
+    use rain_lang::util::cache::Cache;
     let int_cache = Cache::<u64>::new();
     assert_eq!(int_cache.len(), 0);
     int_cache.cache(10);
@@ -157,7 +159,7 @@ impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
 
     # Example
     ```rust
-    use rain_lang::util::hash_cache::Cache;
+    use rain_lang::util::cache::Cache;
     let int_cache = Cache::<u64>::new();
     assert!(int_cache.is_empty());
     int_cache.cache(10);

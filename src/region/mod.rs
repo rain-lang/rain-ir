@@ -1,7 +1,7 @@
 /*!
 `rain` value regions
 */
-use crate::util::hash_cache::Cache;
+use crate::util::cache::Cache;
 use crate::value::{arr::TyArr, TypeId};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;

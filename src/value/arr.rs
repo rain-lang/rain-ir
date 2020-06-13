@@ -5,7 +5,7 @@ Reference-counted, hash-consed, typed arrays of values
 use super::predicate::Is;
 use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
-use crate::util::hash_cache::{Cache, Caches};
+use crate::util::cache::{Cache, Caches};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;

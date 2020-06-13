@@ -30,6 +30,9 @@ use std::cmp::Ordering;
 
 use crate::region::{Region, RegionBorrow, Regional};
 
+mod arr;
+pub use arr::*;
+
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct Lifetime(Region);
@@ -41,7 +44,6 @@ pub struct LifetimeBorrow<'a>(RegionBorrow<'a>);
 /// The data describing a `rain` lifetime
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum LifetimeData {
-    //TODO: this
 }
 
 impl Lifetime {

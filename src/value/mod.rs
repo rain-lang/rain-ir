@@ -11,7 +11,7 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
-use crate::util::{hash_cache::Cache, PrivateByAddr};
+use crate::util::{cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use fxhash::FxHashSet;
 use lazy_static::lazy_static;
