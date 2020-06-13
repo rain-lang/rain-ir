@@ -17,7 +17,7 @@ use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 
 lazy_static! {
     /// A cache for arrays of values
-    pub static ref ARRAY_CACHE: Cache<ValId, ArcValIdArr> = Cache::default();
+    pub static ref ARRAY_CACHE: Cache<[ValId], ArcValIdArr> = Cache::default();
 }
 
 #[macro_export]
@@ -543,7 +543,7 @@ impl Hash for PrivateValArr {
 #[derive(Clone, Eq, PartialEq)]
 pub struct ArcValIdArr(pub Arc<HeaderSlice<HeaderWithLength<()>, [ValId]>>);
 
-impl Caches<ValId> for ArcValIdArr {
+impl Caches<[ValId]> for ArcValIdArr {
     #[inline]
     fn can_collect(&self) -> bool {
         self.0.is_unique()

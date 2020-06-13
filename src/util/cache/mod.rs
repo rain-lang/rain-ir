@@ -11,7 +11,7 @@ use triomphe::Arc;
 pub mod arr;
 
 /// A container which can be used to cache values of type `T`
-pub trait Caches<T>: Hash + Eq + Clone {
+pub trait Caches<T: ?Sized>: Hash + Eq + Clone {
     /// Is this handle unique or, if weak references are allowed, destroyed (for garbage collection)
     fn can_collect(&self) -> bool;
 }
@@ -25,7 +25,7 @@ impl<T: Hash + Eq> Caches<T> for Arc<T> {
 
 /// A cache for values of type `T`
 #[derive(Debug)]
-pub struct Cache<T, C: Caches<T> = Arc<T>, S: BuildHasher + Clone = RandomState> {
+pub struct Cache<T: ?Sized, C: Caches<T> = Arc<T>, S: BuildHasher + Clone = RandomState> {
     /// The set of cached values
     cache: DashMap<C, (), S>,
     /// The cached type
@@ -42,7 +42,7 @@ impl<T: Hash + Eq> Cache<T> {
     }
 }
 
-impl<T, C: Caches<T>, S: BuildHasher + Clone + Default> Default for Cache<T, C, S> {
+impl<T: ?Sized, C: Caches<T>, S: BuildHasher + Clone + Default> Default for Cache<T, C, S> {
     fn default() -> Cache<T, C, S> {
         Cache {
             cache: DashMap::default(),
@@ -51,7 +51,7 @@ impl<T, C: Caches<T>, S: BuildHasher + Clone + Default> Default for Cache<T, C, 
     }
 }
 
-impl<T: Eq + Hash, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
+impl<T: Eq + Hash + ?Sized, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S> {
     /**
     Attempt to cache a value. If already cached, return the corresponding `Arc`
 
