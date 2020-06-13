@@ -2,6 +2,7 @@
 Cached immutable arrays, bags, and sets of values
 */
 
+use super::Caches;
 use itertools::Itertools;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -10,11 +11,21 @@ use std::ops::Deref;
 use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 /// A cached array satisfying a given predicate `P`
-#[derive(Eq, PartialEq)]
 #[repr(transparent)]
 pub struct CachedArr<A, P = (), H = ()> {
     ptr: Option<ThinArc<H, A>>,
     predicate: std::marker::PhantomData<P>,
+}
+
+impl<A: Eq + Deref, P> Caches<[A]> for CachedArr<A, P> {
+    #[inline]
+    fn can_collect(&self) -> bool {
+        if let Some(ptr) = &self.ptr {
+            ptr.with_arc(|ptr| ptr.is_unique())
+        } else {
+            true
+        }
+    }
 }
 
 impl<A, P, H> Clone for CachedArr<A, P, H> {
@@ -26,6 +37,25 @@ impl<A, P, H> Clone for CachedArr<A, P, H> {
         }
     }
 }
+
+impl<A: Deref, P, Q, H> PartialEq<CachedArr<A, P, H>> for CachedArr<A, Q, H> {
+    #[inline]
+    fn eq(&self, other: &CachedArr<A, P, H>) -> bool {
+        let lhs = self.as_slice();
+        let rhs = other.as_slice();
+        if lhs.len() != rhs.len() {
+            return false;
+        }
+        for (l, r) in lhs.iter().zip(rhs.iter()) {
+            if l.deref() as *const _ != r.deref() as *const _ {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+impl<A: Deref, P, H> Eq for CachedArr<A, P, H> {}
 
 impl<A, P, H> CachedArr<A, P, H> {
     /// Get the pointer to the first element of this `CachedArr`, or null if there is none (i.e. the slice is empty)
