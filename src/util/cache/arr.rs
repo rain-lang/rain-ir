@@ -88,7 +88,7 @@ impl<A, P, H> CachedArr<A, P, H> {
     }
     /// Coerce this array into one satisfying another predicate
     #[inline]
-    fn coerce<Q>(self) -> CachedArr<A, Q, H> {
+    pub fn coerce<Q>(self) -> CachedArr<A, Q, H> {
         CachedArr {
             ptr: self.ptr,
             predicate: std::marker::PhantomData,
@@ -96,12 +96,12 @@ impl<A, P, H> CachedArr<A, P, H> {
     }
     /// Coerce this array as a reference into one satisfying another predicate
     #[inline]
-    fn coerce_ref<Q>(&self) -> &CachedArr<A, Q, H> {
+    pub fn coerce_ref<Q>(&self) -> &CachedArr<A, Q, H> {
         unsafe { std::mem::transmute(self) }
     }
 }
 
-impl<A> Debug for CachedArr<A>
+impl<A, P> Debug for CachedArr<A, P>
 where
     A: Debug,
 {
@@ -131,17 +131,24 @@ impl<A, P> Deref for CachedArr<A, P> {
     }
 }
 
-impl<A> From<Vec<A>> for CachedArr<A> {
-    fn from(v: Vec<A>) -> CachedArr<A> {
-        if v.len() == 0 {
-            CachedArr::empty()
+impl<A> CachedArr<A> {
+    /// Create a new cached array from an exact length iterator
+    pub fn from_exact<I: ExactSizeIterator + Iterator<Item=A>>(iter: I) -> CachedArr<A> {
+        if iter.len() == 0 {
+            CachedArr::EMPTY
         } else {
-            let ptr = Arc::from_header_and_iter(HeaderWithLength::new((), v.len()), v.into_iter());
+            let ptr = Arc::from_header_and_iter(HeaderWithLength::new((), iter.len()), iter);
             CachedArr {
                 ptr: Some(Arc::into_thin(ptr)),
                 predicate: std::marker::PhantomData,
             }
         }
+    }
+}
+
+impl<A> From<Vec<A>> for CachedArr<A> {
+    fn from(v: Vec<A>) -> CachedArr<A> {
+        Self::from_exact(v.into_iter())
     }
 }
 
@@ -184,13 +191,11 @@ pub trait EmptyPredicate {}
 impl EmptyPredicate for () {}
 
 impl<A, P: EmptyPredicate> CachedArr<A, P> {
-    /// Create an empty cached array
-    pub fn empty() -> CachedArr<A, P> {
-        CachedArr {
-            ptr: None,
-            predicate: std::marker::PhantomData,
-        }
-    }
+    /// Get a constant empty `CachedArr`
+    pub const EMPTY: CachedArr<A, P> = CachedArr {
+        ptr: None,
+        predicate: std::marker::PhantomData
+    };
 }
 
 /// A marker type indicating an array which is sorted by address, but may have duplicates

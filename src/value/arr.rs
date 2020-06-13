@@ -5,10 +5,12 @@ Reference-counted, hash-consed, typed arrays of values
 use super::predicate::Is;
 use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
-use crate::util::cache::{Cache, Caches};
+use crate::util::cache::{
+    arr::{BagMarker, CachedArr, EmptyPredicate, SetMarker, Sorted, Uniq},
+    Cache, Caches,
+};
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use ref_cast::RefCast;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
@@ -17,7 +19,7 @@ use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 
 lazy_static! {
     /// A cache for arrays of values
-    pub static ref ARRAY_CACHE: Cache<[ValId], ArcValIdArr> = Cache::default();
+    pub static ref ARRAY_CACHE: Cache<[ValId], CachedArr<ValId>> = Cache::default();
 }
 
 #[macro_export]
@@ -35,11 +37,11 @@ macro_rules! vararr {
 }
 
 /// A reference-counted, hash-consed, typed array of values
-#[derive(Debug, Eq, Hash, RefCast)]
+#[derive(Debug, Eq, Hash)]
 #[repr(transparent)]
 pub struct ValArr<A = (), P = ()> {
-    arr: Option<PrivateValArr>,
-    variant: std::marker::PhantomData<(A, P)>,
+    arr: CachedArr<ValId, A>,
+    variant: std::marker::PhantomData<P>,
 }
 
 /// A reference-counted, hash-consed, typed array of values guaranteed to be a given variant.
@@ -54,10 +56,10 @@ impl<A, P> Clone for ValArr<A, P> {
     }
 }
 
-impl<A, P> Default for ValArr<A, P> {
+impl<A: EmptyPredicate, P> Default for ValArr<A, P> {
     /// Get an empty `VarArr`
     fn default() -> ValArr<A, P> {
-        ValArr::EMPTY_SELF
+        ValArr::EMPTY
     }
 }
 
@@ -70,25 +72,24 @@ impl<A, B, P, Q> PartialEq<ValArr<A, P>> for ValArr<B, Q> {
 /// The unique empty array of `ValId`s. Temporary hack...
 static UNIQUE_EMPTY_ARRAY: [ValId; 0] = [];
 
-impl<A, P> ValArr<A, P> {
+impl<A: EmptyPredicate, P> ValArr<A, P> {
     /// This type as an empty array, for use in `const` contexts
-    pub const EMPTY_SELF: ValArr<A, P> = ValArr {
-        arr: None,
+    pub const EMPTY: ValArr<A, P> = ValArr {
+        arr: CachedArr::EMPTY,
         variant: std::marker::PhantomData,
     };
+}
+
+impl<A, P> ValArr<A, P> {
     /// Get the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        if let Some(arr) = &self.arr {
-            arr.len()
-        } else {
-            0
-        }
+        self.arr.len()
     }
     /// Check whether this array is empty
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.arr.is_none()
+        self.arr.is_empty()
     }
     /// Get this array as an array of ValIds
     #[inline]
@@ -106,88 +107,71 @@ impl<A, P> ValArr<A, P> {
     /// Get this array as a slice of ValIds
     #[inline]
     pub fn as_slice(&self) -> &[ValId] {
-        if let Some(arr) = &self.arr {
-            &arr
-        } else {
-            &UNIQUE_EMPTY_ARRAY
-        }
+        self.arr.as_slice()
     }
-    /// Get this array as a pointer to an array of ValIds
+    /// Get this array as a pointer to it's first element, or null for an empty array
     #[inline]
-    pub fn as_ptr(&self) -> *const [ValId] {
-        if let Some(arr) = &self.arr {
-            arr.deref()
-        } else {
-            &UNIQUE_EMPTY_ARRAY
-        }
+    pub fn as_ptr(&self) -> *const ValId {
+        self.arr.as_ptr()
     }
     /// Check if this array is address-sorted
     #[inline]
     pub fn is_sorted(&self) -> bool {
-        if let Some(arr) = &self.arr {
-            is_sorted::IsSorted::is_sorted_by_key(&mut arr.iter(), |v| v.as_ptr())
-        } else {
-            true
-        }
+        self.arr.is_sorted()
     }
     /// Check that this array is address-sorted in a strictly increasing fashion
     #[inline]
     pub fn is_set(&self) -> bool {
-        if let Some(arr) = &self.arr {
-            arr.windows(2).all(|w| w[0].as_ptr() < w[1].as_ptr())
-        } else {
-            true
-        }
+        self.arr.is_set()
     }
     /// If this array is address-sorted, return it as a sorted array. If not, fail.
     #[inline]
-    pub fn try_sorted(&self) -> Result<&ValBag<P>, ()> {
+    pub fn try_as_sorted(&self) -> Result<&ValBag<P>, &ValArr<A, P>> {
         if self.is_sorted() {
-            Ok(RefCast::ref_cast(&self.arr))
+            Ok(self.coerce_ref())
         } else {
-            Err(())
+            Err(self)
         }
     }
     /// If this array is strictly address-sorted, return it as a set. If not, fail.
     #[inline]
-    pub fn try_set(&self) -> Result<&ValSet<P>, ()> {
+    pub fn try_as_set(&self) -> Result<&ValSet<P>, &ValArr<A, P>> {
         if self.is_set() {
-            Ok(RefCast::ref_cast(&self.arr))
+            Ok(self.coerce_ref())
         } else {
-            Err(())
+            Err(self)
+        }
+    }
+    /// If this array is address-sorted, return it as a sorted array. If not, fail.
+    #[inline]
+    pub fn try_into_sorted(self) -> Result<ValBag<P>, ValArr<A, P>> {
+        if self.is_sorted() {
+            Ok(self.coerce())
+        } else {
+            Err(self)
+        }
+    }
+    /// If this array is strictly address-sorted, return it as a set. If not, fail.
+    #[inline]
+    pub fn try_into_set(self) -> Result<ValSet<P>, ValArr<A, P>> {
+        if self.is_set() {
+            Ok(self.coerce())
+        } else {
+            Err(self)
         }
     }
     /// Clone this array as an array of ValIds
     #[inline]
     pub fn clone_vals(&self) -> ValArr {
         ValArr {
-            arr: self.arr.clone(),
+            arr: self.arr.clone().coerce(),
             variant: std::marker::PhantomData,
         }
     }
-    /// Create a `ValArr` from an exact size iterator over `ValId`s, asserting it is of the desired type
+    /// Deduplicate a `CachedArr` to an array of `ValId`s, and assert this array is of the desired type
     #[inline]
-    fn assert_new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> ValArr<A, P> {
-        if vals.len() == 0 {
-            // Avoid empty array bugs
-            return ValArr {
-                arr: None,
-                variant: std::marker::PhantomData,
-            };
-        }
-        Self::dedup_and_assert(ArcValIdArr(Arc::from_header_and_iter(
-            HeaderWithLength::new((), vals.len()),
-            vals,
-        )))
-    }
-    /// Deduplicate an `Arc` to an array of `ValId`s, and assert this array is of the desired type
-    #[inline]
-    fn dedup_and_assert(ava: ArcValIdArr) -> ValArr<A, P> {
-        let dedup_ava = ARRAY_CACHE.cache(ava);
-        ValArr {
-            arr: Some(PrivateValArr(Arc::into_thin(dedup_ava.0))),
-            variant: std::marker::PhantomData,
-        }
+    fn dedup(ava: CachedArr<ValId>) -> ValArr<A> {
+
     }
     /// Iterate over the `ValId`s in this container
     #[inline]
@@ -218,49 +202,23 @@ impl<A, P> ValArr<A, P> {
     #[inline]
     fn coerce<B, Q>(self) -> ValArr<B, Q> {
         ValArr {
-            arr: self.arr,
+            arr: self.arr.coerce(),
             variant: std::marker::PhantomData,
         }
     }
     /// Coerce a reference to this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
     fn coerce_ref<B, Q>(&self) -> &ValArr<B, Q> {
-        RefCast::ref_cast(&self.arr)
+        unsafe { std::mem::transmute(self) }
     }
     /// Coerce this container into a slice of `VarId<V>`, asserting that the predicate holds *for each container element*!
     /// While this method can be called incorrectly, it is *safe* as regardless of `V`, all `VarId<V>` are guaranteed to have
     /// the same representation.
     #[inline]
     fn coerce_slice<U>(&self) -> &[ValId<U>] {
-        unsafe {
-            std::mem::transmute(if let Some(arr) = &self.arr {
-                arr.deref()
-            } else {
-                &UNIQUE_EMPTY_ARRAY[..]
-            })
-        }
+        unsafe { std::mem::transmute(self.arr.as_slice()) }
     }
 }
-
-/// A marker for a sorted array of a given value type
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Sorted;
-
-/// A trait implemented by markers which expose the `Bag` API
-pub trait BagMarker {}
-
-impl BagMarker for Sorted {}
-
-/// A marker for a sorted array of unique elements of a given value type
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Uniq;
-
-/// A trait implemented by markers which expose the `Set` API
-pub trait SetMarker: BagMarker {}
-
-impl SetMarker for Uniq {}
-
-impl BagMarker for Uniq {}
 
 /// An array of types
 pub type TyArr = VarArr<TypeValue>;
@@ -408,8 +366,16 @@ impl ValArr {
     }
     /// Deduplicate an `Arc` to an array of `ValId`s to get a `ValArr`
     #[inline]
-    pub fn dedup(ava: ArcValIdArr) -> ValArr {
-        Self::dedup_and_assert(ava)
+    pub fn dedup(ava: CachedArr<ValId>) -> ValArr {
+        let dedup_ava = if ava.len() != 0 {
+            ARRAY_CACHE.cache(ava)
+        } else {
+            ava // Don't waste cache space on an empty array
+        };
+        ValArr {
+            arr: dedup_ava,
+            variant: std::marker::PhantomData,
+        }
     }
 }
 
