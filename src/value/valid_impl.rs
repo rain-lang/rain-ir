@@ -134,6 +134,10 @@ impl<P> ValId<P> {
             variant: self.variant,
         }
     }
+    /// Clone this `ValId<P>` as a `ValId`
+    pub fn clone_val(&self) -> ValId {
+        self.clone().coerce()
+    }
     /// Coerce this `ValId` into another predicated value
     pub(super) fn coerce<Q>(self) -> ValId<Q> {
         ValId {

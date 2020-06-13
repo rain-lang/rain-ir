@@ -30,6 +30,10 @@ pub struct Bool;
 lazy_static! {
     /// A reference to the type of booleans
     pub static ref BOOL_TY: VarId<Bool> = VarId::direct_new(Bool);
+    /// A reference to the true boolean value
+    pub static ref TRUE: VarId<bool> = VarId::direct_new(true);
+    /// A reference to the false boolean value
+    pub static ref FALSE: VarId<bool> = VarId::direct_new(false);
 }
 
 debug_from_display!(Bool);
@@ -64,6 +68,10 @@ impl Value for Bool {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
+    }
+    #[inline]
+    fn into_val(self) -> ValId {
+        BOOL_TY.clone_val()
     }
 }
 
@@ -116,6 +124,13 @@ impl Value for bool {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
+    }
+    #[inline]
+    fn into_val(self) -> ValId {
+        match self {
+            true => TRUE.clone_val(),
+            false => FALSE.clone_val(),
+        }
     }
 }
 
@@ -521,7 +536,6 @@ impl Value for Logical {
         self.into()
     }
 }
-
 
 impl ValueData for Logical {}
 
