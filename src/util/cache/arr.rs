@@ -10,11 +10,21 @@ use std::ops::Deref;
 use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 /// A cached array satisfying a given predicate `P`
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 #[repr(transparent)]
 pub struct CachedArr<A, P = (), H = ()> {
     ptr: Option<ThinArc<H, A>>,
     predicate: std::marker::PhantomData<P>,
+}
+
+impl<A, P, H> Clone for CachedArr<A, P, H> {
+    #[inline]
+    fn clone(&self) -> CachedArr<A, P, H> {
+        CachedArr {
+            ptr: self.ptr.clone(),
+            predicate: self.predicate,
+        }
+    }
 }
 
 impl<A, P, H> CachedArr<A, P, H> {
@@ -30,6 +40,11 @@ impl<A, P, H> CachedArr<A, P, H> {
     #[inline]
     pub fn as_slice(&self) -> &[A] {
         self.ptr.as_ref().map(|p| &p.slice).unwrap_or(&[])
+    }
+    /// Iterate over the items of this `CachedArr`
+    #[inline]
+    pub fn iter(&self) -> std::slice::Iter<A> {
+        self.as_slice().iter()
     }
     /// Strip the predicate from this `CachedArr`
     #[inline]
@@ -241,5 +256,99 @@ impl<A: Deref, P: SetMarker, H> CachedArr<A, P, H> {
 /// A cached bag of elements
 pub type CachedBag<A, H = ()> = CachedArr<A, Sorted, H>;
 
+impl<A: Deref + Clone, H> CachedBag<A, H> {
+    /// Check whether an item is in this bag. If it is, return a reference.
+    pub fn contains_impl(&self, item: *const A::Target) -> Option<&A> {
+        self.as_slice()
+            .binary_search_by_key(&item, |a| a.deref() as *const _)
+            .ok()
+            .map(|ix| &self.as_slice()[ix])
+    }
+}
+
+impl<A: Deref + Clone> CachedBag<A> {
+    /// Merge two bags
+    pub fn merge_impl(&self, rhs: &CachedBag<A>) -> CachedBag<A> {
+        // Edge cases
+        if rhs.is_empty() {
+            return self.clone();
+        } else if self.is_empty() {
+            return rhs.clone();
+        }
+        let union = self
+            .iter()
+            .merge_by(rhs.iter(), |l, r| {
+                l.deref() as *const _ <= r.deref() as *const _
+            })
+            .cloned()
+            .collect_vec();
+        CachedArr::<A>::from(union).coerce()
+    }
+    /// Take the intersection of two bags
+    pub fn intersect_impl(&self, rhs: &CachedBag<A>) -> CachedBag<A> {
+        // Edge cases
+        if rhs.is_empty() {
+            return rhs.clone();
+        } else if self.is_empty() {
+            return self.clone();
+        }
+        let intersection = self
+            .iter()
+            .merge_join_by(rhs.iter(), |l, r| {
+                ((*l).deref() as *const A::Target).cmp(&((*r).deref() as *const A::Target))
+            })
+            .filter_map(|v| v.both().map(|(l, _)| l))
+            .cloned()
+            .collect_vec();
+        CachedArr::<A>::from(intersection).coerce()
+    }
+}
+
+impl<A: Deref + Clone, P: BagMarker, H> CachedArr<A, P, H> {
+    /// Check whether an item is in this bag. If it is, return a reference.
+    pub fn contains(&self, item: *const A::Target) -> Option<&A> {
+        self.coerce_ref().contains_impl(item)
+    }
+}
+
+impl<A: Deref + Clone, P: BagMarker> CachedArr<A, P> {
+    /// Merge two bags
+    pub fn merge<Q: BagMarker>(&self, rhs: &CachedArr<A, Q>) -> CachedBag<A> {
+        self.coerce_ref().merge_impl(rhs.coerce_ref())
+    }
+    /// Take the intersection of two bags
+    pub fn intersect<Q: BagMarker>(&self, rhs: &CachedArr<A, Q>) -> CachedArr<A, P> {
+        self.coerce_ref().intersect_impl(rhs.coerce_ref()).coerce()
+    }
+}
+
 /// A cached set of elements
 pub type CachedSet<A, H = ()> = CachedArr<A, Uniq, H>;
+
+impl<A: Deref + Clone> CachedSet<A> {
+    /// Take the union of two sets
+    pub fn union_impl(&self, rhs: &CachedSet<A>) -> CachedSet<A> {
+        // Edge cases
+        if rhs.is_empty() {
+            return self.clone();
+        } else if self.is_empty() {
+            return rhs.clone();
+        }
+        let union = self
+            .iter()
+            .merge_join_by(rhs.iter(), |l, r| {
+                ((*l).deref() as *const A::Target).cmp(&((*r).deref() as *const A::Target))
+            })
+            .map(|v| v.reduce(|l, _| l))
+            .cloned()
+            .collect_vec();
+        CachedArr::<A>::from(union).coerce()
+    }
+}
+
+impl<A: Deref + Clone, P: SetMarker> CachedArr<A, P> {
+    /// Take the union of two sets
+    pub fn union<Q: SetMarker>(&self, rhs: &CachedArr<A, Q>) -> CachedSet<A> {
+        self.coerce_ref().union_impl(rhs.coerce_ref())
+    }
+}
