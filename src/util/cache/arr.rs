@@ -2,10 +2,12 @@
 Cached immutable arrays, bags, and sets of values
 */
 
+use itertools::Itertools;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
+use std::iter::FromIterator;
 use std::ops::Deref;
-use triomphe::ThinArc;
+use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 /// A cached array satisfying a given predicate `P`
 #[derive(Clone, Eq, PartialEq)]
@@ -84,6 +86,68 @@ impl<A, P> Deref for CachedArr<A, P> {
     }
 }
 
+impl<A> From<Vec<A>> for CachedArr<A> {
+    fn from(v: Vec<A>) -> CachedArr<A> {
+        if v.len() == 0 {
+            CachedArr::empty()
+        } else {
+            let ptr = Arc::from_header_and_iter(HeaderWithLength::new((), v.len()), v.into_iter());
+            CachedArr {
+                ptr: Some(Arc::into_thin(ptr)),
+                predicate: std::marker::PhantomData,
+            }
+        }
+    }
+}
+
+impl<A: Deref> From<Vec<A>> for CachedBag<A> {
+    fn from(mut v: Vec<A>) -> CachedBag<A> {
+        v.sort_unstable_by_key(|a| a.deref() as *const _);
+        CachedArr::<A>::from(v).coerce()
+    }
+}
+
+impl<A: Deref> From<Vec<A>> for CachedSet<A> {
+    fn from(mut v: Vec<A>) -> CachedSet<A> {
+        v.sort_unstable_by_key(|a| a.deref() as *const _);
+        v.dedup_by_key(|a| a.deref() as *const _);
+        CachedArr::<A>::from(v).coerce()
+    }
+}
+
+impl<A> FromIterator<A> for CachedArr<A> {
+    fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> CachedArr<A> {
+        iter.into_iter().collect_vec().into()
+    }
+}
+
+impl<A: Deref> FromIterator<A> for CachedBag<A> {
+    fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> CachedBag<A> {
+        iter.into_iter().collect_vec().into()
+    }
+}
+
+impl<A: Deref> FromIterator<A> for CachedSet<A> {
+    fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> CachedSet<A> {
+        iter.into_iter().collect_vec().into()
+    }
+}
+
+/// A marker type for a predicate which is true for any empty array
+pub trait EmptyPredicate {}
+
+impl EmptyPredicate for () {}
+
+impl<A, P: EmptyPredicate> CachedArr<A, P> {
+    /// Create an empty cached array
+    pub fn empty() -> CachedArr<A, P> {
+        CachedArr {
+            ptr: None,
+            predicate: std::marker::PhantomData,
+        }
+    }
+}
+
 /// A marker type indicating an array which is sorted by address, but may have duplicates
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Sorted;
@@ -92,6 +156,7 @@ pub struct Sorted;
 pub trait BagMarker {}
 
 impl BagMarker for Sorted {}
+impl EmptyPredicate for Sorted {}
 
 /// A marker type indicating an array which is strictly sorted by address (i.e. no duplicates)
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -102,6 +167,7 @@ pub trait SetMarker: BagMarker {}
 
 impl BagMarker for Uniq {}
 impl SetMarker for Uniq {}
+impl EmptyPredicate for Uniq {}
 
 impl<A: Deref, P, H> CachedArr<A, P, H> {
     /// Check if this array is sorted by address
