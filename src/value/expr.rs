@@ -154,8 +154,8 @@ impl Value for Sexpr {
 }
 
 impl Deref for Sexpr {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
+    type Target = ValArr;
+    fn deref(&self) -> &ValArr {
         &self.args
     }
 }
