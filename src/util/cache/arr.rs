@@ -47,7 +47,7 @@ impl<A: Deref, P, Q, H> PartialEq<CachedArr<A, P, H>> for CachedArr<A, Q, H> {
             return false;
         }
         for (l, r) in lhs.iter().zip(rhs.iter()) {
-            if l.deref() as *const _ != r.deref() as *const _ {
+            if l.deref() as *const A::Target != r.deref() as *const A::Target {
                 return false;
             }
         }
@@ -133,7 +133,7 @@ impl<A, P> Deref for CachedArr<A, P> {
 
 impl<A> CachedArr<A> {
     /// Create a new cached array from an exact length iterator
-    pub fn from_exact<I: ExactSizeIterator + Iterator<Item=A>>(iter: I) -> CachedArr<A> {
+    pub fn from_exact<I: ExactSizeIterator + Iterator<Item = A>>(iter: I) -> CachedArr<A> {
         if iter.len() == 0 {
             CachedArr::EMPTY
         } else {
@@ -152,6 +152,12 @@ impl<A> From<Vec<A>> for CachedArr<A> {
     }
 }
 
+impl<A: Clone> From<&'_ [A]> for CachedArr<A> {
+    fn from(v: &[A]) -> CachedArr<A> {
+        Self::from_exact(v.iter().cloned())
+    }
+}
+
 impl<A: Deref> From<Vec<A>> for CachedBag<A> {
     fn from(mut v: Vec<A>) -> CachedBag<A> {
         v.sort_unstable_by_key(|a| a.deref() as *const _);
@@ -161,8 +167,8 @@ impl<A: Deref> From<Vec<A>> for CachedBag<A> {
 
 impl<A: Deref> From<Vec<A>> for CachedSet<A> {
     fn from(mut v: Vec<A>) -> CachedSet<A> {
-        v.sort_unstable_by_key(|a| a.deref() as *const _);
-        v.dedup_by_key(|a| a.deref() as *const _);
+        v.sort_unstable_by_key(|a| (*a).deref() as *const _);
+        v.dedup_by_key(|a| (*a).deref() as *const _);
         CachedArr::<A>::from(v).coerce()
     }
 }
@@ -194,7 +200,7 @@ impl<A, P: EmptyPredicate> CachedArr<A, P> {
     /// Get a constant empty `CachedArr`
     pub const EMPTY: CachedArr<A, P> = CachedArr {
         ptr: None,
-        predicate: std::marker::PhantomData
+        predicate: std::marker::PhantomData,
     };
 }
 
@@ -222,9 +228,9 @@ impl EmptyPredicate for Uniq {}
 impl<A: Deref, P, H> CachedArr<A, P, H> {
     /// Check if this array is sorted by address
     pub fn is_sorted(&self) -> bool {
-        is_sorted::IsSorted::is_sorted_by_key(&mut self.as_slice().iter(), |v| {
-            v.deref() as *const _
-        })
+        self.as_slice()
+            .windows(2)
+            .all(|w| w[0].deref() as *const _ <= w[1].deref() as *const _)
     }
     /// Check if this array is strictly sorted by address
     pub fn is_set(&self) -> bool {
@@ -247,6 +253,20 @@ impl<A: Deref, P, H> CachedArr<A, P, H> {
         } else {
             Err(self)
         }
+    }
+    /// Sort this array and return it
+    pub fn sorted(&self) -> CachedBag<A>
+    where
+        A: Clone,
+    {
+        CachedBag::from(self.iter().cloned().collect_vec())
+    }
+    /// Sort and deduplicate this array and return it
+    pub fn set(&self) -> CachedSet<A>
+    where
+        A: Clone,
+    {
+        CachedSet::from(self.iter().cloned().collect_vec())
     }
     /// Try to cast this array into a bag if sorted
     pub fn try_into_bag(self) -> Result<CachedBag<A, H>, Self> {
@@ -295,9 +315,15 @@ impl<A: Deref + Clone, H> CachedBag<A, H> {
     /// Check whether an item is in this bag. If it is, return a reference.
     pub fn contains_impl(&self, item: *const A::Target) -> Option<&A> {
         self.as_slice()
-            .binary_search_by_key(&item, |a| a.deref() as *const _)
+            .binary_search_by_key(&item, |a| (*a).deref() as *const A::Target)
             .ok()
             .map(|ix| &self.as_slice()[ix])
+    }
+    /// Deduplicate this bag into a set
+    pub fn uniq_impl(&self) -> CachedSet<A> {
+        let mut v = self.iter().cloned().collect_vec();
+        v.dedup_by_key(|a| (*a).deref() as *const A::Target);
+        CachedArr::<A>::from(v).coerce()
     }
 }
 
@@ -313,7 +339,7 @@ impl<A: Deref + Clone> CachedBag<A> {
         let union = self
             .iter()
             .merge_by(rhs.iter(), |l, r| {
-                l.deref() as *const _ <= r.deref() as *const _
+                (*l).deref() as *const A::Target <= (*r).deref() as *const A::Target
             })
             .cloned()
             .collect_vec();
@@ -348,12 +374,19 @@ impl<A: Deref + Clone, P: BagMarker, H> CachedArr<A, P, H> {
 
 impl<A: Deref + Clone, P: BagMarker> CachedArr<A, P> {
     /// Merge two bags
+    #[inline]
     pub fn merge<Q: BagMarker>(&self, rhs: &CachedArr<A, Q>) -> CachedBag<A> {
         self.coerce_ref().merge_impl(rhs.coerce_ref())
     }
     /// Take the intersection of two bags
+    #[inline]
     pub fn intersect<Q: BagMarker>(&self, rhs: &CachedArr<A, Q>) -> CachedArr<A, P> {
         self.coerce_ref().intersect_impl(rhs.coerce_ref()).coerce()
+    }
+    /// Deduplicate this bag into a set
+    #[inline]
+    pub fn uniq(&self) -> CachedSet<A> {
+        self.coerce_ref().uniq_impl()
     }
 }
 

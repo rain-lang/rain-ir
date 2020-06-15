@@ -6,7 +6,7 @@ use super::predicate::Is;
 use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
 use crate::util::cache::{
-    arr::{BagMarker, CachedArr, EmptyPredicate, SetMarker, Sorted, Uniq},
+    arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},
     Cache, Caches,
 };
 use itertools::Itertools;
@@ -68,9 +68,6 @@ impl<A, B, P, Q> PartialEq<ValArr<A, P>> for ValArr<B, Q> {
         self.arr == other.arr
     }
 }
-
-/// The unique empty array of `ValId`s. Temporary hack...
-static UNIQUE_EMPTY_ARRAY: [ValId; 0] = [];
 
 impl<A: EmptyPredicate, P> ValArr<A, P> {
     /// This type as an empty array, for use in `const` contexts
@@ -168,35 +165,26 @@ impl<A, P> ValArr<A, P> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Deduplicate a `CachedArr` to an array of `ValId`s, and assert this array is of the desired type
-    #[inline]
-    fn dedup(ava: CachedArr<ValId>) -> ValArr<A> {
-
-    }
     /// Iterate over the `ValId`s in this container
     #[inline]
-    fn iter_vals(&self) -> std::slice::Iter<ValId> {
-        if let Some(arr) = &self.arr {
-            arr.iter()
-        } else {
-            UNIQUE_EMPTY_ARRAY.iter()
-        }
+    pub fn iter_vals(&self) -> std::slice::Iter<ValId> {
+        self.arr.iter()
     }
     /// Address-sort this container *without* deduplicating
     #[inline]
     pub fn sorted(&self) -> ValBag<P> {
-        // Special case (TODO: consider performance implications...)
-        if self.is_sorted() {
-            return self.clone().coerce();
+        ValBag {
+            arr: self.arr.sorted(),
+            variant: self.variant,
         }
-        ValBag::assert_new(self.iter_vals().sorted_by_key(|v| v.as_ptr()).cloned())
     }
     /// Address-sort this container *with* deduplication, yielding a `VarSet`
     #[inline]
     pub fn set(&self) -> ValSet<P> {
-        let mut source: Vec<_> = self.iter_vals().sorted_by_key(|v| v.as_ptr()).collect();
-        source.dedup();
-        ValSet::assert_new(source.into_iter().cloned())
+        ValSet {
+            arr: self.arr.set(),
+            variant: self.variant,
+        }
     }
     /// Coerce this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
@@ -220,6 +208,14 @@ impl<A, P> ValArr<A, P> {
     }
 }
 
+impl<A> ValArr<A> {
+    /// Deduplicate a cached array into a `ValArr`
+    #[inline]
+    pub fn dedup(arr: CachedArr<ValId, A>) -> ValArr<A> {
+        ValArr::dedup_impl(arr.into_arr()).coerce()
+    }
+}
+
 /// An array of types
 pub type TyArr = VarArr<TypeValue>;
 
@@ -229,50 +225,6 @@ pub type VarBag<V> = ValArr<Sorted, Is<V>>;
 /// A set (implemented as a sorted, unique array) of `rain` values
 pub type VarSet<V> = ValArr<Uniq, Is<V>>;
 
-impl ValBag {
-    /// Check whether an item is in this bag. If it is, return a reference.
-    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValId<Q>` pair.
-    pub fn contains_impl(&self, item: *const NormalValue) -> Option<&ValId> {
-        self.as_slice()
-            .binary_search_by_key(&item, ValId::as_ptr)
-            .ok()
-            .map(|ix| &self.as_slice()[ix])
-    }
-    /// Merge two bags
-    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValArr<B, Q>` pair.
-    pub fn merge_impl(&self, rhs: &ValBag) -> ValBag {
-        // Edge cases
-        if rhs.is_empty() {
-            return self.clone();
-        } else if self.is_empty() {
-            return rhs.clone();
-        }
-        let union: Vec<_> = self
-            .iter_vals()
-            .merge_by(rhs.iter_vals(), |l, r| l.as_ptr() <= r.as_ptr())
-            .cloned()
-            .collect();
-        ValBag::assert_new(union.into_iter())
-    }
-    /// Take the intersection of two bags
-    /// This impl is to avoid recompilation for every `ValArr<A, P>`, `ValArr<B, Q>` pair.
-    pub fn intersect_impl(&self, rhs: &ValBag) -> ValBag {
-        // Edge cases
-        if rhs.is_empty() {
-            return rhs.clone();
-        } else if self.is_empty() {
-            return self.clone();
-        }
-        let intersection: Vec<_> = self
-            .iter_vals()
-            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
-            .filter_map(|v| v.both().map(|(l, _)| l))
-            .cloned()
-            .collect();
-        ValBag::assert_new(intersection.into_iter())
-    }
-}
-
 impl<A: BagMarker, P> ValArr<A, P> {
     /// Forget any additional array type information, yielding a `ValBag`
     pub fn as_bag(&self) -> &ValBag<P> {
@@ -281,30 +233,20 @@ impl<A: BagMarker, P> ValArr<A, P> {
     /// Check whether an item is in this bag. If it is, return a reference.
     #[inline]
     pub fn contains<Q>(&self, item: *const NormalValue) -> Option<&ValId<Q>> {
-        self.as_bag()
-            .as_vals()
-            .contains_impl(item)
-            .map(ValId::coerce_ref)
+        self.arr.contains(item).map(|v| v.coerce_ref())
     }
     /// Deduplicate this bag to yield a `ValSet`
     pub fn uniq(&self) -> ValSet<P> {
-        let vals: Vec<_> = self.iter_vals().dedup().collect();
-        ValSet::assert_new(vals.into_iter().cloned())
+        ValSet::dedup(self.arr.uniq()).coerce()
     }
     /// Merge two bags
     #[inline]
     pub fn merge<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValBag<P> {
-        self.as_bag()
-            .as_vals()
-            .merge_impl(rhs.coerce_ref())
-            .coerce()
+        ValBag::dedup(self.arr.merge(&rhs.arr)).coerce()
     }
     /// Take the intersection of two bags
     pub fn intersect<B: BagMarker>(&self, rhs: &ValArr<B, P>) -> ValArr<A, P> {
-        self.as_bag()
-            .as_vals()
-            .intersect_impl(rhs.coerce_ref())
-            .coerce()
+        ValBag::dedup(self.arr.intersect(&rhs.arr).coerce()).coerce()
     }
 }
 
@@ -315,34 +257,7 @@ impl<A: SetMarker, P> ValArr<A, P> {
     }
     /// Take the union of two `ValSet`s
     pub fn union<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
-        // Edge cases
-        if rhs.is_empty() {
-            return self.clone().coerce();
-        } else if self.is_empty() {
-            return rhs.clone().coerce();
-        }
-        let union: Vec<_> = self
-            .iter_vals()
-            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
-            .map(|v| v.reduce(|l, _| l))
-            .cloned()
-            .collect();
-        ValSet::assert_new(union.into_iter())
-    }
-    /// Take the symmetric difference of two `ValSet`s
-    pub fn diff<B: SetMarker>(&self, rhs: &ValArr<B, P>) -> ValSet<P> {
-        if rhs.is_empty() {
-            return self.clone().coerce();
-        } else if self.is_empty() {
-            return rhs.clone().coerce();
-        }
-        let diff: Vec<_> = self
-            .iter_vals()
-            .merge_join_by(rhs.iter_vals(), |l, r| l.as_ptr().cmp(&r.as_ptr()))
-            .filter_map(|v| v.map_any(Some, Some).reduce(|_, _| None))
-            .cloned()
-            .collect();
-        ValSet::assert_new(diff.into_iter())
+        ValSet::dedup(self.arr.union(&rhs.arr)).coerce()
     }
 }
 
@@ -362,11 +277,11 @@ impl ValArr {
     /// Create a `ValArr` from an exact size iterator over `ValId`s
     #[inline]
     pub fn new<I: Iterator<Item = ValId> + ExactSizeIterator>(vals: I) -> ValArr {
-        Self::assert_new(vals)
+        Self::dedup_impl(CachedArr::from_exact(vals))
     }
     /// Deduplicate an `Arc` to an array of `ValId`s to get a `ValArr`
     #[inline]
-    pub fn dedup(ava: CachedArr<ValId>) -> ValArr {
+    pub fn dedup_impl(ava: CachedArr<ValId>) -> ValArr {
         let dedup_ava = if ava.len() != 0 {
             ARRAY_CACHE.cache(ava)
         } else {
@@ -388,86 +303,67 @@ impl FromIterator<ValId> for ValArr {
 }
 
 impl FromIterator<ValId> for ValBag {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValBag {
-        let v = iter.into_iter().sorted_by_key(ValId::as_ptr);
-        Self::assert_new(v)
+        ValBag::dedup(CachedBag::from_iter(iter))
     }
 }
 
 impl FromIterator<ValId> for ValSet {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValSet {
-        let mut v: Vec<_> = iter.into_iter().sorted_by_key(ValId::as_ptr).collect();
-        v.dedup();
-        Self::assert_new(v.into_iter())
+        ValSet::dedup(CachedSet::from_iter(iter))
     }
 }
 
 impl<V: Value> FromIterator<V> for VarArr<V> {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarArr<V> {
-        let v: Vec<ValId> = iter.into_iter().map(Value::into_val).collect();
-        Self::assert_new(v.into_iter())
+        let v = iter.into_iter().map(Value::into_val).collect_vec();
+        ValArr::<()>::dedup(v.into()).coerce()
     }
 }
 
 impl<V: Value> FromIterator<V> for VarBag<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarBag<V> {
-        let v = iter
-            .into_iter()
-            .map(Value::into_val)
-            .sorted_by_key(ValId::as_ptr);
-        Self::assert_new(v)
+        let v = iter.into_iter().map(Value::into_val).collect_vec();
+        ValBag::dedup(v.into()).coerce()
     }
 }
 
 impl<V: Value> FromIterator<V> for VarSet<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
-        let mut v: Vec<_> = iter
-            .into_iter()
-            .map(Value::into_val)
-            .sorted_by_key(ValId::as_ptr)
-            .collect();
-        v.dedup();
-        Self::assert_new(v.into_iter())
+        let v = iter.into_iter().map(Value::into_val).collect_vec();
+        ValSet::dedup(v.into()).coerce()
     }
 }
 
 impl<V: Value> FromIterator<VarId<V>> for VarArr<V> {
     fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarArr<V> {
-        let v: Vec<ValId> = iter.into_iter().map(Into::into).collect();
-        Self::assert_new(v.into_iter())
+        let v = iter.into_iter().map(Into::into).collect_vec();
+        ValArr::<()>::dedup(v.into()).coerce()
     }
 }
 
 impl<V: Value> FromIterator<VarId<V>> for VarBag<V> {
     fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarBag<V> {
-        let v = iter
-            .into_iter()
-            .map(Into::into)
-            .sorted_by_key(ValId::as_ptr);
-        Self::assert_new(v)
+        let v = iter.into_iter().map(Into::into).collect_vec();
+        ValBag::dedup(v.into()).coerce()
     }
 }
 
 impl<V: Value> FromIterator<VarId<V>> for VarSet<V> {
     fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarSet<V> {
-        let mut v: Vec<_> = iter
-            .into_iter()
-            .map(Into::into)
-            .sorted_by_key(ValId::as_ptr)
-            .collect();
-        v.dedup();
-        Self::assert_new(v.into_iter())
+        let v = iter.into_iter().map(Into::into).collect_vec();
+        ValSet::dedup(v.into()).coerce()
     }
 }
 
 impl<A, P> Index<usize> for ValArr<A, P> {
     type Output = ValId<P>;
+    #[inline]
     fn index(&self, ix: usize) -> &ValId<P> {
-        if let Some(arr) = &self.arr {
-            arr[ix].coerce_ref()
-        } else {
-            panic!("Indexed empty VarArr with index {}", ix)
-        }
+        self.arr.index(ix).coerce_ref()
     }
 }
 
@@ -559,12 +455,12 @@ mod tests {
 
         // Direct fully unsorted array construction
         let ua = ValArr::<()>::from_iter(fv.iter().cloned());
-        ua.try_sorted().expect_err("This array is not sorted!");
-        ua.try_set().expect_err("This array is not a set!");
+        ua.try_as_sorted().expect_err("This array is not sorted!");
+        ua.try_as_set().expect_err("This array is not a set!");
         assert_eq!(ua.len(), 25);
         let ua2 = ValArr::<()>::from_iter(fv2.iter().cloned());
-        ua2.try_sorted().expect_err("This array is not sorted!");
-        ua2.try_set().expect_err("This array is not a set!");
+        ua2.try_as_sorted().expect_err("This array is not sorted!");
+        ua2.try_as_set().expect_err("This array is not a set!");
         assert_eq!(ua2.len(), 35);
 
         // Direct fully unsorted bag construction
@@ -661,6 +557,15 @@ mod tests {
         assert_eq!(finite_valarrs, finite_valarrs_2);
         assert_eq!(finite_valarrs.deref(), finite_valarrs_2.deref());
 
+        // Convert a dereference to a pointer
+        fn get_ptr(v: &ValArr) -> *const ValId {
+            if v.len() == 0 {
+                std::ptr::null()
+            } else {
+                &v[0]
+            }
+        }
+
         // Basic identity tests
         for i in 0..finite_arrays.len() {
             assert_eq!(
@@ -671,12 +576,12 @@ mod tests {
             );
             assert_eq!(
                 finite_valarrs[i].as_ptr(),
-                finite_valarrs[i].deref() as *const [ValId],
+                get_ptr(&finite_valarrs[i]),
                 "Failure at index {}",
                 i
             );
             assert_eq!(
-                finite_valarrs_2[i].deref() as *const [ValId],
+                get_ptr(&finite_valarrs_2[i]),
                 finite_valarrs_2[i].as_ptr(),
                 "Failure at index {}",
                 i
@@ -695,7 +600,7 @@ mod tests {
             );
             assert_eq!(
                 finite_valarrs[i].as_ptr(),
-                finite_valarrs_3[i].as_valarr().deref(),
+                get_ptr(finite_valarrs_3[i].as_valarr()),
                 "Failure at index {}",
                 i
             );

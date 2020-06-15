@@ -50,7 +50,7 @@ pub trait Regional {
 /// The null region
 pub static NULL_REGION: RegionData = RegionData {
     parent: Region(None),
-    param_tys: TyArr::EMPTY_SELF,
+    param_tys: TyArr::EMPTY,
     depth: 0,
 };
 
