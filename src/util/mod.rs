@@ -11,7 +11,7 @@ use triomphe::{Arc, ArcBorrow};
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;
 
-pub mod hash_cache;
+pub mod cache;
 
 /// An implementation of ByAddress which can only be constructed if a value of the type
 /// parameter `V` can be constructed, which of course is impossible without `unsafe` if
