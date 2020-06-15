@@ -7,7 +7,7 @@
 In Rust, lifetimes can be modeled using the formal, imperative semantics of [Stacked Borrows](https://plv.mpi-sws.org/rustbelt/stacked-borrows/),
 however, since `rain` is a purely functional language, statements can be executed in an arbitrary order (including in parallel) constrained only by their
 dependencies. Hence, in `rain`, we instead model lifetimes a set of conditions on possible dependencies between values, and hence as a
-generalization of linear types. That said, it is occasionally useful to think of `rain` lifetimes as 
+generalization of linear types. That said, it is occasionally useful to think of `rain` lifetimes as
 [stacked borrows](https://plv.mpi-sws.org/rustbelt/stacked-borrows/) applied not to a particular imperative program,
 but to the equivalence class of all imperative programs executing the instructions of a `rain` program in an order
 satisfying certain constraints. It is important to keep in mind, however, that there are subtle differences between these models,
@@ -26,36 +26,95 @@ and pinning, is dealt with by an "address dependency" system in which a given va
 almost like a field, but again, for our current, simple case, we will ignore this subtlety.
 
 */
-use std::cmp::Ordering;
-
 use crate::region::{Region, RegionBorrow, Regional};
+use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use triomphe::{Arc, ArcBorrow};
 
 mod arr;
 pub use arr::*;
 
 /// A `rain` lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
-pub struct Lifetime(Region);
+#[derive(Debug, Clone, Eq, Default)]
+pub struct Lifetime(Option<Arc<LifetimeData>>);
 
-/// A borrow of a `rain` lifetime
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
-pub struct LifetimeBorrow<'a>(RegionBorrow<'a>);
-
-/// The data describing a `rain` lifetime
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum LifetimeData {
+impl PartialEq for Lifetime {
+    fn eq(&self, other: &Lifetime) -> bool {
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
+    }
 }
 
+impl Hash for Lifetime {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.deref(), hasher)
+    }
+}
+
+impl Deref for Lifetime {
+    type Target = LifetimeData;
+    fn deref(&self) -> &LifetimeData {
+        if let Some(ptr) = &self.0 {
+            &ptr
+        } else {
+            &STATIC_LIFETIME
+        }
+    }
+}
+
+/// A borrow of a `rain` lifetime
+#[derive(Debug, Copy, Clone, Eq, Default)]
+pub struct LifetimeBorrow<'a>(Option<ArcBorrow<'a, LifetimeData>>);
+
+impl PartialEq for LifetimeBorrow<'_> {
+    fn eq(&self, other: &LifetimeBorrow) -> bool {
+        let self_ptr = self.deref() as *const _;
+        let other_ptr = other.deref() as *const _;
+        self_ptr == other_ptr
+    }
+}
+
+impl Hash for LifetimeBorrow<'_> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.deref(), hasher)
+    }
+}
+
+impl Deref for LifetimeBorrow<'_> {
+    type Target = LifetimeData;
+    fn deref(&self) -> &LifetimeData {
+        if let Some(ptr) = &self.0 {
+            &ptr
+        } else {
+            &STATIC_LIFETIME
+        }
+    }
+}
+
+/// The data describing a `rain` lifetime
+#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd)]
+pub enum LifetimeData {
+    /// A region. TODO: this
+    Region(Region),
+}
+
+/// The static `rain` lifetime, with a constant address
+pub static STATIC_LIFETIME: LifetimeData = LifetimeData::Region(Region::NULL);
+
 impl Lifetime {
+    /// The static `rain` lifetime
+    pub const STATIC: Lifetime = Lifetime(None);
     /// Borrow this lifetime
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow(self.0.borrow_region())
+        LifetimeBorrow(self.0.as_ref().map(|v| v.borrow_arc()))
     }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
     pub fn is_static(&self) -> bool {
-        self.0.is_null()
+        self.0.is_none()
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
@@ -81,14 +140,20 @@ impl Lifetime {
 impl Regional for Lifetime {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.0.borrow_region()
+        match self.deref() {
+            LifetimeData::Region(r) => r.borrow_region(),
+        }
     }
 }
 
 impl From<Region> for Lifetime {
     #[inline]
     fn from(region: Region) -> Lifetime {
-        Lifetime(region)
+        if region.is_null() {
+            Lifetime(None)
+        } else {
+            Lifetime(Some(LifetimeData::Region(region).into()))
+        }
     }
 }
 
@@ -98,7 +163,7 @@ impl PartialOrd for Lifetime {
     This naturally induces a partial ordering on the set of lifetimes.
     */
     fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        self.deref().partial_cmp(other.deref())
     }
 }
 
@@ -108,7 +173,7 @@ impl PartialOrd for LifetimeBorrow<'_> {
     This naturally induces a partial ordering on the set of lifetimes
     */
     fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        self.deref().partial_cmp(other.deref())
     }
 }
 
@@ -116,31 +181,31 @@ impl<'a> LifetimeBorrow<'a> {
     /// Clone this lifetime
     #[inline]
     pub fn clone_lifetime(&self) -> Lifetime {
-        Lifetime(self.0.clone_region())
+        Lifetime(self.0.map(|v| v.clone_arc()))
     }
     /// Get the region of this lifetime
     #[inline]
     pub fn get_region(&self) -> RegionBorrow<'a> {
-        self.0
+        match self.0 {
+            None => RegionBorrow::NULL,
+            Some(r) => match r.get() {
+                LifetimeData::Region(r) => r.borrow_region(),
+            },
+        }
     }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
     pub fn is_static(&self) -> bool {
-        self.0.is_null()
+        self.0.is_none()
     }
 }
 
 impl Regional for LifetimeBorrow<'_> {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.0
-    }
-}
-
-impl<'a> From<RegionBorrow<'a>> for LifetimeBorrow<'a> {
-    #[inline]
-    fn from(borrow: RegionBorrow) -> LifetimeBorrow {
-        LifetimeBorrow(borrow)
+        match self.deref() {
+            LifetimeData::Region(r) => r.borrow_region(),
+        }
     }
 }
 
