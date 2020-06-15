@@ -1,26 +1,19 @@
 /*!
 `rain` expressions
 */
-use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, ValueData};
+use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, ValueData, arr::ValArr};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
-use smallvec::{smallvec, SmallVec};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
 use std::ops::Deref;
-
-/// The size of a small S-expression
-pub const SMALL_SEXPR_SIZE: usize = 3;
-
-/// The argument-vector of an S-expression
-pub type SexprArgs = SmallVec<[ValId; SMALL_SEXPR_SIZE]>;
 
 /// An S-expression
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Sexpr {
     /// The arguments of this S-expression
-    args: SexprArgs,
+    args: ValArr,
     /// The (cached) lifetime of this S-expression
     lifetime: Lifetime,
     /// The (cached) type of this S-expression
@@ -32,7 +25,7 @@ pretty_display!(Sexpr, "(...)");
 
 impl Sexpr {
     /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.
-    pub fn try_new(mut args: SexprArgs) -> Result<Sexpr, Error> {
+    pub fn try_new(mut args: Vec<ValId>) -> Result<Sexpr, Error> {
         // Simple cases
         match args.len() {
             0 => return Ok(Self::unit()),
@@ -45,7 +38,7 @@ impl Sexpr {
                 if s.len() == 0 {
                     return Err(Error::EmptySexprApp); // Special error for unit application
                 }
-                let mut new_args = SexprArgs::with_capacity(args.len() + s.len());
+                let mut new_args = Vec::with_capacity(args.len() + s.len());
                 new_args.extend(s.iter().cloned());
                 new_args.extend(args.drain(1..));
                 args = new_args;
@@ -59,7 +52,7 @@ impl Sexpr {
             | Application::Incomplete(lifetime, ty)
             | Application::Stop(lifetime, ty) => (lifetime, ty),
         };
-        Ok(Sexpr { args, lifetime, ty })
+        Ok(Sexpr { args: args.into(), lifetime, ty })
     }
     /// Attempt to create an S-expression from an un-owned argument-list, evaluating as necessary
     pub fn eval(args: &[ValId]) -> Result<Sexpr, Error> {
@@ -80,11 +73,11 @@ impl Sexpr {
                 Application::Complete(lifetime, ty)
                 | Application::Incomplete(lifetime, ty)
                 | Application::Stop(lifetime, ty) => {
-                    let mut a = SexprArgs::with_capacity(1 + args.len());
+                    let mut a = Vec::with_capacity(1 + args.len());
                     a.push(f);
                     a.clone_from_slice(args);
                     return Ok(Sexpr {
-                        args: a,
+                        args: a.into(),
                         lifetime,
                         ty,
                     });
@@ -96,7 +89,7 @@ impl Sexpr {
     /// Create an S-expression corresponding to the unit value
     pub fn unit() -> Sexpr {
         Sexpr {
-            args: SexprArgs::new(),
+            args: ValArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: UNIT_TY.as_ty().clone(),
         }
@@ -109,7 +102,7 @@ impl Sexpr {
         }
         let ty = value.ty().clone_ty();
         Sexpr {
-            args: smallvec![value],
+            args: valarr![value],
             lifetime: Lifetime::default(),
             ty,
         }
@@ -161,8 +154,8 @@ impl Value for Sexpr {
 }
 
 impl Deref for Sexpr {
-    type Target = SexprArgs;
-    fn deref(&self) -> &SexprArgs {
+    type Target = [ValId];
+    fn deref(&self) -> &[ValId] {
         &self.args
     }
 }

@@ -36,6 +36,20 @@ macro_rules! vararr {
     }};
 }
 
+#[macro_export]
+/// A macro to create a value array
+macro_rules! valarr {
+    () => { $crate::value::arr::VarArr::EMPTY_SELF };
+    ($elem:expr; $n:expr) => {{
+        let v: Vec<ValId> = vec![$elem; $n];
+        v.into_iter().collect()
+    }};
+    ($($x:expr),+ $(,)?) => {{
+        let v: Vec<ValId> = vec![$($x,)+];
+        v.into_iter().collect()
+    }};
+}
+
 /// A reference-counted, hash-consed, typed array of values
 #[derive(Debug, Eq, Hash)]
 #[repr(transparent)]
@@ -298,6 +312,12 @@ impl FromIterator<ValId> for ValArr {
     fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValArr {
         let v: Vec<_> = iter.into_iter().collect();
         //TODO: optimize the case where size is known?
+        Self::new(v.into_iter())
+    }
+}
+
+impl From<Vec<ValId>> for ValArr {
+    fn from(v: Vec<ValId>) -> ValArr {
         Self::new(v.into_iter())
     }
 }

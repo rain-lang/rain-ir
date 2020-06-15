@@ -23,7 +23,6 @@ use crate::value::{
 };
 use ahash::RandomState;
 use num::ToPrimitive;
-use smallvec::smallvec;
 use std::borrow::Borrow;
 use std::convert::TryInto;
 use std::fmt::{self, Debug, Formatter};
@@ -217,7 +216,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                     _ => match base.ty().as_enum() {
                         // Else try index-expression building
                         ValueEnum::Product(p) => {
-                            base = Sexpr::try_new(smallvec![
+                            base = Sexpr::try_new(vec![
                                 base.clone(),
                                 Index::try_new(Finite(p.len() as u128), ix)
                                     .map_err(|_| Error::IndexOutOfBounds {
