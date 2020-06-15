@@ -2,34 +2,23 @@
 Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
-    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId,
-    Value, ValueData, ValueEnum,
+    arr::{TyArr, ValArr},
+    universe::FINITE_TY,
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
+    ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
-use smallvec::SmallVec;
 use std::ops::Deref;
-
-/// The size of a small tuple
-pub const SMALL_TUPLE_SIZE: usize = 3;
-
-/// The size of a small product type
-pub const SMALL_PRODUCT_SIZE: usize = SMALL_TUPLE_SIZE;
-
-/// The element-vector of a tuple
-pub type TupleElems = SmallVec<[ValId; SMALL_TUPLE_SIZE]>;
-
-/// The element-vector of a product type
-pub type ProductElems = SmallVec<[TypeId; SMALL_PRODUCT_SIZE]>;
 
 /// A tuple of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Tuple {
     /// The elements of this tuple
-    elems: TupleElems,
+    elems: ValArr,
     /// The (cached) lifetime of this tuple
     lifetime: Lifetime,
     /// The (cached) type of this tuple
@@ -39,7 +28,7 @@ pub struct Tuple {
 impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new(elems: TupleElems) -> Result<Tuple, ()> {
+    pub fn try_new(elems: ValArr) -> Result<Tuple, ()> {
         let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
         let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
@@ -52,7 +41,7 @@ impl Tuple {
     #[inline]
     pub fn unit() -> Tuple {
         Tuple {
-            elems: TupleElems::new(),
+            elems: ValArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: UNIT_TY.as_ty().clone(),
         }
@@ -68,9 +57,9 @@ impl Live for Tuple {
 lifetime_region!(Tuple);
 
 impl Deref for Tuple {
-    type Target = TupleElems;
+    type Target = ValArr;
     #[inline]
-    fn deref(&self) -> &TupleElems {
+    fn deref(&self) -> &ValArr {
         &self.elems
     }
 }
@@ -160,7 +149,7 @@ pretty_display!(Tuple, "[...]");
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Product {
     /// The elements of this product type
-    elems: ProductElems,
+    elems: TyArr,
     /// The (cached) lifetime of this product type
     lifetime: Lifetime,
     /// The (cached) type of this product type
@@ -170,7 +159,7 @@ pub struct Product {
 impl Product {
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new(elems: ProductElems) -> Result<Product, ()> {
+    pub fn try_new(elems: TyArr) -> Result<Product, ()> {
         let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
@@ -183,7 +172,7 @@ impl Product {
     #[inline]
     pub fn unit_ty() -> Product {
         Product {
-            elems: SmallVec::new(),
+            elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: FINITE_TY.clone(),
         }
@@ -199,7 +188,7 @@ impl Substitute for Product {
             .elems
             .iter()
             .cloned()
-            .map(|val| val.substitute(ctx))
+            .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
             .collect();
         Product::try_new(elems?).map_err(|_| Error::IncomparableRegions)
     }
@@ -216,9 +205,9 @@ impl Live for Product {
 lifetime_region!(Product);
 
 impl Deref for Product {
-    type Target = ProductElems;
+    type Target = TyArr;
     #[inline]
-    fn deref(&self) -> &ProductElems {
+    fn deref(&self) -> &TyArr {
         &self.elems
     }
 }
@@ -321,7 +310,7 @@ mod prettyprint_impl {
     mod tests {
         use super::*;
         use crate::parser::builder::Builder;
-        use smallvec::smallvec;
+        use crate::valarr;
 
         #[test]
         fn nested_units_print_properly() {
@@ -329,7 +318,7 @@ mod prettyprint_impl {
             let unit_ty = Product::unit_ty();
             assert_eq!(format!("{}", unit), format!("{}", UNIT_VALUE));
             assert_eq!(format!("{}", unit_ty), format!("{}", Unit));
-            let two_units = Tuple::try_new(smallvec![unit.clone().into(), unit.into()])
+            let two_units = Tuple::try_new(valarr![unit.clone().into(), unit.into()])
                 .expect("This is a valid tuple!");
             assert_eq!(
                 format!("{}", two_units),
