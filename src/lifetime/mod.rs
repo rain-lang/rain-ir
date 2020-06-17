@@ -31,9 +31,16 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
+use lazy_static::lazy_static;
+use crate::util::cache::Cache;
 
 mod arr;
 pub use arr::*;
+
+lazy_static! {
+    /// The global lifetime cache
+    pub static ref LIFETIME_CACHE: Cache<LifetimeData> = Cache::new();
+}
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
@@ -106,6 +113,14 @@ pub static STATIC_LIFETIME: LifetimeData = LifetimeData::Region(Region::NULL);
 impl Lifetime {
     /// The static `rain` lifetime
     pub const STATIC: Lifetime = Lifetime(None);
+    /// Create a new `Lifetime` from `LifetimeData`
+    pub fn new(data: LifetimeData) -> Lifetime {
+        Lifetime(Some(LIFETIME_CACHE.cache(data)))
+    }
+    /// Deduplicate an `Arc<LifetimeData>` into a `Lifetime`
+    pub fn dedup(arc: Arc<LifetimeData>) -> Lifetime {
+        Lifetime(Some(LIFETIME_CACHE.cache(arc)))
+    }
     /// Borrow this lifetime
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
@@ -152,7 +167,7 @@ impl From<Region> for Lifetime {
         if region.is_null() {
             Lifetime(None)
         } else {
-            Lifetime(Some(LifetimeData::Region(region).into()))
+            Lifetime::new(LifetimeData::Region(region).into())
         }
     }
 }
