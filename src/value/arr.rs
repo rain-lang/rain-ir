@@ -316,9 +316,9 @@ impl FromIterator<ValId> for ValArr {
     }
 }
 
-impl From<Vec<ValId>> for ValArr {
-    fn from(v: Vec<ValId>) -> ValArr {
-        Self::new(v.into_iter())
+impl<A, P> From<Vec<ValId<P>>> for ValArr<A, P> where CachedArr<ValId, A>: FromIterator<ValId> {
+    fn from(v: Vec<ValId<P>>) -> ValArr<A, P> {
+        ValArr::dedup(v.into_iter().map(|v| v.into_val()).collect()).coerce()
     }
 }
 

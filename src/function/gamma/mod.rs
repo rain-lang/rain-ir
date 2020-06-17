@@ -7,19 +7,23 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
-use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, arr::ValSet};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use itertools::Itertools;
 use std::ops::Deref;
+use thin_dst::ThinBox;
+
+pub mod pattern;
+use pattern::Pattern;
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Gamma {
     /// The branches of this gamma node
-    branches: Box<[Branch]>,
+    branches: ThinBox<(), Branch>,
     /// The dependencies of this gamma node, taken as a whole.
     /// Sorted by address
-    deps: Box<[ValId]>,
+    deps: ValSet,
     /// The lifetime of this gamma node
     lifetime: Lifetime,
     /// The type of this gamma node
@@ -30,7 +34,7 @@ pub struct Gamma {
 impl Gamma {
     /// Get the branches of this gamma node
     pub fn branches(&self) -> &[Branch] {
-        &self.branches
+        &self.branches.slice
     }
 }
 
@@ -102,10 +106,10 @@ impl GammaBuilder {
     }
     /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
     /// Return an error on a mismatch between branch parameters and the desired gamma node type
-    pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, ()> {
+    pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
         //TODO: type checking
         Ok(BranchBuilder {
-            region: pattern.region(&self.branches),
+            region: pattern.region(self.ty.borrow_var())?,
             builder: self,
             pattern,
         })
@@ -136,8 +140,8 @@ impl GammaBuilder {
         self.branches.shrink_to_fit();
         //TODO: completion check
         Ok(Gamma {
-            deps: deps.into_boxed_slice(),
-            branches: self.branches.into_boxed_slice(),
+            deps: deps.into(),
+            branches: ThinBox::new((), self.branches.into_iter()),
             lifetime,
             ty: self.ty,
         })
@@ -216,19 +220,6 @@ impl<'a> BranchBuilder<'a> {
             value, //TODO: check type, lifetimes, etc.
         });
         Ok(ix)
-    }
-}
-
-/// A pattern for a gamma node branch
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Pattern {}
-
-impl Pattern {
-    /// Create the region for a given pattern given the current branch-set
-    pub fn region(&self, _branches: &[Branch]) -> Region {
-        match self {
-            _ => unimplemented!(),
-        }
     }
 }
 
