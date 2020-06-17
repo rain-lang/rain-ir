@@ -4,7 +4,7 @@ Pattern matching branches
 TODO: consider caching patterns
 */
 use crate::function::pi::Pi;
-use crate::region::{Region, RegionData};
+use crate::region::{Parameter, Region, RegionData};
 use crate::value::{Error, TypeId, VarRef};
 use std::ops::Deref;
 use triomphe::Arc;
@@ -13,14 +13,10 @@ use triomphe::Arc;
 #[derive(Debug, Clone, Hash, Eq)]
 pub struct Pattern(pub Arc<PatternData>);
 
-impl Pattern {
-    /// Get the region associated with this pattern, given a function type and a parent
-    pub fn region(&self, ty: VarRef<Pi>) -> Result<Region, Error> {
-        self.deref().region(ty)
-    }
-    /// Get the argument type vector associated with this pattern, given a function type
-    pub fn arg_tys(&self, ty: VarRef<Pi>) -> Result<Vec<TypeId>, Error> {
-        self.deref().arg_tys(ty)
+impl Match for Pattern {
+    #[inline]
+    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        self.deref().try_match(ty)
     }
 }
 
@@ -52,20 +48,27 @@ impl From<PatternData> for Pattern {
 pub enum PatternData {
     /// The wildcard pattern
     Any,
+    /// A boolean pattern
+    Bool(bool),
 }
 
-impl PatternData {
-    /// Get the region associated with this pattern, given an input region and a parent
-    pub fn region(&self, ty: VarRef<Pi>) -> Result<Region, Error> {
-        Ok(Region::new(RegionData::with(
-            self.arg_tys(ty)?.into(),
-            ty.def_region().parent().cloned().unwrap_or(Region::NULL)
-        )))
-    }
-    /// Get the argument type vector associated with this pattern, given an input region
-    pub fn arg_tys(&self, ty: VarRef<Pi>) -> Result<Vec<TypeId>, Error> {
-        match self {
-            PatternData::Any => Ok(ty.def_region().param_tys().iter().cloned().collect()),
-        }
+/// The parameters to a branch
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct BranchArgs {
+    /// This branch's region
+    pub region: Region,
+    /// This branch's parameters
+    pub params: Vec<Parameter>,
+}
+
+/// A value which can perform pattern matching
+pub trait Match {
+    /// Try to match a pattern as a sub-branch of a given pi-type
+    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error>;
+}
+
+impl Match for PatternData {
+    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        unimplemented!()
     }
 }

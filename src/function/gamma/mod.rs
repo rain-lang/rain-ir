@@ -5,16 +5,16 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, Regional};
+use crate::region::{Parameter, Region, Regional};
 use crate::typing::Typed;
-use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, arr::ValSet};
+use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use itertools::Itertools;
 use std::ops::Deref;
 use thin_dst::ThinBox;
 
 pub mod pattern;
-use pattern::Pattern;
+use pattern::{BranchArgs, Match, Pattern};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -109,7 +109,7 @@ impl GammaBuilder {
     pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
         //TODO: type checking
         Ok(BranchBuilder {
-            region: pattern.region(self.ty.borrow_var())?,
+            args: pattern.try_match(self.ty.borrow_var())?,
             builder: self,
             pattern,
         })
@@ -190,8 +190,8 @@ impl Branch {
 /// A builder for a branch of a gamma node
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct BranchBuilder<'a> {
-    /// The region corresponding to this branch's pattern
-    region: Region,
+    /// This branch's arguments
+    args: BranchArgs,
     /// The pattern corresponding to this branch
     pattern: Pattern,
     /// The builder for this branch
@@ -202,7 +202,17 @@ impl<'a> BranchBuilder<'a> {
     /// Get the region of this branch builder
     #[inline]
     pub fn region(&self) -> &Region {
-        &self.region
+        &self.args.region
+    }
+    /// Get the parameters of this branch builder
+    #[inline]
+    pub fn params(&self) -> &[Parameter] {
+        &self.args.params
+    }
+    /// Get the arguments of this branch builder
+    #[inline]
+    pub fn args(&self) -> &BranchArgs {
+        &self.args
     }
     /// Get the pattern of this branch builder
     #[inline]
@@ -215,7 +225,7 @@ impl<'a> BranchBuilder<'a> {
         let ix = self.builder.branches.len();
         //TODO: region check...
         self.builder.branches.push(Branch {
-            region: self.region,
+            region: self.args.region,
             pattern: self.pattern,
             value, //TODO: check type, lifetimes, etc.
         });
