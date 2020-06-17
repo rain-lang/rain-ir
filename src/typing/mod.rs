@@ -113,6 +113,7 @@ impl Type for TypeValue {
             ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.universe(),
             ValueEnum::Pi(p) => p.universe(),
+            ValueEnum::Finite(f) => f.universe(),
             u => panic!(
                 "Impossible (TypeValue::universe): TypeValue({}) is not a type",
                 u
@@ -128,6 +129,7 @@ impl Type for TypeValue {
             ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.is_universe(),
             ValueEnum::Pi(p) => p.is_universe(),
+            ValueEnum::Finite(f) => f.is_universe(),
             u => panic!(
                 "Impossible (TypeValue::is_universe): TypeValue({}) is not a type",
                 u
