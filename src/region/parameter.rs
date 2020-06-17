@@ -3,7 +3,7 @@ Parameters to a `rain` region
 */
 use super::{Region, RegionBorrow, Regional};
 use crate::eval::Apply;
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
@@ -19,6 +19,8 @@ pub struct Parameter {
     region: Region,
     /// The index of this parameter in the region's type vector
     ix: usize,
+    /// The lifetime of this parameter
+    lifetime: Lifetime,
 }
 
 quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
@@ -41,7 +43,8 @@ impl Parameter {
         if ix >= region.len() {
             Err(())
         } else {
-            Ok(Parameter { region, ix })
+            let lifetime = region.clone().into();
+            Ok(Parameter { region, ix, lifetime })
         }
     }
     /// Get the index of this parameter
@@ -58,7 +61,7 @@ impl Parameter {
 
 impl Live for Parameter {
     fn lifetime(&self) -> LifetimeBorrow {
-        self.region().into()
+        self.lifetime.borrow_lifetime()
     }
 }
 

@@ -47,12 +47,8 @@ pub trait Regional {
     }
 }
 
-/// The null region
-pub static NULL_REGION: RegionData = RegionData {
-    parent: Region(None),
-    param_tys: TyArr::EMPTY,
-    depth: 0,
-};
+/// The null region, with a given unique address
+pub static NULL_REGION: RegionData = RegionData::NULL;
 
 lazy_static! {
     /// The global cache of constructed regions.
@@ -63,6 +59,8 @@ lazy_static! {
 }
 
 impl Region {
+    /// The null region
+    pub const NULL: Region = Region(None);
     /// Create a new reference from a given `RegionData`, caching if possible
     #[inline]
     pub fn new(data: RegionData) -> Region {
@@ -178,6 +176,8 @@ impl Hash for Region {
 }
 
 impl<'a> RegionBorrow<'a> {
+    /// A borrow of the null region
+    pub const NULL: RegionBorrow<'a> = RegionBorrow(None);
     /// Like `deref`, but using the lifetime of the `RegionBorrow` (which is incompatible with the `Deref` trait).
     #[inline]
     pub fn get(&self) -> &'a RegionData {
@@ -280,6 +280,12 @@ impl Deref for RegionData {
 }
 
 impl RegionData {
+    /// The null region data
+    pub const NULL: RegionData = RegionData {
+        parent: Region(None),
+        param_tys: TyArr::EMPTY,
+        depth: 0,
+    };
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
     pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
