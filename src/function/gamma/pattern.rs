@@ -47,7 +47,7 @@ impl From<PatternData> for Pattern {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum PatternData {
     /// The wildcard pattern
-    Any,
+    Any(Any),
     /// A boolean pattern
     Bool(bool),
 }
@@ -68,7 +68,27 @@ pub trait Match {
 }
 
 impl Match for PatternData {
+    #[inline]
     fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        match self {
+            PatternData::Any(a) => a.try_match(ty),
+            PatternData::Bool(b) => b.try_match(ty),
+        }
+    }
+}
+
+/// A pattern which matches any argument vector, returning it unchanged
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Any;
+
+impl Match for Any {
+    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        unimplemented!()
+    }
+}
+
+impl Match for bool {
+    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
         unimplemented!()
     }
 }
