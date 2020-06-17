@@ -19,6 +19,7 @@ num = "^0.2"
 fxhash = "^0.2"
 itertools = "^0.9"
 is_sorted = "^0.1"
+thin-dst = "^1.1.0"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }

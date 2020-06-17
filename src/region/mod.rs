@@ -315,6 +315,11 @@ impl RegionData {
             Some(&self.parent)
         }
     }
+    /// Get the parameter types of this region
+    #[inline]
+    pub fn param_tys(&self) -> &TyArr {
+        &self.param_tys
+    }
     /// Check if this region is the null region
     #[inline]
     pub fn is_null(&self) -> bool {
