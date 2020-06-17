@@ -4,8 +4,9 @@ Pattern matching branches
 TODO: consider caching patterns
 */
 use crate::function::pi::Pi;
-use crate::region::{Parameter, Region, RegionData};
-use crate::value::{Error, TypeId, VarRef};
+use crate::primitive::logical::BOOL_TY;
+use crate::region::{Parameter, Region};
+use crate::value::{Error, VarRef};
 use std::ops::Deref;
 use triomphe::Arc;
 
@@ -82,13 +83,24 @@ impl Match for PatternData {
 pub struct Any;
 
 impl Match for Any {
-    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
-        unimplemented!()
+    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        Ok(BranchArgs {
+            region: ty.def_region().clone(),
+            params: ty.params().collect(),
+        })
     }
 }
 
 impl Match for bool {
-    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
-        unimplemented!()
+    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        let tdr = ty.def_region();
+        // Filter for a single boolean argument
+        if tdr.len() != 1 {
+            return Err(Error::TupleLengthMismatch);
+        }
+        if &tdr[0] != BOOL_TY.deref() {
+            return Err(Error::TypeMismatch);
+        }
+        Any.try_match(ty)
     }
 }
