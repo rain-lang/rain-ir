@@ -17,6 +17,12 @@ pub struct CachedArr<A, P = (), H = ()> {
     predicate: std::marker::PhantomData<P>,
 }
 
+impl<A, P: EmptyPredicate> Default for CachedArr<A, P> {
+    fn default() -> CachedArr<A, P> {
+        CachedArr::EMPTY
+    }
+}
+
 impl<A: Eq + Deref, P> Caches<[A]> for CachedArr<A, P> {
     #[inline]
     fn can_collect(&self) -> bool {
