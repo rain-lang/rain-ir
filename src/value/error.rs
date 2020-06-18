@@ -23,5 +23,7 @@ pub enum Error {
     /// (or sometimes an object which *may* be a function)
     TooManyArgs,
     /// A pattern match failure
-    MatchFailure
+    MatchFailure,
+    /// An incomplete match statement
+    IncompleteMatch
 }

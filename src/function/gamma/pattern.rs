@@ -42,6 +42,13 @@ impl Pattern {
             },
         }
     }
+    /// Check whether a pattern is complete
+    pub fn is_complete(&self) -> bool {
+        match self.deref() {
+            PatternData::Any(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Match for Pattern {

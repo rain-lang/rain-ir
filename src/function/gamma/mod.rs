@@ -140,6 +140,12 @@ impl GammaBuilder {
     /// Finish constructing this gamma node
     /// On failure, return an unchanged object to try again, along with a reason
     pub fn finish(mut self) -> Result<Gamma, (GammaBuilder, Error)> {
+        // First, check completeness
+        if !self.pattern.is_complete() {
+            return Err((self, Error::IncompleteMatch))
+        }
+
+        // Then, actually make the gamma node
         let mut deps = self.deps();
         deps.shrink_to_fit();
         let lifetime = Lifetime::default()
@@ -150,7 +156,6 @@ impl GammaBuilder {
             Err(err) => return Err((self, err)),
         };
         self.branches.shrink_to_fit();
-        //TODO: completion check
         Ok(Gamma {
             deps: deps.into(),
             branches: ThinBox::new((), self.branches.into_iter()),
