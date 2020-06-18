@@ -5,7 +5,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Parameter, Region, Regional};
+use crate::region::{Parameter, Region, RegionData, Regional};
 use crate::typing::Typed;
 use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
@@ -14,7 +14,7 @@ use std::ops::Deref;
 use thin_dst::ThinBox;
 
 pub mod pattern;
-use pattern::{BranchArgs, Match, Pattern};
+use pattern::{Match, Pattern};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -107,9 +107,20 @@ impl GammaBuilder {
     /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
     /// Return an error on a mismatch between branch parameters and the desired gamma node type
     pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
-        //TODO: type checking
+        let matched = pattern.try_match_ty(self.ty.borrow_var())?;
+        let region = RegionData::with(
+            matched.0.into(),
+            self.ty
+                .def_region()
+                .parent()
+                .cloned()
+                .unwrap_or(Region::NULL),
+        );
+        let region = Region::new(region);
+        let params = region.clone().params().collect();
         Ok(BranchBuilder {
-            args: pattern.try_match(self.ty.borrow_var())?,
+            region,
+            params,
             builder: self,
             pattern,
         })
@@ -190,8 +201,10 @@ impl Branch {
 /// A builder for a branch of a gamma node
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct BranchBuilder<'a> {
-    /// This branch's arguments
-    args: BranchArgs,
+    /// This branch's region
+    region: Region,
+    /// This branch's parameters
+    params: Vec<Parameter>,
     /// The pattern corresponding to this branch
     pattern: Pattern,
     /// The builder for this branch
@@ -202,17 +215,12 @@ impl<'a> BranchBuilder<'a> {
     /// Get the region of this branch builder
     #[inline]
     pub fn region(&self) -> &Region {
-        &self.args.region
+        &self.region
     }
     /// Get the parameters of this branch builder
     #[inline]
     pub fn params(&self) -> &[Parameter] {
-        &self.args.params
-    }
-    /// Get the arguments of this branch builder
-    #[inline]
-    pub fn args(&self) -> &BranchArgs {
-        &self.args
+        &self.params
     }
     /// Get the pattern of this branch builder
     #[inline]
@@ -225,7 +233,7 @@ impl<'a> BranchBuilder<'a> {
         let ix = self.builder.branches.len();
         //TODO: region check...
         self.builder.branches.push(Branch {
-            region: self.args.region,
+            region: self.region,
             pattern: self.pattern,
             value, //TODO: check type, lifetimes, etc.
         });

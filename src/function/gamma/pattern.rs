@@ -4,9 +4,10 @@ Pattern matching branches
 TODO: consider caching patterns
 */
 use crate::function::pi::Pi;
-use crate::primitive::logical::BOOL_TY;
-use crate::region::{Parameter, Region};
-use crate::value::{Error, VarRef};
+use crate::primitive::logical::{BOOL_TY, FALSE, TRUE};
+use crate::typing::Typed;
+use crate::value::{Error, TypeId, ValId, VarRef};
+use itertools::Itertools;
 use std::ops::Deref;
 use triomphe::Arc;
 
@@ -16,8 +17,12 @@ pub struct Pattern(pub Arc<PatternData>);
 
 impl Match for Pattern {
     #[inline]
-    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
-        self.deref().try_match(ty)
+    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+        self.deref().try_match_ty(ty)
+    }
+    #[inline]
+    fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error> {
+        self.deref().try_match(inp)
     }
 }
 
@@ -55,28 +60,37 @@ pub enum PatternData {
     Bool(bool),
 }
 
-/// The parameters to a branch
+/// The match result types for a branch
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct BranchArgs {
-    /// This branch's region
-    pub region: Region,
-    /// This branch's parameters
-    pub params: Vec<Parameter>,
-}
+pub struct MatchedTy(pub Vec<TypeId>);
+
+/// The match results for a branch
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Matched(pub Vec<ValId>);
 
 /// A value which can perform pattern matching
 pub trait Match {
     /// Try to match a pattern as a sub-branch of a given pi-type
-    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error>;
+    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error>;
+    /// Try to match a value according to a pattern
+    fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error>;
 }
 
 impl Match for PatternData {
     #[inline]
-    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         match self {
-            PatternData::Any(a) => a.try_match(ty),
-            PatternData::Empty(e) => e.try_match(ty),
-            PatternData::Bool(b) => b.try_match(ty),
+            PatternData::Any(a) => a.try_match_ty(ty),
+            PatternData::Empty(e) => e.try_match_ty(ty),
+            PatternData::Bool(b) => b.try_match_ty(ty),
+        }
+    }
+    #[inline]
+    fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error> {
+        match self {
+            PatternData::Any(a) => a.try_match(inp),
+            PatternData::Empty(e) => e.try_match(inp),
+            PatternData::Bool(b) => b.try_match(inp),
         }
     }
 }
@@ -86,16 +100,18 @@ impl Match for PatternData {
 pub struct Any;
 
 impl Match for Any {
-    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
-        Ok(BranchArgs {
-            region: ty.def_region().clone(),
-            params: ty.params().collect(),
-        })
+    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+        Ok(MatchedTy(
+            ty.def_region().param_tys().iter().cloned().collect_vec(),
+        ))
+    }
+    fn try_match(&self, ty: &[ValId]) -> Result<Matched, Error> {
+        Ok(Matched(ty.to_vec()))
     }
 }
 
 impl Match for bool {
-    fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         let tdr = ty.def_region();
         // Filter for a single boolean argument
         if tdr.len() != 1 {
@@ -104,7 +120,20 @@ impl Match for bool {
         if &tdr[0] != BOOL_TY.deref() {
             return Err(Error::TypeMismatch);
         }
-        Any.try_match(ty)
+        Any.try_match_ty(ty)
+    }
+    fn try_match(&self, ty: &[ValId]) -> Result<Matched, Error> {
+        if ty.len() != 1 {
+            return Err(Error::TupleLengthMismatch);
+        }
+        if ty[0].ty() != BOOL_TY.borrow_ty() {
+            return Err(Error::TypeMismatch);
+        }
+        match self {
+            true if &ty[0] == TRUE.deref() => Ok(Matched(vec![])),
+            false if &ty[0] == FALSE.deref() => Ok(Matched(vec![])),
+            _ => Err(Error::MatchFailure),
+        }
     }
 }
 
@@ -113,10 +142,10 @@ impl Match for bool {
 pub struct Empty;
 
 impl Match for Empty {
-    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
-        Ok(BranchArgs {
-            region: Region::NULL,
-            params: Vec::new(),
-        })
+    fn try_match_ty(&self, _ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+        Ok(MatchedTy(vec![]))
+    }
+    fn try_match(&self, _inp: &[ValId]) -> Result<Matched, Error> {
+        Ok(Matched(vec![]))
     }
 }

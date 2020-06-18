@@ -22,4 +22,6 @@ pub enum Error {
     /// Too many arguments for a (non-curried!) function
     /// (or sometimes an object which *may* be a function)
     TooManyArgs,
+    /// A pattern match failure
+    MatchFailure
 }
