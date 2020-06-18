@@ -101,6 +101,14 @@ pub struct GammaBuilder {
 }
 
 impl GammaBuilder {
+    /// Create a new gamma node builder
+    pub fn new(ty: VarId<Pi>) -> GammaBuilder {
+        GammaBuilder {
+            branches: Vec::new(),
+            pattern: Pattern::empty(),
+            ty,
+        }
+    }
     /// Get the current branch-set of this gamma builder
     pub fn branches(&self) -> &[Branch] {
         &self.branches
@@ -137,12 +145,17 @@ impl GammaBuilder {
             .dedup()
             .collect()
     }
+    /// Check whether this gamma node is complete
+    #[inline]
+    pub fn is_complete(&self) -> bool {
+        self.pattern.is_complete()
+    }
     /// Finish constructing this gamma node
     /// On failure, return an unchanged object to try again, along with a reason
     pub fn finish(mut self) -> Result<Gamma, (GammaBuilder, Error)> {
         // First, check completeness
-        if !self.pattern.is_complete() {
-            return Err((self, Error::IncompleteMatch))
+        if !self.is_complete() {
+            return Err((self, Error::IncompleteMatch));
         }
 
         // Then, actually make the gamma node
@@ -266,5 +279,66 @@ mod prettyprint_impl {
         ) -> Result<(), fmt::Error> {
             write!(fmt, "UNIMPLEMENTED!")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::builder::Builder;
+    use std::convert::TryInto;
+    #[test]
+    fn not_as_gamma_works() {
+        // Initialize the gamma builder
+        let mut builder = Builder::<&str>::new();
+        let unary: VarId<Pi> = builder
+            .parse_expr("#pi |_: #bool| #bool")
+            .expect("The unary type is valid")
+            .1
+            .try_into()
+            .expect("The unary type is a pi type");
+        let mut gamma_builder = GammaBuilder::new(unary.clone());
+        assert!(!gamma_builder.is_complete());
+        assert_eq!(gamma_builder.branches().len(), 0);
+
+        // Add the `#true` branch, mapping to `#false`
+        let branch_builder = gamma_builder
+            .build_branch(true.into())
+            .expect("#true is a valid branch for #bool");
+        assert_eq!(branch_builder.region(), unary.def_region());
+        assert_eq!(branch_builder.params().len(), 1);
+        assert_eq!(
+            branch_builder
+                .finish(false.into())
+                .expect("#false is a valid result for #bool"),
+            0
+        );
+        assert!(!gamma_builder.is_complete());
+        assert_eq!(gamma_builder.branches().len(), 1);
+
+        // Add the `#false` branch, mapping to `#true`
+        let branch_builder = gamma_builder
+            .build_branch(false.into())
+            .expect("#false is a valid branch for #bool");
+        assert_eq!(branch_builder.region(), unary.def_region());
+        assert_eq!(branch_builder.params().len(), 1);
+        assert_eq!(
+            branch_builder
+                .finish(true.into())
+                .expect("#true is a valid result for #bool"),
+            1
+        );
+        assert!(gamma_builder.is_complete());
+        assert_eq!(gamma_builder.branches().len(), 2);
+        
+        // Complete gamma node construction
+        let gamma = gamma_builder
+            .finish()
+            .expect("This is a complete gamma node");
+
+        assert_eq!(gamma.branches().len(), 2);
+        assert_eq!(gamma.region(), Region::NULL);
+
+        //TODO: gamma node evaluation
     }
 }

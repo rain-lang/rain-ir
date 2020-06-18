@@ -16,6 +16,10 @@ use triomphe::Arc;
 pub struct Pattern(pub Arc<PatternData>);
 
 impl Pattern {
+    /// Create the empty pattern
+    pub fn empty() -> Pattern {
+        Empty.into()
+    }
     /// Get the disjunction of two patterns
     pub fn disjunction(&self, other: &Pattern) -> Pattern {
         let mut m = self.clone();
