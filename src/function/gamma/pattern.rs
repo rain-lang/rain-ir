@@ -15,6 +15,35 @@ use triomphe::Arc;
 #[derive(Debug, Clone, Hash, Eq)]
 pub struct Pattern(pub Arc<PatternData>);
 
+impl Pattern {
+    /// Get the disjunction of two patterns
+    pub fn disjunction(&self, other: &Pattern) -> Pattern {
+        let mut m = self.clone();
+        m.take_disjunction(other);
+        m
+    }
+    /// Make this pattern into the disjunction of two patterns
+    pub fn take_disjunction(&mut self, other: &Pattern) {
+        match other.deref() {
+            PatternData::Any(_) => {
+                if self != other {
+                    *self = other.clone()
+                }
+            }
+            PatternData::Empty(_) => {}
+            PatternData::Bool(l) => match (*self).deref() {
+                PatternData::Bool(r) => {
+                    if l != r {
+                        *self = Pattern::from(Any)
+                    }
+                }
+                PatternData::Any(_) => {}
+                PatternData::Empty(_) => *self = other.clone(),
+            },
+        }
+    }
+}
+
 impl Match for Pattern {
     #[inline]
     fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
@@ -110,6 +139,20 @@ impl Match for Any {
     }
 }
 
+impl From<Any> for PatternData {
+    #[inline]
+    fn from(a: Any) -> PatternData {
+        PatternData::Any(a)
+    }
+}
+
+impl From<Any> for Pattern {
+    #[inline]
+    fn from(a: Any) -> Pattern {
+        PatternData::Any(a).into()
+    }
+}
+
 impl Match for bool {
     fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         let tdr = ty.def_region();
@@ -137,6 +180,20 @@ impl Match for bool {
     }
 }
 
+impl From<bool> for PatternData {
+    #[inline]
+    fn from(b: bool) -> PatternData {
+        PatternData::Bool(b)
+    }
+}
+
+impl From<bool> for Pattern {
+    #[inline]
+    fn from(b: bool) -> Pattern {
+        PatternData::Bool(b).into()
+    }
+}
+
 /// The empty pattern, which does not match any argument vector
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Empty;
@@ -147,5 +204,19 @@ impl Match for Empty {
     }
     fn try_match(&self, _inp: &[ValId]) -> Result<Matched, Error> {
         Ok(Matched(vec![]))
+    }
+}
+
+impl From<Empty> for PatternData {
+    #[inline]
+    fn from(e: Empty) -> PatternData {
+        PatternData::Empty(e)
+    }
+}
+
+impl From<Empty> for Pattern {
+    #[inline]
+    fn from(e: Empty) -> Pattern {
+        PatternData::Empty(e).into()
     }
 }

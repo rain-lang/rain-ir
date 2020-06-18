@@ -96,7 +96,8 @@ pub struct GammaBuilder {
     branches: Vec<Branch>,
     /// The desired type of this gamma node
     ty: VarId<Pi>,
-    //TODO: completion check, etc...
+    /// The current pattern matched by this builder
+    pattern: Pattern,
 }
 
 impl GammaBuilder {
@@ -156,6 +157,10 @@ impl GammaBuilder {
             lifetime,
             ty: self.ty,
         })
+    }
+    /// Get the current pattern matched by this builder
+    pub fn pattern(&self) -> &Pattern {
+        &self.pattern
     }
 }
 
@@ -231,11 +236,12 @@ impl<'a> BranchBuilder<'a> {
     /// On failure, return an unchanged object to try again, along with a reason
     pub fn finish(self, value: ValId) -> Result<usize, (BranchBuilder<'a>, Error)> {
         let ix = self.builder.branches.len();
-        //TODO: region check...
+        //TODO: check `value`'s type, region, lifetimes, etc.
+        self.builder.pattern.take_disjunction(&self.pattern);
         self.builder.branches.push(Branch {
             region: self.region,
             pattern: self.pattern,
-            value, //TODO: check type, lifetimes, etc.
+            value,
         });
         Ok(ix)
     }
