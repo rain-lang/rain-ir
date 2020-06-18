@@ -49,6 +49,8 @@ impl From<PatternData> for Pattern {
 pub enum PatternData {
     /// The wildcard pattern
     Any(Any),
+    /// The empty pattern
+    Empty(Empty),
     /// A boolean pattern
     Bool(bool),
 }
@@ -73,6 +75,7 @@ impl Match for PatternData {
     fn try_match(&self, ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
         match self {
             PatternData::Any(a) => a.try_match(ty),
+            PatternData::Empty(e) => e.try_match(ty),
             PatternData::Bool(b) => b.try_match(ty),
         }
     }
@@ -102,5 +105,18 @@ impl Match for bool {
             return Err(Error::TypeMismatch);
         }
         Any.try_match(ty)
+    }
+}
+
+/// The empty pattern, which does not match any argument vector
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Empty;
+
+impl Match for Empty {
+    fn try_match(&self, _ty: VarRef<Pi>) -> Result<BranchArgs, Error> {
+        Ok(BranchArgs {
+            region: Region::NULL,
+            params: Vec::new(),
+        })
     }
 }
