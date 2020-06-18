@@ -81,7 +81,7 @@ impl Apply for Lambda {
             return self.do_apply_in_ctx(args, inline, Some(&mut ctx));
         };
         if self.def_region().len() < args.len() && !inline {
-            // Do a typecheck and lifetime check, then return application
+            // Do a typecheck and lifetime check, then return partial application
             unimplemented!()
         }
 

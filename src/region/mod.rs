@@ -87,7 +87,7 @@ impl Region {
     }
     /// Iterate over the parameters of this `Region`.
     #[inline]
-    pub fn params(self) -> impl Iterator<Item = Parameter> {
+    pub fn params(self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
