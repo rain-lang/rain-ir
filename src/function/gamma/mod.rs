@@ -2,8 +2,8 @@
 Gamma nodes, representing pattern matching and primitive recursion
 */
 
-use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::function::pi::Pi;
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Region, RegionData, Regional};
 use crate::typing::Typed;
@@ -56,7 +56,46 @@ impl Live for Gamma {
 }
 
 impl Apply for Gamma {
-    //TODO: again, pretty important, right?
+    fn do_apply_in_ctx<'a>(
+        &self,
+        args: &'a [ValId],
+        _inline: bool,
+        ctx: Option<&mut EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        let mut param_tys = self.ty.param_tys().iter();
+        let mut ix = 0;
+        while let Some(ty) = param_tys.next() {
+            if ix >= args.len() {
+                // Incomplete gamma application
+                unimplemented!()
+            }
+            if args[ix].ty() != ty.borrow_ty() {
+                return Err(Error::TypeMismatch);
+            }
+            ix += 1;
+        }
+        // Successful application
+        let rest = &args[ix..];
+        let inp = &args[..ix];
+        for branch in self.branches() {
+            let inp = if let Ok(inp) = branch.pattern().try_match(inp) {
+                inp
+            } else {
+                continue;
+            };
+            if let Some(ctx) = ctx {
+                return branch.do_apply_with_ctx(&inp.0, rest, true, ctx);
+            } else {
+                let capacity = 0; //TODO
+                let mut ctx = EvalCtx::with_capacity(capacity);
+                return branch.do_apply_with_ctx(&inp.0, rest, true, &mut ctx);
+            }
+        }
+        panic!(
+            "Complete gamma node has no matching branches!\nNODE: {:#?}\nARGV: {:#?}",
+            self, args
+        );
+    }
 }
 
 impl Substitute for Gamma {
@@ -219,6 +258,48 @@ impl Branch {
         deps.sort_unstable_by_key(|v| v.as_ptr());
         deps
     }
+    /// Get the pattern of this branch
+    pub fn pattern(&self) -> &Pattern {
+        &self.pattern
+    }
+    /// Get the value of this branch
+    pub fn value(&self) -> &ValId {
+        &self.value
+    }
+    /// Get the defining region of this branch
+    pub fn def_region(&self) -> &Region {
+        &self.region
+    }
+    /// Evaluate a branch with a given argument vector and context
+    fn do_apply_with_ctx<'a>(
+        &self,
+        args: &[ValId],
+        rest: &'a [ValId],
+        inline: bool,
+        ctx: &mut EvalCtx,
+    ) -> Result<Application<'a>, Error> {
+        // Substitute
+        let region = ctx.push_region(
+            self.def_region(),
+            args.iter().cloned(),
+            !ctx.is_checked(),
+            inline,
+        )?;
+
+        // Evaluate the result
+        let result = ctx.evaluate(self.value());
+        // Pop the evaluation context
+        ctx.pop();
+        let result = result?;
+
+        if let Some(region) = region {
+            Lambda::try_new(result, region)
+                .map(|lambda| Application::Success(rest, lambda.into()))
+                .map_err(|_| Error::IncomparableRegions)
+        } else {
+            Ok(Application::Success(rest, result))
+        }
+    }
 }
 
 /// A builder for a branch of a gamma node
@@ -330,7 +411,6 @@ mod tests {
         );
         assert!(gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 2);
-        
         // Complete gamma node construction
         let gamma = gamma_builder
             .finish()

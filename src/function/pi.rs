@@ -3,11 +3,11 @@ Pi types
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{LifetimeBorrow, Live};
-use crate::region::{Parametrized, Region, RegionBorrow, Regional, Parameter};
+use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
-    ValueEnum,
+    arr::TyArr, Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
+    ValueData, ValueEnum,
 };
 use crate::{debug_from_display, pretty_display, substitute_to_valid};
 
@@ -51,10 +51,15 @@ impl Pi {
     pub fn def_region(&self) -> &Region {
         self.result.def_region()
     }
+    /// Get the parameter types of this pi type
+    #[inline]
+    pub fn param_tys(&self) -> &TyArr {
+        self.def_region().param_tys()
+    }
     /// Get the parameters of this pi type
     //TODO: parameter lifetimes...
     #[inline]
-    pub fn params(&self) -> impl Iterator<Item=Parameter> + ExactSizeIterator {
+    pub fn params(&self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
         self.def_region().clone().params()
     }
 }
