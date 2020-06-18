@@ -367,6 +367,7 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
+    use crate::value::expr::Sexpr;
     use std::convert::TryInto;
     #[test]
     fn not_as_gamma_works() {
@@ -419,6 +420,13 @@ mod tests {
         assert_eq!(gamma.branches().len(), 2);
         assert_eq!(gamma.region(), Region::NULL);
 
-        //TODO: gamma node evaluation
+        let gamma = gamma.into_val();
+
+        for t in [true, false].iter().copied() {
+            assert_eq!(
+                Sexpr::try_new(vec![gamma.clone(), t.into()]).expect("Valid application").into_val(),
+                (!t).into_val()
+            )
+        }
     }
 }
