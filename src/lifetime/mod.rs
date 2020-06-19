@@ -83,6 +83,18 @@ impl PartialEq for LifetimeBorrow<'_> {
     }
 }
 
+impl PartialEq<Lifetime> for LifetimeBorrow<'_> {
+    fn eq(&self, other: &Lifetime) -> bool {
+        *self == other.borrow_lifetime()
+    }
+}
+
+impl PartialEq<LifetimeBorrow<'_>> for Lifetime {
+    fn eq(&self, other: &LifetimeBorrow) -> bool {
+        self.borrow_lifetime() == *other
+    }
+}
+
 impl Hash for LifetimeBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
@@ -182,12 +194,32 @@ impl PartialOrd for Lifetime {
     }
 }
 
+impl PartialOrd<LifetimeBorrow<'_>> for Lifetime {
+    /**
+    We define a lifetime to be a sublifetime of another lifetime if every value in one lifetime lies in the other,
+    This naturally induces a partial ordering on the set of lifetimes.
+    */
+    fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
+        self.deref().partial_cmp(other.deref())
+    }
+}
+
 impl PartialOrd for LifetimeBorrow<'_> {
     /**
     We define a lifetime to be a sublifetime of another lifetime if every value in one lifetime lies in the other,
     This naturally induces a partial ordering on the set of lifetimes
     */
     fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
+        self.deref().partial_cmp(other.deref())
+    }
+}
+
+impl PartialOrd<Lifetime> for LifetimeBorrow<'_> {
+    /**
+    We define a lifetime to be a sublifetime of another lifetime if every value in one lifetime lies in the other,
+    This naturally induces a partial ordering on the set of lifetimes.
+    */
+    fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
         self.deref().partial_cmp(other.deref())
     }
 }

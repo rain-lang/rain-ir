@@ -29,6 +29,7 @@ pub mod expr;
 pub mod predicate;
 pub mod tuple;
 pub mod universe;
+pub mod cast;
 use predicate::Is;
 
 use expr::Sexpr;
