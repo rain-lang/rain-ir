@@ -25,14 +25,15 @@ use std::ops::{Deref, RangeBounds};
 use triomphe::{Arc, ArcBorrow};
 
 pub mod arr;
+pub mod cast;
 pub mod expr;
 pub mod predicate;
 pub mod tuple;
 pub mod universe;
-pub mod cast;
-use predicate::Is;
 
+use cast::Cast;
 use expr::Sexpr;
+use predicate::Is;
 use tuple::{Product, Tuple};
 use universe::Universe;
 
@@ -90,6 +91,8 @@ pub enum ValueEnum {
     Phi(Phi),
     /// Logical operations on booleans
     Logical(Logical),
+    /// Type and lifetime casts
+    Cast(Cast),
 }
 
 // Common value type aliases:
@@ -547,6 +550,7 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Gamma {}
     impl InjectionRef<ValueEnum> for Phi {}
     impl InjectionRef<ValueEnum> for Logical {}
+    impl InjectionRef<ValueEnum> for Cast {}
 
     // NormalValue injection.
     impl TryFrom<NormalValue> for Sexpr {
@@ -564,7 +568,11 @@ enum_convert! {
             other if *other == () => Ok(Tuple::unit()),
     }
     impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
-    impl TryFrom<NormalValue> for Product { as ValueEnum, }
+    impl TryFrom<NormalValue> for Product {
+        as ValueEnum,
+        match
+            other if *other == Unit => Ok(Product::unit_ty()),
+    }
     impl TryFromRef<NormalValue> for Product { as ValueEnum, }
     impl TryFrom<NormalValue> for Universe { as ValueEnum, }
     impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
@@ -582,6 +590,8 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
     impl TryFrom<NormalValue> for Logical { as ValueEnum, }
     impl TryFromRef<NormalValue> for Logical { as ValueEnum, }
+    impl TryFrom<NormalValue> for Cast { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Cast { as ValueEnum, }
 }
 
 impl From<Sexpr> for NormalValue {
@@ -593,6 +603,29 @@ impl From<Sexpr> for NormalValue {
             return sexpr[0].as_norm().clone();
         }
         NormalValue::assert_new(ValueEnum::Sexpr(sexpr))
+    }
+}
+
+impl From<Cast> for NormalValue {
+    fn from(cast: Cast) -> NormalValue {
+        if cast.ty() != cast.value().ty() {
+            NormalValue::assert_new(ValueEnum::Cast(cast))
+        } else if cast.lifetime() != cast.value().lifetime() {
+            //TODO: modify types with an inline lifetime, e.g. `Sexpr`
+            NormalValue::assert_new(ValueEnum::Cast(cast))
+        } else {
+            cast.take_value().into()
+        }
+    }
+}
+
+impl From<Cast> for ValId {
+    fn from(cast: Cast) -> ValId {
+        if cast.lifetime() != cast.value().lifetime() || cast.ty() != cast.value().ty() {
+            ValId::<()>::direct_new(NormalValue::from(ValueEnum::Cast(cast)))
+        } else {
+            cast.take_value()
+        }
     }
 }
 
@@ -798,6 +831,7 @@ macro_rules! forv {
             ValueEnum::Gamma($i) => $e,
             ValueEnum::Phi($i) => $e,
             ValueEnum::Logical($i) => $e,
+            ValueEnum::Cast($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
