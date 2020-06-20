@@ -25,5 +25,7 @@ pub enum Error {
     /// A pattern match failure
     MatchFailure,
     /// An incomplete match statement
-    IncompleteMatch
+    IncompleteMatch,
+    /// An invalid substitution kind
+    InvalidSubKind
 }

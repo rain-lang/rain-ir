@@ -3,27 +3,40 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::lifetime::LifetimeBorrow;
 use crate::lifetime::Live;
+use crate::lifetime::{Lifetime, LifetimeBorrow};
 use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
-use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId};
+use crate::value::{
+    arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
+};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use std::convert::TryInto;
 
 /// A lambda function
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Lambda {
     /// The result of this lambda function
-    result: Parametrized<ValId>,
+    result: ValId,
     /// The type of this lambda function
     ty: VarId<Pi>,
+    /// The direct dependencies of this lambda function
+    deps: ValSet,
+    /// The lifetime of this lambda function
+    lt: Lifetime,
 }
 
 impl Lambda {
     /// Create a new lambda function from a parametrized `ValId`
     pub fn new(result: Parametrized<ValId>) -> Lambda {
         let ty = VarId::from(Pi::ty(&result));
-        Lambda { result, ty }
+        let (_region, result, deps, lt) = result.destruct();
+        Lambda {
+            result,
+            deps,
+            lt,
+            ty,
+        }
     }
     /// Attempt to create a new lambda function from a region and value
     pub fn try_new(value: ValId, region: Region) -> Result<Lambda, Error> {
@@ -32,12 +45,12 @@ impl Lambda {
     /// Get the defining region of this lambda function
     #[inline]
     pub fn def_region(&self) -> &Region {
-        self.result.def_region()
+        self.ty.def_region()
     }
     /// Get the result of this lambda function
     #[inline]
     pub fn result(&self) -> &ValId {
-        self.result.value()
+        &self.result
     }
     /// Get the type of this lambda function as a guaranteed pi type
     #[inline]
@@ -132,7 +145,21 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
-        Ok(Lambda::new(self.result.substitute(ctx)?))
+        Ok(Lambda {
+            result: self.result.substitute(ctx)?,
+            ty: self
+                .ty
+                .substitute(ctx)?
+                .try_into()
+                //TODO
+                .map_err(|_val| Error::InvalidSubKind)?,
+            deps: self
+                .deps
+                .iter()
+                .map(|d| d.substitute(ctx))
+                .collect::<Result<_, _>>()?,
+            lt: self.lt.clone(), //TODO: region escape...
+        })
     }
 }
 
@@ -164,7 +191,7 @@ mod tests {
     use super::*;
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
-    use crate::primitive::logical::{Bool, Not};
+    use crate::primitive::logical::{Bool};
 
     #[test]
     fn bool_identity_lambda_works_properly() {
@@ -218,12 +245,8 @@ mod tests {
         // Check dependencies and type externally
         let (rest, not) = builder.parse_expr("not").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(not.deps().len(), 1);
-        assert_eq!(not.deps()[0], Not.into_val());
         let (rest, unary) = builder.parse_expr("unary").unwrap();
         assert_eq!(rest, "");
-        assert_eq!(unary.deps().len(), 1);
-        assert_eq!(unary.deps()[0], Bool.into_val());
         assert_eq!(not.ty(), unary);
 
         // Check depdendencies and types internally
