@@ -221,9 +221,9 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                                 Index::try_new(Finite(p.len() as u128), ix)
                                     .map_err(|_| Error::IndexOutOfBounds {
                                         ix: ix,
-                                        max: p.len()
+                                        max: p.len(),
                                     })?
-                                    .into()
+                                    .into(),
                             ])?
                             .into();
                         }

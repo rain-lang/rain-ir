@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 ahash = "^0.3"
 smallvec = "^1.4"
-triomphe = "^0.1.1"
+elysees = "^0.0.2"
 dashmap = "^3"
 lazy_static = "^1.4"
 ref-cast = "^1"

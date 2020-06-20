@@ -44,7 +44,11 @@ impl Parameter {
             Err(())
         } else {
             let lifetime = region.clone().into();
-            Ok(Parameter { region, ix, lifetime })
+            Ok(Parameter {
+                region,
+                ix,
+                lifetime,
+            })
         }
     }
     /// Get the index of this parameter

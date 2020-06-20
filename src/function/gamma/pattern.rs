@@ -7,9 +7,9 @@ use crate::function::pi::Pi;
 use crate::primitive::logical::{BOOL_TY, FALSE, TRUE};
 use crate::typing::Typed;
 use crate::value::{Error, TypeId, ValId, VarRef};
+use elysees::Arc;
 use itertools::Itertools;
 use std::ops::Deref;
-use triomphe::Arc;
 
 /// A branch of a gamma node
 #[derive(Debug, Clone, Hash, Eq)]

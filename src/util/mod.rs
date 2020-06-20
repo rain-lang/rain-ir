@@ -2,11 +2,11 @@
 Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
 
+use elysees::{Arc, ArcBorrow};
 use ref_cast::RefCast;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
-use triomphe::{Arc, ArcBorrow};
 
 #[cfg(feature = "symbol_table")]
 pub mod symbol_table;

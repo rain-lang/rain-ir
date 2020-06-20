@@ -27,5 +27,5 @@ pub enum Error {
     /// An incomplete match statement
     IncompleteMatch,
     /// An invalid substitution kind
-    InvalidSubKind
+    InvalidSubKind,
 }
