@@ -13,6 +13,7 @@ use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
 use crate::util::{cache::Cache, PrivateByAddr};
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
+use elysees::{Arc, ArcBorrow};
 use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
@@ -22,7 +23,6 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::{Deref, RangeBounds};
-use triomphe::{Arc, ArcBorrow};
 
 pub mod arr;
 pub mod cast;

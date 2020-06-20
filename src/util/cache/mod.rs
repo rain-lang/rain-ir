@@ -4,9 +4,9 @@ A cache for hash-consing values
 
 use ahash::RandomState;
 use dashmap::DashMap;
+use elysees::Arc;
 use std::borrow::Borrow;
 use std::hash::{BuildHasher, Hash};
-use triomphe::Arc;
 
 pub mod arr;
 
@@ -58,7 +58,7 @@ impl<T: Eq + Hash + ?Sized, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S>
     # Example
     ```rust
     use rain_lang::util::cache::Cache;
-    use triomphe::Arc;
+    use elysees::Arc;
     let int_cache = Cache::<u64>::new();
 
     let cached_32 = int_cache.cache(32);
@@ -101,7 +101,7 @@ impl<T: Eq + Hash + ?Sized, C: Caches<T>, S: BuildHasher + Clone> Cache<T, C, S>
     # Example
     ```rust
     use rain_lang::util::cache::Cache;
-    use triomphe::Arc;
+    use elysees::Arc;
     let int_cache = Cache::<u64>::new();
 
     // Let's stick 2 used values and 3 unused values into the cache:

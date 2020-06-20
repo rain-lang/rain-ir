@@ -447,7 +447,6 @@ impl Borrow<ValueEnum> for ValRef<'_> {
     }
 }
 
-
 // ValId construction and casting
 
 impl From<NormalValue> for ValId {
@@ -502,8 +501,7 @@ where
     }
 }
 
-impl<V: ValueData> From<V> for VarId<V>
-{
+impl<V: ValueData> From<V> for VarId<V> {
     fn from(v: V) -> VarId<V> {
         v.into_val().coerce()
     }
@@ -557,7 +555,6 @@ impl<V: Value> From<VarId<V>> for NormalValue {
         val.as_norm().clone()
     }
 }
-
 
 impl<V: Value> From<VarRef<'_, V>> for ValueEnum {
     fn from(val: VarRef<V>) -> ValueEnum {

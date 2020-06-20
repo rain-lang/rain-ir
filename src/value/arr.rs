@@ -9,13 +9,13 @@ use crate::util::cache::{
     arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},
     Cache, Caches,
 };
+use elysees::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::ops::{Deref, Index};
-use triomphe::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 
 lazy_static! {
     /// A cache for arrays of values
@@ -316,7 +316,10 @@ impl FromIterator<ValId> for ValArr {
     }
 }
 
-impl<A, P> From<Vec<ValId<P>>> for ValArr<A, P> where CachedArr<ValId, A>: FromIterator<ValId> {
+impl<A, P> From<Vec<ValId<P>>> for ValArr<A, P>
+where
+    CachedArr<ValId, A>: FromIterator<ValId>,
+{
     fn from(v: Vec<ValId<P>>) -> ValArr<A, P> {
         ValArr::dedup(v.into_iter().map(|v| v.into_val()).collect()).coerce()
     }

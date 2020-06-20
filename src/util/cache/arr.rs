@@ -3,12 +3,12 @@ Cached immutable arrays, bags, and sets of values
 */
 
 use super::Caches;
+use elysees::{Arc, HeaderWithLength, ThinArc};
 use itertools::Itertools;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::ops::Deref;
-use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 /// A cached array satisfying a given predicate `P`
 #[repr(transparent)]

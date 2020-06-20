@@ -3,11 +3,11 @@
 */
 use crate::util::cache::Cache;
 use crate::value::{arr::TyArr, TypeId};
+use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use triomphe::{Arc, ArcBorrow};
 
 mod parametrized;
 pub use parametrized::*;

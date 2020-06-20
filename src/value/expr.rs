@@ -1,7 +1,7 @@
 /*!
 `rain` expressions
 */
-use super::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, ValueData, arr::ValArr};
+use super::{arr::ValArr, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
@@ -52,7 +52,11 @@ impl Sexpr {
             | Application::Incomplete(lifetime, ty)
             | Application::Stop(lifetime, ty) => (lifetime, ty),
         };
-        Ok(Sexpr { args: args.into(), lifetime, ty })
+        Ok(Sexpr {
+            args: args.into(),
+            lifetime,
+            ty,
+        })
     }
     /// Attempt to create an S-expression from an un-owned argument-list, evaluating as necessary
     pub fn eval(args: &[ValId]) -> Result<Sexpr, Error> {

@@ -28,11 +28,11 @@ almost like a field, but again, for our current, simple case, we will ignore thi
 */
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::util::cache::Cache;
+use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use triomphe::{Arc, ArcBorrow};
 
 mod arr;
 pub use arr::*;
