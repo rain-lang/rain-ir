@@ -4,7 +4,7 @@ A `rain` evaluation context
 
 use super::Error;
 use super::Substitute;
-use crate::lifetime::Live;
+use crate::lifetime::{Lifetime, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::util::symbol_table::SymbolTable;
@@ -17,7 +17,9 @@ use std::iter::Iterator;
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalCtx {
     /// The cache for evaluated values
-    cache: SymbolTable<ValId, ValId, FxBuildHasher>,
+    eval_cache: SymbolTable<ValId, ValId, FxBuildHasher>,
+    /// The cache for lifetime substitutions
+    lt_cache: SymbolTable<Lifetime, Lifetime, FxBuildHasher>,
     /// The minimum region depths at each scope level
     minimum_depths: SmallVec<[usize; 2]>,
 }
@@ -25,9 +27,10 @@ pub struct EvalCtx {
 impl EvalCtx {
     /// Create a new, empty evaluation context with a given capacity
     #[inline]
-    pub fn with_capacity(n: usize) -> EvalCtx {
+    pub fn with_capacity(e: usize, l: usize) -> EvalCtx {
         EvalCtx {
-            cache: SymbolTable::with_capacity(n),
+            eval_cache: SymbolTable::with_capacity(e),
+            lt_cache: SymbolTable::with_capacity(l),
             minimum_depths: smallvec![usize::MAX],
         }
     }
@@ -39,13 +42,13 @@ impl EvalCtx {
     /// Push a new (empty) scope onto the evaluation context
     #[inline]
     pub fn push(&mut self) {
-        self.cache.push();
+        self.eval_cache.push();
         self.minimum_depths.push(self.minimum_depth());
     }
     /// Pop a scope from the evaluation context
     #[inline]
     pub fn pop(&mut self) {
-        self.cache.pop();
+        self.eval_cache.pop();
         self.minimum_depths.pop();
     }
     /// Check whether this is a pre-checked context
@@ -72,7 +75,7 @@ impl EvalCtx {
                 *top = (*top).min(llt.depth());
             }
         }
-        Ok(self.cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
+        Ok(self.eval_cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
     }
     /// Register substitutes values for each value in a region.
     ///
@@ -139,7 +142,7 @@ impl EvalCtx {
             return Some(value.clone());
         }
         // Check the cache
-        if let Some(value) = self.cache.get(value) {
+        if let Some(value) = self.eval_cache.get(value) {
             return Some(value.clone());
         }
         None
