@@ -163,7 +163,7 @@ impl Substitute for Lambda {
                 .iter()
                 .map(|d| d.substitute(ctx))
                 .collect::<Result<_, _>>()?,
-            lt: self.lt.clone(), //TODO: region escape...
+            lt: ctx.evaluate_lt(&self.lt)?,
         })
     }
 }
