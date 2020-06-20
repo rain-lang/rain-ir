@@ -93,6 +93,13 @@ impl<V> Parametrized<V> {
     pub fn def_region(&self) -> &Region {
         &self.region
     }
+    /**
+    Decompose this `Parametrized` into its components
+    */
+    #[inline]
+    pub fn destruct(self) -> (Region, V, ValSet, Lifetime) {
+        (self.region, self.value, self.deps, self.lifetime)
+    }
 }
 
 impl<V: Value> Parametrized<V> {
