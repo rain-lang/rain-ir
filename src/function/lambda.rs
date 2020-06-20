@@ -89,13 +89,18 @@ impl Apply for Lambda {
         let ctx = if let Some(ctx) = ctx {
             ctx
         } else {
-            let capacity = 0; //TODO
-            let mut ctx = EvalCtx::with_capacity(capacity);
+            let eval_capacity = 0; //TODO
+            let lt_capacity = 0; //TODO
+            let mut ctx = EvalCtx::with_capacity(eval_capacity, lt_capacity);
             return self.do_apply_in_ctx(args, inline, Some(&mut ctx));
         };
-        if self.def_region().len() < args.len() && !inline {
+        if self.def_region().len() > args.len() && !inline {
             // Do a typecheck and lifetime check, then return partial application
-            unimplemented!()
+            unimplemented!(
+                "Partial lambda application (args == {:?}, region_len == {:?})",
+                args,
+                self.def_region().len()
+            )
         }
 
         // Substitute
@@ -158,7 +163,7 @@ impl Substitute for Lambda {
                 .iter()
                 .map(|d| d.substitute(ctx))
                 .collect::<Result<_, _>>()?,
-            lt: self.lt.clone(), //TODO: region escape...
+            lt: ctx.evaluate_lt(&self.lt)?,
         })
     }
 }
@@ -191,7 +196,7 @@ mod tests {
     use super::*;
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
-    use crate::primitive::logical::{Bool};
+    use crate::primitive::logical::Bool;
 
     #[test]
     fn bool_identity_lambda_works_properly() {

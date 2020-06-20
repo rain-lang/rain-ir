@@ -86,8 +86,9 @@ impl Apply for Gamma {
             if let Some(ctx) = ctx {
                 return branch.do_apply_with_ctx(&inp.0, rest, true, ctx);
             } else {
-                let capacity = 0; //TODO
-                let mut ctx = EvalCtx::with_capacity(capacity);
+                let eval_capacity = 0; //TODO
+                let lt_capacity = 0; //TODO
+                let mut ctx = EvalCtx::with_capacity(eval_capacity, lt_capacity);
                 return branch.do_apply_with_ctx(&inp.0, rest, true, &mut ctx);
             }
         }
@@ -424,7 +425,9 @@ mod tests {
 
         for t in [true, false].iter().copied() {
             assert_eq!(
-                Sexpr::try_new(vec![gamma.clone(), t.into()]).expect("Valid application").into_val(),
+                Sexpr::try_new(vec![gamma.clone(), t.into()])
+                    .expect("Valid application")
+                    .into_val(),
                 (!t).into_val()
             )
         }

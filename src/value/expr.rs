@@ -164,13 +164,21 @@ impl Apply for Sexpr {}
 
 impl Substitute for Sexpr {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Sexpr, Error> {
+        use std::cmp::Ordering::*;
         let args: Result<_, _> = self
             .args
             .iter()
             .cloned()
             .map(|val| val.substitute(ctx))
             .collect();
-        Sexpr::try_new(args?)
+        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
+        let mut result = Sexpr::try_new(args?)?;
+        match result.lifetime.partial_cmp(&lifetime) {
+            None => return Err(Error::LifetimeError),
+            Some(Greater) => result.lifetime = lifetime,
+            _ => {}
+        };
+        Ok(result)
     }
 }
 

@@ -12,6 +12,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use std::convert::TryInto;
 use std::ops::Deref;
 
 /// A tuple of `rain` values
@@ -130,13 +131,18 @@ impl Apply for Tuple {
 
 impl Substitute for Tuple {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Tuple, Error> {
-        let elems: Result<_, _> = self
+        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
+        let elems = self
             .elems
             .iter()
             .cloned()
             .map(|val| val.substitute(ctx))
-            .collect();
-        Tuple::try_new(elems?).map_err(|_| Error::IncomparableRegions)
+            .collect::<Result<_, _>>()?;
+        Ok(Tuple {
+            elems,
+            lifetime,
+            ty: self.ty.substitute(ctx)?,
+        })
     }
 }
 
@@ -184,13 +190,18 @@ pretty_display!(Product, "#product [...]");
 
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
-        let elems: Result<_, _> = self
+        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
+        let elems = self
             .elems
             .iter()
             .cloned()
             .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
-            .collect();
-        Product::try_new(elems?).map_err(|_| Error::IncomparableRegions)
+            .collect::<Result<_, _>>()?;
+        Ok(Product {
+            elems,
+            lifetime,
+            ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
+        })
     }
 }
 
