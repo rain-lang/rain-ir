@@ -159,13 +159,15 @@ impl EvalCtx {
     pub fn evaluate_lt(&mut self, lifetime: &Lifetime) -> Result<Lifetime, Error> {
         // Ignore lifetimes out of the minimum depth
         if lifetime.depth() < self.minimum_depth() {
-            return Ok(lifetime.clone())
+            return Ok(lifetime.clone());
         }
         // Check if the lifetime has been cached
         if let Some(lifetime) = self.lt_cache.get(lifetime) {
-            return Ok(lifetime.clone())
+            return Ok(lifetime.clone());
         }
         // Otherwise, attempt to escape the lifetime from it's region
-        unimplemented!()
+        let result = lifetime.escape_upto(self.minimum_depth());
+        self.lt_cache.def(lifetime.clone(), result.clone());
+        return Ok(result);
     }
 }

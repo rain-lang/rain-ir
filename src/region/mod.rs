@@ -97,6 +97,17 @@ impl Region {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
+    /// Get the ancestor of this region up to a given depth
+    #[inline]
+    pub fn ancestor(&self, depth: usize) -> &Region {
+        let mut ptr: &Region = self;
+        while ptr.depth() > depth {
+            ptr = ptr
+                .parent()
+                .expect("Depth > 0, so region must have a parent");
+        }
+        ptr
+    }
 }
 
 impl Deref for Region {
@@ -195,6 +206,19 @@ impl<'a> RegionBorrow<'a> {
     /// Get the underlying `ArcBorrow` of this `RegionData`, if any
     pub fn get_borrow(&self) -> Option<ArcBorrow<'a, RegionData>> {
         self.0
+    }
+    /// Get the ancestor of this region up to a given depth
+    #[inline]
+    pub fn ancestor(&self, depth: usize) -> RegionBorrow {
+        let mut ptr: RegionBorrow = *self;
+        while ptr.depth() > depth {
+            ptr = ptr
+                .get()
+                .parent()
+                .expect("Depth > 0, so region must have a parent")
+                .borrow_region();
+        }
+        ptr
     }
 }
 

@@ -27,12 +27,12 @@ almost like a field, but again, for our current, simple case, we will ignore thi
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
+use crate::util::cache::Cache;
+use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use triomphe::{Arc, ArcBorrow};
-use lazy_static::lazy_static;
-use crate::util::cache::Cache;
 
 mod arr;
 pub use arr::*;
@@ -44,6 +44,7 @@ lazy_static! {
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
+#[repr(transparent)]
 pub struct Lifetime(Option<Arc<LifetimeData>>);
 
 impl PartialEq for Lifetime {
@@ -161,6 +162,19 @@ impl Lifetime {
             }
         }
         Ok(base.clone_lifetime())
+    }
+    /// Escape a lifetime up to a given depth
+    #[inline]
+    pub fn escape_upto(&self, depth: usize) -> Lifetime {
+        if self.depth() <= depth {
+            return self.clone();
+        }
+        self.region().ancestor(depth).clone_region().into()
+    }
+    /// Escape a lifetime up to the current depth - 1
+    #[inline]
+    pub fn escape(&self) -> Lifetime {
+        self.escape_upto(self.depth().saturating_sub(1))
     }
 }
 
