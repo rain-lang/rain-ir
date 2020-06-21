@@ -372,7 +372,7 @@ mod tests {
     use std::convert::TryInto;
     #[test]
     fn not_as_gamma_works() {
-        // Initialize the gamma builder
+        // Initialize the gamma node builder
         let mut builder = Builder::<&str>::new();
         let unary: VarId<Pi> = builder
             .parse_expr("#pi |_: #bool| #bool")
@@ -413,6 +413,7 @@ mod tests {
         );
         assert!(gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 2);
+
         // Complete gamma node construction
         let gamma = gamma_builder
             .finish()

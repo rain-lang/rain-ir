@@ -449,6 +449,10 @@ impl Display for Scope<'_> {
     }
 }
 
+/// A gamma node
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Gamma {}
+
 /// A `rain` expression
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr<'a> {
@@ -482,6 +486,8 @@ pub enum Expr<'a> {
     Scope(Scope<'a>),
     /// A logical operation
     Logical(Logical),
+    /// A gamma node
+    Gamma(Gamma),
     /// The unit token
     Unit,
 }
@@ -507,6 +513,7 @@ impl Display for Expr<'_> {
             Expr::Jeq(j) => Display::fmt(j, fmt),
             Expr::Scope(s) => Display::fmt(s, fmt),
             Expr::Logical(l) => Display::fmt(l, fmt),
+            Expr::Gamma(_) => unimplemented!("Gamma node display"),
             Expr::Unit => write!(fmt, "{}", KEYWORD_UNIT),
         }
     }

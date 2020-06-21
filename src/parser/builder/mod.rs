@@ -126,6 +126,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Jeq(j) => self.build_jeq(j)?.into(),
             Expr::Scope(s) => self.build_scope(s)?,
             Expr::Logical(l) => (*l).into(),
+            Expr::Gamma(_) => unimplemented!("Gamma node construction"),
             Expr::Unit => Unit.into(),
         };
         Ok(result_value)
