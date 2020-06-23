@@ -23,7 +23,7 @@ thin-dst = "^1.1.0"
 
 # Parser dependencies
 nom = { version = "^5", optional = true }
-indexmap = { version = "^1.3.2", optional = true }
+hayami = { version = "^0.1", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "^0.6"
@@ -37,9 +37,8 @@ default = [
     "parser", 
     "prettyprinter"
     ]
-parser = ["nom", "symbol_table"]
-prettyprinter = ["symbol_table"]
-symbol_table = ["indexmap"]
+parser = ["nom", "hayami"]
+prettyprinter = ["hayami"]
 
 [[example]]
 name = "repl"

@@ -8,9 +8,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 
-#[cfg(feature = "symbol_table")]
-pub mod symbol_table;
-
 pub mod cache;
 
 /// An implementation of ByAddress which can only be constructed if a value of the type
