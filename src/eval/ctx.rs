@@ -7,9 +7,9 @@ use super::Substitute;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
-use hayami::SymbolTable;
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
+use hayami::SymbolTable;
 use smallvec::{smallvec, SmallVec};
 use std::iter::Iterator;
 

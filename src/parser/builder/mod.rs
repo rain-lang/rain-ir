@@ -14,7 +14,6 @@ use crate::primitive::{
 };
 use crate::region::{Parametrized, Region, RegionData};
 use crate::typing::Typed;
-use hayami::SymbolTable;
 use crate::value::{
     self,
     expr::Sexpr,
@@ -22,6 +21,7 @@ use crate::value::{
     TypeId, ValId, ValueEnum,
 };
 use ahash::RandomState;
+use hayami::SymbolTable;
 use num::ToPrimitive;
 use std::borrow::Borrow;
 use std::convert::TryInto;
