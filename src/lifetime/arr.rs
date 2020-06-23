@@ -3,7 +3,7 @@
 */
 
 use super::Lifetime;
-use crate::util::cache::{
+use dashcache::{
     arr::{CachedArr, EmptyPredicate, Sorted, Uniq},
     Cache,
 };

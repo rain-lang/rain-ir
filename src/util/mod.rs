@@ -8,8 +8,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 
-pub mod cache;
-
 /// An implementation of ByAddress which can only be constructed if a value of the type
 /// parameter `V` can be constructed, which of course is impossible without `unsafe` if
 /// `V` has no public constructors.

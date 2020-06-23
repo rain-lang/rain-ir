@@ -27,7 +27,7 @@ almost like a field, but again, for our current, simple case, we will ignore thi
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
-use crate::util::cache::Cache;
+use dashcache::Cache;
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
