@@ -4,10 +4,10 @@ The actual, conditionally compiled prettyprinter implementation
 
 use super::tokens::*;
 use crate::typing::{Type, Typed};
-use crate::util::symbol_table::SymbolTable;
 use crate::value::{NormalValue, ValRef, Value};
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
+use hayami::SymbolTable;
 use ref_cast::RefCast;
 use smallvec::SmallVec;
 use std::default::Default;
@@ -165,7 +165,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 }
                 top.prettyprint(self, fmt)?;
                 writeln!(fmt, "{}", STATEMENT_DELIM)?;
-                self.symbols.def(top.deref(), name);
+                self.symbols.insert(top.deref(), name);
                 // Record the increase in the number of defined names
                 self.unique += 1;
                 new_deps += 1;
@@ -183,7 +183,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     ) -> Result<(), fmt::Error> {
         let name: I = self.unique.into();
         write!(fmt, "{}: {}", name, value.ty())?;
-        self.symbols.def(value.deref(), name);
+        self.symbols.insert(value.deref(), name);
         self.unique += 1;
         Ok(())
     }

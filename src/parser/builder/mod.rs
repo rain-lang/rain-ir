@@ -14,7 +14,7 @@ use crate::primitive::{
 };
 use crate::region::{Parametrized, Region, RegionData};
 use crate::typing::Typed;
-use crate::util::symbol_table::SymbolTable;
+use hayami::SymbolTable;
 use crate::value::{
     self,
     expr::Sexpr,
@@ -287,7 +287,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         }
         if let Some(var) = s.var.get_sym().map_err(Error::CannotAssignIdent)? {
             //TODO: pattern-assignment
-            self.symbols.def(var.into(), v);
+            self.symbols.insert(var.into(), v);
         }
         Ok(())
     }
@@ -327,7 +327,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         self.push_scope();
         for (i, (id, _)) in args.iter().enumerate() {
             match id.get_sym() {
-                Ok(Some(sym)) => self.symbols.def(
+                Ok(Some(sym)) => self.symbols.insert(
                     sym.into(),
                     region
                         .clone()
@@ -354,7 +354,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Pop the top region from the region stack, along with any scopes in the region. Return it, if any
     pub fn pop_region(&mut self) -> Option<Region> {
         if let Some((region, depth)) = self.stack.pop() {
-            self.symbols.jump_to_depth(depth);
+            self.symbols.jump(depth);
             Some(region)
         } else {
             None

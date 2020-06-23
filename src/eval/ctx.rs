@@ -7,7 +7,7 @@ use super::Substitute;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
-use crate::util::symbol_table::SymbolTable;
+use hayami::SymbolTable;
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
 use smallvec::{smallvec, SmallVec};
@@ -75,7 +75,7 @@ impl EvalCtx {
                 *top = (*top).min(llt.depth());
             }
         }
-        Ok(self.eval_cache.try_def(lhs, rhs).map_err(|_| ()).is_err())
+        Ok(self.eval_cache.try_insert(lhs, rhs).is_err())
     }
     /// Register substitutes values for each value in a region.
     ///
@@ -167,7 +167,7 @@ impl EvalCtx {
         }
         // Otherwise, attempt to escape the lifetime from it's region
         let result = lifetime.escape_upto(self.minimum_depth());
-        self.lt_cache.def(lifetime.clone(), result.clone());
+        self.lt_cache.insert(lifetime.clone(), result.clone());
         return Ok(result);
     }
 }
