@@ -1,8 +1,9 @@
 [package]
-name = "rain-lang"
+name = "rain-ir"
 version = "0.0.0"
 authors = ["Jad Ghalayini <jad.ghalayini@hotmail.com>"]
 edition = "2018"
+repository = "https://gitlab.com/rain-lang/rain-ir"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

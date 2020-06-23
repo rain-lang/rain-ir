@@ -33,7 +33,7 @@ impl Parameter {
     # Examples
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
-    use rain_lang::region::{Region, RegionData, Parameter};
+    use rain_ir::region::{Region, RegionData, Parameter};
     let empty_region = Region::new(RegionData::new(Region::default()));
     assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```
