@@ -9,7 +9,7 @@ use nom::character::complete::{multispace0, multispace1};
 use nom::combinator::{map, opt};
 use nom::sequence::{delimited, preceded, separated_pair, terminated};
 use nom::{Err, IResult};
-use rain_lang::parser::{
+use rain_ir::parser::{
     ast::{Expr, Statement},
     builder::Builder,
     parse_bool, parse_expr, parse_statement,

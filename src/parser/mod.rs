@@ -32,7 +32,7 @@ This is a streaming parser, so incomplete comments (i.e. cones without an ending
 
 # Example
 ```rust
-use rain_lang::parser::parse_single_comment;
+use rain_ir::parser::parse_single_comment;
 assert_eq!(
     parse_single_comment("//This is a comment\nThis is not").unwrap(),
     ("This is not", "This is a comment")
@@ -59,7 +59,7 @@ For now, nested comments are not supported, but this may change.
 
 # Example
 ```rust
-use rain_lang::parser::parse_multi_comment;
+use rain_ir::parser::parse_multi_comment;
 assert_eq!(
     parse_multi_comment("/*This is a multiline\ncomment*/\nThis is not").unwrap(),
     ("\nThis is not", "This is a multiline\ncomment")
@@ -89,7 +89,7 @@ for unfinished multi-line and single-line comments.
 
 # Example
 ```rust
-use rain_lang::parser::parse_ws;
+use rain_ir::parser::parse_ws;
 
 // Whitespace parses as you would expect
 assert_eq!(parse_ws(false, "    \t\r      \n\r\n \t   hello   \t").unwrap(), ("hello   \t", ()));
@@ -175,7 +175,7 @@ Parse a `bool`, i.e. `#true` or `#false`
 
 # Example
 ```rust
-use rain_lang::parser::parse_bool;
+use rain_ir::parser::parse_bool;
 assert_eq!(parse_bool("#true something_else"), Ok((" something_else", true)));
 assert_eq!(parse_bool("#false #true"), Ok((" #true", false)));
 assert!(parse_bool("#7rue").is_err())
@@ -202,7 +202,7 @@ Numbers are parsed as `Ident`s as well, and only later resolved to their special
 
 # Example
 ```rust
-use rain_lang::parser::{parse_ident, ast::Ident};
+use rain_ir::parser::{parse_ident, ast::Ident};
 use nom::IResult;
 let process = |res: IResult<&'static str, Ident<'static>>| -> (&'static str, &'static str) {
     let (rest, id) = res.unwrap();
@@ -244,7 +244,7 @@ TODO: make a trailing period with nothing after it return `Incomplete` for REPL 
 
 # Example
 ```rust
-use rain_lang::parser::{parse_path, ast::{Ident, Path}};
+use rain_ir::parser::{parse_path, ast::{Ident, Path}};
 use smallvec::smallvec;
 use std::convert::TryFrom;
 let my_path = Path(smallvec![
@@ -289,7 +289,7 @@ In either case, the parser returns `Incomplete` if given only whitespace or an e
 
 # Example
 ```rust
-use rain_lang::parser::{parse_expr_list, ast::{Expr, Sexpr, Tuple}};
+use rain_ir::parser::{parse_expr_list, ast::{Expr, Sexpr, Tuple}};
 let (rest, list_of_units) = parse_expr_list(true, "() () [] [] ()").expect("Valid");
 assert_eq!(rest, "");
 //assert!(parse_expr_list(false, "(), (), [] [] ()").is_err()); // Incomplete
