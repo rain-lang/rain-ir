@@ -73,7 +73,7 @@ impl Typed for Lambda {
 impl Live for Lambda {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
-        self.result.lifetime()
+        self.lt.borrow_lifetime()
     }
 }
 
@@ -186,7 +186,12 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            self.result.prettyprint(printer, fmt)
+            crate::region::prettyprint::prettyprint_parametrized(
+                printer,
+                fmt,
+                &self.result,
+                self.def_region(),
+            )
         }
     }
 }

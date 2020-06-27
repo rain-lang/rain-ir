@@ -158,11 +158,33 @@ where
     }
 }
 
+/// Prettyprinting implementation for parametrized values
 #[cfg(feature = "prettyprinter")]
-mod prettyprint_impl {
+pub mod prettyprint {
     use super::*;
     use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
     use std::fmt::{self, Display, Formatter};
+
+    /// Prettyprint a value parametrized by a given region
+    pub fn prettyprint_parametrized<I, V>(printer: &mut PrettyPrinter<I>, fmt: &mut Formatter, value: &V, region: &Region) -> Result<(), fmt::Error>
+    where
+        I: From<usize> + Display,
+        V: PrettyPrint + Value
+    {
+        //TODO: print _ for parameters if all unused?
+        write!(fmt, "{}", PARAM_OPEN)?;
+        let mut first = true;
+        for param in region.borrow_params() {
+            if !first {
+                write!(fmt, " ")?;
+            }
+            first = false;
+            printer.prettyprint_index(fmt, ValId::<()>::from(param).borrow_val())?;
+        }
+        write!(fmt, "{} ", PARAM_CLOSE)?;
+        printer.scoped_print(fmt, value)?;
+        Ok(())
+    }
 
     impl<V> PrettyPrint for Parametrized<V>
     where
@@ -173,18 +195,7 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "{}", PARAM_OPEN)?;
-            let mut first = true;
-            for param in self.region.borrow_params() {
-                if !first {
-                    write!(fmt, " ")?;
-                }
-                first = false;
-                printer.prettyprint_index(fmt, ValId::<()>::from(param).borrow_val())?;
-            }
-            write!(fmt, "{} ", PARAM_CLOSE)?;
-            printer.scoped_print(fmt, &self.value)?;
-            Ok(())
+            prettyprint_parametrized(printer, fmt, &self.value, &self.region)
         }
     }
 }
