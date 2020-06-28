@@ -7,13 +7,12 @@ use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
 use dashcache::{
     arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},
-    Cache, Caches,
+    Cache,
 };
-use elysees::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher};
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::iter::FromIterator;
 use std::ops::{Deref, Index};
 
@@ -395,62 +394,6 @@ impl<A, P> Deref for ValArr<A, P> {
     #[inline]
     fn deref(&self) -> &[ValId<P>] {
         self.coerce_slice()
-    }
-}
-
-/// A reference-counted, hash-consed, typed array of values.
-///
-/// Implementation detail: Should not be constructable by the user!
-#[derive(Clone, Eq, PartialEq)]
-pub struct PrivateValArr(ThinArc<(), ValId>);
-
-impl Deref for PrivateValArr {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
-        &self.0.slice
-    }
-}
-
-impl Debug for PrivateValArr {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Debug::fmt(self.deref(), fmt)
-    }
-}
-
-impl Hash for PrivateValArr {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
-    }
-}
-
-/// A reference-counted array of values which is not necessarily hash-consed.
-/// This wrapper is for the `Hash` implementation
-#[derive(Clone, Eq, PartialEq)]
-pub struct ArcValIdArr(pub Arc<HeaderSlice<HeaderWithLength<()>, [ValId]>>);
-
-impl Caches<[ValId]> for ArcValIdArr {
-    #[inline]
-    fn can_collect(&self) -> bool {
-        self.0.is_unique()
-    }
-}
-
-impl Deref for ArcValIdArr {
-    type Target = [ValId];
-    fn deref(&self) -> &[ValId] {
-        &self.0.slice
-    }
-}
-
-impl Debug for ArcValIdArr {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
-        Debug::fmt(self.deref(), fmt)
-    }
-}
-
-impl Hash for ArcValIdArr {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.deref().hash(hasher)
     }
 }
 
