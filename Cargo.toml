@@ -10,7 +10,7 @@ repository = "https://gitlab.com/rain-lang/rain-ir"
 [dependencies]
 ahash = "^0.3"
 smallvec = "^1.4"
-elysees = "^0.0.2"
+elysees = "^0.1.1"
 dashmap = "^3"
 lazy_static = "^1.4"
 ref-cast = "^1"
