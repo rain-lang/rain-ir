@@ -155,7 +155,7 @@ impl GammaBuilder {
     /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
     /// Return an error on a mismatch between branch parameters and the desired gamma node type
     pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
-        let matched = pattern.try_match_ty(self.ty.borrow_var())?;
+        let matched = pattern.try_get_args(self.ty.borrow_var())?;
         let region = RegionData::with(
             matched.0.into(),
             self.ty

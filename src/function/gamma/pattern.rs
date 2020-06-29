@@ -61,8 +61,8 @@ impl Match for Pattern {
         self.deref().matches(args, outputs)
     }
     #[inline]
-    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
-        self.deref().try_match_ty(ty)
+    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+        self.deref().try_get_args(ty)
     }
     #[inline]
     fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error> {
@@ -116,14 +116,12 @@ pub struct Matched(pub Vec<ValId>);
 pub trait Match {
     /// Return Ok(()) if a pattern can produce a given output type vector from a given input type vector
     fn matches(&self, args: &[TypeId], outputs: &[TypeId]) -> Result<(), Error>;
-    /// Try to match a pattern as a sub-branch of a given pi-type.
-    ///
-    /// The resulting typevector should always return `Ok(())` if passed as `outputs` to matches if the pi-types
-    /// arguments are passed as `args`
-    /// TODO: word that better... much better...
-    /// Might fail even if a match is possible though.
-    /// TODO: word that better as well...
-    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error>;
+    /// Attempt to obtain an argument vector compatible with the given pi type's argument vector
+    /// 
+    /// Satisfies the invariant that, should this call succeed, letting `outputs` be the resulting type vector
+    /// and `args` be the pi type's argument vector, `self.matches(args, outputs) == Ok(())`.
+    /// Note this may fail, especially in the case where e.g. there are two such possible vectors.
+    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error>;
     /// Try to match a value according to a pattern
     fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error>;
 }
@@ -138,11 +136,11 @@ impl Match for PatternData {
         }
     }
     #[inline]
-    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         match self {
-            PatternData::Any(a) => a.try_match_ty(ty),
-            PatternData::Empty(e) => e.try_match_ty(ty),
-            PatternData::Bool(b) => b.try_match_ty(ty),
+            PatternData::Any(a) => a.try_get_args(ty),
+            PatternData::Empty(e) => e.try_get_args(ty),
+            PatternData::Bool(b) => b.try_get_args(ty),
         }
     }
     #[inline]
@@ -168,7 +166,7 @@ impl Match for Any {
             return Err(Error::TypeMismatch);
         }
     }
-    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         Ok(MatchedTy(
             ty.def_region().param_tys().iter().cloned().collect_vec(),
         ))
@@ -205,7 +203,7 @@ impl Match for bool {
         }
         return Ok(())
     }
-    fn try_match_ty(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         let tdr = ty.def_region();
         // Filter for a single boolean argument
         if tdr.len() != 1 {
@@ -254,7 +252,7 @@ impl Match for Empty {
         // `Empty` matches any input/output pair since the actual match always fails
         return Ok(())
     }
-    fn try_match_ty(&self, _ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_args(&self, _ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
         Ok(MatchedTy(vec![]))
     }
     fn try_match(&self, _inp: &[ValId]) -> Result<Matched, Error> {
