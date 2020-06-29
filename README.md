@@ -1,6 +1,6 @@
 # rain
 [![Pipeline status](https://gitlab.com/rain-lang/rain-ir/badges/master/pipeline.svg)](https://gitlab.com/rain-lang/rain-ir)
-[![codecov](https://codecov.io/gl/tekne/rain/branch/master/graph/badge.svg)](https://codecov.io/gl/rain-lang/rain-ir)
+[![codecov](https://codecov.io/gl/rain-lang/rain-ir/branch/master/graph/badge.svg)](https://codecov.io/gl/rain-lang/rain-ir)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://gitlab.com/rain-lang/rain-ir)
 
