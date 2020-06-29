@@ -390,8 +390,7 @@ mod tests {
         let branch_builder = gamma_builder
             .build_branch(true.into())
             .expect("#true is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
+        assert_eq!(branch_builder.params().len(), 0);
         assert_eq!(
             branch_builder
                 .finish(false.into())
@@ -405,8 +404,6 @@ mod tests {
         let branch_builder = gamma_builder
             .build_branch(false.into())
             .expect("#false is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
         assert_eq!(
             branch_builder
                 .finish(true.into())
