@@ -1,10 +1,8 @@
 /*!
-[![Documentation](https://docs.rs/rain-lang/badge.svg)](https://docs.rs/rain-lang/)
-[![crates.io](https://img.shields.io/crates/v/rain-lang.svg)](https://crates.io/crates/rain-lang)
-[![Downloads](https://img.shields.io/crates/d/rain-lang.svg)](https://crates.io/crates/rain-lang)
-[![Pipeline status](https://gitlab.com/tekne/rain/badges/master/pipeline.svg)](https://gitlab.com/tekne/rain)
-[![codecov](https://codecov.io/gl/tekne/rain/branch/master/graph/badge.svg)](https://codecov.io/gl/tekne/rain)
+[![Pipeline status](https://gitlab.com/rain-lang/rain-ir/badges/master/pipeline.svg)](https://gitlab.com/rain-lang/rain-ir)
+[![codecov](https://codecov.io/gl/tekne/rain/branch/master/graph/badge.svg)](https://codecov.io/gl/rain-lang/rain-ir)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://gitlab.com/rain-lang/rain-ir)
 
 `rain` is an implementation of an [RVSDG](https://arxiv.org/abs/1912.05036) with a concept of lifetimes,
 inspired by (and implemented in) Rust. The goal is to build a purely functional, low-level intermediate
