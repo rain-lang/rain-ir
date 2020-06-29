@@ -173,6 +173,14 @@ impl GammaBuilder {
             pattern,
         })
     }
+    /// Push a branch onto this gamma node
+    pub fn add(&mut self, branch: Branch) -> Result<usize, (Branch, Error)> {
+        let ix = self.branches.len();
+        //TODO: check compatibility of branch with this gamma node builder
+        self.pattern.take_disjunction(&branch.pattern);
+        self.branches.push(branch);
+        Ok(ix)
+    }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
     /// Dependencies are returned sorted by address, and deduplicated
