@@ -232,6 +232,14 @@ pub struct Branch {
 }
 
 impl Branch {
+    /// Attempt to create a new branch from a pattern and a function
+    pub fn new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
+        //TODO: check if function is compatible with pattern
+        Ok(Branch {
+            pattern,
+            func
+        })
+    }
     /// Return the dependencies of this branch
     pub fn deps(&self) -> &ValSet {
         self.func.depset()
