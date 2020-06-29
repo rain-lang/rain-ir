@@ -2,10 +2,10 @@
 Parameters to a `rain` region
 */
 use super::{Region, RegionBorrow, Regional};
-use crate::eval::Apply;
+use crate::eval::{Application, Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
-use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 
 /**
@@ -86,7 +86,22 @@ impl Typed for Parameter {
     }
 }
 
-impl Apply for Parameter {}
+impl Apply for Parameter {
+    fn do_apply_in_ctx<'a>(
+        &self,
+        _args: &'a [ValId],
+        _inline: bool,
+        _ctx: Option<&mut EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        match self.ty().as_enum() {
+            ValueEnum::Pi(p) => unimplemented!("Pi type parameters: parameter = {}: {}", self, p),
+            ValueEnum::Product(p) => {
+                unimplemented!("Product type parameters: parameter = {}: {}", self, p)
+            }
+            _ => Err(Error::NotAFunction),
+        }
+    }
+}
 
 impl Value for Parameter {
     fn no_deps(&self) -> usize {
