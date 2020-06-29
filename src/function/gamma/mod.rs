@@ -5,12 +5,11 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Parameter, Region, RegionData, Regional};
+use crate::region::{Parameter, Region, RegionData};
 use crate::typing::Typed;
 use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use itertools::Itertools;
-use std::ops::Deref;
 use thin_dst::ThinBox;
 
 pub mod pattern;
@@ -183,6 +182,7 @@ impl GammaBuilder {
             .map(|branch| branch.deps().into_iter())
             .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
             .dedup()
+            .cloned()
             .collect()
     }
     /// Check whether this gamma node is complete
@@ -225,51 +225,32 @@ impl GammaBuilder {
 /// A branch of a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Branch {
-    /// The region corresponding to this branch
-    region: Region,
     /// The pattern of this branch
     pattern: Pattern,
-    /// The value of this branch
-    value: ValId,
+    /// The function corresponding to this branch
+    func: VarId<Lambda>,
 }
 
 impl Branch {
     /// Return the dependencies of this branch
-    pub fn deps(&self) -> Vec<ValId> {
-        use std::cmp::Ordering::*;
-        match self
-            .value
-            .lifetime()
-            .region()
-            .partial_cmp(self.region.deref())
-        {
-            None | Some(Greater) => panic!(
-                "Impossible: region mismatch should have been caught by BranchBuilder as error"
-            ),
-            Some(Equal) => self
-                .value
-                .deps()
-                .collect_deps(..self.value.depth(), |_| true),
-            Some(Less) => vec![self.value.clone()],
-        }
-    }
-    /// Return the dependencies of this branch, sorted by address
-    pub fn sorted_deps(&self) -> Vec<ValId> {
-        let mut deps = self.deps();
-        deps.sort_unstable_by_key(|v| v.as_ptr());
-        deps
+    pub fn deps(&self) -> &ValSet {
+        self.func.depset()
     }
     /// Get the pattern of this branch
     pub fn pattern(&self) -> &Pattern {
         &self.pattern
     }
-    /// Get the value of this branch
-    pub fn value(&self) -> &ValId {
-        &self.value
+    /// Get the result of this branch
+    pub fn result(&self) -> &ValId {
+        &self.func.result()
     }
     /// Get the defining region of this branch
     pub fn def_region(&self) -> &Region {
-        &self.region
+        &self.func.def_region()
+    }
+    /// Get the function corresponding to this branch
+    pub fn func(&self) -> &VarId<Lambda> {
+        &self.func
     }
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
@@ -288,7 +269,7 @@ impl Branch {
         )?;
 
         // Evaluate the result
-        let result = ctx.evaluate(self.value());
+        let result = ctx.evaluate(self.result());
         // Pop the evaluation context
         ctx.pop();
         let result = result?;
@@ -336,12 +317,15 @@ impl<'a> BranchBuilder<'a> {
     /// On failure, return an unchanged object to try again, along with a reason
     pub fn finish(self, value: ValId) -> Result<usize, (BranchBuilder<'a>, Error)> {
         let ix = self.builder.branches.len();
+        let func = match Lambda::try_new(value, self.region.clone()) {
+            Ok(func) => func,
+            Err(err) => return Err((self, err)),
+        };
         //TODO: check `value`'s type, region, lifetimes, etc.
         self.builder.pattern.take_disjunction(&self.pattern);
         self.builder.branches.push(Branch {
-            region: self.region,
             pattern: self.pattern,
-            value,
+            func: func.into(),
         });
         Ok(ix)
     }
@@ -368,8 +352,10 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::parser::builder::Builder;
+    use crate::region::Regional;
     use crate::value::expr::Sexpr;
     use std::convert::TryInto;
+
     #[test]
     fn not_as_gamma_works() {
         // Initialize the gamma node builder

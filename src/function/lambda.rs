@@ -57,6 +57,11 @@ impl Lambda {
     pub fn get_ty(&self) -> &VarId<Pi> {
         &self.ty
     }
+    /// Get the dependency-set of this lambda function
+    #[inline]
+    pub fn depset(&self) -> &ValSet {
+        &self.deps
+    }
 }
 
 impl Typed for Lambda {
