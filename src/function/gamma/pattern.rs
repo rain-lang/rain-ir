@@ -3,12 +3,10 @@ Pattern matching branches
 
 TODO: consider caching patterns
 */
-use crate::function::pi::Pi;
 use crate::primitive::logical::{BOOL_TY, FALSE, TRUE};
 use crate::typing::Typed;
-use crate::value::{Error, TypeId, ValId, VarRef};
+use crate::value::{Error, TypeId, ValId};
 use elysees::Arc;
-use itertools::Itertools;
 use std::ops::Deref;
 
 /// A branch of a gamma node
@@ -61,8 +59,8 @@ impl Match for Pattern {
         self.deref().matches(args, outputs)
     }
     #[inline]
-    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
-        self.deref().try_get_args(ty)
+    fn try_get_outputs(&self, ty: &[TypeId]) -> Result<MatchedTy, Error> {
+        self.deref().try_get_outputs(ty)
     }
     #[inline]
     fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error> {
@@ -117,11 +115,11 @@ pub trait Match {
     /// Return Ok(()) if a pattern can produce a given output type vector from a given input type vector
     fn matches(&self, args: &[TypeId], outputs: &[TypeId]) -> Result<(), Error>;
     /// Attempt to obtain an argument vector compatible with the given pi type's argument vector
-    /// 
+    ///
     /// Satisfies the invariant that, should this call succeed, letting `outputs` be the resulting type vector
     /// and `args` be the pi type's argument vector, `self.matches(args, outputs) == Ok(())`.
     /// Note this may fail, especially in the case where e.g. there are two such possible vectors.
-    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error>;
+    fn try_get_outputs(&self, ty: &[TypeId]) -> Result<MatchedTy, Error>;
     /// Try to match a value according to a pattern
     fn try_match(&self, inp: &[ValId]) -> Result<Matched, Error>;
 }
@@ -136,11 +134,11 @@ impl Match for PatternData {
         }
     }
     #[inline]
-    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_outputs(&self, ty: &[TypeId]) -> Result<MatchedTy, Error> {
         match self {
-            PatternData::Any(a) => a.try_get_args(ty),
-            PatternData::Empty(e) => e.try_get_args(ty),
-            PatternData::Bool(b) => b.try_get_args(ty),
+            PatternData::Any(a) => a.try_get_outputs(ty),
+            PatternData::Empty(e) => e.try_get_outputs(ty),
+            PatternData::Bool(b) => b.try_get_outputs(ty),
         }
     }
     #[inline]
@@ -166,10 +164,8 @@ impl Match for Any {
             return Err(Error::TypeMismatch);
         }
     }
-    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
-        Ok(MatchedTy(
-            ty.def_region().param_tys().iter().cloned().collect_vec(),
-        ))
+    fn try_get_outputs(&self, tys: &[TypeId]) -> Result<MatchedTy, Error> {
+        Ok(MatchedTy(tys.into()))
     }
     fn try_match(&self, ty: &[ValId]) -> Result<Matched, Error> {
         Ok(Matched(ty.to_vec()))
@@ -193,23 +189,22 @@ impl From<Any> for Pattern {
 impl Match for bool {
     fn matches(&self, args: &[TypeId], outputs: &[TypeId]) -> Result<(), Error> {
         if args.len() != 1 {
-            return Err(Error::TupleLengthMismatch)
-        }
-        if &args[0] != BOOL_TY.deref() {
-            return Err(Error::TypeMismatch)
-        }
-        if outputs.len() != 0 {
-            return Err(Error::TupleLengthMismatch)
-        }
-        return Ok(())
-    }
-    fn try_get_args(&self, ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
-        let tdr = ty.def_region();
-        // Filter for a single boolean argument
-        if tdr.len() != 1 {
             return Err(Error::TupleLengthMismatch);
         }
-        if &tdr[0] != BOOL_TY.deref() {
+        if &args[0] != BOOL_TY.deref() {
+            return Err(Error::TypeMismatch);
+        }
+        if outputs.len() != 0 {
+            return Err(Error::TupleLengthMismatch);
+        }
+        return Ok(());
+    }
+    fn try_get_outputs(&self, tys: &[TypeId]) -> Result<MatchedTy, Error> {
+        // Filter for a single boolean argument
+        if tys.len() != 1 {
+            return Err(Error::TupleLengthMismatch);
+        }
+        if &tys[0] != BOOL_TY.deref() {
             return Err(Error::TypeMismatch);
         }
         Ok(MatchedTy(vec![]))
@@ -250,9 +245,9 @@ pub struct Empty;
 impl Match for Empty {
     fn matches(&self, _args: &[TypeId], _outputs: &[TypeId]) -> Result<(), Error> {
         // `Empty` matches any input/output pair since the actual match always fails
-        return Ok(())
+        return Ok(());
     }
-    fn try_get_args(&self, _ty: VarRef<Pi>) -> Result<MatchedTy, Error> {
+    fn try_get_outputs(&self, _ty: &[TypeId]) -> Result<MatchedTy, Error> {
         Ok(MatchedTy(vec![]))
     }
     fn try_match(&self, _inp: &[ValId]) -> Result<Matched, Error> {
