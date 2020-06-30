@@ -183,6 +183,20 @@ impl Product {
             ty: FINITE_TY.clone(),
         }
     }
+    /// Get the type-tuple corresponding to this product type
+    ///
+    /// TODO: consider caching this (or the tuple type) in an atomic, as it may need to be computed many times
+    #[inline]
+    pub fn tuple(&self) -> Tuple {
+        let ty_elems = self.elems.iter().map(|elem| elem.ty().clone_ty()).collect();
+        //TODO: think about this...
+        let ty = Product::try_new(ty_elems).expect("Impossible").into();
+        Tuple {
+            elems: self.elems.as_vals().clone(),
+            lifetime: self.lifetime.clone(),
+            ty,
+        }
+    }
 }
 
 debug_from_display!(Product);
