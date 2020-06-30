@@ -155,7 +155,7 @@ impl GammaBuilder {
     /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
     /// Return an error on a mismatch between branch parameters and the desired gamma node type
     pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
-        let matched = pattern.try_match_ty(self.ty.borrow_var())?;
+        let matched = pattern.try_get_outputs(self.ty.def_region().param_tys())?;
         let region = RegionData::with(
             matched.0.into(),
             self.ty
@@ -172,6 +172,14 @@ impl GammaBuilder {
             builder: self,
             pattern,
         })
+    }
+    /// Push a branch onto this gamma node
+    pub fn add(&mut self, branch: Branch) -> Result<usize, (Branch, Error)> {
+        let ix = self.branches.len();
+        //TODO: check compatibility of branch with this gamma node builder
+        self.pattern.take_disjunction(&branch.pattern);
+        self.branches.push(branch);
+        Ok(ix)
     }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
@@ -232,6 +240,14 @@ pub struct Branch {
 }
 
 impl Branch {
+    /// Attempt to create a new branch from a pattern and a function
+    pub fn new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
+        //TODO: check if function is compatible with pattern
+        Ok(Branch {
+            pattern,
+            func
+        })
+    }
     /// Return the dependencies of this branch
     pub fn deps(&self) -> &ValSet {
         self.func.depset()
@@ -374,8 +390,7 @@ mod tests {
         let branch_builder = gamma_builder
             .build_branch(true.into())
             .expect("#true is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
+        assert_eq!(branch_builder.params().len(), 0);
         assert_eq!(
             branch_builder
                 .finish(false.into())
@@ -389,8 +404,6 @@ mod tests {
         let branch_builder = gamma_builder
             .build_branch(false.into())
             .expect("#false is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
         assert_eq!(
             branch_builder
                 .finish(true.into())
