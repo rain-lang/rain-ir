@@ -1,4 +1,5 @@
 use super::*;
+use std::hash::Hasher;
 
 // Statics
 
@@ -13,25 +14,25 @@ impl<P> Eq for ValId<P> {}
 
 impl<'a, P, Q> PartialEq<ValRef<'a, P>> for ValId<Q> {
     fn eq(&self, other: &ValRef<'a, P>) -> bool {
-        self.ptr == other.ptr
+        std::ptr::eq(self.as_val().deref(), other.as_val().deref())
     }
 }
 
 impl<P, Q> PartialEq<ValId<P>> for ValId<Q> {
     fn eq(&self, other: &ValId<P>) -> bool {
-        self.ptr == other.ptr
+        std::ptr::eq(self.as_val().deref(), other.as_val().deref())
     }
 }
 
 impl<'a, U, V> PartialEq<ValRef<'a, U>> for ValRef<'a, V> {
     fn eq(&self, other: &ValRef<'a, U>) -> bool {
-        self.ptr == other.ptr
+        std::ptr::eq(self.as_val().deref(), other.as_val().deref())
     }
 }
 
 impl<'a, U, V> PartialEq<ValId<U>> for ValRef<'a, V> {
     fn eq(&self, other: &ValId<U>) -> bool {
-        self.ptr == other.ptr
+        std::ptr::eq(self.as_val().deref(), other.as_val().deref())
     }
 }
 
@@ -59,6 +60,20 @@ impl<'a, P> Clone for ValRef<'a, P> {
 
 impl<'a, P> Copy for ValRef<'a, P> {}
 
+// Hash
+
+impl<P> Hash for ValId<P> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.as_val().deref(), hasher)
+    }
+}
+
+impl<'a, P> Hash for ValRef<'a, P> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        std::ptr::hash(self.as_val().deref(), hasher)
+    }
+}
+
 // Base methods (implemented on unqualified `ValId` pointers)
 
 impl ValId {
@@ -68,7 +83,7 @@ impl ValId {
     pub fn direct_new<V: Into<NormalValue>>(v: V) -> ValId {
         let norm = v.into();
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -76,7 +91,7 @@ impl ValId {
     #[inline]
     pub fn dedup(norm: Arc<NormalValue>) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -104,7 +119,7 @@ impl<P> ValId<P> {
     }
     /// Get this `ValId<P>` as a `ValId`
     pub fn as_val(&self) -> &ValId {
-        RefCast::ref_cast(&self.ptr)
+        self.coerce_ref()
     }
     /// Get the pointer behind this `ValId`
     #[inline]
@@ -139,6 +154,7 @@ impl<P> ValId<P> {
         self.clone().coerce()
     }
     /// Coerce this `ValId` into another predicated value
+    #[inline]
     pub(super) fn coerce<Q>(self) -> ValId<Q> {
         ValId {
             ptr: self.ptr,
@@ -146,8 +162,10 @@ impl<P> ValId<P> {
         }
     }
     /// Coerce this `ValId` into a reference to another predicated value
+    #[inline]
     pub(super) fn coerce_ref<Q>(&self) -> &ValId<Q> {
-        RefCast::ref_cast(&self.ptr)
+        let ptr_ref = &self.ptr;
+        unsafe { &*(ptr_ref as *const _ as *const ValId<Q>) }
     }
 }
 
@@ -169,7 +187,16 @@ impl<'a, P> ValRef<'a, P> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Clone this `VarRef` as a `ValId`
+    /// Get this `ValRef<P>` as a `ValId<P>`
+    pub fn as_arc(&self) -> &ValId<P> {
+        let arc_ptr = self.ptr.as_arc();
+        unsafe { &*(arc_ptr as *const _ as *const ValId<P>) }
+    }
+    /// Get this `ValRef<P>` as a `ValId`
+    pub fn as_valid(&self) -> &ValId {
+        self.as_arc().as_val()
+    }
+    /// Clone this `ValRef<P>` as a `ValId`
     pub fn clone_val(&self) -> ValId {
         ValId {
             ptr: self.ptr.clone_arc(),
@@ -352,7 +379,7 @@ impl<'a, V> VarId<V> {
     {
         let norm: NormalValue = v.into();
         VarId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -361,7 +388,7 @@ impl<'a, V> VarId<V> {
     where
         V: Type,
     {
-        RefCast::ref_cast(&self.ptr)
+        self.coerce_ref()
     }
     /// Borrow this `VarId` as a `TypeRef`
     pub fn borrow_ty(&self) -> TypeRef
@@ -433,14 +460,28 @@ where
     }
 }
 
-impl Borrow<NormalValue> for ValRef<'_> {
+impl<P> Borrow<ValId> for ValRef<'_, P> {
+    #[inline]
+    fn borrow(&self) -> &ValId {
+        self.as_valid()
+    }
+}
+
+impl<P> Borrow<VarId<P>> for VarRef<'_, P> {
+    #[inline]
+    fn borrow(&self) -> &VarId<P> {
+        self.as_arc()
+    }
+}
+
+impl<P> Borrow<NormalValue> for ValRef<'_, P> {
     #[inline]
     fn borrow(&self) -> &NormalValue {
         &self.ptr
     }
 }
 
-impl Borrow<ValueEnum> for ValRef<'_> {
+impl<P> Borrow<ValueEnum> for ValRef<'_, P> {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
         &self.ptr
@@ -453,7 +494,7 @@ impl From<NormalValue> for ValId {
     #[inline]
     fn from(value: NormalValue) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            ptr: VALUE_CACHE.cache(value),
             variant: std::marker::PhantomData,
         }
     }
@@ -463,7 +504,7 @@ impl From<Arc<NormalValue>> for ValId {
     #[inline]
     fn from(value: Arc<NormalValue>) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            ptr: VALUE_CACHE.cache(value),
             variant: std::marker::PhantomData,
         }
     }
@@ -526,7 +567,7 @@ where
 
 impl<'a, V: Value> From<&'a VarId<V>> for &'a ValId {
     fn from(var: &'a VarId<V>) -> &'a ValId {
-        RefCast::ref_cast(&var.ptr)
+        var.coerce_ref()
     }
 }
 

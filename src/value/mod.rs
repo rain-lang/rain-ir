@@ -11,7 +11,6 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
-use crate::util::PrivateByAddr;
 use crate::{debug_from_display, enum_convert, forv, pretty_display};
 use dashcache::Cache;
 use elysees::{Arc, ArcBorrow};
@@ -46,18 +45,16 @@ pub use valid_impl::*;
 // Basic value type declarations:
 
 /// A `rain` value, optionally asserted to satisfy a predicate `P`
-#[derive(Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValId<P = ()> {
-    ptr: NormAddr,
+    ptr: Arc<NormalValue>,
     variant: std::marker::PhantomData<P>,
 }
 
 /// A borrowed `rain` value, optionally guaranteed to satisfy a given predicate `P`
-#[derive(Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValRef<'a, P = ()> {
-    ptr: NormRef<'a>,
+    ptr: ArcBorrow<'a, NormalValue>,
     variant: std::marker::PhantomData<P>,
 }
 
@@ -215,35 +212,28 @@ impl Substitute<ValId> for ValueEnum {
     }
 }
 
-/// A private type which can only be constructed within the `value` crate: an implementation detail so that
-/// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
-#[derive(Debug)]
-pub struct Private {}
-
-/// A wrapper over an `Arc<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
-/// Can only be constructed within the `value` crate: a user should never have direct access to these.
-type NormAddr = PrivateByAddr<Arc<NormalValue>, Private>;
-
-/// A wrapper over an `ArcBorrow<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
-/// Can only be constructed within the `value` crate: a user should never have direct access to these.
-type NormRef<'a> = PrivateByAddr<ArcBorrow<'a, NormalValue>, Private>;
-
 /// A normalized `rain` value
-#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct NormalValue(pub(crate) PrivateValue);
+pub struct NormalValue(pub(crate) ValueEnum);
 
 impl NormalValue {
     /// Assert a given value is normalized
     pub(crate) fn assert_new(value: ValueEnum) -> NormalValue {
-        NormalValue(PrivateValue(value))
+        NormalValue(value)
     }
+    /*
+    /// Assert a reference to a given value is a reference to a normal value
+    pub(crate) fn assert_ref(value: &ValueEnum) -> &NormalValue {
+        unsafe { &*(value as *const ValueEnum as *const NormalValue) }
+    }
+    */
 }
 
 impl Deref for NormalValue {
     type Target = ValueEnum;
     fn deref(&self) -> &ValueEnum {
-        &(self.0).0
+        &self.0
     }
 }
 
@@ -261,14 +251,14 @@ impl From<ValueEnum> for NormalValue {
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &(self.0).0
+        &self.0
     }
 }
 
 impl From<NormalValue> for ValueEnum {
     #[inline]
     fn from(normal: NormalValue) -> ValueEnum {
-        (normal.0).0
+        normal.0
     }
 }
 
@@ -318,11 +308,6 @@ impl Regional for NormalValue {
         self.deref().region()
     }
 }
-
-/// A wrapper around a `rain` value to assert refinement conditions.
-/// Implementation detail: library consumers should not be able to construct this!
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct PrivateValue(pub(crate) ValueEnum);
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
