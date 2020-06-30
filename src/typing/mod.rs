@@ -6,12 +6,11 @@ use super::{
     lifetime::{LifetimeBorrow, Live},
     region::{RegionBorrow, Regional},
     value::{
-        Error, NormalValue, PrivateValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
+        Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
         ValueEnum,
     },
 };
 use crate::{debug_from_display, pretty_display};
-use ref_cast::RefCast;
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
@@ -33,9 +32,9 @@ pub trait Type: Value {
 }
 
 /// A value guaranteed to be a type
-#[derive(Eq, PartialEq, Hash, RefCast)]
+#[derive(Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct TypeValue(PrivateValue);
+pub struct TypeValue(NormalValue);
 
 debug_from_display!(TypeValue);
 pretty_display!(TypeValue, s, fmt => write!(fmt, "{}", s.deref()));
@@ -147,20 +146,20 @@ impl From<TypeValue> for ValId {
 impl Deref for TypeValue {
     type Target = NormalValue;
     fn deref(&self) -> &NormalValue {
-        RefCast::ref_cast(&self.0)
+        &self.0
     }
 }
 
 impl From<TypeValue> for NormalValue {
     fn from(ty: TypeValue) -> NormalValue {
-        NormalValue(ty.0)
+        ty.0
     }
 }
 
 impl From<TypeValue> for ValueEnum {
     fn from(ty: TypeValue) -> ValueEnum {
         (ty.0).0
-    }
+    } 
 }
 
 impl TryFrom<NormalValue> for TypeValue {
@@ -168,7 +167,7 @@ impl TryFrom<NormalValue> for TypeValue {
     #[inline]
     fn try_from(value: NormalValue) -> Result<TypeValue, NormalValue> {
         if value.is_ty() {
-            Ok(TypeValue(value.0))
+            Ok(TypeValue(value))
         } else {
             Err(value)
         }
@@ -180,7 +179,10 @@ impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
     #[inline]
     fn try_from(value: &'a NormalValue) -> Result<&'a TypeValue, &'a NormalValue> {
         if value.is_ty() {
-            Ok(RefCast::ref_cast(&value.0))
+            let cast = unsafe {
+                &*(value as *const NormalValue as *const TypeValue)
+            };
+            Ok(cast)
         } else {
             Err(value)
         }
@@ -189,7 +191,7 @@ impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
 
 impl<'a> From<&'a TypeValue> for &'a NormalValue {
     fn from(value: &'a TypeValue) -> &'a NormalValue {
-        RefCast::ref_cast(&value.0)
+        &value.0
     }
 }
 
@@ -216,7 +218,7 @@ impl TryFrom<ValueEnum> for TypeValue {
     #[inline]
     fn try_from(value: ValueEnum) -> Result<TypeValue, ValueEnum> {
         if value.is_ty() {
-            Ok(TypeValue(NormalValue::from(value).0))
+            Ok(TypeValue(NormalValue::from(value)))
         } else {
             Err(value)
         }
