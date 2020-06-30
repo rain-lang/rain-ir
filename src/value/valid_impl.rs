@@ -13,25 +13,25 @@ impl<P> Eq for ValId<P> {}
 
 impl<'a, P, Q> PartialEq<ValRef<'a, P>> for ValId<Q> {
     fn eq(&self, other: &ValRef<'a, P>) -> bool {
-        self.ptr == other.ptr
+        Arc::as_ptr(&self.ptr) == ArcBorrow::into_raw(other.ptr)
     }
 }
 
 impl<P, Q> PartialEq<ValId<P>> for ValId<Q> {
     fn eq(&self, other: &ValId<P>) -> bool {
-        self.ptr == other.ptr
+        Arc::as_ptr(&self.ptr) == Arc::as_ptr(&other.ptr)
     }
 }
 
 impl<'a, U, V> PartialEq<ValRef<'a, U>> for ValRef<'a, V> {
     fn eq(&self, other: &ValRef<'a, U>) -> bool {
-        self.ptr == other.ptr
+        ArcBorrow::into_raw(self.ptr) == ArcBorrow::into_raw(other.ptr)
     }
 }
 
 impl<'a, U, V> PartialEq<ValId<U>> for ValRef<'a, V> {
     fn eq(&self, other: &ValId<U>) -> bool {
-        self.ptr == other.ptr
+        ArcBorrow::into_raw(self.ptr) == Arc::as_ptr(&other.ptr)
     }
 }
 
@@ -68,7 +68,7 @@ impl ValId {
     pub fn direct_new<V: Into<NormalValue>>(v: V) -> ValId {
         let norm = v.into();
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -76,7 +76,7 @@ impl ValId {
     #[inline]
     pub fn dedup(norm: Arc<NormalValue>) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -169,7 +169,7 @@ impl<'a, P> ValRef<'a, P> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Clone this `VarRef` as a `ValId`
+    /// Clone this `ValRef<P>` as a `ValId`
     pub fn clone_val(&self) -> ValId {
         ValId {
             ptr: self.ptr.clone_arc(),
@@ -352,7 +352,7 @@ impl<'a, V> VarId<V> {
     {
         let norm: NormalValue = v.into();
         VarId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(norm), Private {}),
+            ptr: VALUE_CACHE.cache(norm),
             variant: std::marker::PhantomData,
         }
     }
@@ -453,7 +453,7 @@ impl From<NormalValue> for ValId {
     #[inline]
     fn from(value: NormalValue) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            ptr: VALUE_CACHE.cache(value),
             variant: std::marker::PhantomData,
         }
     }
@@ -463,7 +463,7 @@ impl From<Arc<NormalValue>> for ValId {
     #[inline]
     fn from(value: Arc<NormalValue>) -> ValId {
         ValId {
-            ptr: NormAddr::make(VALUE_CACHE.cache(value), Private {}),
+            ptr: VALUE_CACHE.cache(value),
             variant: std::marker::PhantomData,
         }
     }
