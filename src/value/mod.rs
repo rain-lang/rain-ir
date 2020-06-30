@@ -576,18 +576,6 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Cast { as ValueEnum, }
 }
 
-impl From<Pi> for NormalValue {
-    fn from(p: Pi) -> NormalValue {
-        NormalValue(ValueEnum::Pi(p))
-    }
-}
-
-impl From<Phi> for NormalValue {
-    fn from(p: Phi) -> NormalValue {
-        NormalValue(ValueEnum::Phi(p))
-    }
-}
-
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
 #[macro_export]
 macro_rules! forv {

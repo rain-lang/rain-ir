@@ -131,6 +131,12 @@ impl Substitute for Pi {
     }
 }
 
+impl From<Pi> for NormalValue {
+    fn from(p: Pi) -> NormalValue {
+        NormalValue(ValueEnum::Pi(p))
+    }
+}
+
 substitute_to_valid!(Pi);
 debug_from_display!(Pi);
 pretty_display!(Pi, "#pi|...| {...}");

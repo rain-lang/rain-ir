@@ -75,6 +75,12 @@ impl Apply for Phi {
     //TODO: again, pretty important, right? I mean, Turing-completeness is kind of a big deal...
 }
 
+impl From<Phi> for NormalValue {
+    fn from(p: Phi) -> NormalValue {
+        NormalValue(ValueEnum::Phi(p))
+    }
+}
+
 substitute_to_valid!(Phi);
 debug_from_display!(Phi);
 pretty_display!(Phi, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_PHI);
