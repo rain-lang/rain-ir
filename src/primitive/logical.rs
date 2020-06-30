@@ -105,6 +105,110 @@ impl Apply for bool {}
 
 trivial_lifetime!(bool);
 
+impl From<Bool> for ValueEnum {
+    fn from(b: Bool) -> ValueEnum {
+        ValueEnum::BoolTy(b)
+    }
+}
+
+impl TryFrom<ValueEnum> for Bool {
+    type Error = ValueEnum;
+    fn try_from(val: ValueEnum) -> Result<Bool, ValueEnum> {
+        match val {
+            ValueEnum::BoolTy(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a ValueEnum> for &'a Bool {
+    type Error = &'a ValueEnum;
+    fn try_from(val: &'a ValueEnum) -> Result<&'a Bool, &'a ValueEnum> {
+        match val {
+            ValueEnum::BoolTy(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl From<Bool> for NormalValue {
+    fn from(b: Bool) -> NormalValue {
+        NormalValue(ValueEnum::BoolTy(b))
+    }
+}
+
+impl TryFrom<NormalValue> for Bool {
+    type Error = NormalValue;
+    fn try_from(val: NormalValue) -> Result<Bool, NormalValue> {
+        match val.deref() {
+            ValueEnum::BoolTy(b) => Ok(*b),
+            _ => Err(val),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a NormalValue> for &'a Bool {
+    type Error = &'a NormalValue;
+    fn try_from(val: &'a NormalValue) -> Result<&'a Bool, &'a NormalValue> {
+        match val.deref() {
+            ValueEnum::BoolTy(b) => Ok(b),
+            _ => Err(val),
+        }
+    }
+}
+
+impl From<bool> for ValueEnum {
+    fn from(b: bool) -> ValueEnum {
+        ValueEnum::Bool(b)
+    }
+}
+
+impl TryFrom<ValueEnum> for bool {
+    type Error = ValueEnum;
+    fn try_from(val: ValueEnum) -> Result<bool, ValueEnum> {
+        match val {
+            ValueEnum::Bool(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a ValueEnum> for &'a bool {
+    type Error = &'a ValueEnum;
+    fn try_from(val: &'a ValueEnum) -> Result<&'a bool, &'a ValueEnum> {
+        match val {
+            ValueEnum::Bool(b) => Ok(b),
+            v => Err(v),
+        }
+    }
+}
+
+impl From<bool> for NormalValue {
+    fn from(b: bool) -> NormalValue {
+        NormalValue(ValueEnum::Bool(b))
+    }
+}
+
+impl TryFrom<NormalValue> for bool {
+    type Error = NormalValue;
+    fn try_from(val: NormalValue) -> Result<bool, NormalValue> {
+        match val.deref() {
+            ValueEnum::Bool(b) => Ok(*b),
+            _ => Err(val),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a NormalValue> for &'a bool {
+    type Error = &'a NormalValue;
+    fn try_from(val: &'a NormalValue) -> Result<&'a bool, &'a NormalValue> {
+        match val.deref() {
+            ValueEnum::Bool(b) => Ok(b),
+            _ => Err(val),
+        }
+    }
+}
+
 impl Value for bool {
     #[inline]
     fn no_deps(&self) -> usize {
@@ -514,6 +618,12 @@ impl Apply for Logical {
 }
 
 trivial_substitute!(Logical);
+
+impl From<Logical> for NormalValue {
+    fn from(l: Logical) -> NormalValue {
+        NormalValue(ValueEnum::Logical(l))
+    }
+}
 
 impl Value for Logical {
     #[inline]

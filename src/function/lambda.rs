@@ -179,6 +179,12 @@ substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
 pretty_display!(Lambda, "#lambda |...| {...}");
 
+impl From<Lambda> for NormalValue {
+    fn from(l: Lambda) -> NormalValue {
+        NormalValue(ValueEnum::Lambda(l))
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;

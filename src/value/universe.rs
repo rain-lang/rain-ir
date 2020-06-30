@@ -226,6 +226,12 @@ impl Type for Universe {
 
 impl Apply for Universe {}
 
+impl From<Universe> for NormalValue {
+    fn from(universe: Universe) -> NormalValue {
+        NormalValue(ValueEnum::Universe(universe))
+    }
+}
+
 impl Value for Universe {
     #[inline]
     fn no_deps(&self) -> usize {

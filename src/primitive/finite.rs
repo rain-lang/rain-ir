@@ -150,6 +150,18 @@ impl Typed for Index {
 
 impl Apply for Index {}
 
+impl From<Finite> for NormalValue {
+    fn from(finite: Finite) -> NormalValue {
+        NormalValue(ValueEnum::Finite(finite))
+    }
+}
+
+impl From<Index> for NormalValue {
+    fn from(ix: Index) -> NormalValue {
+        NormalValue(ValueEnum::Index(ix))
+    }
+}
+
 impl Value for Index {
     #[inline]
     fn no_deps(&self) -> usize {

@@ -154,6 +154,29 @@ impl Value for Cast {
 debug_from_display!(Cast);
 pretty_display!(Cast, "#cast(...)");
 
+impl From<Cast> for NormalValue {
+    fn from(cast: Cast) -> NormalValue {
+        if cast.ty() != cast.value().ty() {
+            NormalValue(ValueEnum::Cast(cast))
+        } else if cast.lifetime() != cast.value().lifetime() {
+            //TODO: modify types with an inline lifetime, e.g. `Sexpr`
+            NormalValue(ValueEnum::Cast(cast))
+        } else {
+            cast.take_value().into()
+        }
+    }
+}
+
+impl From<Cast> for ValId {
+    fn from(cast: Cast) -> ValId {
+        if cast.lifetime() != cast.value().lifetime() || cast.ty() != cast.value().ty() {
+            ValId::<()>::direct_new(NormalValue::from(ValueEnum::Cast(cast)))
+        } else {
+            cast.take_value()
+        }
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;

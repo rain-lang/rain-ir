@@ -186,6 +186,18 @@ impl Substitute for Sexpr {
     }
 }
 
+impl From<Sexpr> for NormalValue {
+    fn from(sexpr: Sexpr) -> NormalValue {
+        if sexpr == () {
+            return ().into();
+        }
+        if sexpr.len() == 1 {
+            return sexpr[0].as_norm().clone();
+        }
+        NormalValue(ValueEnum::Sexpr(sexpr))
+    }
+}
+
 substitute_to_valid!(Sexpr);
 
 #[cfg(feature = "prettyprinter")]

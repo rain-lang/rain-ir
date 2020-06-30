@@ -124,6 +124,12 @@ impl Apply for Parameter {
     }
 }
 
+impl From<Parameter> for NormalValue {
+    fn from(param: Parameter) -> NormalValue {
+        NormalValue(ValueEnum::Parameter(param))
+    }
+}
+
 impl Value for Parameter {
     fn no_deps(&self) -> usize {
         0

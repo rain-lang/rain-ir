@@ -9,7 +9,7 @@ use super::{
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::primitive::UNIT_TY;
+use crate::primitive::{Unit, UNIT_TY};
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
@@ -148,6 +148,15 @@ impl Substitute for Tuple {
 
 substitute_to_valid!(Tuple);
 
+impl From<Tuple> for NormalValue {
+    fn from(tuple: Tuple) -> NormalValue {
+        if tuple == () {
+            return ().into();
+        }
+        NormalValue(ValueEnum::Tuple(tuple))
+    }
+}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
 
@@ -256,6 +265,15 @@ impl Type for Product {
     }
     fn is_universe(&self) -> bool {
         false
+    }
+}
+
+impl From<Product> for NormalValue {
+    fn from(product: Product) -> NormalValue {
+        if product == Unit {
+            return Unit.into();
+        }
+        NormalValue(ValueEnum::Product(product))
     }
 }
 

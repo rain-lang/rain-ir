@@ -104,6 +104,12 @@ impl Substitute for Gamma {
     }
 }
 
+impl From<Gamma> for NormalValue {
+    fn from(g: Gamma) -> NormalValue {
+        NormalValue(ValueEnum::Gamma(g))
+    }
+}
+
 impl Value for Gamma {
     fn no_deps(&self) -> usize {
         self.deps.len()
