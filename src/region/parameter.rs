@@ -94,12 +94,30 @@ impl Apply for Parameter {
         _ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.len() == 0 {
-            return Ok(Application::Success(args, self.clone().into()))
+            return Ok(Application::Success(args, self.clone().into()));
         }
         match self.ty().as_enum() {
             ValueEnum::Pi(p) => unimplemented!("Pi type parameters: parameter = {}: {}", self, p),
             ValueEnum::Product(p) => {
-                unimplemented!("Product application: parameter = {}: {}", self, p)
+                if args.len() > 1 {
+                    unimplemented!("Multi-tuple application: blocking on ApplyTy")
+                }
+                let ix = match args[0].as_enum() {
+                    ValueEnum::Index(ix) => {
+                        if ix.get_ty().0 == p.len() as u128 {
+                            ix.ix()
+                        } else {
+                            return Err(Error::TupleLengthMismatch);
+                        }
+                    }
+                    ValueEnum::Parameter(pi) => {
+                        unimplemented!("Parameter {} indexing parameter product {}: {}", pi, self, p)
+                    }
+                    _ => return Err(Error::TypeMismatch),
+                };
+                let lt = p.lifetime().clone_lifetime(); // TODO: this
+                let ty = p[ix as usize].clone();
+                Ok(Application::Stop(lt, ty))
             }
             _ => Err(Error::NotAFunction),
         }
