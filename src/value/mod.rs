@@ -7,7 +7,6 @@ use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
-    Unit,
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
@@ -522,26 +521,13 @@ enum_convert! {
     impl InjectionRef<ValueEnum> for Cast {}
 
     // NormalValue injection.
-    impl TryFrom<NormalValue> for Sexpr {
-        as ValueEnum,
-        match
-            other if *other == () => Ok(Sexpr::unit()),
-            other => Ok(Sexpr::singleton(ValId::from(other))),
-    }
+    impl TryFrom<NormalValue> for Sexpr { as ValueEnum, }
     impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
     impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
     impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
-    impl TryFrom<NormalValue> for Tuple {
-        as ValueEnum,
-        match
-            other if *other == () => Ok(Tuple::unit()),
-    }
+    impl TryFrom<NormalValue> for Tuple { as ValueEnum, }
     impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
-    impl TryFrom<NormalValue> for Product {
-        as ValueEnum,
-        match
-            other if *other == Unit => Ok(Product::unit_ty()),
-    }
+    impl TryFrom<NormalValue> for Product { as ValueEnum, }
     impl TryFromRef<NormalValue> for Product { as ValueEnum, }
     impl TryFrom<NormalValue> for Universe { as ValueEnum, }
     impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
