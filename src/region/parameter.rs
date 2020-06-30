@@ -89,14 +89,17 @@ impl Typed for Parameter {
 impl Apply for Parameter {
     fn do_apply_in_ctx<'a>(
         &self,
-        _args: &'a [ValId],
+        args: &'a [ValId],
         _inline: bool,
         _ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
+        if args.len() == 0 {
+            return Ok(Application::Success(args, self.clone().into()))
+        }
         match self.ty().as_enum() {
             ValueEnum::Pi(p) => unimplemented!("Pi type parameters: parameter = {}: {}", self, p),
             ValueEnum::Product(p) => {
-                unimplemented!("Product type parameters: parameter = {}: {}", self, p)
+                unimplemented!("Product application: parameter = {}: {}", self, p)
             }
             _ => Err(Error::NotAFunction),
         }
