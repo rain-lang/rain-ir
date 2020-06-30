@@ -45,7 +45,6 @@ pub use valid_impl::*;
 // Basic value type declarations:
 
 /// A `rain` value, optionally asserted to satisfy a predicate `P`
-#[derive(Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValId<P = ()> {
     ptr: Arc<NormalValue>,
@@ -53,7 +52,6 @@ pub struct ValId<P = ()> {
 }
 
 /// A borrowed `rain` value, optionally guaranteed to satisfy a given predicate `P`
-#[derive(Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValRef<'a, P = ()> {
     ptr: ArcBorrow<'a, NormalValue>,
