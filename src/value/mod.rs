@@ -507,23 +507,10 @@ impl Value for ValueEnum {
 
 enum_convert! {
     // ValueEnum injection:
-    impl Injection<ValueEnum> for Sexpr {
-        match
-            other if *other == () => Ok(Sexpr::unit()),
-            other => Ok(Sexpr::singleton(ValId::from(other))),
-    }
-    impl TryFromRef<ValueEnum> for Sexpr {}
+    impl InjectionRef<ValueEnum> for Sexpr {}
     impl InjectionRef<ValueEnum> for Parameter {}
-    impl Injection<ValueEnum> for Tuple {
-        match
-            other if *other == () => Ok(Tuple::unit()),
-    }
-    impl TryFromRef<ValueEnum> for Tuple {}
-    impl Injection<ValueEnum> for Product {
-        match
-            other if *other == Unit => Ok(Product::unit_ty()),
-    }
-    impl TryFromRef<ValueEnum> for Product {}
+    impl InjectionRef<ValueEnum> for Tuple {}
+    impl InjectionRef<ValueEnum> for Product {}
     impl InjectionRef<ValueEnum> for Universe {}
     impl InjectionRef<ValueEnum> for Finite {}
     impl InjectionRef<ValueEnum> for Index {}
