@@ -409,3 +409,45 @@ mod prettyprint_impl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+
+    /// Test converting the unit tuple to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn unit_value_construction() {
+        let unit_tuple = Tuple::unit();
+        let unit_value = ValueEnum::Tuple(unit_tuple.clone());
+        assert_eq!(ValueEnum::from(unit_tuple.clone()), unit_value);
+        assert_eq!(
+            Tuple::try_from(unit_value.clone()).expect("Correct variant"),
+            unit_tuple
+        );
+        assert_eq!(
+            <&Tuple>::try_from(&unit_value).expect("Correct variant"),
+            &unit_tuple
+        );
+        assert_eq!(NormalValue::from(unit_tuple), NormalValue::from(()));
+        assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
+    }
+
+    /// Test converting the unit type to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn unit_type_construction() {
+        let unit_type = Product::unit_ty();
+        let unit_type_enum = ValueEnum::Product(unit_type.clone());
+        assert_eq!(ValueEnum::from(unit_type.clone()), unit_type_enum);
+        assert_eq!(
+            Product::try_from(unit_type_enum.clone()).expect("Correct variant"),
+            unit_type
+        );
+        assert_eq!(
+            <&Product>::try_from(&unit_type_enum).expect("Correct variant"),
+            &unit_type
+        );
+        assert_eq!(NormalValue::from(unit_type), NormalValue::from(Unit));
+        assert_eq!(NormalValue::from(unit_type_enum), NormalValue::from(Unit));
+    }
+}
