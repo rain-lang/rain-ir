@@ -44,6 +44,18 @@ impl Pattern {
             },
         }
     }
+    /// Check whether a pattern is strictly a subset of this one
+    pub fn is_subset(&self, other: &Pattern) -> bool {
+        match self.deref() {
+            PatternData::Empty(_) => false,
+            PatternData::Any(_) => true,
+            PatternData::Bool(s) => match other.deref() {
+                PatternData::Bool(o) => s == o,
+                PatternData::Empty(_) => true,
+                PatternData::Any(_) => false,
+            },
+        }
+    }
     /// Check whether a pattern is complete
     pub fn is_complete(&self) -> bool {
         match self.deref() {

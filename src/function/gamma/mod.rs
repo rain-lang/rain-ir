@@ -184,13 +184,15 @@ impl GammaBuilder {
             pattern,
         })
     }
-    /// Push a branch onto this gamma node
-    pub fn add(&mut self, branch: Branch) -> Result<usize, (Branch, Error)> {
+    /// Push a branch onto this gamma node returning it's index *in the builder*, if any
+    pub fn add(&mut self, branch: Branch) -> Result<Option<usize>, (Branch, Error)> {
         let ix = self.branches.len();
-        //TODO: check compatibility of branch with this gamma node builder
+        if self.pattern.is_subset(&branch.pattern) {
+            return Ok(None)
+        }
         self.pattern.take_disjunction(&branch.pattern);
         self.branches.push(branch);
-        Ok(ix)
+        Ok(Some(ix))
     }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
