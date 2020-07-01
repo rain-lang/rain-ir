@@ -11,7 +11,9 @@ use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{Unit, UNIT_TY};
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{
+    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
+};
 use std::convert::TryInto;
 use std::ops::Deref;
 
@@ -159,6 +161,11 @@ impl From<Tuple> for NormalValue {
 
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Tuple {}
+    impl TryFrom<NormalValue> for Tuple { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
+}
 
 /// A product of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -210,6 +217,11 @@ impl Product {
 
 debug_from_display!(Product);
 pretty_display!(Product, "#product [...]");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Product {}
+    impl TryFrom<NormalValue> for Product { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Product { as ValueEnum, }
+}
 
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {

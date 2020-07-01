@@ -14,7 +14,7 @@ use crate::value::{
 };
 use crate::{
     debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
-    trivial_substitute, vararr,
+    trivial_substitute, vararr, enum_convert
 };
 use either::Either;
 use lazy_static::lazy_static;
@@ -653,6 +653,11 @@ trivial_lifetime!(Logical);
 
 debug_from_display!(Logical);
 display_pretty!(Logical);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Logical {}
+    impl TryFrom<NormalValue> for Logical { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Logical { as ValueEnum, }
+}
 
 macro_rules! make_logical {
     ($t:ident[$arity:expr] = $tt:expr) => {

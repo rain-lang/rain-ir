@@ -10,7 +10,7 @@ use crate::typing::Typed;
 use crate::value::{
     arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, enum_convert};
 use std::convert::TryInto;
 
 /// A lambda function
@@ -178,6 +178,11 @@ impl ValueData for Lambda {}
 substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
 pretty_display!(Lambda, "#lambda |...| {...}");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Lambda {}
+    impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
+}
 
 impl From<Lambda> for NormalValue {
     fn from(l: Lambda) -> NormalValue {

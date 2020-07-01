@@ -7,6 +7,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
+use crate::enum_convert;
 use std::ops::Deref;
 
 /// An S-expression
@@ -22,6 +23,12 @@ pub struct Sexpr {
 
 debug_from_display!(Sexpr);
 pretty_display!(Sexpr, "(...)");
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Sexpr {}
+    impl TryFrom<NormalValue> for Sexpr { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
+}
 
 impl Sexpr {
     /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.

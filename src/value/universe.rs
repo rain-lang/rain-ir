@@ -7,7 +7,7 @@ use crate::typing::{Type, Typed};
 use crate::value::{
     NormalValue, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData, ValueEnum,
 };
-use crate::{lifetime_region, quick_pretty, trivial_substitute};
+use crate::{lifetime_region, quick_pretty, trivial_substitute, enum_convert};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use std::cmp::Ordering;
@@ -139,6 +139,11 @@ impl Universe {
 
 quick_pretty!(Universe, s, fmt => write!(fmt, "#universe({}, {})", s.level, s.kind));
 trivial_substitute!(Universe);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Universe {}
+    impl TryFrom<NormalValue> for Universe { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
+}
 
 impl<'a> UniverseId {
     /// Take the union of this universe and another

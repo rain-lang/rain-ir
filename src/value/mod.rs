@@ -10,7 +10,7 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
-use crate::{debug_from_display, enum_convert, forv, pretty_display};
+use crate::{debug_from_display, forv, pretty_display};
 use dashcache::Cache;
 use elysees::{Arc, ArcBorrow};
 use fxhash::FxHashSet;
@@ -502,51 +502,6 @@ impl Value for ValueEnum {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
-}
-
-enum_convert! {
-    // ValueEnum injection:
-    impl InjectionRef<ValueEnum> for Sexpr {}
-    impl InjectionRef<ValueEnum> for Parameter {}
-    impl InjectionRef<ValueEnum> for Tuple {}
-    impl InjectionRef<ValueEnum> for Product {}
-    impl InjectionRef<ValueEnum> for Universe {}
-    impl InjectionRef<ValueEnum> for Finite {}
-    impl InjectionRef<ValueEnum> for Index {}
-    impl InjectionRef<ValueEnum> for Pi {}
-    impl InjectionRef<ValueEnum> for Lambda {}
-    impl InjectionRef<ValueEnum> for Gamma {}
-    impl InjectionRef<ValueEnum> for Phi {}
-    impl InjectionRef<ValueEnum> for Logical {}
-    impl InjectionRef<ValueEnum> for Cast {}
-
-    // NormalValue injection.
-    impl TryFrom<NormalValue> for Sexpr { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
-    impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
-    impl TryFrom<NormalValue> for Tuple { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
-    impl TryFrom<NormalValue> for Product { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Product { as ValueEnum, }
-    impl TryFrom<NormalValue> for Universe { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
-    impl TryFrom<NormalValue> for Finite { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Finite { as ValueEnum, }
-    impl TryFrom<NormalValue> for Index { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Index { as ValueEnum, }
-    impl TryFrom<NormalValue> for Pi { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
-    impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
-    impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
-    impl TryFrom<NormalValue> for Phi { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
-    impl TryFrom<NormalValue> for Logical { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Logical { as ValueEnum, }
-    impl TryFrom<NormalValue> for Cast { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Cast { as ValueEnum, }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
