@@ -245,13 +245,23 @@ mod tests {
         assert_eq!(ValueEnum::from(unit_sexpr.clone()), unit_value);
         assert_eq!(
             Sexpr::try_from(unit_value.clone()).expect("Correct variant"),
-            unit_sexpr.clone()
+            unit_sexpr
         );
         assert_eq!(
             <&Sexpr>::try_from(&unit_value).expect("Correct variant"),
             &unit_sexpr
         );
-        assert_eq!(NormalValue::from(unit_sexpr.clone()), NormalValue::from(()));
+        assert_eq!(NormalValue::from(unit_sexpr), NormalValue::from(()));
         assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
+    }
+    #[test]
+    fn singleton_value_construction() {
+        let st = Sexpr::singleton(true.into());
+        let stv = ValueEnum::Sexpr(st.clone());
+        assert_eq!(ValueEnum::from(st.clone()), stv);
+        assert_eq!(Sexpr::try_from(stv.clone()).expect("Correct variant"), st);
+        assert_eq!(<&Sexpr>::try_from(&stv).expect("Correct variant"), &st);
+        assert_eq!(NormalValue::from(st), NormalValue::from(true));
+        assert_eq!(NormalValue::from(stv), NormalValue::from(true));
     }
 }
