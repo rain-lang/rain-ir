@@ -237,7 +237,7 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use std::convert::TryFrom;
-    /// Test converting the unit S-expression to and from ValueEnum/NormalValue worsk properly
+    /// Test converting the unit S-expression to and from ValueEnum/NormalValue works properly
     #[test]
     fn unit_value_construction() {
         let unit_sexpr = Sexpr::unit();
@@ -254,6 +254,7 @@ mod tests {
         assert_eq!(NormalValue::from(unit_sexpr), NormalValue::from(()));
         assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
     }
+    /// Test converting simple singleton S-expressions to and from ValueEnum/NormalValue works properly
     #[test]
     fn singleton_value_construction() {
         let st = Sexpr::singleton(true.into());
