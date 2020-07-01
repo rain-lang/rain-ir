@@ -8,7 +8,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Region, RegionData};
 use crate::typing::Typed;
 use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, enum_convert};
 use itertools::Itertools;
 use thin_dst::ThinBox;
 
@@ -104,6 +104,12 @@ impl Substitute for Gamma {
     }
 }
 
+impl From<Gamma> for NormalValue {
+    fn from(g: Gamma) -> NormalValue {
+        NormalValue(ValueEnum::Gamma(g))
+    }
+}
+
 impl Value for Gamma {
     fn no_deps(&self) -> usize {
         self.deps.len()
@@ -127,6 +133,11 @@ substitute_to_valid!(Gamma);
 
 debug_from_display!(Gamma);
 pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Gamma {}
+    impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
+}
 
 /// A builder for a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

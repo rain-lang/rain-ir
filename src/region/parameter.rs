@@ -7,6 +7,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
+use crate::enum_convert;
 
 /**
 A parameter to a `rain` region.
@@ -25,6 +26,12 @@ pub struct Parameter {
 
 quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
 trivial_substitute!(Parameter);
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Parameter {}
+    impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
+}
 
 impl Parameter {
     /**
@@ -121,6 +128,12 @@ impl Apply for Parameter {
             }
             _ => Err(Error::NotAFunction),
         }
+    }
+}
+
+impl From<Parameter> for NormalValue {
+    fn from(param: Parameter) -> NormalValue {
+        NormalValue(ValueEnum::Parameter(param))
     }
 }
 
