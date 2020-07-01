@@ -2,12 +2,12 @@
 `rain` expressions
 */
 use super::{arr::ValArr, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum};
+use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
-use crate::enum_convert;
 use std::ops::Deref;
 
 /// An S-expression
@@ -230,5 +230,28 @@ mod prettyprint_impl {
             }
             write!(fmt, "{}", SEXPR_CLOSE)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+    /// Test converting the unit S-expression to and from ValueEnum/NormalValue worsk properly
+    #[test]
+    fn unit_value_construction() {
+        let unit_sexpr = Sexpr::unit();
+        let unit_value = ValueEnum::Sexpr(unit_sexpr.clone());
+        assert_eq!(ValueEnum::from(unit_sexpr.clone()), unit_value);
+        assert_eq!(
+            Sexpr::try_from(unit_value.clone()).expect("Correct variant"),
+            unit_sexpr.clone()
+        );
+        assert_eq!(
+            <&Sexpr>::try_from(&unit_value).expect("Correct variant"),
+            &unit_sexpr
+        );
+        assert_eq!(NormalValue::from(unit_sexpr.clone()), NormalValue::from(()));
+        assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
     }
 }
