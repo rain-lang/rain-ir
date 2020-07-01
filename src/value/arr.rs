@@ -245,7 +245,7 @@ impl<A: BagMarker, P> ValArr<A, P> {
     }
     /// Check whether an item is in this bag. If it is, return a reference.
     #[inline]
-    pub fn contains<Q>(&self, item: *const NormalValue) -> Option<&ValId<Q>> {
+    pub fn contains(&self, item: *const NormalValue) -> Option<&ValId<P>> {
         self.arr.contains(item).map(|v| v.coerce_ref())
     }
     /// Deduplicate this bag to yield a `ValSet`
