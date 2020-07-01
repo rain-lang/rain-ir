@@ -114,6 +114,19 @@ impl<A, P> ValArr<A, P> {
     pub fn as_arr(&self) -> &ValArr<(), P> {
         self.coerce_ref()
     }
+    /// Get this array as an array of ValIds
+    #[inline]
+    pub fn into_valarr(self) -> ValArr {
+        self.coerce()
+    }
+    /// Forget any additional value information, yielding just a container of raw `ValId`s
+    pub fn into_vals(self) -> ValArr<A, ()> {
+        self.coerce()
+    }
+    /// Forget any additional array information, yielding just a raw `ValArr`
+    pub fn into_arr(self) -> ValArr<(), P> {
+        self.coerce()
+    }
     /// Get this array as a slice of ValIds
     #[inline]
     pub fn as_slice(&self) -> &[ValId] {
