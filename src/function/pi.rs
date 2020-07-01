@@ -9,7 +9,7 @@ use crate::value::{
     arr::TyArr, Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
     ValueData, ValueEnum,
 };
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -131,9 +131,20 @@ impl Substitute for Pi {
     }
 }
 
+impl From<Pi> for NormalValue {
+    fn from(p: Pi) -> NormalValue {
+        NormalValue(ValueEnum::Pi(p))
+    }
+}
+
 substitute_to_valid!(Pi);
 debug_from_display!(Pi);
 pretty_display!(Pi, "#pi|...| {...}");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Pi {}
+    impl TryFrom<NormalValue> for Pi { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

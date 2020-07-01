@@ -6,7 +6,7 @@ use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, pretty_display, substitute_to_valid};
+use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 
 /// A `rain` cast
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -153,6 +153,34 @@ impl Value for Cast {
 
 debug_from_display!(Cast);
 pretty_display!(Cast, "#cast(...)");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Cast {}
+    impl TryFrom<NormalValue> for Cast { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Cast { as ValueEnum, }
+}
+
+impl From<Cast> for NormalValue {
+    fn from(cast: Cast) -> NormalValue {
+        if cast.ty() != cast.value().ty() {
+            NormalValue(ValueEnum::Cast(cast))
+        } else if cast.lifetime() != cast.value().lifetime() {
+            //TODO: modify types with an inline lifetime, e.g. `Sexpr`
+            NormalValue(ValueEnum::Cast(cast))
+        } else {
+            cast.take_value().into()
+        }
+    }
+}
+
+impl From<Cast> for ValId {
+    fn from(cast: Cast) -> ValId {
+        if cast.lifetime() != cast.value().lifetime() || cast.ty() != cast.value().ty() {
+            ValId::<()>::direct_new(NormalValue::from(ValueEnum::Cast(cast)))
+        } else {
+            cast.take_value()
+        }
+    }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

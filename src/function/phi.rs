@@ -6,7 +6,9 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::Region;
 use crate::typing::Typed;
 use crate::value::{tuple::Product, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{
+    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
+};
 use smallvec::SmallVec;
 
 /// The size of a small set of mutually recursive values
@@ -75,9 +77,20 @@ impl Apply for Phi {
     //TODO: again, pretty important, right? I mean, Turing-completeness is kind of a big deal...
 }
 
+impl From<Phi> for NormalValue {
+    fn from(p: Phi) -> NormalValue {
+        NormalValue(ValueEnum::Phi(p))
+    }
+}
+
 substitute_to_valid!(Phi);
 debug_from_display!(Phi);
 pretty_display!(Phi, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_PHI);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Phi {}
+    impl TryFrom<NormalValue> for Phi { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
