@@ -27,17 +27,21 @@ dashcache = "^0.2.0"
 nom = { version = "^5", optional = true }
 hayami = { version = "^0.1", optional = true }
 
+# Feature dependencies
+rand = { version = "^0.7", optional = true }
+
 [dev-dependencies]
 pretty_assertions = "^0.6"
 rustyline = "^6.1"
 clap = "^2.33"
-rand = "^0.7"
 rand_xoshiro = "^0.4"
+criterion = "^0.3"
 
 [features]
 default = [
     "parser", 
-    "prettyprinter"
+    "prettyprinter",
+    "rand"
     ]
 parser = ["nom", "hayami"]
 prettyprinter = ["hayami"]
@@ -45,3 +49,8 @@ prettyprinter = ["hayami"]
 [[example]]
 name = "repl"
 required-features = ["parser", "prettyprinter"]
+
+[[bench]]
+name = "basic"
+path = "benches/basic.rs"
+harness = false
