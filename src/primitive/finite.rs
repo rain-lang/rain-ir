@@ -196,6 +196,26 @@ impl Value for Index {
 
 impl ValueData for Index {}
 
+#[cfg(feature = "rand")]
+mod rand_impl {
+    use super::*;
+    use rand::distributions::{Distribution, Standard};
+    use rand::Rng;
+
+    impl Distribution<Finite> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Finite {
+            Finite(rng.gen())
+        }
+    }
+
+    impl Distribution<Index> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Index {
+            let ty = Finite(rng.gen::<u128>().max(1));
+            ty.ix(rng.gen_range(0, ty.0)).unwrap()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
