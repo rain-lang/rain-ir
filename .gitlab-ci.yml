@@ -36,7 +36,7 @@ before_script:
     - cargo --version
 
 .only_settings: &only_settings
-  - master@tekne/rain #TODO: think about this
+  - master@rain-lang/rain-ir #TODO: think about this
 
 .cargo_update: &cargo_update
     # XXX(minver<1.41.0): No backwards compatibility is provided. Instead, it

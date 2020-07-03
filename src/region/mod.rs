@@ -70,6 +70,16 @@ impl Region {
             Region(Some(REGION_CACHE.cache(data)))
         }
     }
+    /// Create a new region with a given parameter type vector and a parent region
+    #[inline]
+    pub fn with(param_tys: TyArr, parent: Region) -> Region {
+        Region::new(RegionData::with(param_tys, parent))
+    }
+    /// Create a new region with a given parent region and no parameters
+    #[inline]
+    pub fn with_parent(parent: Region) -> Region {
+        Region::new(RegionData::with_parent(parent))
+    }
     /// Get a reference to a borrow of this region. More efficient than taking an `&Region`.
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
@@ -322,7 +332,7 @@ impl RegionData {
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
-    pub fn new(parent: Region) -> RegionData {
+    pub fn with_parent(parent: Region) -> RegionData {
         Self::with(TyArr::default(), parent)
     }
     /// Get the depth of this region

@@ -7,12 +7,10 @@ use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
-    Unit,
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
-use crate::util::PrivateByAddr;
-use crate::{debug_from_display, enum_convert, forv, pretty_display};
+use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use fxhash::FxHashSet;
@@ -46,18 +44,16 @@ pub use valid_impl::*;
 // Basic value type declarations:
 
 /// A `rain` value, optionally asserted to satisfy a predicate `P`
-#[derive(Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValId<P = ()> {
-    ptr: NormAddr,
+    ptr: Arc<NormalValue>,
     variant: std::marker::PhantomData<P>,
 }
 
 /// A borrowed `rain` value, optionally guaranteed to satisfy a given predicate `P`
-#[derive(Eq, Hash, RefCast)]
 #[repr(transparent)]
 pub struct ValRef<'a, P = ()> {
-    ptr: NormRef<'a>,
+    ptr: ArcBorrow<'a, NormalValue>,
     variant: std::marker::PhantomData<P>,
 }
 
@@ -215,35 +211,24 @@ impl Substitute<ValId> for ValueEnum {
     }
 }
 
-/// A private type which can only be constructed within the `value` crate: an implementation detail so that
-/// `&ValId` cannot be `RefCast`ed to `&TypeId` outside the module (for type safety).
-#[derive(Debug)]
-pub struct Private {}
-
-/// A wrapper over an `Arc<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
-/// Can only be constructed within the `value` crate: a user should never have direct access to these.
-type NormAddr = PrivateByAddr<Arc<NormalValue>, Private>;
-
-/// A wrapper over an `ArcBorrow<NormalValue>` with `ByAddress` semantics for `PartialEq`, `Eq` and `Hash`
-/// Can only be constructed within the `value` crate: a user should never have direct access to these.
-type NormRef<'a> = PrivateByAddr<ArcBorrow<'a, NormalValue>, Private>;
-
 /// A normalized `rain` value
-#[derive(Clone, Eq, PartialEq, Hash, RefCast)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct NormalValue(pub(crate) PrivateValue);
+pub struct NormalValue(pub(crate) ValueEnum);
 
 impl NormalValue {
-    /// Assert a given value is normalized
-    pub(crate) fn assert_new(value: ValueEnum) -> NormalValue {
-        NormalValue(PrivateValue(value))
+    /*
+    /// Assert a reference to a given value is a reference to a normal value
+    pub(crate) fn assert_ref(value: &ValueEnum) -> &NormalValue {
+        unsafe { &*(value as *const ValueEnum as *const NormalValue) }
     }
+    */
 }
 
 impl Deref for NormalValue {
     type Target = ValueEnum;
     fn deref(&self) -> &ValueEnum {
-        &(self.0).0
+        &self.0
     }
 }
 
@@ -261,14 +246,14 @@ impl From<ValueEnum> for NormalValue {
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &(self.0).0
+        &self.0
     }
 }
 
 impl From<NormalValue> for ValueEnum {
     #[inline]
     fn from(normal: NormalValue) -> ValueEnum {
-        (normal.0).0
+        normal.0
     }
 }
 
@@ -318,11 +303,6 @@ impl Regional for NormalValue {
         self.deref().region()
     }
 }
-
-/// A wrapper around a `rain` value to assert refinement conditions.
-/// Implementation detail: library consumers should not be able to construct this!
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct PrivateValue(pub(crate) ValueEnum);
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
@@ -521,288 +501,6 @@ impl Value for ValueEnum {
     }
     fn into_norm(self) -> NormalValue {
         self.into()
-    }
-}
-
-enum_convert! {
-    // ValueEnum injection:
-    impl Injection<ValueEnum> for Sexpr {
-        match
-            other if *other == () => Ok(Sexpr::unit()),
-            other => Ok(Sexpr::singleton(ValId::from(other))),
-    }
-    impl TryFromRef<ValueEnum> for Sexpr {}
-    impl InjectionRef<ValueEnum> for Parameter {}
-    impl Injection<ValueEnum> for Tuple {
-        match
-            other if *other == () => Ok(Tuple::unit()),
-    }
-    impl TryFromRef<ValueEnum> for Tuple {}
-    impl Injection<ValueEnum> for Product {
-        match
-            other if *other == Unit => Ok(Product::unit_ty()),
-    }
-    impl TryFromRef<ValueEnum> for Product {}
-    impl InjectionRef<ValueEnum> for Universe {}
-    impl InjectionRef<ValueEnum> for Finite {}
-    impl InjectionRef<ValueEnum> for Index {}
-    impl InjectionRef<ValueEnum> for Pi {}
-    impl InjectionRef<ValueEnum> for Lambda {}
-    impl InjectionRef<ValueEnum> for Gamma {}
-    impl InjectionRef<ValueEnum> for Phi {}
-    impl InjectionRef<ValueEnum> for Logical {}
-    impl InjectionRef<ValueEnum> for Cast {}
-
-    // NormalValue injection.
-    impl TryFrom<NormalValue> for Sexpr {
-        as ValueEnum,
-        match
-            other if *other == () => Ok(Sexpr::unit()),
-            other => Ok(Sexpr::singleton(ValId::from(other))),
-    }
-    impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
-    impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
-    impl TryFrom<NormalValue> for Tuple {
-        as ValueEnum,
-        match
-            other if *other == () => Ok(Tuple::unit()),
-    }
-    impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
-    impl TryFrom<NormalValue> for Product {
-        as ValueEnum,
-        match
-            other if *other == Unit => Ok(Product::unit_ty()),
-    }
-    impl TryFromRef<NormalValue> for Product { as ValueEnum, }
-    impl TryFrom<NormalValue> for Universe { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Universe { as ValueEnum, }
-    impl TryFrom<NormalValue> for Finite { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Finite { as ValueEnum, }
-    impl TryFrom<NormalValue> for Index { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Index { as ValueEnum, }
-    impl TryFrom<NormalValue> for Pi { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Pi { as ValueEnum, }
-    impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
-    impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
-    impl TryFrom<NormalValue> for Phi { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Phi { as ValueEnum, }
-    impl TryFrom<NormalValue> for Logical { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Logical { as ValueEnum, }
-    impl TryFrom<NormalValue> for Cast { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Cast { as ValueEnum, }
-}
-
-impl From<Sexpr> for NormalValue {
-    fn from(sexpr: Sexpr) -> NormalValue {
-        if sexpr == () {
-            return ().into();
-        }
-        if sexpr.len() == 1 {
-            return sexpr[0].as_norm().clone();
-        }
-        NormalValue::assert_new(ValueEnum::Sexpr(sexpr))
-    }
-}
-
-impl From<Cast> for NormalValue {
-    fn from(cast: Cast) -> NormalValue {
-        if cast.ty() != cast.value().ty() {
-            NormalValue::assert_new(ValueEnum::Cast(cast))
-        } else if cast.lifetime() != cast.value().lifetime() {
-            //TODO: modify types with an inline lifetime, e.g. `Sexpr`
-            NormalValue::assert_new(ValueEnum::Cast(cast))
-        } else {
-            cast.take_value().into()
-        }
-    }
-}
-
-impl From<Cast> for ValId {
-    fn from(cast: Cast) -> ValId {
-        if cast.lifetime() != cast.value().lifetime() || cast.ty() != cast.value().ty() {
-            ValId::<()>::direct_new(NormalValue::from(ValueEnum::Cast(cast)))
-        } else {
-            cast.take_value()
-        }
-    }
-}
-
-impl From<Parameter> for NormalValue {
-    fn from(param: Parameter) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Parameter(param))
-    }
-}
-
-impl From<Tuple> for NormalValue {
-    fn from(tuple: Tuple) -> NormalValue {
-        if tuple == () {
-            return ().into();
-        }
-        NormalValue::assert_new(ValueEnum::Tuple(tuple))
-    }
-}
-
-impl From<Product> for NormalValue {
-    fn from(product: Product) -> NormalValue {
-        if product == Unit {
-            return Unit.into();
-        }
-        NormalValue::assert_new(ValueEnum::Product(product))
-    }
-}
-
-impl From<Universe> for NormalValue {
-    fn from(universe: Universe) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Universe(universe))
-    }
-}
-
-impl From<Bool> for ValueEnum {
-    fn from(b: Bool) -> ValueEnum {
-        ValueEnum::BoolTy(b)
-    }
-}
-
-impl TryFrom<ValueEnum> for Bool {
-    type Error = ValueEnum;
-    fn try_from(val: ValueEnum) -> Result<Bool, ValueEnum> {
-        match val {
-            ValueEnum::BoolTy(b) => Ok(b),
-            v => Err(v),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a ValueEnum> for &'a Bool {
-    type Error = &'a ValueEnum;
-    fn try_from(val: &'a ValueEnum) -> Result<&'a Bool, &'a ValueEnum> {
-        match val {
-            ValueEnum::BoolTy(b) => Ok(b),
-            v => Err(v),
-        }
-    }
-}
-
-impl From<Bool> for NormalValue {
-    fn from(b: Bool) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::BoolTy(b))
-    }
-}
-
-impl TryFrom<NormalValue> for Bool {
-    type Error = NormalValue;
-    fn try_from(val: NormalValue) -> Result<Bool, NormalValue> {
-        match val.deref() {
-            ValueEnum::BoolTy(b) => Ok(*b),
-            _ => Err(val),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a NormalValue> for &'a Bool {
-    type Error = &'a NormalValue;
-    fn try_from(val: &'a NormalValue) -> Result<&'a Bool, &'a NormalValue> {
-        match val.deref() {
-            ValueEnum::BoolTy(b) => Ok(b),
-            _ => Err(val),
-        }
-    }
-}
-
-impl From<bool> for ValueEnum {
-    fn from(b: bool) -> ValueEnum {
-        ValueEnum::Bool(b)
-    }
-}
-
-impl TryFrom<ValueEnum> for bool {
-    type Error = ValueEnum;
-    fn try_from(val: ValueEnum) -> Result<bool, ValueEnum> {
-        match val {
-            ValueEnum::Bool(b) => Ok(b),
-            v => Err(v),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a ValueEnum> for &'a bool {
-    type Error = &'a ValueEnum;
-    fn try_from(val: &'a ValueEnum) -> Result<&'a bool, &'a ValueEnum> {
-        match val {
-            ValueEnum::Bool(b) => Ok(b),
-            v => Err(v),
-        }
-    }
-}
-
-impl From<bool> for NormalValue {
-    fn from(b: bool) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Bool(b))
-    }
-}
-
-impl TryFrom<NormalValue> for bool {
-    type Error = NormalValue;
-    fn try_from(val: NormalValue) -> Result<bool, NormalValue> {
-        match val.deref() {
-            ValueEnum::Bool(b) => Ok(*b),
-            _ => Err(val),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a NormalValue> for &'a bool {
-    type Error = &'a NormalValue;
-    fn try_from(val: &'a NormalValue) -> Result<&'a bool, &'a NormalValue> {
-        match val.deref() {
-            ValueEnum::Bool(b) => Ok(b),
-            _ => Err(val),
-        }
-    }
-}
-
-impl From<Finite> for NormalValue {
-    fn from(finite: Finite) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Finite(finite))
-    }
-}
-
-impl From<Index> for NormalValue {
-    fn from(ix: Index) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Index(ix))
-    }
-}
-
-impl From<Pi> for NormalValue {
-    fn from(p: Pi) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Pi(p))
-    }
-}
-
-impl From<Lambda> for NormalValue {
-    fn from(l: Lambda) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Lambda(l))
-    }
-}
-
-impl From<Gamma> for NormalValue {
-    fn from(g: Gamma) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Gamma(g))
-    }
-}
-
-impl From<Phi> for NormalValue {
-    fn from(p: Phi) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Phi(p))
-    }
-}
-
-impl From<Logical> for NormalValue {
-    fn from(l: Logical) -> NormalValue {
-        NormalValue::assert_new(ValueEnum::Logical(l))
     }
 }
 

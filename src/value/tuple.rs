@@ -9,9 +9,11 @@ use super::{
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::primitive::UNIT_TY;
+use crate::primitive::{Unit, UNIT_TY};
 use crate::typing::{Type, Typed};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{
+    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
+};
 use std::convert::TryInto;
 use std::ops::Deref;
 
@@ -148,8 +150,22 @@ impl Substitute for Tuple {
 
 substitute_to_valid!(Tuple);
 
+impl From<Tuple> for NormalValue {
+    fn from(tuple: Tuple) -> NormalValue {
+        if tuple == () {
+            return ().into();
+        }
+        NormalValue(ValueEnum::Tuple(tuple))
+    }
+}
+
 debug_from_display!(Tuple);
 pretty_display!(Tuple, "[...]");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Tuple {}
+    impl TryFrom<NormalValue> for Tuple { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
+}
 
 /// A product of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -183,10 +199,29 @@ impl Product {
             ty: FINITE_TY.clone(),
         }
     }
+    /// Get the type-tuple corresponding to this product type
+    ///
+    /// TODO: consider caching this (or the tuple type) in an atomic, as it may need to be computed many times
+    #[inline]
+    pub fn tuple(&self) -> Tuple {
+        let ty_elems = self.elems.iter().map(|elem| elem.ty().clone_ty()).collect();
+        //TODO: think about this...
+        let ty = Product::try_new(ty_elems).expect("Impossible").into();
+        Tuple {
+            elems: self.elems.as_vals().clone(),
+            lifetime: self.lifetime.clone(),
+            ty,
+        }
+    }
 }
 
 debug_from_display!(Product);
 pretty_display!(Product, "#product [...]");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Product {}
+    impl TryFrom<NormalValue> for Product { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Product { as ValueEnum, }
+}
 
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
@@ -242,6 +277,15 @@ impl Type for Product {
     }
     fn is_universe(&self) -> bool {
         false
+    }
+}
+
+impl From<Product> for NormalValue {
+    fn from(product: Product) -> NormalValue {
+        if product == Unit {
+            return Unit.into();
+        }
+        NormalValue(ValueEnum::Product(product))
     }
 }
 
@@ -363,5 +407,47 @@ mod prettyprint_impl {
                 ("", ValId::from(false))
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+
+    /// Test converting the unit tuple to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn unit_value_construction() {
+        let unit_tuple = Tuple::unit();
+        let unit_value = ValueEnum::Tuple(unit_tuple.clone());
+        assert_eq!(ValueEnum::from(unit_tuple.clone()), unit_value);
+        assert_eq!(
+            Tuple::try_from(unit_value.clone()).expect("Correct variant"),
+            unit_tuple
+        );
+        assert_eq!(
+            <&Tuple>::try_from(&unit_value).expect("Correct variant"),
+            &unit_tuple
+        );
+        assert_eq!(NormalValue::from(unit_tuple), NormalValue::from(()));
+        assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
+    }
+
+    /// Test converting the unit type to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn unit_type_construction() {
+        let unit_type = Product::unit_ty();
+        let unit_type_enum = ValueEnum::Product(unit_type.clone());
+        assert_eq!(ValueEnum::from(unit_type.clone()), unit_type_enum);
+        assert_eq!(
+            Product::try_from(unit_type_enum.clone()).expect("Correct variant"),
+            unit_type
+        );
+        assert_eq!(
+            <&Product>::try_from(&unit_type_enum).expect("Correct variant"),
+            &unit_type
+        );
+        assert_eq!(NormalValue::from(unit_type), NormalValue::from(Unit));
+        assert_eq!(NormalValue::from(unit_type_enum), NormalValue::from(Unit));
     }
 }

@@ -5,12 +5,15 @@ use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::Live;
 use crate::lifetime::{Lifetime, LifetimeBorrow};
-use crate::region::{Parametrized, Region};
+use crate::region::{Parameter, Parametrized, Region};
 use crate::typing::Typed;
 use crate::value::{
-    arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
+    arr::{TySet, ValSet},
+    Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::{
+    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
+};
 use std::convert::TryInto;
 
 /// A lambda function
@@ -38,6 +41,21 @@ impl Lambda {
             ty,
         }
     }
+    /// A utility constructor, which creates a new instance of the identity lambda for a given type
+    pub fn id(ty: TypeId) -> Lambda {
+        let tyset: TySet = std::iter::once(ty.clone()).collect();
+        let region = Region::with(tyset.as_arr().clone(), Region::default());
+        let result = Parameter::try_new(region.clone(), 0).expect("Region has one parameter").into();
+        let ty: VarId<Pi> = Pi::try_new(ty, region.clone()).expect("Identity pi type is valid").into();
+        let lt = ty.lifetime().clone_lifetime(); //TODO: someday...
+        let deps = tyset.into_vals();
+        Lambda {
+            result,
+            ty,
+            deps,
+            lt,
+        }
+    }
     /// Attempt to create a new lambda function from a region and value
     pub fn try_new(value: ValId, region: Region) -> Result<Lambda, Error> {
         Ok(Self::new(Parametrized::try_new(value, region)?))
@@ -56,6 +74,11 @@ impl Lambda {
     #[inline]
     pub fn get_ty(&self) -> &VarId<Pi> {
         &self.ty
+    }
+    /// Get the dependency-set of this lambda function
+    #[inline]
+    pub fn depset(&self) -> &ValSet {
+        &self.deps
     }
 }
 
@@ -173,6 +196,17 @@ impl ValueData for Lambda {}
 substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
 pretty_display!(Lambda, "#lambda |...| {...}");
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Lambda {}
+    impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Lambda { as ValueEnum, }
+}
+
+impl From<Lambda> for NormalValue {
+    fn from(l: Lambda) -> NormalValue {
+        NormalValue(ValueEnum::Lambda(l))
+    }
+}
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {

@@ -5,16 +5,17 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Parameter, Region, RegionData, Regional};
+use crate::region::{Region, RegionData, Regional};
 use crate::typing::Typed;
-use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid};
+use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, TypeId};
+use crate::{
+    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
+};
 use itertools::Itertools;
-use std::ops::Deref;
 use thin_dst::ThinBox;
 
 pub mod pattern;
-use pattern::{Match, Pattern};
+use pattern::{Match, Pattern, MatchedTy};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -105,6 +106,12 @@ impl Substitute for Gamma {
     }
 }
 
+impl From<Gamma> for NormalValue {
+    fn from(g: Gamma) -> NormalValue {
+        NormalValue(ValueEnum::Gamma(g))
+    }
+}
+
 impl Value for Gamma {
     fn no_deps(&self) -> usize {
         self.deps.len()
@@ -128,6 +135,11 @@ substitute_to_valid!(Gamma);
 
 debug_from_display!(Gamma);
 pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Gamma {}
+    impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Gamma { as ValueEnum, }
+}
 
 /// A builder for a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -153,26 +165,27 @@ impl GammaBuilder {
     pub fn branches(&self) -> &[Branch] {
         &self.branches
     }
-    /// Add a new branch to this gamma builder for a given pattern, which needs to be given a value
-    /// Return an error on a mismatch between branch parameters and the desired gamma node type
-    pub fn build_branch(&mut self, pattern: Pattern) -> Result<BranchBuilder, Error> {
-        let matched = pattern.try_match_ty(self.ty.borrow_var())?;
-        let region = RegionData::with(
-            matched.0.into(),
-            self.ty
-                .def_region()
-                .parent()
-                .cloned()
-                .unwrap_or(Region::NULL),
-        );
-        let region = Region::new(region);
-        let params = region.clone().params().collect();
-        Ok(BranchBuilder {
-            region,
-            params,
-            builder: self,
-            pattern,
-        })
+    /// Push a constant branch onto this gamma node for a given pattern
+    pub fn add_const(&mut self, pattern: Pattern, value: ValId) -> Result<Option<usize>, Error> {
+        if self.pattern.is_subset(&pattern) {
+            return Ok(None);
+        }
+        let branch = Branch::try_const(pattern, self.ty.param_tys(), value)?;
+        self.pattern.take_disjunction(&branch.pattern);
+        let ix = self.branches.len();
+        self.branches.push(branch);
+        Ok(Some(ix))
+    }
+    /// Push a branch onto this gamma node returning it's index *in the builder*, if any
+    pub fn add(&mut self, branch: Branch) -> Result<Option<usize>, Error> {
+        //TODO: check compatibility of this gamma node and branch
+        if self.pattern.is_subset(&branch.pattern) {
+            return Ok(None);
+        }
+        self.pattern.take_disjunction(&branch.pattern);
+        let ix = self.branches.len();
+        self.branches.push(branch);
+        Ok(Some(ix))
     }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
@@ -183,6 +196,7 @@ impl GammaBuilder {
             .map(|branch| branch.deps().into_iter())
             .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
             .dedup()
+            .cloned()
             .collect()
     }
     /// Check whether this gamma node is complete
@@ -225,51 +239,48 @@ impl GammaBuilder {
 /// A branch of a gamma node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Branch {
-    /// The region corresponding to this branch
-    region: Region,
     /// The pattern of this branch
     pattern: Pattern,
-    /// The value of this branch
-    value: ValId,
+    /// The function corresponding to this branch
+    func: VarId<Lambda>,
 }
 
 impl Branch {
-    /// Return the dependencies of this branch
-    pub fn deps(&self) -> Vec<ValId> {
-        use std::cmp::Ordering::*;
-        match self
-            .value
-            .lifetime()
-            .region()
-            .partial_cmp(self.region.deref())
-        {
-            None | Some(Greater) => panic!(
-                "Impossible: region mismatch should have been caught by BranchBuilder as error"
-            ),
-            Some(Equal) => self
-                .value
-                .deps()
-                .collect_deps(..self.value.depth(), |_| true),
-            Some(Less) => vec![self.value.clone()],
-        }
+    /// Attempt to create a new branch from a pattern and a function
+    pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
+        //TODO: check if function is compatible with pattern
+        Ok(Branch { pattern, func })
     }
-    /// Return the dependencies of this branch, sorted by address
-    pub fn sorted_deps(&self) -> Vec<ValId> {
-        let mut deps = self.deps();
-        deps.sort_unstable_by_key(|v| v.as_ptr());
-        deps
+    /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
+    pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
+        let MatchedTy(matched) = pattern.try_get_outputs(args)?;
+        let region = RegionData::with(
+            matched.into(),
+            value.region().clone_region()
+        );
+        let region = Region::new(region);
+        let func = Lambda::try_new(value, region)?.into();
+        Ok(Branch{ pattern, func })
+    }
+    /// Return the dependencies of this branch
+    pub fn deps(&self) -> &ValSet {
+        self.func.depset()
     }
     /// Get the pattern of this branch
     pub fn pattern(&self) -> &Pattern {
         &self.pattern
     }
-    /// Get the value of this branch
-    pub fn value(&self) -> &ValId {
-        &self.value
+    /// Get the result of this branch
+    pub fn result(&self) -> &ValId {
+        &self.func.result()
     }
     /// Get the defining region of this branch
     pub fn def_region(&self) -> &Region {
-        &self.region
+        &self.func.def_region()
+    }
+    /// Get the function corresponding to this branch
+    pub fn func(&self) -> &VarId<Lambda> {
+        &self.func
     }
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
@@ -288,7 +299,7 @@ impl Branch {
         )?;
 
         // Evaluate the result
-        let result = ctx.evaluate(self.value());
+        let result = ctx.evaluate(self.result());
         // Pop the evaluation context
         ctx.pop();
         let result = result?;
@@ -300,50 +311,6 @@ impl Branch {
         } else {
             Ok(Application::Success(rest, result))
         }
-    }
-}
-
-/// A builder for a branch of a gamma node
-#[derive(Debug, Eq, PartialEq, Hash)]
-pub struct BranchBuilder<'a> {
-    /// This branch's region
-    region: Region,
-    /// This branch's parameters
-    params: Vec<Parameter>,
-    /// The pattern corresponding to this branch
-    pattern: Pattern,
-    /// The builder for this branch
-    builder: &'a mut GammaBuilder,
-}
-
-impl<'a> BranchBuilder<'a> {
-    /// Get the region of this branch builder
-    #[inline]
-    pub fn region(&self) -> &Region {
-        &self.region
-    }
-    /// Get the parameters of this branch builder
-    #[inline]
-    pub fn params(&self) -> &[Parameter] {
-        &self.params
-    }
-    /// Get the pattern of this branch builder
-    #[inline]
-    pub fn pattern(&self) -> &Pattern {
-        &self.pattern
-    }
-    /// Finish constructing branch with a given value, returning it's index in the builder on success.
-    /// On failure, return an unchanged object to try again, along with a reason
-    pub fn finish(self, value: ValId) -> Result<usize, (BranchBuilder<'a>, Error)> {
-        let ix = self.builder.branches.len();
-        //TODO: check `value`'s type, region, lifetimes, etc.
-        self.builder.pattern.take_disjunction(&self.pattern);
-        self.builder.branches.push(Branch {
-            region: self.region,
-            pattern: self.pattern,
-            value,
-        });
-        Ok(ix)
     }
 }
 
@@ -370,6 +337,7 @@ mod tests {
     use crate::parser::builder::Builder;
     use crate::value::expr::Sexpr;
     use std::convert::TryInto;
+
     #[test]
     fn not_as_gamma_works() {
         // Initialize the gamma node builder
@@ -385,32 +353,17 @@ mod tests {
         assert_eq!(gamma_builder.branches().len(), 0);
 
         // Add the `#true` branch, mapping to `#false`
-        let branch_builder = gamma_builder
-            .build_branch(true.into())
-            .expect("#true is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
-        assert_eq!(
-            branch_builder
-                .finish(false.into())
-                .expect("#false is a valid result for #bool"),
-            0
-        );
+        assert_eq!(gamma_builder.add_const(true.into(), false.into()).expect("Valid branch"), Some(0));
         assert!(!gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 1);
 
         // Add the `#false` branch, mapping to `#true`
-        let branch_builder = gamma_builder
-            .build_branch(false.into())
-            .expect("#false is a valid branch for #bool");
-        assert_eq!(branch_builder.region(), unary.def_region());
-        assert_eq!(branch_builder.params().len(), 1);
-        assert_eq!(
-            branch_builder
-                .finish(true.into())
-                .expect("#true is a valid result for #bool"),
-            1
-        );
+        assert_eq!(gamma_builder.add_const(false.into(), true.into()).expect("Valid branch"), Some(1));
+        assert!(gamma_builder.is_complete());
+        assert_eq!(gamma_builder.branches().len(), 2);
+
+        // Add a new `#true` branch, which should just do nothing
+        assert_eq!(gamma_builder.add_const(true.into(), false.into()).expect("Valid branch"), None);
         assert!(gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 2);
 

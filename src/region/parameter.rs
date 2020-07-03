@@ -2,11 +2,12 @@
 Parameters to a `rain` region
 */
 use super::{Region, RegionBorrow, Regional};
-use crate::eval::Apply;
+use crate::eval::{Application, Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
-use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
+use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
+use crate::enum_convert;
 
 /**
 A parameter to a `rain` region.
@@ -26,6 +27,12 @@ pub struct Parameter {
 quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
 trivial_substitute!(Parameter);
 
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Parameter {}
+    impl TryFrom<NormalValue> for Parameter { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Parameter { as ValueEnum, }
+}
+
 impl Parameter {
     /**
      Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
@@ -34,7 +41,7 @@ impl Parameter {
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
     use rain_ir::region::{Region, RegionData, Parameter};
-    let empty_region = Region::new(RegionData::new(Region::default()));
+    let empty_region = Region::with_parent(Region::default());
     assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```
     */
@@ -86,7 +93,49 @@ impl Typed for Parameter {
     }
 }
 
-impl Apply for Parameter {}
+impl Apply for Parameter {
+    fn do_apply_in_ctx<'a>(
+        &self,
+        args: &'a [ValId],
+        _inline: bool,
+        _ctx: Option<&mut EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        if args.len() == 0 {
+            return Ok(Application::Success(args, self.clone().into()));
+        }
+        match self.ty().as_enum() {
+            ValueEnum::Pi(p) => unimplemented!("Pi type parameters: parameter = {}: {}", self, p),
+            ValueEnum::Product(p) => {
+                if args.len() > 1 {
+                    unimplemented!("Multi-tuple application: blocking on ApplyTy")
+                }
+                let ix = match args[0].as_enum() {
+                    ValueEnum::Index(ix) => {
+                        if ix.get_ty().0 == p.len() as u128 {
+                            ix.ix()
+                        } else {
+                            return Err(Error::TupleLengthMismatch);
+                        }
+                    }
+                    ValueEnum::Parameter(pi) => {
+                        unimplemented!("Parameter {} indexing parameter product {}: {}", pi, self, p)
+                    }
+                    _ => return Err(Error::TypeMismatch),
+                };
+                let lt = p.lifetime().clone_lifetime(); // TODO: this
+                let ty = p[ix as usize].clone();
+                Ok(Application::Stop(lt, ty))
+            }
+            _ => Err(Error::NotAFunction),
+        }
+    }
+}
+
+impl From<Parameter> for NormalValue {
+    fn from(param: Parameter) -> NormalValue {
+        NormalValue(ValueEnum::Parameter(param))
+    }
+}
 
 impl Value for Parameter {
     fn no_deps(&self) -> usize {

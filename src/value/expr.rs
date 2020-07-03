@@ -2,6 +2,7 @@
 `rain` expressions
 */
 use super::{arr::ValArr, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum};
+use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
@@ -22,6 +23,12 @@ pub struct Sexpr {
 
 debug_from_display!(Sexpr);
 pretty_display!(Sexpr, "(...)");
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Sexpr {}
+    impl TryFrom<NormalValue> for Sexpr { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Sexpr { as ValueEnum, }
+}
 
 impl Sexpr {
     /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.
@@ -186,6 +193,18 @@ impl Substitute for Sexpr {
     }
 }
 
+impl From<Sexpr> for NormalValue {
+    fn from(sexpr: Sexpr) -> NormalValue {
+        if sexpr == () {
+            return ().into();
+        }
+        if sexpr.len() == 1 {
+            return sexpr[0].as_norm().clone();
+        }
+        NormalValue(ValueEnum::Sexpr(sexpr))
+    }
+}
+
 substitute_to_valid!(Sexpr);
 
 #[cfg(feature = "prettyprinter")]
@@ -211,5 +230,39 @@ mod prettyprint_impl {
             }
             write!(fmt, "{}", SEXPR_CLOSE)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+    /// Test converting the unit S-expression to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn unit_value_construction() {
+        let unit_sexpr = Sexpr::unit();
+        let unit_value = ValueEnum::Sexpr(unit_sexpr.clone());
+        assert_eq!(ValueEnum::from(unit_sexpr.clone()), unit_value);
+        assert_eq!(
+            Sexpr::try_from(unit_value.clone()).expect("Correct variant"),
+            unit_sexpr
+        );
+        assert_eq!(
+            <&Sexpr>::try_from(&unit_value).expect("Correct variant"),
+            &unit_sexpr
+        );
+        assert_eq!(NormalValue::from(unit_sexpr), NormalValue::from(()));
+        assert_eq!(NormalValue::from(unit_value), NormalValue::from(()));
+    }
+    /// Test converting simple singleton S-expressions to and from ValueEnum/NormalValue works properly
+    #[test]
+    fn singleton_value_construction() {
+        let st = Sexpr::singleton(true.into());
+        let stv = ValueEnum::Sexpr(st.clone());
+        assert_eq!(ValueEnum::from(st.clone()), stv);
+        assert_eq!(Sexpr::try_from(stv.clone()).expect("Correct variant"), st);
+        assert_eq!(<&Sexpr>::try_from(&stv).expect("Correct variant"), &st);
+        assert_eq!(NormalValue::from(st), NormalValue::from(true));
+        assert_eq!(NormalValue::from(stv), NormalValue::from(true));
     }
 }

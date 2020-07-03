@@ -114,6 +114,19 @@ impl<A, P> ValArr<A, P> {
     pub fn as_arr(&self) -> &ValArr<(), P> {
         self.coerce_ref()
     }
+    /// Get this array as an array of ValIds
+    #[inline]
+    pub fn into_valarr(self) -> ValArr {
+        self.coerce()
+    }
+    /// Forget any additional value information, yielding just a container of raw `ValId`s
+    pub fn into_vals(self) -> ValArr<A, ()> {
+        self.coerce()
+    }
+    /// Forget any additional array information, yielding just a raw `ValArr`
+    pub fn into_arr(self) -> ValArr<(), P> {
+        self.coerce()
+    }
     /// Get this array as a slice of ValIds
     #[inline]
     pub fn as_slice(&self) -> &[ValId] {
@@ -245,7 +258,7 @@ impl<A: BagMarker, P> ValArr<A, P> {
     }
     /// Check whether an item is in this bag. If it is, return a reference.
     #[inline]
-    pub fn contains<Q>(&self, item: *const NormalValue) -> Option<&ValId<Q>> {
+    pub fn contains(&self, item: *const NormalValue) -> Option<&ValId<P>> {
         self.arr.contains(item).map(|v| v.coerce_ref())
     }
     /// Deduplicate this bag to yield a `ValSet`

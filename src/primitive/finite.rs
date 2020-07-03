@@ -9,7 +9,7 @@ use crate::value::{
     universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum,
     VarId, VarRef,
 };
-use crate::{debug_from_display, quick_pretty, trivial_lifetime, trivial_substitute};
+use crate::{debug_from_display, enum_convert, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::cmp::Ordering;
@@ -23,6 +23,11 @@ pub struct Finite(pub u128);
 debug_from_display!(Finite);
 quick_pretty!(Finite, s, fmt => write!(fmt, "{}({})", KEYWORD_FINITE, s.0));
 trivial_substitute!(Finite);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Finite {}
+    impl TryFrom<NormalValue> for Finite { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Finite { as ValueEnum, }
+}
 
 impl Finite {
     /// Get an index into this type. Return an error if out of bounds
@@ -116,6 +121,11 @@ debug_from_display!(Index);
 quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty.0, s.ix));
 trivial_substitute!(Index);
 trivial_lifetime!(Index);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Index {}
+    impl TryFrom<NormalValue> for Index { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Index { as ValueEnum, }
+}
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds
@@ -149,6 +159,18 @@ impl Typed for Index {
 }
 
 impl Apply for Index {}
+
+impl From<Finite> for NormalValue {
+    fn from(finite: Finite) -> NormalValue {
+        NormalValue(ValueEnum::Finite(finite))
+    }
+}
+
+impl From<Index> for NormalValue {
+    fn from(ix: Index) -> NormalValue {
+        NormalValue(ValueEnum::Index(ix))
+    }
+}
 
 impl Value for Index {
     #[inline]
