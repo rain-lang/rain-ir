@@ -5,7 +5,7 @@
 use super::Lifetime;
 use dashcache::{
     arr::{CachedArr, EmptyPredicate, Sorted, Uniq},
-    Cache,
+    DashCache, GlobalCache
 };
 use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
@@ -13,7 +13,7 @@ use std::ops::Deref;
 
 lazy_static! {
     /// The global lifetime array cache
-    pub static ref LIFETIME_ARRAY_CACHE: Cache<[Lifetime], CachedArr<Lifetime>> = Cache::default();
+    pub static ref LIFETIME_ARRAY_CACHE: DashCache<CachedArr<Lifetime>> = DashCache::new();
 }
 
 /// An array of `rain` lifetimes optionally satisfying a given predicate `P`

@@ -2,7 +2,7 @@
 `rain` value regions
 */
 use crate::value::{arr::TyArr, TypeId};
-use dashcache::Cache;
+use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
@@ -55,7 +55,7 @@ lazy_static! {
     ///
     /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
     /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
-    pub static ref REGION_CACHE: Cache<RegionData> = Cache::new();
+    pub static ref REGION_CACHE: DashCache<Arc<RegionData>> = DashCache::new();
 }
 
 impl Region {

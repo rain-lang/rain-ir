@@ -7,7 +7,7 @@ use super::{NormalValue, ValId, Value, VarId};
 use crate::typing::TypeValue;
 use dashcache::{
     arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},
-    Cache,
+    DashCache, GlobalCache,
 };
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -18,7 +18,7 @@ use std::ops::{Deref, Index};
 
 lazy_static! {
     /// A cache for arrays of values
-    pub static ref ARRAY_CACHE: Cache<[ValId], CachedArr<ValId>> = Cache::default();
+    pub static ref ARRAY_CACHE: DashCache<CachedArr<ValId>> = DashCache::new();
 }
 
 #[macro_export]

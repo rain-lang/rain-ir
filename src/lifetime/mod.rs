@@ -27,7 +27,7 @@ almost like a field, but again, for our current, simple case, we will ignore thi
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
-use dashcache::Cache;
+use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
@@ -39,7 +39,7 @@ pub use arr::*;
 
 lazy_static! {
     /// The global lifetime cache
-    pub static ref LIFETIME_CACHE: Cache<LifetimeData> = Cache::new();
+    pub static ref LIFETIME_CACHE: DashCache<Arc<LifetimeData>> = DashCache::new();
 }
 
 /// A `rain` lifetime

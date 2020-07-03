@@ -4,7 +4,7 @@ use super::*;
 
 lazy_static! {
     /// The global `rain` value cache
-    pub static ref VALUE_CACHE: Cache<NormalValue> = Cache::new();
+    pub static ref VALUE_CACHE: DashCache<Arc<NormalValue>> = DashCache::new();
 }
 
 // Equality
