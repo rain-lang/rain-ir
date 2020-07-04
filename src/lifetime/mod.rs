@@ -148,7 +148,7 @@ TODO
 
 ## Non-`Copy` objects
 
-Consider as an example the following Rust program:
+Consider as an example the following simple Rust program:
 ```ignore
 let x: String = "Hello".into();
 let y = x + "!";
