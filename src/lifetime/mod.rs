@@ -192,6 +192,9 @@ TODO
 
 # Allocators and Functional Drop
 
+Implementing allocators requires implementing `Drop`. Of course, it is somewhat easy to see how this could be done with linear types, but introducing
+something like `Drop` into a functional language looks like a much more formidable challenge.
+
 ## Allocator support
 
 TODO
