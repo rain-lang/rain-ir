@@ -110,7 +110,7 @@ the relevancy restriction of a linear type, can only be enforced by escape incon
 
 ### Logical Lifetime Rules
 
-Substructural lifetimes can come from two sources:
+Substructural lifetimes can come from the value or region level:
 - A *constructor* for a substructural lifetime can create a value with a lifetime equal to the intersection of the dependencies of that value and 
 a fresh substructural lifetime. For example, a constructor for allocated memory can consume a reference to an allocator to yield a fresh affinely-typed.
 Any function can be made constructor like by enforcing that it does the same.
@@ -118,8 +118,16 @@ Any function can be made constructor like by enforcing that it does the same.
 
 In general:
 - An affine lifetime is incompatible with itself, so a value cannot have two dependencies with the same affine lifetime
+- If lifetimes `A` and `B` are incompatible, and `C` is a sublifetime of `B`, then `A` and `C` are incompatible
 
 ### Lifetime Inconsistency
+
+Lifetime inconsistency, similarly, is also checked at the value and region level:
+- At the *value* level, if an operation produces a product type with a relevant member, then that member must be used by the result of any function-variant
+escaping the region of the operation
+- At the *region* level, the result of any function-variant must use all relevant parameters of it's region at least once
+
+Another layer of lifetime inconsistency checking performed is borrow checking, which is described below.
 
 ## Borrow Lifetimes
 
