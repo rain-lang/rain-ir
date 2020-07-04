@@ -58,6 +58,11 @@ regions is designed to be the largest region contained in every region in the se
 is values of the `ValueEnum::Parameter` variant, which serve as parameters into a region: these are assigned as region the region they are parameters into. 
 If a value has dependencies that are incomparable (i.e. not ordered by inclusion), then it's lifetime is invalid, and hence it cannot be a valid `rain` value.
 
+Note that functional variants like `ValueEnum::Lambda`, `ValueEnum::Gamma` and `ValueEnum::Pi` are *not* exceptions to the rule above: their lifetime is also
+the intersection of the lifetimes of their dependencies. The caveat here is that their results do not count as dependencies, but rather the elements of
+their `deps` vector do: in general, dependencies satisfy the property listed above that a node can *never* have a dependency in a region that is not it's
+region or an ancestor.
+
 A lifetime bound to a given region with no additional restrictions (e.g. linearity) is called a *region lifetime* or *frame lifetime* (in reference to stack frames).
 `Copy` types like booleans which depend on a parameter to a region (including parameters with a `Copy` type) have a region lifetime. Values with non-`Copy`
 types cannot have a region lifetime: see the section on linear lifetimes below.
@@ -71,9 +76,41 @@ region nested within it's minimal region. From this point of view, then, the reg
 it could be possible to implement the region system purely in terms of lifetimes in this manner. However, for simplicity, the region system is a simpler
 backbone which the lifetime system is built upon.
 
-## Linear Lifetimes
+## Substructural Types
 
-TODO
+One of the core features of `rain` is a [substructural type system](https://mitpress-request.mit.edu/sites/default/files/titles/content/9780262162289_sch_0001.pdf) 
+which, as we  will see below, allows us to naturally represent stateful operations common in imperative programs (such as calls to external libraries, IO, 
+mutable state, and manual memory management) in the purely functional context of `rain`, allowing easy translation of the `rain` IR to and from imperative frontends 
+(like, someday perhaps, C and Rust) and backends (like LLVM and WASM).
+
+A *linear type* is a type such that it's values must be used exactly once. `rain` also supports other types corresponding to different forms of substructural 
+logic, including
+- *Affine types*, which can be used at most once but can remain unused
+- *Relevant types*, which must be used at least once but can be used multiple times
+
+A type without any such usage restriction is called an *unrestricted* type. Note that linear types are both affine and relevant, but not all affine/relevant types
+are linear. For example, in Rust terms, `Vec<T>` is affine (it can only be used once), but not relevant (not even necessarily ignoring `Drop`, if we take into account
+`mem::forget` or even leak amplification) and therefore is *not* linear.
+
+*Ordered types*, which are types that must be used exactly once in the order of their introduction, are supported in a very limited sense, namely,
+pi-types with a linear type parameter must use this parameter in their return type exactly once, and hence, a nested list of such pi types acts like
+somewhat like a fragment of ordered logic (we note that the linearity of the type means it will be consumed by the pi type and hence unable to be used 
+by the lambda function it types). That said, because in general `rain` IR is a graph and hence has no order of variable introduction, there cannot be 
+any other support for ordered typing.
+
+A value with a linear type is assigned a *linear lifetime*. Linear typing is then enforced in two ways
+- Via incompatibility between lifetimes: these are called the "logical lifetime rules"
+- Via "escape inconsistency", which is where a value can be constructed but cannot escape from it's defining region via an escape constructor like
+`#lambda` or `#pi`.
+
+Separating enforcement in this manner has both theoretical and practical benefits: theoretically, for example, it is not wrong to have *a* value which
+does not use a relevant type (which must be used at least once), but it is definitely wrong to have a value be the result of a lambda function where that
+lambda function either has a relevant type as a paremeter or as an unused result of one of the operations in it's definition. Hence, relevant types, and
+the relevancy restriction of a linear type, can only be enforced by escape inconsistency and not by lifetime incompatibility.
+
+### Logical Lifetime Rules
+
+### Lifetime Inconsistency
 
 ## Borrow Lifetimes
 
