@@ -158,6 +158,13 @@ TODO
 
 ## Immutable Borrows
 
+Consider as an example the following simple Rust program:
+```ignore
+let x: String = "Hello".into();
+println!("{}", x);
+let y = x + "!";
+```
+
 TODO
 
 ## Mutable Borrows
