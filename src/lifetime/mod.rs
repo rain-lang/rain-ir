@@ -184,6 +184,10 @@ TODO
 
 ## Lifetimes as Quotients
 
+Just as regions can be viewed as quotients of the lifetime system, we can actually view lifetimes themselves as quotients of the `rain` graph.
+This, in particular, yields an algorithm for doing a partial lifetime check of the `rain` graph on just `rain` values, though some lifetime
+annotation for parameters to functions/regions is still needed.
+
 TODO
 
 # Allocators and Functional Drop
