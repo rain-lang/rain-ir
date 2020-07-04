@@ -131,7 +131,10 @@ Another layer of lifetime inconsistency checking performed is borrow checking, w
 
 ## Borrow Lifetimes
 
-TODO
+As in Rust, the borrow checker is a central part of `rain`'s functionality. In brief, it allows lifetimes to "borrow" from values, creating artificial
+lifetime incompatibilites which mimic Rust's imperative borrow checking.
+
+TODO: rest
 
 ## Planned: Cellular Lifetimes
 
