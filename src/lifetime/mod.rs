@@ -58,6 +58,10 @@ regions is designed to be the largest region contained in every region in the se
 is values of the `ValueEnum::Parameter` variant, which serve as parameters into a region: these are assigned as region the region they are parameters into. 
 If a value has dependencies that are incomparable (i.e. not ordered by inclusion), then it's lifetime is invalid, and hence it cannot be a valid `rain` value.
 
+A lifetime bound to a given region with no additional restrictions (e.g. linearity) is called a *region lifetime* or *frame lifetime* (in reference to stack frames).
+`Copy` types like booleans which depend on a parameter to a region (including parameters with a `Copy` type) have a region lifetime. Values with non-`Copy`
+types cannot have a region lifetime: see the section on linear lifetimes below.
+
 ### Regions as Quotients
 
 It is possible to view regions as quotients of the lifetime graph: a value's *assigned* region is just the region of it's lifetime, and if we removed all
