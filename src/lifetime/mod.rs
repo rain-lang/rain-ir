@@ -153,6 +153,11 @@ Consider as an example the following simple Rust program:
 let x: String = "Hello".into();
 let y = x + "!";
 ```
+We know that adding another usage of `x` to this program, like
+```
+let z = x + "?";
+```
+would yield an invalid program.
 
 TODO
 
