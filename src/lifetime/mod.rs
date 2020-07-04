@@ -28,9 +28,69 @@ this would require compiling many, many inlined lambda functions.
 
 # Lifetimes
 
+The `rain` intermediate representation consists of a DAG with values (represented by the `ValId` struct) as nodes and the dependencies
+between values as edges. Every value in this graph is assigned a lifetime, and hence values which break the lifetime assignment rules
+are impossible to construct: constructing them will return an error, since no valid lifetime can be assigned to them. Hence, rain's lifetime
+rules can be described naturally by two questions:
+- Which lifetimes exist?
+- Which values can have which lifetimes?
+Note the implication of the latter question: values cannot necessarily be assigned a unique lifetime, though they may sometimes have a *minimal*
+lifetime (we will get to the partial order of lifetimes soon). That said, lifetime inference is part of `rain`-IR, and the even at the API/IR
+level explicit, external lifetimes do not often need to be used (and often *cannot* be used, since certain values will generate thier own lifetimes).
+
+## The Static Lifetime
+
+The most basic lifetime is the static, null, or constant lifetime, which corresponds to a `NULL` lifetime pointer. "Constant lifetime" is probably the best
+name, since this guarantees properties closer to Rust's `const` values than Rust values with `'static`. Values with the constant lifetime can be
+freely copied and hence cannot have a destructor, and furthermore cannot depend on any non-constant values (e.g. function parameters, etc.).
+Lifetimes are partially ordered, and the static lifetime is at the root of this partial order, i.e., is a minimal element: it is included in every lifetime, 
+whereas no other lifetimes are included in the static lifetime. The partial order of lifetimes has no maximal element.
+
+## Regions
+
+TODO
+
+## Linear Lifetimes
+
+TODO
+
+## Borrow Lifetimes
+
+TODO
+
+## Planned: Cellular Lifetimes
+
 TODO
 
 # Basic Lifetime Examples
+
+## Non-`Copy` objects
+
+TODO
+
+## Immutable Borrows
+
+TODO
+
+## Mutable Borrows
+
+TODO
+
+## "Linear types can change the world!"
+
+TODO
+
+# Allocators and Functional Drop
+
+## Allocator support
+
+TODO
+
+## Nondeterministic Drops and the stack
+
+TODO
+
+## Example: garbage collection
 
 TODO
 
@@ -38,19 +98,55 @@ TODO
 
 TODO
 
+# Unsafe Code
+
+## Assumptions
+
+TODO
+
+## Heaps and Raw Pointers
+
+TODO
+
+## Heap Combinators
+
+TODO
+
 # Concurrency and Atomics
+
+## Atomic Cell Lifetimes
+
+TODO
+
+## Mutexes
+
+TODO
+
+## Concurrent Heap Combinators
+
+TODO
+
+## The `Time` object
 
 TODO
 
 # Compiling Lifetimes
 
+## Virtual Dependencies
+
+TODO
+
+## Alias Analysis
+
 TODO
 
 # Rust Lifetimes vs. `rain` Lifetimes
 
+## HIR lifetimes and Regions
+
 TODO
 
-# Implementing Basic Lifetimes with Frames
+## Aliasing
 
 TODO
 
