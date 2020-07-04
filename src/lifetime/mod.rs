@@ -48,7 +48,24 @@ whereas no other lifetimes are included in the static lifetime. The partial orde
 
 ## Regions
 
-TODO
+Similar to the concept of scoping local variables, the `rain` graph, as an RVSDG, is divided into regions (represented by the `Region` struct). These regions
+are partially ordered into a tree, with a null region at the root. Values in a region can use values in ancestor regions, but not vice versa. All values have
+a single, unique, minimal region they can be placed into. All lifetimes, as well, can be placed into a region, and the lifetime assigned to a region must be
+compatible with that value's minimal region: i.e., the value's minimal region *must* be an ancestor of the value's assigned lifetime's region.
+
+In general, with some important exceptions, a value's region is the intersection of the regions of it's dependencies, where the intersection of a set of
+regions is designed to be the largest region contained in every region in the set, if such a region exists. The most important exception to keep in mind
+is values of the `ValueEnum::Parameter` variant, which serve as parameters into a region: these are assigned as region the region they are parameters into. 
+If a value has dependencies that are incomparable (i.e. not ordered by inclusion), then it's lifetime is invalid, and hence it cannot be a valid `rain` value.
+
+### Regions as Quotients
+
+It is possible to view regions as quotients of the lifetime graph: a value's *assigned* region is just the region of it's lifetime, and if we removed all
+linear typing from `rain`, then a value's lifetime is just it's region (since all other lifetime information would be irrelevant). Note that according to
+this definition, a values assigned region is distinct from it's minimal region: a value can be assigned a stronger lifetime that would place it into a
+region nested within it's minimal region. From this point of view, then, the region system is just the lifetime system modulo linear types, and in fact
+it could be possible to implement the region system purely in terms of lifetimes in this manner. However, for simplicity, the region system is a simpler
+backbone which the lifetime system is built upon.
 
 ## Linear Lifetimes
 
@@ -77,6 +94,10 @@ TODO
 TODO
 
 ## "Linear types can change the world!"
+
+TODO
+
+## Lifetimes as Quotients
 
 TODO
 
