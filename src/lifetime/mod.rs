@@ -194,7 +194,7 @@ TODO
 
 Implementing allocators requires implementing `Drop`. Of course, it is somewhat easy to see how this could be done with linear types, but introducing
 something like `Drop` into a functional language looks like a much more formidable challenge. Nevertheless, this is done implicitly in basically
-every functional language which implements garbage collection.
+every functional language which implements garbage collection. The key point is that garbage collection here is an implementation detail.
 
 ## Allocator support
 
