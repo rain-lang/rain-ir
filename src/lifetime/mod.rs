@@ -201,6 +201,8 @@ seems natural, implementing this safely without dropping down to assembly or IR 
 
 ## Allocator support
 
+`rain` should not actually need an allocator.
+
 TODO
 
 ## Nondeterministic Drops and the stack
