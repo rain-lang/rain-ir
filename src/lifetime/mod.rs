@@ -1,29 +1,58 @@
 /*!
 `rain` value lifetimes
 
+# Module Overview
+
+`rain`'s lifetime system centers around the `Lifetime` object, which semantically represents a distinct `rain` lifetime.
+`Lifetime` objects are automatically managed and garbage collected by a global lifetime cache. This module contains the
+definitions for the `Lifetime` object, the lifetime cache, a variety of auxiliary objects (e.g. `LifetimeBorrow` to avoid 
+pointer-chasing) and implementations of a variety of algorithms used in the lifetime system.
+
 # Introduction
 
-`rain` at it's core is an [RVSDG](https://arxiv.org/abs/1912.05036) with dependent linear types generalized with lifetimes.
-In Rust, lifetimes can be modeled using the formal, imperative semantics of [Stacked Borrows](https://plv.mpi-sws.org/rustbelt/stacked-borrows/),
-however, since `rain` is a purely functional language, statements can be executed in an arbitrary order (including in parallel) constrained only by their
-dependencies. Hence, in `rain`, we instead model lifetimes a set of conditions on possible dependencies between values, and hence as a
-generalization of linear types. That said, it is occasionally useful to think of `rain` lifetimes as
-[stacked borrows](https://plv.mpi-sws.org/rustbelt/stacked-borrows/) applied not to a particular imperative program,
-but to the equivalence class of all imperative programs executing the instructions of a `rain` program in an order
-satisfying certain constraints. It is important to keep in mind, however, that there are subtle differences between these models,
-such that something allowable in one may be forbidden in the other.
+`rain` is fundamentally an [RVSDG](https://arxiv.org/abs/1912.05036) extended with a concept of lifetimes, inspired but distinct
+from the lifetimes in Rust. Unlike Rust (or rather, Rust's [MIR](https://rustc-dev-guide.rust-lang.org/mir/index.html), which is a 
+more appropriate comparison point), `rain` is a purely functional language, and hence it is unwieldy to define lifetimes in terms 
+of the execution order of statements as is done, e.g., in the [Stacked Borrows model](https://plv.mpi-sws.org/rustbelt/stacked-borrows/paper.pdf). 
+Instead, lifetimes are defined purely in terms of the dependency graph. This has the additional effect of making lifetimes "concurrency agnostic:" 
+as the dependency graph in general makes no assumption as to whether it is evaluated concurrently or sequentially (outside of nodes merging disjoint
+sections of it according to [Concurrent Separation Logic](https://read.seas.harvard.edu/~kohler/class/cs260r-17/brookes16concurrent.pdf))
+this definition naturally encompasses both concurrent and sequential programs by taking advantage of the properties of an RVSDG.
 
-We can sum up the basic idea behind rain's lifetime system in a single sentence: "values cannot be referenced after they are used". Remember,
-since `rain` is purely functional, there is no concept of mutable borrows (unlike in Rust): instead, there are updates which are marked so as
-to be compiled as in-place operations. To model more complex systems, such as those involving interior mutability, we will later introduce
-*heap types* based off [Concurrent Separation Logic](https://dl.acm.org/doi/10.1145/2984450.2984457), but for now, we will focus purely on
-immutable borrows. One key difference between Rust's immutable borrows and `rain`'s immutable borrows is that the latter are not constrained
-to have the same representation as a pointer: for example, if we were to borrow the `rain` equivalent of a `Vec`, both a bitwise copy of the
-`Vec`'s contents and a pointer to the `Vec` would be considered valid borrows, and treated the same by the borrow checker (we note that they
-would have the same lifetime, but different types). This, of course, can be achieved in Rust through appropriate use of `PhantomData` and
-unsafe code, but I believe having it as a language feature is much cleaner. Types which must maintain a constant address across borrows,
-and pinning, is dealt with by an "address dependency" system in which a given value type has an implicit dependency on its address, treated
-almost like a field, but again, for our current, simple case, we will ignore this subtlety.
+The current lifetime system in `rain` is not yet completely formalized, as the semantics of the language are still being developed.
+What is documented here is an informal summary of the current state of the lifetime model we plan to implement in the prototype
+`rain-ir` interpreter: this model is highly incomplete, and many important features remain unfinished. Currently, we only implement the
+simplest kind of lifetime, namely a region or frame lifetime. This form of lifetime is akin to Rust's original syntactic lifetime model,
+and indeed, with linear types, we hypothesize that it can simulate a good portion of the rest of the lifetime system on it's own, though
+this would require compiling many, many inlined lambda functions. 
+
+# Lifetimes
+
+TODO
+
+# Basic Lifetime Examples
+
+TODO
+
+# Interior Mutability
+
+TODO
+
+# Concurrency and Atomics
+
+TODO
+
+# Compiling Lifetimes
+
+TODO
+
+# Rust Lifetimes vs. `rain` Lifetimes
+
+TODO
+
+# Implementing Basic Lifetimes with Frames
+
+TODO
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
