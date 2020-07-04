@@ -138,6 +138,10 @@ TODO: rest
 
 ## Planned: Cellular Lifetimes
 
+While borrow lifetimes describe immutable borrows and, as shown in the examples below, mutable borrows can be represented with linear types, interior
+mutability, `Cell` and atomics still remain to be covered. We are currently pursuing a framework for these based off concurrent separation logic which
+is fully general, however, we plan to design a specialized system of "cellular lifetimes" for this case which can simplify optimizing certain cases.
+
 TODO
 
 # Basic Lifetime Examples
