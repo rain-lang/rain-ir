@@ -148,6 +148,12 @@ TODO
 
 ## Non-`Copy` objects
 
+Consider as an example the following Rust program:
+```ignore
+let x: String = "Hello".into();
+let y = x + "!";
+```
+
 TODO
 
 ## Immutable Borrows
