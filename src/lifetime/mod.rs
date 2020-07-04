@@ -153,6 +153,8 @@ Consider as an example the following simple Rust program:
 let x: String = "Hello".into();
 let y = x + "!";
 ```
+Giving this `rain`-like lifetimes...
+
 We know that adding another usage of `x` to this program, like
 ```
 let z = x + "?";
