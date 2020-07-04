@@ -196,7 +196,8 @@ Implementing allocators requires implementing `Drop`. Of course, it is somewhat 
 something like `Drop` into a functional language looks like a much more formidable challenge. Nevertheless, this is done implicitly in basically
 every functional language which implements garbage collection. The key point is that garbage collection here is an implementation detail.
 Even assuming this to be a corruption, and considering a functional language which leaks all its memory, the program still probably has a call stack,
-and this is basically the same thing. This hints at the semantics of `Drop` in `rain`: it's like a custom call stack.
+and this is basically the same thing. This hints at the semantics of `Drop` in `rain`: it's like a custom call stack. While implementing it `unsafe`ly
+seems natural, implementing this safely without dropping down to assembly or IR feels strange. This section is about that.
 
 ## Allocator support
 
