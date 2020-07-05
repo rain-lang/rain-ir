@@ -17,6 +17,7 @@ use std::ops::Deref;
 
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
+#[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 #[repr(transparent)]
 pub struct Finite(pub u128);
 
