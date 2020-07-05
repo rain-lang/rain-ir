@@ -207,6 +207,8 @@ TODO
 
 ## Nondeterministic Drops and the stack
 
+Nondeterminism is an important consequence of custom `Drop` implementations.
+
 TODO
 
 ## Example: garbage collection
