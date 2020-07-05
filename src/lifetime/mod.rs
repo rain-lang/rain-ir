@@ -282,24 +282,12 @@ already offered by the system (in particular, they can be copied without perform
 
 ## Immutable Borrows
 
-Consider as an example the following simple Rust program:
-```ignore
-let x: String = "Hello".into();
-println!("{}", x);
-let y = x + "!";
-```
-This example is a little interesting, since `println!` does not take `x` by value but instead takes `x` by reference,
-though we don't write `&x`. I chose it because `rain` can borrow values without dereferencing: it all has to do with 
-the lifetime of the parameter, which *also* controls whether the destructor is invoked (see the section on`Drop` below).
-Translating it into `rain`, we'll make some adjustments:
-- Instead of the `println!` macro, we'll use a simple `print` function, which borrows `x` *by value*
-- The `print` function will take in an additional parameter called `io` with a linear type to represent changes to IO
-
 TODO
 
 ## Mutable Borrows
 
-TODO
+Mutable borrows can be modeled rather simply: they're just a special affine type with a particular destructor. This, however,
+provides a good example of a type of lifetime bound that can't really be expressed in Rust: the affine-equivalence bound.
 
 TODO
 
@@ -326,7 +314,7 @@ seems natural, implementing this safely without dropping down to assembly or IR 
 
 TODO
 
-## Nondeterministic Drops and the stack
+## Nondeterministic Drops and Static Sections
 
 Nondeterminism is an important consequence of custom `Drop` implementations.
 
