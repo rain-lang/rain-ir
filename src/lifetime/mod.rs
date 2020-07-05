@@ -151,17 +151,130 @@ TODO
 Consider as an example the following simple Rust program:
 ```ignore
 let x: String = "Hello".into();
-let y = x + "!";
+let y: String = x + "!";
 ```
-Giving this `rain`-like lifetimes...
-
+We'll use pseudo-Rust syntax to indicate `rain` lifetimes: namely, we'll parametrize owned types like `String` with a fake lifetime. So here, `x`, being
+the result of a constructor for `String`, would get a fresh `rain` lifetime `'a`. `y`, having one parameter with lifetime `'a`, and one parameter with
+`'static` lifetime, would get their intersection, namely `'a`. So that yields the program
+```ignore
+let x: String<'a> = "Hello".into();
+let y: String<'a> = x + "!";
+```
 We know that adding another usage of `x` to this program, like
-```
+```ignore
 let z = x + "?";
 ```
-would yield an invalid program.
+would yield an invalid program in Rust. In `rain`, though, nothing looks off yet: you could write this as
+```ignore
+let x: String<'a> = "Hello".into();
+let y: String<'a> = x + "!";
+let z: String<'a> = x + "?";
+```
+The key point here is, if you return `y`, `rain`'s lazy semantics means `z` would never be computed, and hence there
+is no actual double usage. Similarly, if `z` was returned, `y` would never be computed. On the other hand, if we tried
+to *construct* a temporary (even if it was never returned)
+```ignore
+let t: Tuple<'_, String, String> = (y, z);
+```
+you would get an error, since no valid lifetime can be substituted in place of `'_`, as the lifetime `'a` is affine and
+therefore incompatible with itself.
 
-TODO
+## "~~Linear~~ Relevant types can change the world!"
+
+Affine types are useful because they can represent resources. However, using an affine type to represent state can
+introduce non-determinism, and hence make our language no longer purely functional
+
+For example, consider the following pseudo-Rust program, where we treat `Io` as an affine type representing IO, where
+here the lifetime parameters are *affine* `rain` lifetimes
+```ignore
+fn even_input<'a>(io: Io<'a>) -> bool {
+    // Here 'b is a new lifetime for the newly generated string!
+    let (io, string): Tuple<'a + 'b, Io<'a>, String<'b>> = input(io);
+    let integer: u64 = parse(string); // Note the lifetime disappears because `u64` is an unrestricted type
+    if integer >= 1 {
+        false
+    } else {
+        integer % 2 != 0
+    }
+}
+```
+Now, translating this naively to C, we might get the following (correct) code
+```c
+bool even_input() { // Note the io parameter disappears
+    struct String string = input(); // Again, no io parameter
+    uint64_t integer = parse(string);
+    if(integer >= 1) {
+        return false;
+    } else {
+        return integer % 2 != 0;
+    }
+}
+```
+The C optimizer could then generate the more optimal code
+```c
+bool even_input() {
+    struct String string = input();
+    parse(string);
+    return false;
+}
+```
+Assuming that it can figure out that `parse` has no side effects, it can generate the even better code
+```c
+bool even_input() {
+    input();
+    return false;
+}
+```
+Alas, the `rain` optimizer, being purely functional, would probably just jump straight ahead to
+```ignore
+fn even_input<'a>(io: Io<'a>) -> bool {
+    false
+}
+```
+And then, of course, we'd just get the following C, which does *not* prompt the user for input
+```c
+bool even_input() {
+    return false;
+}
+```
+The issue is that, here, it is *non deterministic* whether or not the user is prompted for input. And that's bad!
+On the other hand, if we made the `Io` type *linear* instead of affine, then the following function would fail to
+compile, since the field `io` of the tuple `(io, string)` is not being used but has a relevant lifetime. On the other hand,
+if we rewrote things to look like
+```ignore
+fn even_input<'a>(io: Io<'a>) -> Tuple<'a, Io<'a>, bool> {
+    // Here 'b is a new lifetime for the newly generated string!
+    let (io, string): Tuple<'a + 'b, Io<'a>, String<'b>> = input(io);
+    // Note the lifetime disappears because `u64` is an unrestricted type
+    let integer: u64 = parse(string);
+    if integer >= 1 {
+        (io, false)
+    } else {
+        (io, integer % 2 != 0)
+    }
+}
+```
+then the same naive C is produced. On the other hand, if we do the optimization on the `rain`-side, we get
+```ignore
+fn even_input<'a>(io: Io<'a>) -> Tuple<'a, Io<'a>, bool> {
+    // Here 'b is a new lifetime for the newly generated string!
+    let (io, string): Tuple<'a + 'b, Io<'a>, String<'b>> = input(io);
+    (io, false)
+}
+```
+The best part is we get the knowledge that `parse` has no side effects for free, since it's return value is not
+used, and hence we get the best C optimization without expensive global analysis.
+
+Now, the reader may have noticed that I crossed out the word "linear" in the classic title 
+[Linear types can change the world](http://www.cs.ioc.ee/ewscs/2010/mycroft/linear-2up.pdf) and replaced it with
+relevant: that's because, if we only care that effects *happen*, but want to allow certain sequences of events to
+occur in unspecified order (e.g. in a multithreaded context), it suffices to make `Io` relevant, and add a function of
+signature
+```text
+join :: Io -> Io -> Io
+```
+This makes relevant types a great fit for, e.g., Unix file descriptors, where they very naturally fit the semantics
+already offered by the system (in particular, they can be copied without performing any `clone` operation).
 
 ## Immutable Borrows
 
@@ -171,14 +284,18 @@ let x: String = "Hello".into();
 println!("{}", x);
 let y = x + "!";
 ```
+This example is a little interesting, since `println!` does not take `x` by value but instead takes `x` by reference,
+though we don't write `&x`. I chose it because `rain` can borrow values without dereferencing: it all has to do with 
+the lifetime of the parameter, which *also* controls whether the destructor is invoked (see the section on`Drop` below).
+Translating it into `rain`, we'll make some adjustments:
+- Instead of the `println!` macro, we'll use a simple `print` function, which borrows `x` *by value*
+- The `print` function will take in an additional parameter called `io` with a linear type to represent changes to IO
 
 TODO
 
 ## Mutable Borrows
 
 TODO
-
-## "Linear types can change the world!"
 
 TODO
 
