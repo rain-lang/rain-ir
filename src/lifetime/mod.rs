@@ -137,7 +137,9 @@ pair, where the lifetime is a sublifetime of the value's assigned lifetime. Valu
 but are incompatible with any value either
 - With the given lifetime, including sub-lifetimes
 - Borrowing the given lifetime *with a different source value*
-However, they *are* compatible with values borrowing the given lifetime with the *same* source value.
+However, they *are* compatible with values borrowing the given lifetime with the *same* source value. A borrowed lifetime can be given arbitrary
+substructural rules (regardless of the substructural rules it borrows from): usually, unrestricted borrows are used, which act similarly to Rust's
+immutable borrows (see the example below).
 
 ## Planned: Cellular Lifetimes
 
