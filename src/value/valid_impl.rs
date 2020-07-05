@@ -8,6 +8,14 @@ lazy_static! {
     pub static ref VALUE_CACHE: DashCache<Arc<NormalValue>> = DashCache::new();
 }
 
+// Garbage collection
+impl<P> Drop for ValId<P> {
+    fn drop(&mut self) {
+        VALUE_CACHE.try_gc(&mut self.ptr);
+    }
+}
+
+
 // Equality
 
 impl<P> Eq for ValId<P> {}
@@ -157,7 +165,7 @@ impl<P> ValId<P> {
     #[inline]
     pub(super) fn coerce<Q>(self) -> ValId<Q> {
         ValId {
-            ptr: self.ptr,
+            ptr: unsafe { std::mem::transmute(self) },
             variant: std::marker::PhantomData,
         }
     }
