@@ -132,17 +132,18 @@ Another layer of lifetime inconsistency checking performed is borrow checking, w
 ## Borrow Lifetimes
 
 As in Rust, the borrow checker is a central part of `rain`'s functionality. In brief, it allows lifetimes to "borrow" from values, creating artificial
-lifetime incompatibilites which mimic Rust's imperative borrow checking.
-
-TODO: rest
+lifetime incompatibilites which mimic Rust's imperative borrow checking. It works in the following way: a lifetime can "borrow" from a (value, lifetime)
+pair, where the lifetime is a sublifetime of the value's assigned lifetime. Values with such a lifetime have a dependency on the value they borrow from,
+but are incompatible with any value either
+- With the given lifetime, including sub-lifetimes
+- Borrowing the given lifetime *with a different source value*
+However, they *are* compatible with values borrowing the given lifetime with the *same* source value.
 
 ## Planned: Cellular Lifetimes
 
 While borrow lifetimes describe immutable borrows and, as shown in the examples below, mutable borrows can be represented with linear types, interior
 mutability, `Cell` and atomics still remain to be covered. We are currently pursuing a framework for these based off concurrent separation logic which
 is fully general, however, we plan to design a specialized system of "cellular lifetimes" for this case which can simplify optimizing certain cases.
-
-TODO
 
 # Basic Lifetime Examples
 
