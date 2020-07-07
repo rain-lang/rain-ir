@@ -31,7 +31,7 @@ pub enum Affine {
 }
 
 /// An owned affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct Owned {
 
 }
