@@ -32,7 +32,7 @@ impl<V: Value + Clone> Parametrized<V> {
                 let mut deps = value.deps().collect_deps(..value.depth(), |_| true);
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
-                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .intersect_all(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| Error::LifetimeError)?;
                 Ok(Parametrized {
                     region,
@@ -45,7 +45,7 @@ impl<V: Value + Clone> Parametrized<V> {
                 let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into_val()];
                 deps.shrink_to_fit();
                 let lifetime = Lifetime::default()
-                    .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
+                    .intersect_all(deps.iter().map(|dep: &ValId| dep.lifetime()))
                     .map_err(|_| Error::LifetimeError)?;
                 Ok(Parametrized {
                     region,

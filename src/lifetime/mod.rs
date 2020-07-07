@@ -495,7 +495,7 @@ impl Lifetime {
     }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, ()>
+    pub fn intersect_all<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, ()>
     where
         I: Iterator<Item = LifetimeBorrow<'a>>,
     {

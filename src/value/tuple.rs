@@ -32,7 +32,7 @@ impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn try_new(elems: ValArr) -> Result<Tuple, ()> {
-        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
+        let lifetime = Lifetime::default().intersect_all(elems.iter().map(|t| t.lifetime()))?;
         let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
             elems,
@@ -182,7 +182,7 @@ impl Product {
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn try_new(elems: TyArr) -> Result<Product, ()> {
-        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
+        let lifetime = Lifetime::default().intersect_all(elems.iter().map(|t| t.lifetime()))?;
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
