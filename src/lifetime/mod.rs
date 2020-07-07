@@ -391,6 +391,10 @@ use std::ops::Deref;
 
 mod arr;
 pub use arr::*;
+mod color;
+pub use color::*;
+mod data;
+pub use data::*;
 
 lazy_static! {
     /// The global lifetime cache
@@ -468,16 +472,6 @@ impl Deref for LifetimeBorrow<'_> {
     }
 }
 
-/// The data describing a `rain` lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd)]
-pub enum LifetimeData {
-    /// A region. TODO: this
-    Region(Region),
-}
-
-/// The static `rain` lifetime, with a constant address
-pub static STATIC_LIFETIME: LifetimeData = LifetimeData::Region(Region::NULL);
-
 impl Lifetime {
     /// The static `rain` lifetime
     pub const STATIC: Lifetime = Lifetime(None);
@@ -536,9 +530,7 @@ impl Lifetime {
 impl Regional for Lifetime {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        match self.deref() {
-            LifetimeData::Region(r) => r.borrow_region(),
-        }
+        self.deref().region()
     }
 }
 
@@ -548,7 +540,7 @@ impl From<Region> for Lifetime {
         if region.is_null() {
             Lifetime(None)
         } else {
-            Lifetime::new(LifetimeData::Region(region).into())
+            Lifetime::new(LifetimeData::from(region).into())
         }
     }
 }
@@ -604,9 +596,7 @@ impl<'a> LifetimeBorrow<'a> {
     pub fn get_region(&self) -> RegionBorrow<'a> {
         match self.0 {
             None => RegionBorrow::NULL,
-            Some(r) => match r.get() {
-                LifetimeData::Region(r) => r.borrow_region(),
-            },
+            Some(r) => r.get().region(),
         }
     }
     /// Check whether this lifetime is the static (null) lifetime
@@ -619,9 +609,7 @@ impl<'a> LifetimeBorrow<'a> {
 impl Regional for LifetimeBorrow<'_> {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        match self.deref() {
-            LifetimeData::Region(r) => r.borrow_region(),
-        }
+        self.deref().region()
     }
 }
 
