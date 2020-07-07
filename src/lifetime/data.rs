@@ -22,6 +22,34 @@ pub struct LifetimeData {
 }
 
 impl LifetimeData {
+    /// A helper function to intersect two affine lifetime sets
+    #[inline]
+    pub fn affine_intersect(
+        left: HashMap<Color, Affine>,
+        right: HashMap<Color, Affine>,
+    ) -> Result<HashMap<Color, Affine>, Error> {
+        let mut has_error: Option<Error> = None;
+        let result =
+            left.symmetric_difference_with(right, |left, right| match left.intersect(&right) {
+                Ok(int) => Some(int),
+                Err(err) => {
+                    has_error = Some(err);
+                    None
+                }
+            });
+        if let Some(err) = has_error {
+            return Err(err);
+        }
+        Ok(result)
+    }
+    /// A helper function to intersect an affine lifetime set with itself
+    #[inline]
+    pub fn affine_intersect_selct(affine: &HashMap<Color, Affine>) -> Result<(), Error> {
+        for (_, affine) in affine.iter() {
+            affine.intersect_self()?
+        }
+        Ok(())
+    }
     /// Intersect this lifetime data with itself
     #[inline]
     pub fn intersect_self(&self) -> Result<(), Error> {
@@ -64,6 +92,14 @@ impl Affine {
         match (self, other) {
             (Borrowed(l), Borrowed(r)) => l.intersect(r).map(Borrowed),
             _ => Err(Error::LifetimeError),
+        }
+    }
+    /// Intersect this affine lifetime with itself
+    pub fn intersect_self(&self) -> Result<(), Error> {
+        use Affine::*;
+        match self {
+            Owned(_) => Err(Error::LifetimeError),
+            Borrowed(_) => Ok(()),
         }
     }
 }
