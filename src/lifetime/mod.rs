@@ -389,6 +389,7 @@ use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::ops::{BitAnd, Mul};
 
 mod arr;
 pub use arr::*;
@@ -577,6 +578,100 @@ impl Lifetime {
     #[inline]
     pub fn escape(&self) -> Lifetime {
         self.escape_upto(self.depth().saturating_sub(1))
+    }
+}
+
+impl BitAnd for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
+        if self == other || other.is_static() {
+            return Ok(self);
+        }
+        if self.is_static() {
+            return Ok(other);
+        }
+        self.deref().conj(other.deref()).map(Lifetime::new)
+    }
+}
+
+impl BitAnd<&'_ Lifetime> for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        if self == *other || other.is_static() {
+            return Ok(self);
+        }
+        if self.is_static() {
+            return Ok(other.clone());
+        }
+        self.deref().conj(other.deref()).map(Lifetime::new)
+    }
+}
+
+impl BitAnd<Lifetime> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
+        other.bitand(self)
+    }
+}
+
+impl BitAnd<&'_ Lifetime> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        other.join(self)
+    }
+}
+
+impl Mul for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
+        if self == other {
+            return self.star_self().map(|_| self);
+        }
+        if self.is_static() {
+            return Ok(other);
+        }
+        if other.is_static() {
+            return Ok(self);
+        }
+        self.deref().star(other.deref()).map(Lifetime::new)
+    }
+}
+
+impl Mul<&'_ Lifetime> for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        if self == *other {
+            return self.star_self().map(|_| self);
+        }
+        if self.is_static() {
+            return Ok(other.clone());
+        }
+        if other.is_static() {
+            return Ok(self);
+        }
+        self.deref().star(other.deref()).map(Lifetime::new)
+    }
+}
+
+impl Mul<Lifetime> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
+        other.mul(self)
+    }
+}
+
+impl Mul<&'_ Lifetime> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        self.star(other)
     }
 }
 
