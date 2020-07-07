@@ -521,6 +521,31 @@ impl Lifetime {
         }
         self.deref().star(other.deref()).map(Lifetime::new)
     }
+    /// Find the conjunction of this lifetime with another
+    #[inline]
+    pub fn join(&self, other: &Lifetime) -> Result<Lifetime, Error> {
+        if self == other || other.is_static() {
+            return Ok(self.clone());
+        }
+        if self.is_static() {
+            return Ok(other.clone());
+        }
+        self.deref().conj(other.deref()).map(Lifetime::new)
+    }
+    /// Find the conjunction of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
+    #[inline]
+    pub fn conj<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
+    where
+        I: Iterator<Item = LifetimeBorrow<'a>>,
+    {
+        let mut base = self.clone();
+        for lifetime in lifetimes {
+            if lifetime != base {
+                base = base.join(lifetime.as_lifetime())?;
+            }
+        }
+        Ok(base)
+    }
     /// Find the separating conjunction of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
     pub fn sep_conj<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
