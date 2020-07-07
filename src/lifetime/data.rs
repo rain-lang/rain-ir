@@ -86,12 +86,7 @@ impl LifetimeData {
     /// Get the conjunction of this lifetime with itself
     #[inline]
     pub fn conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        use Ordering::*;
-        let region = match self.region.partial_cmp(&other.region) {
-            None => return Err(Error::IncomparableRegions),
-            Some(Less) | Some(Equal) => self.region.clone(),
-            Some(Greater) => other.region.clone(),
-        };
+        let region = self.region.conj(&other.region)?;
         let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
             (l, None) => l.cloned(),
             (None, r) => r.cloned(),
@@ -105,7 +100,7 @@ impl LifetimeData {
         };
         let idempotent = self.idempotent & other.idempotent;
         Ok(LifetimeData {
-            region,
+            region: region.clone(),
             affine,
             idempotent,
         })
@@ -113,12 +108,7 @@ impl LifetimeData {
     /// Get the separating conjunction of this lifetime with another
     #[inline]
     pub fn star(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        use Ordering::*;
-        let region = match self.region.partial_cmp(&other.region) {
-            None => return Err(Error::IncomparableRegions),
-            Some(Less) | Some(Equal) => self.region.clone(),
-            Some(Greater) => other.region.clone(),
-        };
+        let region = self.region.conj(&other.region)?;
         let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
             (l, None) => l.cloned(),
             (None, r) => r.cloned(),
@@ -136,7 +126,7 @@ impl LifetimeData {
         };
         let idempotent = self.idempotent & other.idempotent;
         Ok(LifetimeData {
-            region,
+            region: region.clone(),
             affine,
             idempotent,
         })
