@@ -21,6 +21,33 @@ pub struct LifetimeData {
     region: Region,
 }
 
+impl LifetimeData {
+    /// Intersect this lifetime data with itself
+    #[inline]
+    pub fn intersect_self(&self) -> Result<(), Error> {
+        if self.affine.is_none() {
+            return Ok(());
+        }
+        unimplemented!("Affine self intersection")
+    }
+    /// Intersect this lifetime data with another
+    #[inline]
+    pub fn intersect(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
+        use Ordering::*;
+        let region = match self.region.partial_cmp(&other.region) {
+            None => return Err(Error::IncomparableRegions),
+            Some(Less) | Some(Equal) => self.region.clone(),
+            Some(Greater) => other.region.clone(),
+        };
+        let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
+            (l, None) => l.cloned(),
+            (None, r) => r.cloned(),
+            _ => unimplemented!("Double-affine intersection"),
+        };
+        Ok(LifetimeData { region, affine })
+    }
+}
+
 /// The data describing an affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Affine {
