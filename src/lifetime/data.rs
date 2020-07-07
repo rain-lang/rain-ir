@@ -44,7 +44,7 @@ impl LifetimeData {
     }
     /// A helper function to intersect an affine lifetime set with itself
     #[inline]
-    pub fn affine_intersect_selct(affine: &HashMap<Color, Affine>) -> Result<(), Error> {
+    pub fn affine_intersect_self(affine: &HashMap<Color, Affine>) -> Result<(), Error> {
         for (_, affine) in affine.iter() {
             affine.intersect_self()?
         }
@@ -53,10 +53,11 @@ impl LifetimeData {
     /// Intersect this lifetime data with itself
     #[inline]
     pub fn intersect_self(&self) -> Result<(), Error> {
-        if self.affine.is_none() {
-            return Ok(());
+        if let Some(affine) = &self.affine {
+            Self::affine_intersect_self(affine)
+        } else {
+            Ok(())
         }
-        unimplemented!("Affine self intersection")
     }
     /// Intersect this lifetime data with another
     #[inline]
