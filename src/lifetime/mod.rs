@@ -5,16 +5,16 @@
 
 `rain`'s lifetime system centers around the `Lifetime` object, which semantically represents a distinct `rain` lifetime.
 `Lifetime` objects are automatically managed and garbage collected by a global lifetime cache. This module contains the
-definitions for the `Lifetime` object, the lifetime cache, a variety of auxiliary objects (e.g. `LifetimeBorrow` to avoid 
+definitions for the `Lifetime` object, the lifetime cache, a variety of auxiliary objects (e.g. `LifetimeBorrow` to avoid
 pointer-chasing) and implementations of a variety of algorithms used in the lifetime system.
 
 # Introduction
 
 `rain` is fundamentally an [RVSDG](https://arxiv.org/abs/1912.05036) extended with a concept of lifetimes, inspired but distinct
-from the lifetimes in Rust. Unlike Rust (or rather, Rust's [MIR](https://rustc-dev-guide.rust-lang.org/mir/index.html), which is a 
-more appropriate comparison point), `rain` is a purely functional language, and hence it is unwieldy to define lifetimes in terms 
-of the execution order of statements as is done, e.g., in the [Stacked Borrows model](https://plv.mpi-sws.org/rustbelt/stacked-borrows/paper.pdf). 
-Instead, lifetimes are defined purely in terms of the dependency graph. This has the additional effect of making lifetimes "concurrency agnostic:" 
+from the lifetimes in Rust. Unlike Rust (or rather, Rust's [MIR](https://rustc-dev-guide.rust-lang.org/mir/index.html), which is a
+more appropriate comparison point), `rain` is a purely functional language, and hence it is unwieldy to define lifetimes in terms
+of the execution order of statements as is done, e.g., in the [Stacked Borrows model](https://plv.mpi-sws.org/rustbelt/stacked-borrows/paper.pdf).
+Instead, lifetimes are defined purely in terms of the dependency graph. This has the additional effect of making lifetimes "concurrency agnostic:"
 as the dependency graph in general makes no assumption as to whether it is evaluated concurrently or sequentially (outside of nodes merging disjoint
 sections of it according to [Concurrent Separation Logic](https://read.seas.harvard.edu/~kohler/class/cs260r-17/brookes16concurrent.pdf))
 this definition naturally encompasses both concurrent and sequential programs by taking advantage of the properties of an RVSDG.
@@ -24,7 +24,7 @@ What is documented here is an informal summary of the current state of the lifet
 `rain-ir` interpreter: this model is highly incomplete, and many important features remain unfinished. Currently, we only implement the
 simplest kind of lifetime, namely a region or frame lifetime. This form of lifetime is akin to Rust's original syntactic lifetime model,
 and indeed, with linear types, we hypothesize that it can simulate a good portion of the rest of the lifetime system on it's own, though
-this would require compiling many, many inlined lambda functions. 
+this would require compiling many, many inlined lambda functions.
 
 # Lifetimes
 
@@ -43,7 +43,7 @@ level explicit, external lifetimes do not often need to be used (and often *cann
 The most basic lifetime is the static, null, or constant lifetime, which corresponds to a `NULL` lifetime pointer. "Constant lifetime" is probably the best
 name, since this guarantees properties closer to Rust's `const` values than Rust values with `'static`. Values with the constant lifetime can be
 freely copied and hence cannot have a destructor, and furthermore cannot depend on any non-constant values (e.g. function parameters, etc.).
-Lifetimes are partially ordered, and the static lifetime is at the root of this partial order, i.e., is a minimal element: it is included in every lifetime, 
+Lifetimes are partially ordered, and the static lifetime is at the root of this partial order, i.e., is a minimal element: it is included in every lifetime,
 whereas no other lifetimes are included in the static lifetime. The partial order of lifetimes has no maximal element.
 
 ## Regions
@@ -55,7 +55,7 @@ compatible with that value's minimal region: i.e., the value's minimal region *m
 
 In general, with some important exceptions, a value's region is the intersection of the regions of it's dependencies, where the intersection of a set of
 regions is designed to be the largest region contained in every region in the set, if such a region exists. The most important exception to keep in mind
-is values of the `ValueEnum::Parameter` variant, which serve as parameters into a region: these are assigned as region the region they are parameters into. 
+is values of the `ValueEnum::Parameter` variant, which serve as parameters into a region: these are assigned as region the region they are parameters into.
 If a value has dependencies that are incomparable (i.e. not ordered by inclusion), then it's lifetime is invalid, and hence it cannot be a valid `rain` value.
 
 Note that functional variants like `ValueEnum::Lambda`, `ValueEnum::Gamma` and `ValueEnum::Pi` are *not* exceptions to the rule above: their lifetime is also
@@ -78,12 +78,12 @@ backbone which the lifetime system is built upon.
 
 ## Substructural Types
 
-One of the core features of `rain` is a [substructural type system](https://mitpress-request.mit.edu/sites/default/files/titles/content/9780262162289_sch_0001.pdf) 
-which, as we  will see below, allows us to naturally represent stateful operations common in imperative programs (such as calls to external libraries, IO, 
-mutable state, and manual memory management) in the purely functional context of `rain`, allowing easy translation of the `rain` IR to and from imperative frontends 
+One of the core features of `rain` is a [substructural type system](https://mitpress-request.mit.edu/sites/default/files/titles/content/9780262162289_sch_0001.pdf)
+which, as we  will see below, allows us to naturally represent stateful operations common in imperative programs (such as calls to external libraries, IO,
+mutable state, and manual memory management) in the purely functional context of `rain`, allowing easy translation of the `rain` IR to and from imperative frontends
 (like, someday perhaps, C and Rust) and backends (like LLVM and WASM).
 
-A *linear type* is a type such that it's values must be used exactly once. `rain` also supports other types corresponding to different forms of substructural 
+A *linear type* is a type such that it's values must be used exactly once. `rain` also supports other types corresponding to different forms of substructural
 logic, including
 - *Affine types*, which can be used at most once but can remain unused
 - *Relevant types*, which must be used at least once but can be used multiple times
@@ -94,8 +94,8 @@ are linear. For example, in Rust terms, `Vec<T>` is affine (it can only be used 
 
 *Ordered types*, which are types that must be used exactly once in the order of their introduction, are supported in a very limited sense, namely,
 pi-types with a linear type parameter must use this parameter in their return type exactly once, and hence, a nested list of such pi types acts like
-somewhat like a fragment of ordered logic (we note that the linearity of the type means it will be consumed by the pi type and hence unable to be used 
-by the lambda function it types). That said, because in general `rain` IR is a graph and hence has no order of variable introduction, there cannot be 
+somewhat like a fragment of ordered logic (we note that the linearity of the type means it will be consumed by the pi type and hence unable to be used
+by the lambda function it types). That said, because in general `rain` IR is a graph and hence has no order of variable introduction, there cannot be
 any other support for ordered typing.
 
 A value with a linear type is assigned a *linear lifetime*. Linear typing is then enforced in two ways
@@ -111,7 +111,7 @@ the relevancy restriction of a linear type, can only be enforced by escape incon
 ### Logical Lifetime Rules
 
 Substructural lifetimes can come from the value or region level:
-- A *constructor* for a substructural lifetime can create a value with a lifetime equal to the intersection of the dependencies of that value and 
+- A *constructor* for a substructural lifetime can create a value with a lifetime equal to the intersection of the dependencies of that value and
 a fresh substructural lifetime. For example, a constructor for allocated memory can consume a reference to an allocator to yield a fresh affinely-typed.
 Any function can be made constructor like by enforcing that it does the same.
 - A *parameter* of a substructural type can have a substructural lifetime enforced by it's associated `Region`.
@@ -269,7 +269,7 @@ fn even_input<'a>(io: Io<'a>) -> Tuple<'a, Io<'a>, bool> {
 The best part is we get the knowledge that `parse` has no side effects for free, since it's return value is not
 used, and hence we get the best C optimization without expensive global analysis.
 
-Now, the reader may have noticed that I crossed out the word "linear" in the classic title 
+Now, the reader may have noticed that I crossed out the word "linear" in the classic title
 [Linear types can change the world](http://www.cs.ioc.ee/ewscs/2010/mycroft/linear-2up.pdf) and replaced it with
 relevant: that's because, if we only care that effects *happen*, but want to allow certain sequences of events to
 occur in unspecified order (e.g. in a multithreaded context), it suffices to make `Io` relevant, and add a function of
@@ -382,6 +382,7 @@ TODO
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
+use crate::value::Error;
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
@@ -477,6 +478,9 @@ impl Lifetime {
     pub const STATIC: Lifetime = Lifetime(None);
     /// Create a new `Lifetime` from `LifetimeData`
     pub fn new(data: LifetimeData) -> Lifetime {
+        if data == STATIC_LIFETIME {
+            return Lifetime(None);
+        }
         Lifetime(Some(LIFETIME_CACHE.cache(data)))
     }
     /// Deduplicate an `Arc<LifetimeData>` into a `Lifetime`
@@ -493,24 +497,37 @@ impl Lifetime {
     pub fn is_static(&self) -> bool {
         self.0.is_none()
     }
+    /// Check whether this lifetime is self-compatible
+    #[inline]
+    pub fn intersect_self(&self) -> Result<(), Error> {
+        self.deref().intersect_self()
+    }
+    /// Intersect this lifetime with another
+    #[inline]
+    pub fn intersect(&self, other: &Lifetime) -> Result<Lifetime, Error> {
+        if self == other {
+            return self.intersect_self().map(|_| self.clone());
+        }
+        self.deref().intersect(other.deref()).map(Lifetime::new)
+    }
     /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect_all<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, ()>
+    pub fn intersect_all<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
     where
         I: Iterator<Item = LifetimeBorrow<'a>>,
     {
-        let mut base = self.borrow_lifetime();
+        let mut base = self.clone();
+        let mut base_intersected = false;
         for lifetime in lifetimes {
-            if let Some(ord) = base.partial_cmp(&lifetime) {
-                if ord == Ordering::Less {
-                    base = lifetime
-                }
-            } else {
-                //TODO: lifetime intersections where possible...
-                return Err(()); // Incompatible regions!
+            if lifetime != base {
+                base = base.intersect(lifetime.as_lifetime())?;
+                base_intersected = false;
+            } else if !base_intersected {
+                base.intersect_self()?;
+                base_intersected = true;
             }
         }
-        Ok(base.clone_lifetime())
+        Ok(base)
     }
     /// Escape a lifetime up to a given depth
     #[inline]
@@ -531,6 +548,13 @@ impl Regional for Lifetime {
     #[inline]
     fn region(&self) -> RegionBorrow {
         self.deref().region()
+    }
+}
+
+impl From<LifetimeData> for Lifetime {
+    #[inline]
+    fn from(data: LifetimeData) -> Lifetime {
+        Lifetime::new(data)
     }
 }
 
@@ -590,6 +614,11 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn clone_lifetime(&self) -> Lifetime {
         Lifetime(self.0.map(|v| v.clone_arc()))
+    }
+    /// Get this lifetime borrow as a lifetime
+    #[inline]
+    pub fn as_lifetime(&self) -> &Lifetime {
+        unsafe { &*(self as *const _ as *const Lifetime) }
     }
     /// Get the region of this lifetime
     #[inline]
