@@ -34,14 +34,32 @@ impl LifetimeData {
         right: HashMap<Color, Affine>,
     ) -> Result<HashMap<Color, Affine>, Error> {
         let mut has_error: Option<Error> = None;
-        let result =
-            left.symmetric_difference_with(right, |left, right| match left.star(&right) {
-                Ok(int) => Some(int),
-                Err(err) => {
-                    has_error = Some(err);
-                    None
-                }
-            });
+        let result = left.symmetric_difference_with(right, |left, right| match left.star(&right) {
+            Ok(int) => Some(int),
+            Err(err) => {
+                has_error = Some(err);
+                None
+            }
+        });
+        if let Some(err) = has_error {
+            return Err(err);
+        }
+        Ok(result)
+    }
+    /// A helper function to take the conjunction of two affine lifetime sets
+    #[inline]
+    pub fn affine_conj(
+        left: HashMap<Color, Affine>,
+        right: HashMap<Color, Affine>,
+    ) -> Result<HashMap<Color, Affine>, Error> {
+        let mut has_error: Option<Error> = None;
+        let result = left.symmetric_difference_with(right, |left, right| match left.conj(&right) {
+            Ok(int) => Some(int),
+            Err(err) => {
+                has_error = Some(err);
+                None
+            }
+        });
         if let Some(err) = has_error {
             return Err(err);
         }
@@ -49,6 +67,9 @@ impl LifetimeData {
     }
     /// Check whether this lifetime is idempotent under separating conjunction, i.e.
     /// the separating conjunction of this lifetime with itself is itself
+    ///
+    /// Note that *every* lifetime is idempotent under *conjunction*, so there is no need to
+    /// add a helper to check this.
     #[inline]
     pub fn idempotent(&self) -> bool {
         self.idempotent
@@ -61,6 +82,33 @@ impl LifetimeData {
         } else {
             Err(Error::LifetimeError)
         }
+    }
+    /// Get the conjunction of this lifetime with itself
+    #[inline]
+    pub fn conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
+        use Ordering::*;
+        let region = match self.region.partial_cmp(&other.region) {
+            None => return Err(Error::IncomparableRegions),
+            Some(Less) | Some(Equal) => self.region.clone(),
+            Some(Greater) => other.region.clone(),
+        };
+        let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
+            (l, None) => l.cloned(),
+            (None, r) => r.cloned(),
+            (Some(l), Some(r)) => {
+                if HashMap::ptr_eq(l, r) {
+                    Some(l.clone())
+                } else {
+                    Some(Self::affine_conj(l.clone(), r.clone())?)
+                }
+            }
+        };
+        let idempotent = self.idempotent & other.idempotent;
+        Ok(LifetimeData {
+            region,
+            affine,
+            idempotent,
+        })
     }
     /// Get the separating conjunction of this lifetime with another
     #[inline]
@@ -112,6 +160,15 @@ impl Affine {
         match (self, other) {
             (Borrowed(l), Borrowed(r)) => l.star(r).map(Borrowed),
             _ => Err(Error::LifetimeError),
+        }
+    }
+    /// Take the conjunction of this lifetime with another
+    pub fn conj(&self, other: &Affine) -> Result<Affine, Error> {
+        use Affine::*;
+        match (self, other) {
+            (Owned, _) => Ok(Owned),
+            (_, Owned) => Ok(Owned),
+            (Borrowed(l), Borrowed(r)) => l.conj(r).map(Borrowed),
         }
     }
     /// Whether this lifetime is idempotent under separating conjunction
