@@ -201,14 +201,13 @@ impl GammaBuilder {
             .map(|branch| {
                 let branch_lifetime =
                     lifetime.sep_conj(branch.deps().iter().map(|dep| dep.lifetime()));
-                lifetime =
-                    match branch_lifetime.map(|branch_lifetime| lifetime.join(&branch_lifetime)) {
-                        Ok(Ok(lifetime)) => lifetime,
-                        Err(err) | Ok(Err(err)) => {
-                            has_error = Some(err);
-                            Lifetime::default()
-                        }
-                    };
+                lifetime = match branch_lifetime.map(|branch_lifetime| &lifetime & branch_lifetime) {
+                    Ok(Ok(lifetime)) => lifetime,
+                    Err(err) | Ok(Err(err)) => {
+                        has_error = Some(err);
+                        Lifetime::default()
+                    }
+                };
                 branch.deps().iter()
             })
             .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
