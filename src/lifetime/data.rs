@@ -12,13 +12,18 @@ use std::hash::{Hash, Hasher};
 pub static STATIC_LIFETIME: LifetimeData = LifetimeData {
     affine: None,
     region: Region::NULL,
+    idempotent: true,
 };
 
 /// The data describing a `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LifetimeData {
+    /// The affine members of this lifetime
     affine: Option<HashMap<Color, Affine>>,
+    /// The region of this lifetime
     region: Region,
+    /// Whether this lifetime is self-intersectable
+    idempotent: bool,
 }
 
 impl LifetimeData {
@@ -42,21 +47,18 @@ impl LifetimeData {
         }
         Ok(result)
     }
-    /// A helper function to intersect an affine lifetime set with itself
+    /// Check whether this lifetime is idempotent, i.e. is equal to it's self intersection
     #[inline]
-    pub fn affine_intersect_self(affine: &HashMap<Color, Affine>) -> Result<(), Error> {
-        for (_, affine) in affine.iter() {
-            affine.intersect_self()?
-        }
-        Ok(())
+    pub fn idempotent(&self) -> bool {
+        self.idempotent
     }
     /// Intersect this lifetime data with itself
     #[inline]
     pub fn intersect_self(&self) -> Result<(), Error> {
-        if let Some(affine) = &self.affine {
-            Self::affine_intersect_self(affine)
-        } else {
+        if self.idempotent() {
             Ok(())
+        } else {
+            Err(Error::LifetimeError)
         }
     }
     /// Intersect this lifetime data with another
@@ -71,9 +73,24 @@ impl LifetimeData {
         let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
             (l, None) => l.cloned(),
             (None, r) => r.cloned(),
-            _ => unimplemented!("Double-affine intersection"),
+            (Some(l), Some(r)) => {
+                if HashMap::ptr_eq(l, r) {
+                    if self.idempotent() {
+                        Some(l.clone())
+                    } else {
+                        return Err(Error::LifetimeError);
+                    }
+                } else {
+                    Some(Self::affine_intersect(l.clone(), r.clone())?)
+                }
+            }
         };
-        Ok(LifetimeData { region, affine })
+        let idempotent = self.idempotent & other.idempotent;
+        Ok(LifetimeData {
+            region,
+            affine,
+            idempotent,
+        })
     }
 }
 
@@ -147,6 +164,7 @@ impl From<Region> for LifetimeData {
         LifetimeData {
             affine: None,
             region,
+            idempotent: true
         }
     }
 }
