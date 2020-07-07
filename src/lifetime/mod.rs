@@ -497,6 +497,11 @@ impl Lifetime {
     pub fn is_static(&self) -> bool {
         self.0.is_none()
     }
+    /// Check whether this lifetime is idempotent, i.e. is equal to it's self intersection
+    #[inline]
+    pub fn idempotent(&self) -> bool {
+        self.deref().idempotent()
+    }
     /// Check whether this lifetime is self-compatible
     #[inline]
     pub fn intersect_self(&self) -> Result<(), Error> {
