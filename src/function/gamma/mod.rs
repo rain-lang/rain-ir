@@ -216,7 +216,8 @@ impl GammaBuilder {
         let mut deps = self.deps();
         deps.shrink_to_fit();
         let lifetime = Lifetime::default()
-            .intersect_all(deps.iter().map(|dep: &ValId| dep.lifetime()))
+            //TODO: an actual intersection, or rather conjunction, instead
+            .sep_conj(deps.iter().map(|dep: &ValId| dep.lifetime()))
             .map_err(|_| Error::LifetimeError);
         let lifetime = match lifetime {
             Ok(lifetime) => lifetime,

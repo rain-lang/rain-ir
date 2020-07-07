@@ -502,34 +502,40 @@ impl Lifetime {
     pub fn idempotent(&self) -> bool {
         self.deref().idempotent()
     }
-    /// Check whether this lifetime is self-compatible
+    /// Find the separating conjunction of this lifetime with itself.
     #[inline]
-    pub fn intersect_self(&self) -> Result<(), Error> {
-        self.deref().intersect_self()
+    pub fn star_self(&self) -> Result<(), Error> {
+        self.deref().star_self()
     }
-    /// Intersect this lifetime with another
+    /// Find the separating conjunction of this lifetime with another.
     #[inline]
-    pub fn intersect(&self, other: &Lifetime) -> Result<Lifetime, Error> {
+    pub fn star(&self, other: &Lifetime) -> Result<Lifetime, Error> {
         if self == other {
-            return self.intersect_self().map(|_| self.clone());
+            return self.star_self().map(|_| self.clone());
         }
-        self.deref().intersect(other.deref()).map(Lifetime::new)
+        if self.is_static() {
+            return Ok(other.clone());
+        }
+        if other.is_static() {
+            return Ok(self.clone());
+        }
+        self.deref().star(other.deref()).map(Lifetime::new)
     }
-    /// Find the intersection of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
+    /// Find the separating conjunction of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
     #[inline]
-    pub fn intersect_all<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
+    pub fn sep_conj<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
     where
         I: Iterator<Item = LifetimeBorrow<'a>>,
     {
         let mut base = self.clone();
-        let mut base_intersected = false;
+        let mut base_idempotent = false;
         for lifetime in lifetimes {
             if lifetime != base {
-                base = base.intersect(lifetime.as_lifetime())?;
-                base_intersected = false;
-            } else if !base_intersected {
-                base.intersect_self()?;
-                base_intersected = true;
+                base = base.star(lifetime.as_lifetime())?;
+                base_idempotent = false;
+            } else if !base_idempotent {
+                base.star_self()?;
+                base_idempotent = true;
             }
         }
         Ok(base)

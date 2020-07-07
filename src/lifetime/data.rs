@@ -27,15 +27,15 @@ pub struct LifetimeData {
 }
 
 impl LifetimeData {
-    /// A helper function to intersect two affine lifetime sets
+    /// A helper function to take the separating conjunction of two affine lifetime sets
     #[inline]
-    pub fn affine_intersect(
+    pub fn affine_star(
         left: HashMap<Color, Affine>,
         right: HashMap<Color, Affine>,
     ) -> Result<HashMap<Color, Affine>, Error> {
         let mut has_error: Option<Error> = None;
         let result =
-            left.symmetric_difference_with(right, |left, right| match left.intersect(&right) {
+            left.symmetric_difference_with(right, |left, right| match left.star(&right) {
                 Ok(int) => Some(int),
                 Err(err) => {
                     has_error = Some(err);
@@ -47,23 +47,24 @@ impl LifetimeData {
         }
         Ok(result)
     }
-    /// Check whether this lifetime is idempotent, i.e. is equal to it's self intersection
+    /// Check whether this lifetime is idempotent under separating conjunction, i.e.
+    /// the separating conjunction of this lifetime with itself is itself
     #[inline]
     pub fn idempotent(&self) -> bool {
         self.idempotent
     }
-    /// Intersect this lifetime data with itself
+    /// Get the separating conjunction of this lifetime with itself
     #[inline]
-    pub fn intersect_self(&self) -> Result<(), Error> {
+    pub fn star_self(&self) -> Result<(), Error> {
         if self.idempotent() {
             Ok(())
         } else {
             Err(Error::LifetimeError)
         }
     }
-    /// Intersect this lifetime data with another
+    /// Get the separating conjunction of this lifetime with another
     #[inline]
-    pub fn intersect(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
+    pub fn star(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
         use Ordering::*;
         let region = match self.region.partial_cmp(&other.region) {
             None => return Err(Error::IncomparableRegions),
@@ -81,7 +82,7 @@ impl LifetimeData {
                         return Err(Error::LifetimeError);
                     }
                 } else {
-                    Some(Self::affine_intersect(l.clone(), r.clone())?)
+                    Some(Self::affine_star(l.clone(), r.clone())?)
                 }
             }
         };
@@ -97,26 +98,35 @@ impl LifetimeData {
 /// The data describing an affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Affine {
-    /// Owns an affine type
-    Owned(Owned),
-    /// Borrows an affine type
+    /// Owns an affine type completely
+    Owned,
+    /// Borrows an affine type from a source
     Borrowed(Borrowed),
+    //TODO: own/borrow field set
 }
 
 impl Affine {
-    /// Intersect this affine lifetime with another
-    pub fn intersect(&self, other: &Affine) -> Result<Affine, Error> {
+    /// Take the separating conjunction of this lifetime with another
+    pub fn star(&self, other: &Affine) -> Result<Affine, Error> {
         use Affine::*;
         match (self, other) {
-            (Borrowed(l), Borrowed(r)) => l.intersect(r).map(Borrowed),
+            (Borrowed(l), Borrowed(r)) => l.star(r).map(Borrowed),
             _ => Err(Error::LifetimeError),
         }
     }
-    /// Intersect this affine lifetime with itself
-    pub fn intersect_self(&self) -> Result<(), Error> {
+    /// Whether this lifetime is idempotent under separating conjunction
+    pub fn idempotent(&self) -> bool {
         use Affine::*;
         match self {
-            Owned(_) => Err(Error::LifetimeError),
+            Owned => false,
+            Borrowed(_) => true,
+        }
+    }
+    /// Take the separating conjunction of this affine lifetime with itself
+    pub fn star_self(&self) -> Result<(), Error> {
+        use Affine::*;
+        match self {
+            Owned => Err(Error::LifetimeError),
             Borrowed(_) => Ok(()),
         }
     }
@@ -128,21 +138,24 @@ pub struct Owned {
     //TODO: optional source + field-set
 }
 
-/// A borrowed affine lifetime
+/// A completely borrowed affine lifetime with a given source
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Borrowed {
-    /// The source of the borrow
-    pub source: ValId, //TODO: optional field-set
-}
+pub struct Borrowed(pub ValId);
 
 impl Borrowed {
-    /// Intersect this borrowed lifetime with another
-    pub fn intersect(&self, other: &Borrowed) -> Result<Borrowed, Error> {
-        if self.source == other.source {
+    /// Take the conjunction of this lifetime with itself
+    #[inline]
+    pub fn conj(&self, other: &Borrowed) -> Result<Borrowed, Error> {
+        if self.0 == other.0 {
             Ok(self.clone())
         } else {
             Err(Error::LifetimeError)
         }
+    }
+    /// Take the separating conjunction of this lifetime with itself
+    #[inline]
+    pub fn star(&self, other: &Borrowed) -> Result<Borrowed, Error> {
+        self.conj(other)
     }
 }
 
@@ -164,7 +177,7 @@ impl From<Region> for LifetimeData {
         LifetimeData {
             affine: None,
             region,
-            idempotent: true
+            idempotent: true,
         }
     }
 }
