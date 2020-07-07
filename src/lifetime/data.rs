@@ -1,19 +1,46 @@
 /*!
 Lifetime data
 */
+use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
+use im::HashMap;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use crate::value::ValId;
 
 /// The static `rain` lifetime, with a constant address
 pub static STATIC_LIFETIME: LifetimeData = LifetimeData {
-    region: Region::NULL
+    affine: None,
+    region: Region::NULL,
 };
 
 /// The data describing a `rain` lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LifetimeData {
-    region: Region
+    affine: Option<HashMap<Color, Affine>>,
+    region: Region,
+}
+
+/// The data describing an affine lifetime
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Affine {
+    /// Owns an affine type
+    Owned(Owned),
+    /// Borrows an affine type
+    Borrowed(Borrowed)
+}
+
+/// An owned affine lifetime
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Owned {
+
+}
+
+/// A borrowed affine lifetime
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Borrowed {
+    /// The source of the borrow
+    pub source: ValId
 }
 
 impl Hash for LifetimeData {
@@ -31,7 +58,10 @@ impl PartialOrd for LifetimeData {
 impl From<Region> for LifetimeData {
     #[inline]
     fn from(region: Region) -> LifetimeData {
-        LifetimeData { region }
+        LifetimeData {
+            affine: None,
+            region,
+        }
     }
 }
 
