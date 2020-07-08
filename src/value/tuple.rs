@@ -183,12 +183,13 @@ pub struct Product {
 }
 
 impl Product {
-    /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
+    /// Try to create a new product from a vector of types, potentially forcing affinity/relevancy
+    /// Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new(elems: TyArr) -> Result<Product, Error> {
+    pub fn try_new_forced(elems: TyArr, force_affine: bool, force_relevant: bool) -> Result<Product, Error> {
         let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
-        let affine = elems.iter().any(|t| t.is_affine());
-        let relevant = elems.iter().any(|t| t.is_affine());
+        let affine = force_affine || elems.iter().any(|t| t.is_affine());
+        let relevant = force_relevant || elems.iter().any(|t| t.is_affine());
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
@@ -197,6 +198,11 @@ impl Product {
             affine,
             relevant,
         })
+    }
+    /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
+    #[inline]
+    pub fn try_new(elems: TyArr) -> Result<Product, Error> {
+        Self::try_new_forced(elems, false, false)
     }
     /// Create the product corresponding to the unit type
     #[inline]
