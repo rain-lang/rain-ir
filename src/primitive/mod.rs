@@ -223,6 +223,14 @@ impl Type for Unit {
     fn is_universe(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
 }
 
 quick_pretty!(Unit, "#unit");

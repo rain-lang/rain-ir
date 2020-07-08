@@ -86,6 +86,14 @@ impl Type for Bool {
     fn universe(&self) -> UniverseRef {
         FINITE_TY.borrow_var()
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
 }
 
 trivial_lifetime!(Bool);

@@ -176,6 +176,10 @@ pub struct Product {
     lifetime: Lifetime,
     /// The (cached) type of this product type
     ty: UniverseId,
+    /// Whether this product type is affine
+    affine: bool,
+    /// Whether this product type is relevant
+    relevant: bool,
 }
 
 impl Product {
@@ -183,11 +187,15 @@ impl Product {
     #[inline]
     pub fn try_new(elems: TyArr) -> Result<Product, Error> {
         let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
+        let affine = elems.iter().any(|t| t.is_affine());
+        let relevant = elems.iter().any(|t| t.is_affine());
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
             lifetime,
             ty,
+            affine,
+            relevant,
         })
     }
     /// Create the product corresponding to the unit type
@@ -197,6 +205,8 @@ impl Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: FINITE_TY.clone(),
+            affine: false,
+            relevant: false,
         }
     }
     /// Get the type-tuple corresponding to this product type
@@ -226,16 +236,20 @@ enum_convert! {
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
         let lifetime = ctx.evaluate_lt(&self.lifetime)?;
-        let elems = self
+        let elems: TyArr = self
             .elems
             .iter()
             .cloned()
             .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
             .collect::<Result<_, _>>()?;
+        let affine = elems.iter().any(|t| t.is_affine());
+        let relevant = elems.iter().any(|t| t.is_affine());
         Ok(Product {
             elems,
             lifetime,
             ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
+            affine,
+            relevant,
         })
     }
 }
@@ -277,6 +291,14 @@ impl Type for Product {
     }
     fn is_universe(&self) -> bool {
         false
+    }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        self.affine
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        self.relevant
     }
 }
 
