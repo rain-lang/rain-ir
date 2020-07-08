@@ -107,15 +107,15 @@ impl LifetimeData {
     }
     /// Apply the borrow transformation to this lifetime at a given `ValId`
     #[inline]
-    pub fn borrowed(&self, source: ValId) -> LifetimeData {
+    pub fn borrowed(self, source: ValId) -> LifetimeData {
         if self.idempotent {
-            return self.clone();
+            return self
         }
-        let mut affine = if let Some(affine) = &self.affine {
+        let mut affine = if let Some(affine) = self.affine {
             affine.clone()
         } else {
             // Should be idempotent in this case... consider panicking...
-            return self.clone();
+            return self
         };
         //TODO: optimize memory usage?
         for (_key, value) in affine.iter_mut() {
@@ -296,10 +296,15 @@ mod tests {
         let beta = LifetimeData::owns(yellow);
         assert!(!alpha.idempotent());
         assert!(!beta.idempotent());
+        assert_eq!(alpha, alpha);
+        assert_eq!(beta, beta);
+        assert_ne!(alpha, beta);
         let gamma = alpha.star(&beta).expect("Valid lifetime");
         assert!(!gamma.idempotent());
         let gamma_ = alpha.conj(&beta).expect("Valid lifetime");
         assert_eq!(gamma, gamma_);
+        assert_ne!(gamma, alpha);
+        assert_ne!(gamma, beta);
         gamma.star(&alpha).expect_err("Gamma owns alpha");
         gamma.star(&beta).expect_err("Gamma owns beta");
         assert_eq!(
@@ -308,5 +313,13 @@ mod tests {
                 .expect("Gamma owns alpha, but a branch is OK"),
             gamma
         );
+        let a = alpha.clone().borrowed(().into());
+        assert!(a.idempotent());
+        assert_eq!(a, a);
+        assert_ne!(alpha, a);
+        assert_eq!(a.star(&a).expect("Borrows are idempotent"), a);
+        a.star(&alpha).expect_err("Alpha owns what a borrows");
+        assert_eq!(a.conj(&alpha).expect("Borrow | Affine = Affine"), alpha);
+        assert_eq!(alpha.conj(&a).expect("Affine | Borrow = Affine"), alpha);
     }
 }
