@@ -267,6 +267,21 @@ impl Regional for LifetimeData {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn basic_lifetime_operations_work() {}
+    fn basic_affine_lifetime_operations_work() {
+        let red = Color::new();
+        let yellow = Color::new();
+        let alpha = LifetimeData::owns(red);
+        let beta = LifetimeData::owns(yellow);
+        assert!(!alpha.idempotent());
+        assert!(!beta.idempotent());
+        let gamma = alpha.star(&beta).expect("Valid lifetime");
+        assert!(!gamma.idempotent());
+        let gamma_ = alpha.conj(&beta).expect("Valid lifetime");
+        assert_eq!(gamma, gamma_);
+        gamma.star(&alpha).expect_err("Gamma owns alpha");
+        gamma.star(&beta).expect_err("Gamma owns beta");
+        assert_eq!(gamma.conj(&alpha).expect("Gamma owns alpha, but a branch is OK"), gamma);
+    }
 }
