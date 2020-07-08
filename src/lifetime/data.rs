@@ -131,22 +131,36 @@ impl LifetimeData {
             idempotent,
         })
     }
+    /// Wrap this lifetime data into a borrow
+    #[inline]
+    pub fn borrow(&self) -> Borrow {
+        Borrow(self)
+    }
+    /// Gets a lifetime which only owns a given color
+    #[inline]
+    pub fn owns(color: Color) -> LifetimeData {
+        let region = color.region().clone_region();
+        // Not idempotent since owned
+        LifetimeData {
+            affine: Some(hashmap! { color => Affine::Owned }),
+            region,
+            idempotent: false,
+        }
+    }
     /// Gets the lifetime for the nth parameter of a `Region`. Returns a blank lifetime LifetimeData on OOB
     #[inline]
     pub fn param(region: Region, ix: usize) -> LifetimeData {
         if let Some(color) = Color::param(region.clone(), ix) {
-            let region = color.region().clone_region();
-            // Not idempotent since owned
-            LifetimeData {
-                affine: Some(hashmap! { color => Affine::Owned }),
-                region,
-                idempotent: false,
-            }
+            LifetimeData::owns(color)
         } else {
             LifetimeData::from(region)
         }
     }
 }
+
+/// A wrapper for borrowed lifetime data
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Borrow<'a>(pub &'a LifetimeData);
 
 /// The data describing an affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -249,4 +263,10 @@ impl Regional for LifetimeData {
     fn region(&self) -> RegionBorrow {
         self.region.borrow_region()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn basic_lifetime_operations_work() {}
 }
