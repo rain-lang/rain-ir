@@ -505,6 +505,9 @@ mod prettyprint_impl {
                     KEYWORD_PROD, TUPLE_OPEN, Unit, Unit, TUPLE_CLOSE
                 )
             );
+            let anchor: ValId = Tuple::const_anchor().into();
+            assert_eq!(&format!("{}", anchor), &format!("{}[]", KEYWORD_ANCHORED));
+            assert_eq!(&format!("{}", anchor.ty()), &format!("{}[]", KEYWORD_ANCHOR));
         }
 
         #[test]
