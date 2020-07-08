@@ -49,6 +49,15 @@ impl Tuple {
             ty: UNIT_TY.as_ty().clone(),
         }
     }
+    /// Create a *constant* "anchor", i.e. a tuple corresponding to the element of the unit type where the unit type is marked affine
+    #[inline]
+    pub fn const_anchor() -> Tuple {
+        Tuple {
+            elems: ValArr::EMPTY,
+            lifetime: Lifetime::default(),
+            ty: Product::anchor_ty().into(),
+        }
+    }
 }
 
 impl Live for Tuple {
@@ -186,10 +195,14 @@ impl Product {
     /// Try to create a new product from a vector of types, potentially forcing affinity/relevancy
     /// Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new_forced(elems: TyArr, force_affine: bool, force_relevant: bool) -> Result<Product, Error> {
+    pub fn try_new_forced(
+        elems: TyArr,
+        force_affine: bool,
+        force_relevant: bool,
+    ) -> Result<Product, Error> {
         let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
-        let relevant = force_relevant || elems.iter().any(|t| t.is_affine());
+        let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
@@ -212,6 +225,17 @@ impl Product {
             lifetime: Lifetime::default(),
             ty: FINITE_TY.clone(),
             affine: false,
+            relevant: false,
+        }
+    }
+    /// Create the product corresponding to the "anchor" type, i.e. the unit type made affine
+    #[inline]
+    pub fn anchor_ty() -> Product {
+        Product {
+            elems: TyArr::EMPTY,
+            lifetime: Lifetime::default(),
+            ty: FINITE_TY.clone(),
+            affine: true,
             relevant: false,
         }
     }
@@ -477,5 +501,21 @@ mod tests {
         );
         assert_eq!(NormalValue::from(unit_type), NormalValue::from(Unit));
         assert_eq!(NormalValue::from(unit_type_enum), NormalValue::from(Unit));
+    }
+
+    /// Test the anchor type is affine, but *can* be bundled with itself to make another affine type
+    #[test]
+    fn anchor_type_construction() {
+        let anchor: ValId = Tuple::const_anchor().into();
+        let anchor_ty: TypeId = Product::anchor_ty().into();
+        assert_eq!(anchor.ty(), anchor_ty);
+        assert!(anchor_ty.is_affine());
+        assert!(!anchor_ty.is_relevant());
+        let anchor_tuple: ValId = Tuple::try_new(vec![anchor.clone(), anchor.clone()].into())
+            .expect("Two anchors form a valid tuple")
+            .into();
+        let anchor_product = anchor_tuple.ty();
+        assert!(anchor_product.is_affine());
+        assert!(!anchor_product.is_relevant());
     }
 }
