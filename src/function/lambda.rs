@@ -240,7 +240,6 @@ mod tests {
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
     use crate::primitive::logical::Bool;
-    use itertools::Itertools;
 
     #[test]
     fn bool_identity_lambda_works_properly() {
