@@ -30,7 +30,7 @@ lazy_static! {
 impl PartialEq<()> for Tuple {
     #[inline]
     fn eq(&self, _: &()) -> bool {
-        self.len() == 0
+        *self.ty().as_norm() == Unit
     }
 }
 
@@ -239,7 +239,7 @@ debug_from_display!(Unit);
 impl PartialEq<Unit> for Product {
     #[inline]
     fn eq(&self, _: &Unit) -> bool {
-        self.len() == 0
+        self.len() == 0 && !self.is_substruct()
     }
 }
 

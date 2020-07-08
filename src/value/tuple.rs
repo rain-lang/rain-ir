@@ -49,6 +49,23 @@ impl Tuple {
             ty: UNIT_TY.as_ty().clone(),
         }
     }
+    /// Create a *constant* "anchor", i.e. a tuple corresponding to the element of the unit type where the unit type is marked affine
+    #[inline]
+    pub fn const_anchor() -> Tuple {
+        Tuple {
+            elems: ValArr::EMPTY,
+            lifetime: Lifetime::default(),
+            ty: Product::anchor_ty().into(),
+        }
+    }
+    /// Check whether this tuple is an anchor
+    #[inline]
+    pub fn is_anchor(&self) -> bool {
+        match self.ty.as_enum() {
+            ValueEnum::Product(p) => p.is_anchor(),
+            _ => false,
+        }
+    }
 }
 
 impl Live for Tuple {
@@ -167,6 +184,42 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Tuple { as ValueEnum, }
 }
 
+/// The set of flags for a product of rain values
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
+struct ProductFlags(u8);
+
+impl ProductFlags {
+    #[inline]
+    pub fn new(affine: bool, anchor: bool, relevant: bool, flare: bool) -> ProductFlags {
+        let affine = affine as u8 * FLAG_AFFIN;
+        let anchor = anchor as u8 * FLAG_ANCHR;
+        let relevant = relevant as u8 * FLAG_RLVNT;
+        let shiny = flare as u8 * FLAG_FLARE;
+        ProductFlags(affine | anchor | relevant | shiny)
+    }
+    #[inline]
+    pub fn is_affine(self) -> bool {
+        self.0 & FLAG_AFFIN != 0
+    }
+    #[inline]
+    pub fn is_anchor(self) -> bool {
+        self.0 & FLAG_ANCHR != 0
+    }
+    #[inline]
+    pub fn is_relevant(self) -> bool {
+        self.0 & FLAG_RLVNT != 0
+    }
+    #[inline]
+    pub fn is_flare(self) -> bool {
+        self.0 & FLAG_FLARE != 0
+    }
+}
+
+const FLAG_AFFIN: u8 = 0b00000001;
+const FLAG_ANCHR: u8 = 0b00000010;
+const FLAG_RLVNT: u8 = 0b00000100;
+const FLAG_FLARE: u8 = 0b00001000;
+
 /// A product of `rain` values
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Product {
@@ -176,27 +229,29 @@ pub struct Product {
     lifetime: Lifetime,
     /// The (cached) type of this product type
     ty: UniverseId,
-    /// Whether this product type is affine
-    affine: bool,
-    /// Whether this product type is relevant
-    relevant: bool,
+    /// The flags on this product type
+    flags: ProductFlags,
 }
 
 impl Product {
     /// Try to create a new product from a vector of types, potentially forcing affinity/relevancy
     /// Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new_forced(elems: TyArr, force_affine: bool, force_relevant: bool) -> Result<Product, Error> {
+    pub fn try_new_forced(
+        elems: TyArr,
+        force_affine: bool,
+        force_relevant: bool,
+    ) -> Result<Product, Error> {
         let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
-        let relevant = force_relevant || elems.iter().any(|t| t.is_affine());
+        let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
+        let flags = ProductFlags::new(affine, force_affine, relevant, force_relevant);
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
             lifetime,
             ty,
-            affine,
-            relevant,
+            flags,
         })
     }
     /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
@@ -211,8 +266,17 @@ impl Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: FINITE_TY.clone(),
-            affine: false,
-            relevant: false,
+            flags: ProductFlags(0),
+        }
+    }
+    /// Create the product corresponding to the "anchor" type, i.e. the unit type made affine
+    #[inline]
+    pub fn anchor_ty() -> Product {
+        Product {
+            elems: TyArr::EMPTY,
+            lifetime: Lifetime::default(),
+            ty: FINITE_TY.clone(),
+            flags: ProductFlags(FLAG_AFFIN | FLAG_ANCHR),
         }
     }
     /// Get the type-tuple corresponding to this product type
@@ -228,6 +292,14 @@ impl Product {
             lifetime: self.lifetime.clone(),
             ty,
         }
+    }
+    /// Get whether this product type is an anchor, i.e. forcibly affine
+    pub fn is_anchor(&self) -> bool {
+        self.flags.is_anchor()
+    }
+    /// Get whether this product type is a flare, i.e. forcibly relevant
+    pub fn is_flare(&self) -> bool {
+        self.flags.is_flare()
     }
 }
 
@@ -248,14 +320,14 @@ impl Substitute for Product {
             .cloned()
             .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
             .collect::<Result<_, _>>()?;
-        let affine = elems.iter().any(|t| t.is_affine());
-        let relevant = elems.iter().any(|t| t.is_affine());
+        let affine = self.is_anchor() || elems.iter().any(|t| t.is_affine());
+        let relevant = self.is_flare() || elems.iter().any(|t| t.is_affine());
+        let flags = ProductFlags::new(affine, self.is_anchor(), relevant, self.is_flare());
         Ok(Product {
             elems,
             lifetime,
             ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
-            affine,
-            relevant,
+            flags,
         })
     }
 }
@@ -300,11 +372,11 @@ impl Type for Product {
     }
     #[inline]
     fn is_affine(&self) -> bool {
-        self.affine
+        self.flags.is_affine()
     }
     #[inline]
     fn is_relevant(&self) -> bool {
-        self.relevant
+        self.flags.is_relevant()
     }
 }
 
@@ -351,10 +423,19 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            if self.len() == 0 {
+            if *self == () {
                 return write!(fmt, "{}", UNIT_VALUE);
             }
-            write!(fmt, "{}", TUPLE_OPEN)?;
+            write!(
+                fmt,
+                "{}{}",
+                if self.is_anchor() {
+                    KEYWORD_ANCHORED
+                } else {
+                    ""
+                },
+                TUPLE_OPEN
+            )?;
             let mut first = true;
             for elem in self.iter() {
                 if !first {
@@ -373,10 +454,19 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            if self.len() == 0 {
+            if *self == Unit {
                 return write!(fmt, "{}", Unit);
             }
-            write!(fmt, "{}{}", KEYWORD_PROD, TUPLE_OPEN)?;
+            write!(
+                fmt,
+                "{}{}",
+                if self.is_anchor() {
+                    KEYWORD_ANCHOR
+                } else {
+                    KEYWORD_PROD
+                },
+                TUPLE_OPEN
+            )?;
             let mut first = true;
             for elem in self.iter() {
                 if !first {
@@ -415,6 +505,9 @@ mod prettyprint_impl {
                     KEYWORD_PROD, TUPLE_OPEN, Unit, Unit, TUPLE_CLOSE
                 )
             );
+            let anchor: ValId = Tuple::const_anchor().into();
+            assert_eq!(&format!("{}", anchor), &format!("{}[]", KEYWORD_ANCHORED));
+            assert_eq!(&format!("{}", anchor.ty()), &format!("{}[]", KEYWORD_ANCHOR));
         }
 
         #[test]
@@ -477,5 +570,21 @@ mod tests {
         );
         assert_eq!(NormalValue::from(unit_type), NormalValue::from(Unit));
         assert_eq!(NormalValue::from(unit_type_enum), NormalValue::from(Unit));
+    }
+
+    /// Test the anchor type is affine, but *can* be bundled with itself to make another affine type
+    #[test]
+    fn anchor_type_construction() {
+        let anchor: ValId = Tuple::const_anchor().into();
+        let anchor_ty: TypeId = Product::anchor_ty().into();
+        assert_eq!(anchor.ty(), anchor_ty);
+        assert!(anchor_ty.is_affine());
+        assert!(!anchor_ty.is_relevant());
+        let anchor_tuple: ValId = Tuple::try_new(vec![anchor.clone(), anchor.clone()].into())
+            .expect("Two anchors form a valid tuple")
+            .into();
+        let anchor_product = anchor_tuple.ty();
+        assert!(anchor_product.is_affine());
+        assert!(!anchor_product.is_relevant());
     }
 }
