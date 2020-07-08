@@ -240,6 +240,11 @@ impl<'a> RegionBorrow<'a> {
         }
         ptr
     }
+    /// Get this region borrow as a region
+    #[inline]
+    pub fn as_region(&self) -> &Region {
+        unsafe { &*(self as *const _ as *const Region) }
+    }
 }
 
 impl Deref for RegionBorrow<'_> {

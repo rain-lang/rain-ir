@@ -13,8 +13,8 @@ use crate::value::{
     ValueEnum, VarId,
 };
 use crate::{
-    debug_from_display, display_pretty, normal_valid, quick_pretty, trivial_lifetime,
-    trivial_substitute, vararr, enum_convert
+    debug_from_display, display_pretty, enum_convert, normal_valid, quick_pretty, trivial_lifetime,
+    trivial_substitute, vararr,
 };
 use either::Either;
 use lazy_static::lazy_static;
@@ -264,13 +264,13 @@ lazy_static! {
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone()).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone(), Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone(), Lifetime::STATIC).unwrap().into(),
     ];
 }
 

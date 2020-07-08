@@ -2,33 +2,50 @@
 Pi types
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
-    arr::TyArr, Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
-    ValueData, ValueEnum,
+    arr::{TyArr, ValSet},
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
+    ValueEnum,
 };
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Pi {
-    /// The result of this pi type
-    result: Parametrized<TypeId>,
-    /// The type of this pi type
+    /// The result of this lambda function
+    result: TypeId,
+    /// The type of this lambda function
+    /// TODO: extract from region
     ty: UniverseId,
+    /// The direct dependencies of this pi type
+    deps: ValSet,
+    /// The lifetime of this lambda function
+    lt: Lifetime,
+    /// The lifetime of this lambda function's result
+    result_lt: Lifetime,
 }
 
 impl Pi {
     /// Create a new pi type from a parametrized `TypeId`
-    pub fn new(result: Parametrized<TypeId>) -> Pi {
+    pub fn new(result: Parametrized<TypeId>, base_lt: Lifetime) -> Result<Pi, Error> {
         let ty = Self::universe(&result);
-        Pi { ty, result }
+        let (_region, result, deps, lt) = result.destruct();
+        let result_lt = (result.lifetime().as_lifetime() & base_lt)?;
+        Ok(Pi {
+            result,
+            ty,
+            deps,
+            lt,
+            result_lt,
+        })
     }
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
-        Self::new(param.ty())
+        Self::new(param.ty(), param.def_region().clone().into())
+            .expect("Region conjunction should work!")
     }
     /// Get the universe associated with a parametrized `TypeId`
     pub fn universe(param: &Parametrized<TypeId>) -> UniverseId {
@@ -37,30 +54,30 @@ impl Pi {
             .universe()
             .union_all(param.def_region().iter().map(|ty| ty.universe()))
     }
-    /// Attempt to create a new pi type from a region and type
-    pub fn try_new(value: TypeId, region: Region) -> Result<Pi, Error> {
-        Ok(Self::new(Parametrized::try_new(value, region)?))
+    /// Attempt to create a new pi type from a region, type, and lifetime
+    pub fn try_new(value: TypeId, region: Region, base_lt: Lifetime) -> Result<Pi, Error> {
+        Self::new(Parametrized::try_new(value, region)?, base_lt)
     }
     /// Get the result of this pi type
     #[inline]
     pub fn result(&self) -> &TypeId {
-        self.result.value()
+        &self.result
     }
     /// Get the defining region of this pi type
     #[inline]
-    pub fn def_region(&self) -> &Region {
-        self.result.def_region()
+    pub fn def_region(&self) -> RegionBorrow {
+        self.result_lt.region()
     }
     /// Get the parameter types of this pi type
     #[inline]
     pub fn param_tys(&self) -> &TyArr {
-        self.def_region().param_tys()
+        self.def_region().get().param_tys()
     }
     /// Get the parameters of this pi type
     //TODO: parameter lifetimes...
     #[inline]
     pub fn params(&self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
-        self.def_region().clone().params()
+        self.def_region().clone_region().params()
     }
 }
 
@@ -134,8 +151,8 @@ impl Type for Pi {
 }
 
 impl Substitute for Pi {
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        Ok(Pi::new(self.result.substitute(ctx)?))
+    fn substitute(&self, _ctx: &mut EvalCtx) -> Result<Pi, Error> {
+        unimplemented!("Pi type substitution")
     }
 }
 
@@ -167,7 +184,12 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "#pi")?;
-            self.result.prettyprint(printer, fmt)
+            crate::region::prettyprint::prettyprint_parametrized(
+                printer,
+                fmt,
+                &self.result,
+                self.def_region().as_region(),
+            )
         }
     }
 }

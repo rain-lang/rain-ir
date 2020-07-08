@@ -5,7 +5,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, RegionData, Regional};
+use crate::region::{Region, RegionBorrow, RegionData, Regional};
 use crate::typing::Typed;
 use crate::value::{
     arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
@@ -201,7 +201,8 @@ impl GammaBuilder {
             .map(|branch| {
                 let branch_lifetime =
                     lifetime.sep_conj(branch.deps().iter().map(|dep| dep.lifetime()));
-                lifetime = match branch_lifetime.map(|branch_lifetime| &lifetime & branch_lifetime) {
+                lifetime = match branch_lifetime.map(|branch_lifetime| &lifetime & branch_lifetime)
+                {
                     Ok(Ok(lifetime)) => lifetime,
                     Err(err) | Ok(Err(err)) => {
                         has_error = Some(err);
@@ -284,8 +285,8 @@ impl Branch {
         &self.func.result()
     }
     /// Get the defining region of this branch
-    pub fn def_region(&self) -> &Region {
-        &self.func.def_region()
+    pub fn def_region(&self) -> RegionBorrow {
+        self.func.def_region()
     }
     /// Get the function corresponding to this branch
     pub fn func(&self) -> &VarId<Lambda> {
@@ -301,7 +302,7 @@ impl Branch {
     ) -> Result<Application<'a>, Error> {
         // Substitute
         let region = ctx.push_region(
-            self.def_region(),
+            self.def_region().as_region(),
             args.iter().cloned(),
             !ctx.is_checked(),
             inline,
