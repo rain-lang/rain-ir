@@ -95,6 +95,12 @@ pub const UNIT_TYPE: &str = "#unit";
 /// The keyword for product types
 pub const KEYWORD_PROD: &str = "#product";
 
+/// The keyword for an anchored product type
+pub const KEYWORD_ANCHOR: &str = "#anchor";
+
+/// The keyword for an anchored tuple
+pub const KEYWORD_ANCHORED: &str = "#anchored";
+
 /// The keyword for pi types
 pub const KEYWORD_PI: &str = "#pi";
 
