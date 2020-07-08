@@ -105,6 +105,28 @@ impl LifetimeData {
             idempotent,
         })
     }
+    /// Apply the borrow transformation to this lifetime at a given `ValId`
+    #[inline]
+    pub fn borrowed(&self, source: ValId) -> LifetimeData {
+        if self.idempotent {
+            return self.clone();
+        }
+        let mut affine = if let Some(affine) = &self.affine {
+            affine.clone()
+        } else {
+            // Should be idempotent in this case... consider panicking...
+            return self.clone();
+        };
+        //TODO: optimize memory usage?
+        for (_key, value) in affine.iter_mut() {
+            *value = value.borrowed(source.clone());
+        }
+        LifetimeData {
+            affine: Some(affine),
+            region: self.region.clone(),
+            idempotent: true,
+        }
+    }
     /// Get the separating conjunction of this lifetime with another
     #[inline]
     pub fn star(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
@@ -131,11 +153,6 @@ impl LifetimeData {
             idempotent,
         })
     }
-    /// Wrap this lifetime data into a borrow
-    #[inline]
-    pub fn borrow(&self) -> Borrow {
-        Borrow(self)
-    }
     /// Gets a lifetime which only owns a given color
     #[inline]
     pub fn owns(color: Color) -> LifetimeData {
@@ -158,10 +175,6 @@ impl LifetimeData {
     }
 }
 
-/// A wrapper for borrowed lifetime data
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Borrow<'a>(pub &'a LifetimeData);
-
 /// The data describing an affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Affine {
@@ -173,6 +186,13 @@ pub enum Affine {
 }
 
 impl Affine {
+    /// Borrow this lifetime at a given source point
+    pub fn borrowed(&self, source: ValId) -> Affine {
+        match self {
+            Affine::Owned => Affine::Borrowed(Borrowed(source)),
+            b => b.clone(),
+        }
+    }
     /// Take the separating conjunction of this lifetime with another
     pub fn star(&self, other: &Affine) -> Result<Affine, Error> {
         use Affine::*;
@@ -282,6 +302,11 @@ mod tests {
         assert_eq!(gamma, gamma_);
         gamma.star(&alpha).expect_err("Gamma owns alpha");
         gamma.star(&beta).expect_err("Gamma owns beta");
-        assert_eq!(gamma.conj(&alpha).expect("Gamma owns alpha, but a branch is OK"), gamma);
+        assert_eq!(
+            gamma
+                .conj(&alpha)
+                .expect("Gamma owns alpha, but a branch is OK"),
+            gamma
+        );
     }
 }
