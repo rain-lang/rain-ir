@@ -45,8 +45,12 @@ impl Lambda {
     pub fn id(ty: TypeId) -> Lambda {
         let tyset: TySet = std::iter::once(ty.clone()).collect();
         let region = Region::with(tyset.as_arr().clone(), Region::default());
-        let result = Parameter::try_new(region.clone(), 0).expect("Region has one parameter").into();
-        let ty: VarId<Pi> = Pi::try_new(ty, region.clone()).expect("Identity pi type is valid").into();
+        let result = Parameter::try_new(region.clone(), 0)
+            .expect("Region has one parameter")
+            .into();
+        let ty: VarId<Pi> = Pi::try_new(ty, region.clone())
+            .expect("Identity pi type is valid")
+            .into();
         let lt = ty.lifetime().clone_lifetime(); //TODO: someday...
         let deps = tyset.into_vals();
         Lambda {
@@ -236,6 +240,7 @@ mod tests {
     use crate::parser::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
     use crate::primitive::logical::Bool;
+    use itertools::Itertools;
 
     #[test]
     fn bool_identity_lambda_works_properly() {

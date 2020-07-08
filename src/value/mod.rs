@@ -30,7 +30,6 @@ pub mod predicate;
 pub mod tuple;
 pub mod universe;
 
-use cast::Cast;
 use expr::Sexpr;
 use predicate::Is;
 use tuple::{Product, Tuple};
@@ -88,8 +87,6 @@ pub enum ValueEnum {
     Phi(Phi),
     /// Logical operations on booleans
     Logical(Logical),
-    /// Type and lifetime casts
-    Cast(Cast),
 }
 
 // Common value type aliases:
@@ -530,7 +527,6 @@ macro_rules! forv {
             ValueEnum::Gamma($i) => $e,
             ValueEnum::Phi($i) => $e,
             ValueEnum::Logical($i) => $e,
-            ValueEnum::Cast($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {

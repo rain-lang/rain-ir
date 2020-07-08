@@ -14,11 +14,11 @@ use std::ops::Deref;
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Sexpr {
     /// The arguments of this S-expression
-    args: ValArr,
+    pub(super) args: ValArr,
     /// The (cached) lifetime of this S-expression
-    lifetime: Lifetime,
+    pub(super) lifetime: Lifetime,
     /// The (cached) type of this S-expression
-    ty: TypeId,
+    pub(super) ty: TypeId,
 }
 
 debug_from_display!(Sexpr);
@@ -112,9 +112,10 @@ impl Sexpr {
             return s.clone();
         }
         let ty = value.ty().clone_ty();
+        let lifetime = value.lifetime().clone_lifetime();
         Sexpr {
             args: valarr![value],
-            lifetime: Lifetime::default(),
+            lifetime,
             ty,
         }
     }
@@ -195,11 +196,13 @@ impl Substitute for Sexpr {
 
 impl From<Sexpr> for NormalValue {
     fn from(sexpr: Sexpr) -> NormalValue {
-        if sexpr == () {
+        if sexpr.len() == 0 {
             return ().into();
         }
         if sexpr.len() == 1 {
-            return sexpr[0].as_norm().clone();
+            if sexpr[0].ty() == sexpr.ty && sexpr[0].lifetime() == sexpr.lifetime {
+                return sexpr[0].as_norm().clone();
+            }
         }
         NormalValue(ValueEnum::Sexpr(sexpr))
     }
