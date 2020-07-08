@@ -4,7 +4,7 @@ Lifetime data
 use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::value::{Error, ValId};
-use im::HashMap;
+use im::{hashmap, HashMap};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -130,6 +130,21 @@ impl LifetimeData {
             affine,
             idempotent,
         })
+    }
+    /// Gets the lifetime for the nth parameter of a `Region`. Returns a blank lifetime LifetimeData on OOB
+    #[inline]
+    pub fn param(region: Region, ix: usize) -> LifetimeData {
+        if let Some(color) = Color::param(region.clone(), ix) {
+            let region = color.region().clone_region();
+            // Not idempotent since owned
+            LifetimeData {
+                affine: Some(hashmap! { color => Affine::Owned }),
+                region,
+                idempotent: false,
+            }
+        } else {
+            LifetimeData::from(region)
+        }
     }
 }
 

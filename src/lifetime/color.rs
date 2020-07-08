@@ -2,6 +2,7 @@
 Colors, which are the primary component of lifetimes
 */
 use crate::region::{Region, RegionBorrow, Regional};
+use crate::typing::Type;
 use std::sync::atomic::AtomicIsize;
 
 /// A color, the atom for building up lifetimes
@@ -54,20 +55,19 @@ impl Color {
     pub fn new() -> Color {
         Self::new_in(Region::NULL)
     }
-    /// Create the color of a parameter to a region. Return an error if the index is out of bounds
-    pub fn param(region: Region, ix: usize) -> Result<Color, ()> {
-        if ix >= region.len() {
-            return Err(());
+    /// Create the color of a parameter to a region. Return an `None` if the index is out of bounds or to an unrestricted parameter
+    pub fn param(region: Region, ix: usize) -> Option<Color> {
+        if ix >= region.len() || !region[ix].is_substruct()  {
+            return None;
         }
         let ix = ix as isize; // Might get bugs around 2 billion parameters on 32-bit systems, but... lazy...
-        Ok(Color { region, ix })
+        Some(Color { region, ix })
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    
     #[test]
     fn new_colors_are_not_equal() {
         assert_ne!(Color::new(), Color::new());

@@ -484,6 +484,11 @@ impl Lifetime {
         }
         Lifetime(Some(LIFETIME_CACHE.cache(data)))
     }
+    /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
+    #[inline]
+    pub fn param(region: Region, ix: usize) -> Lifetime {
+        Lifetime::new(LifetimeData::param(region, ix))
+    }
     /// Deduplicate an `Arc<LifetimeData>` into a `Lifetime`
     pub fn dedup(arc: Arc<LifetimeData>) -> Lifetime {
         Lifetime(Some(LIFETIME_CACHE.cache(arc)))

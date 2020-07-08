@@ -2,12 +2,12 @@
 Parameters to a `rain` region
 */
 use super::{Region, RegionBorrow, Regional};
+use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
-use crate::enum_convert;
 
 /**
 A parameter to a `rain` region.
@@ -50,11 +50,11 @@ impl Parameter {
         if ix >= region.len() {
             Err(())
         } else {
-            let lifetime = region.clone().into();
+            let lifetime = Lifetime::param(region.clone(), ix);
             Ok(Parameter {
                 region,
-                ix,
                 lifetime,
+                ix,
             })
         }
     }
@@ -117,9 +117,12 @@ impl Apply for Parameter {
                             return Err(Error::TupleLengthMismatch);
                         }
                     }
-                    ValueEnum::Parameter(pi) => {
-                        unimplemented!("Parameter {} indexing parameter product {}: {}", pi, self, p)
-                    }
+                    ValueEnum::Parameter(pi) => unimplemented!(
+                        "Parameter {} indexing parameter product {}: {}",
+                        pi,
+                        self,
+                        p
+                    ),
                     _ => return Err(Error::TypeMismatch),
                 };
                 let lt = p.lifetime().clone_lifetime(); // TODO: this
