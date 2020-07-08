@@ -86,6 +86,14 @@ impl Type for Bool {
     fn universe(&self) -> UniverseRef {
         FINITE_TY.borrow_var()
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
 }
 
 trivial_lifetime!(Bool);
@@ -610,7 +618,7 @@ impl Apply for Logical {
         } else {
             let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
             let lifetime = Lifetime::default()
-                .intersect(lifetimes)
+                .sep_conj(lifetimes)
                 .map_err(|_| Error::LifetimeError)?;
             return Ok(Application::Incomplete(lifetime, Bool.into()));
         }

@@ -89,6 +89,14 @@ impl Type for Finite {
     fn is_universe(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
 }
 
 /// An index into a finite type

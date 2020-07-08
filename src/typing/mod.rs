@@ -5,10 +5,7 @@ use super::{
     eval::{Apply, EvalCtx, Substitute},
     lifetime::{LifetimeBorrow, Live},
     region::{RegionBorrow, Regional},
-    value::{
-        Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
-        ValueEnum,
-    },
+    value::{Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum},
 };
 use crate::{debug_from_display, pretty_display};
 use std::borrow::Borrow;
@@ -29,6 +26,20 @@ pub trait Type: Value {
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe
     fn is_universe(&self) -> bool;
+    /// Get whether this type is affine
+    fn is_affine(&self) -> bool;
+    /// Get whether this type is relevant
+    fn is_relevant(&self) -> bool;
+    /// Get whether this type is linear
+    #[inline]
+    fn is_linear(&self) -> bool {
+        self.is_affine() && self.is_relevant()
+    }
+    /// Get whether this type is substructural
+    #[inline]
+    fn is_substruct(&self) -> bool {
+        self.is_affine() || self.is_relevant()
+    }
 }
 
 /// A value guaranteed to be a type
@@ -108,7 +119,7 @@ impl Type for TypeValue {
         match self.borrow() {
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Parameter(_p) => unimplemented!("Parameter universe getter"),
             ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.universe(),
             ValueEnum::Pi(p) => p.universe(),
@@ -124,7 +135,7 @@ impl Type for TypeValue {
         match self.borrow() {
             ValueEnum::Universe(u) => u.is_universe(),
             ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Parameter(_p) => unimplemented!("Parameter universe check"),
             ValueEnum::Sexpr(_s) => unimplemented!(),
             ValueEnum::BoolTy(b) => b.is_universe(),
             ValueEnum::Pi(p) => p.is_universe(),
@@ -135,6 +146,74 @@ impl Type for TypeValue {
             ),
         }
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.is_affine(),
+            ValueEnum::Product(p) => p.is_affine(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
+            ValueEnum::BoolTy(b) => b.is_affine(),
+            ValueEnum::Pi(p) => p.is_affine(),
+            ValueEnum::Finite(f) => f.is_affine(),
+            u => panic!(
+                "Impossible (TypeValue::is_affine): TypeValue({}) is not a type",
+                u
+            ),
+        }
+    }
+
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.is_relevant(),
+            ValueEnum::Product(p) => p.is_relevant(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
+            ValueEnum::BoolTy(b) => b.is_relevant(),
+            ValueEnum::Pi(p) => p.is_relevant(),
+            ValueEnum::Finite(f) => f.is_relevant(),
+            u => panic!(
+                "Impossible (TypeValue::is_relevant): TypeValue({}) is not a type",
+                u
+            ),
+        }
+    }
+
+    #[inline]
+    fn is_linear(&self) -> bool {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.is_linear(),
+            ValueEnum::Product(p) => p.is_linear(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
+            ValueEnum::BoolTy(b) => b.is_linear(),
+            ValueEnum::Pi(p) => p.is_linear(),
+            ValueEnum::Finite(f) => f.is_linear(),
+            u => panic!(
+                "Impossible (TypeValue::is_linear): TypeValue({}) is not a type",
+                u
+            ),
+        }
+    }
+
+    #[inline]
+    fn is_substruct(&self) -> bool {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.is_substruct(),
+            ValueEnum::Product(p) => p.is_substruct(),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
+            ValueEnum::BoolTy(b) => b.is_substruct(),
+            ValueEnum::Pi(p) => p.is_substruct(),
+            ValueEnum::Finite(f) => f.is_substruct(),
+            u => panic!(
+                "Impossible (TypeValue::is_substruct): TypeValue({}) is not a type",
+                u
+            ),
+        }
+    }
+    
 }
 
 impl From<TypeValue> for ValId {
@@ -159,7 +238,7 @@ impl From<TypeValue> for NormalValue {
 impl From<TypeValue> for ValueEnum {
     fn from(ty: TypeValue) -> ValueEnum {
         (ty.0).0
-    } 
+    }
 }
 
 impl TryFrom<NormalValue> for TypeValue {
@@ -179,9 +258,7 @@ impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
     #[inline]
     fn try_from(value: &'a NormalValue) -> Result<&'a TypeValue, &'a NormalValue> {
         if value.is_ty() {
-            let cast = unsafe {
-                &*(value as *const NormalValue as *const TypeValue)
-            };
+            let cast = unsafe { &*(value as *const NormalValue as *const TypeValue) };
             Ok(cast)
         } else {
             Err(value)

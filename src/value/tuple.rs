@@ -31,8 +31,8 @@ pub struct Tuple {
 impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new(elems: ValArr) -> Result<Tuple, ()> {
-        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
+    pub fn try_new(elems: ValArr) -> Result<Tuple, Error> {
+        let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
         let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
             elems,
@@ -176,19 +176,33 @@ pub struct Product {
     lifetime: Lifetime,
     /// The (cached) type of this product type
     ty: UniverseId,
+    /// Whether this product type is affine
+    affine: bool,
+    /// Whether this product type is relevant
+    relevant: bool,
 }
 
 impl Product {
-    /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
+    /// Try to create a new product from a vector of types, potentially forcing affinity/relevancy
+    /// Return an error if they have incompatible lifetimes.
     #[inline]
-    pub fn try_new(elems: TyArr) -> Result<Product, ()> {
-        let lifetime = Lifetime::default().intersect(elems.iter().map(|t| t.lifetime()))?;
+    pub fn try_new_forced(elems: TyArr, force_affine: bool, force_relevant: bool) -> Result<Product, Error> {
+        let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
+        let affine = force_affine || elems.iter().any(|t| t.is_affine());
+        let relevant = force_relevant || elems.iter().any(|t| t.is_affine());
         let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
         Ok(Product {
             elems,
             lifetime,
             ty,
+            affine,
+            relevant,
         })
+    }
+    /// Try to create a new product from a vector of types. Return an error if they have incompatible lifetimes.
+    #[inline]
+    pub fn try_new(elems: TyArr) -> Result<Product, Error> {
+        Self::try_new_forced(elems, false, false)
     }
     /// Create the product corresponding to the unit type
     #[inline]
@@ -197,6 +211,8 @@ impl Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
             ty: FINITE_TY.clone(),
+            affine: false,
+            relevant: false,
         }
     }
     /// Get the type-tuple corresponding to this product type
@@ -226,16 +242,20 @@ enum_convert! {
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
         let lifetime = ctx.evaluate_lt(&self.lifetime)?;
-        let elems = self
+        let elems: TyArr = self
             .elems
             .iter()
             .cloned()
             .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
             .collect::<Result<_, _>>()?;
+        let affine = elems.iter().any(|t| t.is_affine());
+        let relevant = elems.iter().any(|t| t.is_affine());
         Ok(Product {
             elems,
             lifetime,
             ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
+            affine,
+            relevant,
         })
     }
 }
@@ -277,6 +297,14 @@ impl Type for Product {
     }
     fn is_universe(&self) -> bool {
         false
+    }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        self.affine
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        self.relevant
     }
 }
 

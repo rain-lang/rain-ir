@@ -1,7 +1,7 @@
 /*!
 `rain` value regions
 */
-use crate::value::{arr::TyArr, TypeId};
+use crate::value::{arr::TyArr, Error, TypeId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
@@ -117,6 +117,16 @@ impl Region {
                 .expect("Depth > 0, so region must have a parent");
         }
         ptr
+    }
+    /// Get the conjunction of two regions, if any
+    #[inline]
+    pub fn conj<'a>(&'a self, other: &'a Region) -> Result<&'a Region, Error> {
+        use Ordering::*;
+        match self.partial_cmp(other) {
+            None => Err(Error::IncomparableRegions),
+            Some(Less) | Some(Equal) => Ok(self),
+            Some(Greater) => Ok(other),
+        }
     }
 }
 

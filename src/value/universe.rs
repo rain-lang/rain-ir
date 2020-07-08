@@ -227,6 +227,14 @@ impl Type for Universe {
     fn is_universe(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
 }
 
 impl Apply for Universe {}

@@ -123,6 +123,14 @@ impl Type for Pi {
     fn universe(&self) -> UniverseRef {
         self.ty.borrow_var()
     }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        unimplemented!("Pi type affinity")
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        unimplemented!("Pi type relevance")
+    }
 }
 
 impl Substitute for Pi {

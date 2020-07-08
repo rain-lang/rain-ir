@@ -7,7 +7,9 @@ use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, RegionData, Regional};
 use crate::typing::Typed;
-use crate::value::{arr::ValSet, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, TypeId};
+use crate::value::{
+    arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
+};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
@@ -15,7 +17,7 @@ use itertools::Itertools;
 use thin_dst::ThinBox;
 
 pub mod pattern;
-use pattern::{Match, Pattern, MatchedTy};
+use pattern::{Match, MatchedTy, Pattern};
 
 /// A gamma node, representing pattern matching and primitive recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -189,15 +191,33 @@ impl GammaBuilder {
     }
     /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
     ///
-    /// Dependencies are returned sorted by address, and deduplicated
-    pub fn deps(&self) -> Vec<ValId> {
-        self.branches
+    /// Dependencies are returned sorted by address, and deduplicated. The gamma lifetime is also returned.
+    pub fn deps(&self) -> Result<(Lifetime, Vec<ValId>), (Error, Vec<ValId>)> {
+        let mut lifetime = Lifetime::default();
+        let mut has_error = None;
+        let deps = self
+            .branches
             .iter()
-            .map(|branch| branch.deps().into_iter())
+            .map(|branch| {
+                let branch_lifetime =
+                    lifetime.sep_conj(branch.deps().iter().map(|dep| dep.lifetime()));
+                lifetime = match branch_lifetime.map(|branch_lifetime| &lifetime & branch_lifetime) {
+                    Ok(Ok(lifetime)) => lifetime,
+                    Err(err) | Ok(Err(err)) => {
+                        has_error = Some(err);
+                        Lifetime::default()
+                    }
+                };
+                branch.deps().iter()
+            })
             .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
             .dedup()
             .cloned()
-            .collect()
+            .collect();
+        if let Some(err) = has_error {
+            return Err((err, deps));
+        }
+        Ok((lifetime, deps))
     }
     /// Check whether this gamma node is complete
     #[inline]
@@ -206,28 +226,20 @@ impl GammaBuilder {
     }
     /// Finish constructing this gamma node
     /// On failure, return an unchanged object to try again, along with a reason
-    pub fn finish(mut self) -> Result<Gamma, (GammaBuilder, Error)> {
+    pub fn finish(&self) -> Result<Gamma, Error> {
         // First, check completeness
         if !self.is_complete() {
-            return Err((self, Error::IncompleteMatch));
+            return Err(Error::IncompleteMatch);
         }
 
         // Then, actually make the gamma node
-        let mut deps = self.deps();
-        deps.shrink_to_fit();
-        let lifetime = Lifetime::default()
-            .intersect(deps.iter().map(|dep: &ValId| dep.lifetime()))
-            .map_err(|_| Error::LifetimeError);
-        let lifetime = match lifetime {
-            Ok(lifetime) => lifetime,
-            Err(err) => return Err((self, err)),
-        };
-        self.branches.shrink_to_fit();
+        let ty = self.ty.clone();
+        let (lifetime, deps) = self.deps().map_err(|err| err.0)?;
         Ok(Gamma {
             deps: deps.into(),
-            branches: ThinBox::new((), self.branches.into_iter()),
+            branches: ThinBox::new((), self.branches.iter().cloned()),
             lifetime,
-            ty: self.ty,
+            ty,
         })
     }
     /// Get the current pattern matched by this builder
@@ -254,13 +266,10 @@ impl Branch {
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
     pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
-        let region = RegionData::with(
-            matched.into(),
-            value.region().clone_region()
-        );
+        let region = RegionData::with(matched.into(), value.region().clone_region());
         let region = Region::new(region);
         let func = Lambda::try_new(value, region)?.into();
-        Ok(Branch{ pattern, func })
+        Ok(Branch { pattern, func })
     }
     /// Return the dependencies of this branch
     pub fn deps(&self) -> &ValSet {
@@ -353,17 +362,32 @@ mod tests {
         assert_eq!(gamma_builder.branches().len(), 0);
 
         // Add the `#true` branch, mapping to `#false`
-        assert_eq!(gamma_builder.add_const(true.into(), false.into()).expect("Valid branch"), Some(0));
+        assert_eq!(
+            gamma_builder
+                .add_const(true.into(), false.into())
+                .expect("Valid branch"),
+            Some(0)
+        );
         assert!(!gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 1);
 
         // Add the `#false` branch, mapping to `#true`
-        assert_eq!(gamma_builder.add_const(false.into(), true.into()).expect("Valid branch"), Some(1));
+        assert_eq!(
+            gamma_builder
+                .add_const(false.into(), true.into())
+                .expect("Valid branch"),
+            Some(1)
+        );
         assert!(gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 2);
 
         // Add a new `#true` branch, which should just do nothing
-        assert_eq!(gamma_builder.add_const(true.into(), false.into()).expect("Valid branch"), None);
+        assert_eq!(
+            gamma_builder
+                .add_const(true.into(), false.into())
+                .expect("Valid branch"),
+            None
+        );
         assert!(gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 2);
 
