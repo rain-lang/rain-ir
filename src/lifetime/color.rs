@@ -55,9 +55,9 @@ impl Color {
     pub fn new() -> Color {
         Self::new_in(Region::NULL)
     }
-    /// Create the color of a parameter to a region. Return an `None` if the index is out of bounds or to an unrestricted parameter
+    /// Create the color of a parameter to a region. Return a `None` if the index is out of bounds or to an unrestricted parameter
     pub fn param(region: Region, ix: usize) -> Option<Color> {
-        if ix >= region.len() || !region[ix].is_substruct()  {
+        if ix >= region.len() || !region[ix].is_substruct() {
             return None;
         }
         let ix = ix as isize; // Might get bugs around 2 billion parameters on 32-bit systems, but... lazy...
@@ -68,8 +68,22 @@ impl Color {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::primitive::logical::Bool;
+
     #[test]
     fn new_colors_are_not_equal() {
+        let unary_region = Region::with(vec![Bool.into()].into(), Region::NULL);
         assert_ne!(Color::new(), Color::new());
+        assert_ne!(Color::new_in(unary_region.clone()), Color::new_in(unary_region.clone()));
+    }
+    #[test]
+    fn new_region_color_construction() {
+        let null_region = Region::NULL;
+        assert_eq!(Color::param(null_region.clone(), 0), None);
+        assert_eq!(Color::param(null_region.clone(), 1), None);
+        let unary_region = Region::with(vec![Bool.into()].into(), null_region);
+        // Bool is substructural so *does not get a color*
+        assert_eq!(Color::param(unary_region.clone(), 0), None);
+        assert_eq!(Color::param(unary_region.clone(), 1), None);
     }
 }
