@@ -378,11 +378,13 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
 
     /// Build a pi type
     pub fn build_pi(&mut self, pi: &PiExpr<'a>) -> Result<Pi, Error<'a>> {
-        let result = self.build_parametrized(pi)?;
-        result
+        let param = self
+            .build_parametrized(pi)?
             .try_into_value()
-            .map_err(|_| Error::Message("Pi type must parametrize a valid type"))
-            .map(Pi::new)
+            .map_err(|_| Error::Message("Pi type must parametrize a valid type"))?;
+        let lt = param.def_region().clone().into();
+        let result = Pi::new(param, lt)?;
+        Ok(result)
     }
 
     /// Build a parametrized value
