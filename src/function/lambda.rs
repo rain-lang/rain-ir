@@ -48,7 +48,7 @@ impl Lambda {
         let result = Parameter::try_new(region.clone(), 0)
             .expect("Region has one parameter")
             .into();
-        let ty: VarId<Pi> = Pi::try_new(ty, region.clone(), Lifetime::STATIC)
+        let ty: VarId<Pi> = Pi::try_new(ty, region, Lifetime::STATIC)
             .expect("Identity pi type is valid")
             .into();
         let lt = ty.lifetime().clone_lifetime(); //TODO: someday...

@@ -195,7 +195,7 @@ impl Substitute<NormalValue> for ValueEnum {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
         self.substitute(ctx)
-            .map(|v: ValueEnum| NormalValue::from(v))
+            .map(|val: ValueEnum| val.into())
     }
 }
 

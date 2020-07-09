@@ -117,7 +117,7 @@ pub trait Apply: Typed + Live {
         _inline: bool,
         _ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        if args.len() == 0 {
+        if args.is_empty() {
             Ok(Application::Complete(
                 self.lifetime().clone_lifetime(),
                 self.ty().clone_ty(),

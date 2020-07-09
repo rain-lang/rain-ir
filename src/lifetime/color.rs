@@ -47,11 +47,13 @@ pub static COLOR_COUNTER: ColorCounter = ColorCounter(AtomicIsize::new(-1));
 
 impl Color {
     /// Create a unique new color in a given region
+    #[inline]
     pub fn new_in(region: Region) -> Color {
         let ix = COLOR_COUNTER.next();
         Color { region, ix }
     }
     /// Create a unique new color in the null region
+    #[inline]
     pub fn new() -> Color {
         Self::new_in(Region::NULL)
     }
@@ -65,6 +67,13 @@ impl Color {
     }
 }
 
+impl Default for Color {
+    #[inline]
+    fn default() -> Color {
+        Color::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -74,7 +83,7 @@ mod test {
     fn new_colors_are_not_equal() {
         let unary_region = Region::with(vec![Bool.into()].into(), Region::NULL);
         assert_ne!(Color::new(), Color::new());
-        assert_ne!(Color::new_in(unary_region.clone()), Color::new_in(unary_region.clone()));
+        assert_ne!(Color::new_in(unary_region.clone()), Color::new_in(unary_region));
     }
     #[test]
     fn new_region_color_construction() {
@@ -84,6 +93,6 @@ mod test {
         let unary_region = Region::with(vec![Bool.into()].into(), null_region);
         // Bool is substructural so *does not get a color*
         assert_eq!(Color::param(unary_region.clone(), 0), None);
-        assert_eq!(Color::param(unary_region.clone(), 1), None);
+        assert_eq!(Color::param(unary_region, 1), None);
     }
 }

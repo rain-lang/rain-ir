@@ -40,17 +40,14 @@ impl Sexpr {
             _ => {}
         }
         // Expand sexprs in the first argument
-        match args[0].as_enum() {
-            ValueEnum::Sexpr(s) => {
-                if s.len() == 0 {
-                    return Err(Error::EmptySexprApp); // Special error for unit application
-                }
-                let mut new_args = Vec::with_capacity(args.len() + s.len());
-                new_args.extend(s.iter().cloned());
-                new_args.extend(args.drain(1..));
-                args = new_args;
+        if let ValueEnum::Sexpr(s) = args[0].as_enum() {
+            if s.is_empty() {
+                return Err(Error::EmptySexprApp); // Special error for unit application
             }
-            _ => {}
+            let mut new_args = Vec::with_capacity(args.len() + s.len());
+            new_args.extend(s.iter().cloned());
+            new_args.extend(args.drain(1..));
+            args = new_args;
         }
         // General case
         let (lifetime, ty) = match args[0].apply(&args[1..])? {
@@ -199,10 +196,8 @@ impl From<Sexpr> for NormalValue {
         if sexpr.len() == 0 {
             return ().into();
         }
-        if sexpr.len() == 1 {
-            if sexpr[0].ty() == sexpr.ty && sexpr[0].lifetime() == sexpr.lifetime {
-                return sexpr[0].as_norm().clone();
-            }
+        if sexpr.len() == 1 && sexpr[0].ty() == sexpr.ty && sexpr[0].lifetime() == sexpr.lifetime {
+            return sexpr[0].as_norm().clone();
         }
         NormalValue(ValueEnum::Sexpr(sexpr))
     }

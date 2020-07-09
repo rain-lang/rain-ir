@@ -700,7 +700,7 @@ impl From<Region> for Lifetime {
         if region.is_null() {
             Lifetime(None)
         } else {
-            Lifetime::new(LifetimeData::from(region).into())
+            Lifetime::new(LifetimeData::from(region))
         }
     }
 }

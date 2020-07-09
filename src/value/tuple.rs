@@ -122,7 +122,7 @@ impl Apply for Tuple {
     */
     fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
         // Check for a null application
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Application::Complete(
                 self.lifetime().clone_lifetime(),
                 self.ty().clone_ty(),
@@ -490,7 +490,7 @@ mod prettyprint_impl {
         fn nested_units_print_properly() {
             let unit = Tuple::unit();
             let unit_ty = Product::unit_ty();
-            assert_eq!(format!("{}", unit), format!("{}", UNIT_VALUE));
+            assert_eq!(&format!("{}", unit), UNIT_VALUE);
             assert_eq!(format!("{}", unit_ty), format!("{}", Unit));
             let two_units = Tuple::try_new(valarr![unit.clone().into(), unit.into()])
                 .expect("This is a valid tuple!");
@@ -584,7 +584,7 @@ mod tests {
         assert_eq!(anchor.ty(), anchor_ty);
         assert!(anchor_ty.is_affine());
         assert!(!anchor_ty.is_relevant());
-        let anchor_tuple: ValId = Tuple::try_new(vec![anchor.clone(), anchor.clone()].into())
+        let anchor_tuple: ValId = Tuple::try_new(vec![anchor.clone(), anchor].into())
             .expect("Two anchors form a valid tuple")
             .into();
         let anchor_product = anchor_tuple.ty();

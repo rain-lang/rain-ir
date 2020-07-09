@@ -65,9 +65,9 @@ impl Apply for Gamma {
         _inline: bool,
         ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        let mut param_tys = self.ty.param_tys().iter();
+        let param_tys = self.ty.param_tys().iter();
         let mut ix = 0;
-        while let Some(ty) = param_tys.next() {
+        for ty in param_tys {
             if ix >= args.len() {
                 // Incomplete gamma application
                 unimplemented!()
@@ -359,7 +359,7 @@ mod tests {
             .1
             .try_into()
             .expect("The unary type is a pi type");
-        let mut gamma_builder = GammaBuilder::new(unary.clone());
+        let mut gamma_builder = GammaBuilder::new(unary);
         assert!(!gamma_builder.is_complete());
         assert_eq!(gamma_builder.branches().len(), 0);
 
