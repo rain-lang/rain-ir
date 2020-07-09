@@ -123,7 +123,7 @@ impl LifetimeData {
         }
         LifetimeData {
             affine: Some(affine),
-            region: self.region.clone(),
+            region: self.region,
             idempotent: true,
         }
     }

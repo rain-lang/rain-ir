@@ -238,9 +238,10 @@ impl Value for bool {
     }
     #[inline]
     fn into_val(self) -> ValId {
-        match self {
-            true => TRUE.clone_val(),
-            false => FALSE.clone_val(),
+        if self {
+            TRUE.clone_val()
+        } else {
+            FALSE.clone_val()
         }
     }
 }
