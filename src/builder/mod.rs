@@ -2,14 +2,16 @@
 A builder for `rain` expressions
 */
 use super::ast::{
-    Detuple, Expr, Ident, Index as IndexExpr, Jeq, Lambda as LambdaExpr, Let, Member, ParamArgs,
-    Parametrized as ParametrizedExpr, Pattern, Pi as PiExpr, Product as ProductExpr, Scope,
-    Sexpr as SExpr, Simple, Statement, Tuple as TupleExpr, TypeOf,
+    Detuple, Expr, Finite as FiniteExpr, Ident, Index as IndexExpr, Jeq, Lambda as LambdaExpr, Let,
+    Logical as LogicalExpr, Member, ParamArgs, Parametrized as ParametrizedExpr, Pattern,
+    Pi as PiExpr, Product as ProductExpr, Scope, Sexpr as SExpr, Simple, Statement,
+    Tuple as TupleExpr, TypeOf,
 };
-use super::{parse_expr, parse_statement};
+use super::parser::{parse_expr, parse_statement};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
     finite::{Finite, Index},
+    logical::{And, Bool, Id as LogicalId, Iff, Logical, Nand, Nor, Not, Or, Xor},
     Unit, UNIT,
 };
 use crate::region::{Parametrized, Region, RegionData};
@@ -116,18 +118,26 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             Expr::Sexpr(sexpr) => self.build_sexpr(sexpr)?.into(),
             Expr::Tuple(tuple) => self.build_tuple(tuple)?.into(),
             Expr::Bool(b) => (*b).into(),
-            Expr::BoolTy(b) => (*b).into(),
+            Expr::BoolTy(_) => Bool.into(),
             Expr::TypeOf(ty) => self.build_typeof(ty)?.into(),
-            Expr::Finite(f) => (*f).into(),
+            Expr::Finite(f) => self.build_finite(*f)?.into(),
             Expr::Index(i) => self.build_index(*i)?.into(),
             Expr::Lambda(l) => self.build_lambda(l)?.into(),
             Expr::Pi(p) => self.build_pi(p)?.into(),
             Expr::Product(p) => self.build_product(p)?.into(),
             Expr::Jeq(j) => self.build_jeq(j)?.into(),
             Expr::Scope(s) => self.build_scope(s)?,
-            Expr::Logical(l) => (*l).into(),
+            Expr::Logical(l) => self.build_logical(*l)?.into(),
+            Expr::And(_) => And.into(),
+            Expr::Or(_) => Or.into(),
+            Expr::Xor(_) => Xor.into(),
+            Expr::Not(_) => Not.into(),
+            Expr::LogicalId(_) => LogicalId.into(),
+            Expr::Nand(_) => Nand.into(),
+            Expr::Nor(_) => Nor.into(),
+            Expr::Iff(_) => Iff.into(),
             Expr::Gamma(_) => unimplemented!("Gamma node construction"),
-            Expr::Unit => Unit.into(),
+            Expr::Unit(_) => Unit.into(),
         };
         Ok(result_value)
     }
@@ -152,6 +162,17 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         self.build_expr(expr)?
             .try_into()
             .map_err(|_| Error::Message("Not a type!"))
+    }
+
+    /// Build a finite `rain` expression
+    pub fn build_finite(&self, finite: FiniteExpr) -> Result<Finite, Error<'a>> {
+        Ok(Finite(finite.0))
+    }
+
+    /// Build a logical `rain` expression
+    pub fn build_logical(&self, logical: LogicalExpr) -> Result<Logical, Error<'a>> {
+        Logical::try_new(logical.arity(), logical.data())
+            .map_err(|_| Error::Message("Invalid logical expression!"))
     }
 
     /// Build a `rain` typeof expression
@@ -187,6 +208,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Build an index into a finite type
     pub fn build_index(&self, ix: IndexExpr) -> Result<Index, Error<'a>> {
         if let Some(ty) = ix.ty {
+            let ty = self.build_finite(ty)?;
             Index::try_new(ty, ix.ix).map_err(|_| Error::Message("Invalid index!"))
         } else {
             Err(Error::NotImplemented(

@@ -136,7 +136,7 @@ lifetime_region!(Gamma);
 substitute_to_valid!(Gamma);
 
 debug_from_display!(Gamma);
-pretty_display!(Gamma, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_GAMMA);
+pretty_display!(Gamma, "{}{{ ... }}", crate::tokens::KEYWORD_GAMMA);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Gamma {}
     impl TryFrom<NormalValue> for Gamma { as ValueEnum, }
@@ -342,9 +342,10 @@ mod prettyprint_impl {
 }
 
 #[cfg(test)]
+#[cfg(feature = "parser")]
 mod tests {
     use super::*;
-    use crate::parser::builder::Builder;
+    use crate::builder::Builder;
     use crate::value::expr::Sexpr;
     use std::convert::TryInto;
 

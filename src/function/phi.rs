@@ -85,7 +85,7 @@ impl From<Phi> for NormalValue {
 
 substitute_to_valid!(Phi);
 debug_from_display!(Phi);
-pretty_display!(Phi, "{}{{ ... }}", prettyprinter::tokens::KEYWORD_PHI);
+pretty_display!(Phi, "{}{{ ... }}", crate::tokens::KEYWORD_PHI);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Phi {}
     impl TryFrom<NormalValue> for Phi { as ValueEnum, }

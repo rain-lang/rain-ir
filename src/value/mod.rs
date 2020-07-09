@@ -540,7 +540,7 @@ macro_rules! forv {
 
 debug_from_display!(ValueEnum);
 pretty_display!(ValueEnum, v, fmt => forv! {
-    match (v) { v => write!(fmt, "{}", v) }
+    match (v) { v => write!(fmt, "{}", v), }
 });
 
 impl Live for ValueEnum {

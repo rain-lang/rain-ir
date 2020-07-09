@@ -23,7 +23,13 @@ pub mod typing;
 pub mod util;
 pub mod value;
 
-#[cfg(feature = "parser")]
-pub mod parser;
+pub use rain_ast::tokens;
 
+#[cfg(feature = "parser")]
+pub mod builder;
+#[cfg(feature = "parser")]
+pub use rain_ast::parser;
+#[cfg(feature = "parser")]
+pub use rain_ast::ast;
+#[cfg(feature = "prettyprinter")]
 pub mod prettyprinter;

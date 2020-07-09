@@ -23,10 +23,13 @@ is_sorted = "^0.1"
 thin-dst = "^1.1.0"
 dashcache = "^0.2.0"
 im = "^15"
+hayami = "^0.1"
+
+# Parser
+rain-ast = { git = "https://gitlab.com/rain-lang/rain-ast.git", default-features = false, features = [] }
 
 # Parser dependencies
 nom = { version = "^5", optional = true }
-hayami = { version = "^0.1", optional = true }
 
 # Feature dependencies
 rand = { version = "^0.7", optional = true }
@@ -44,8 +47,8 @@ default = [
     "prettyprinter",
     "rand"
     ]
-parser = ["nom", "hayami"]
-prettyprinter = ["hayami"]
+parser = ["nom", "rain-ast/parser"]
+prettyprinter = []
 
 [[example]]
 name = "repl"

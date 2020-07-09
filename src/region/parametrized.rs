@@ -162,14 +162,20 @@ where
 #[cfg(feature = "prettyprinter")]
 pub mod prettyprint {
     use super::*;
-    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use crate::tokens::*;
     use std::fmt::{self, Display, Formatter};
 
     /// Prettyprint a value parametrized by a given region
-    pub fn prettyprint_parametrized<I, V>(printer: &mut PrettyPrinter<I>, fmt: &mut Formatter, value: &V, region: &Region) -> Result<(), fmt::Error>
+    pub fn prettyprint_parametrized<I, V>(
+        printer: &mut PrettyPrinter<I>,
+        fmt: &mut Formatter,
+        value: &V,
+        region: &Region,
+    ) -> Result<(), fmt::Error>
     where
         I: From<usize> + Display,
-        V: PrettyPrint + Value
+        V: PrettyPrint + Value,
     {
         //TODO: print _ for parameters if all unused?
         write!(fmt, "{}", PARAM_OPEN)?;

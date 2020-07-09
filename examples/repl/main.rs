@@ -9,11 +9,9 @@ use nom::character::complete::{multispace0, multispace1};
 use nom::combinator::{map, opt};
 use nom::sequence::{delimited, preceded, separated_pair, terminated};
 use nom::{Err, IResult};
-use rain_ir::parser::{
-    ast::{Expr, Statement},
-    builder::Builder,
-    parse_bool, parse_expr, parse_statement,
-};
+use rain_ir::ast::{Expr, Statement};
+use rain_ir::builder::Builder;
+use rain_ir::parser::{parse_bool, parse_expr, parse_statement};
 
 use std::fs::File;
 use std::io::BufReader;

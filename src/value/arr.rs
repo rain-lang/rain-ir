@@ -413,9 +413,8 @@ impl<A, P> Deref for ValArr<A, P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg_attr(not(feature = "parser"), allow(unused))]
     use crate::primitive::finite::{Finite, Index};
-    use rand::{Rng, SeedableRng};
-    use rand_xoshiro::Xoroshiro128PlusPlus as TestRng;
 
     /// Basic set operations and construction
     #[test]
@@ -496,8 +495,11 @@ mod tests {
     }
 
     /// A stress-test of the `ValArr` family of structs on large arrays of random indices
+    #[cfg(feature = "rand")]
     #[test]
     fn random_arrays_of_indices_construct_correctly() {
+        use rand::{Rng, SeedableRng};
+        use rand_xoshiro::Xoroshiro128PlusPlus as TestRng;
         const TEST_SEED: u64 = 0x56614ffa9e2a191d;
         const MAX_ARRAY_SIZE: usize = 100;
         const ARRAYS_TO_TEST: usize = 100;

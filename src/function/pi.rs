@@ -164,7 +164,7 @@ impl From<Pi> for NormalValue {
 
 substitute_to_valid!(Pi);
 debug_from_display!(Pi);
-pretty_display!(Pi, "#pi|...| {...}");
+pretty_display!(Pi, "#pi|...| {{...}}");
 enum_convert! {
     impl InjectionRef<ValueEnum> for Pi {}
     impl TryFrom<NormalValue> for Pi { as ValueEnum, }

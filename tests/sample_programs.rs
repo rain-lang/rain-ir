@@ -1,13 +1,16 @@
 /*!
 Test `rain` by compiling a variety of sample programs, and checking their output is correct.
 */
-use rain_ir::parser::builder::Builder;
+#![cfg_attr(not(feature = "parser"), allow(unused))]
 use rain_ir::value::{expr::Sexpr, tuple::Tuple, Value};
+#[cfg(feature = "parser")]
+use rain_ir::builder::Builder;
 
 /// Indexed projections from `(bool, bool)` pairs to a member.
 ///
 /// Reported not to work in issue #35, added as a regression test
 #[test]
+#[cfg(feature = "parser")]
 fn boolean_pair_ix_projections() {
     let mut builder = Builder::<&str>::new();
     let (rest, pi0) = builder
@@ -40,6 +43,7 @@ fn boolean_pair_ix_projections() {
 
 /// Member projections from `(bool, bool)` pairs to a member.
 #[test]
+#[cfg(feature = "parser")]
 fn boolean_pair_mem_projections() {
     let mut builder = Builder::<&str>::new();
     let (rest, pi0) = builder
