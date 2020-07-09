@@ -100,7 +100,7 @@ impl Apply for Parameter {
         _inline: bool,
         _ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Application::Success(args, self.clone().into()));
         }
         match self.ty().as_enum() {

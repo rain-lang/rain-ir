@@ -168,6 +168,6 @@ impl EvalCtx {
         // Otherwise, attempt to escape the lifetime from it's region
         let result = lifetime.escape_upto(self.minimum_depth());
         self.lt_cache.insert(lifetime.clone(), result.clone());
-        return Ok(result);
+        Ok(result)
     }
 }

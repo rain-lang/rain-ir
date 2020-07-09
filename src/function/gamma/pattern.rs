@@ -10,6 +10,7 @@ use elysees::Arc;
 use std::ops::Deref;
 
 /// A branch of a gamma node
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Debug, Clone, Hash, Eq)]
 pub struct Pattern(pub Arc<PatternData>);
 
@@ -171,9 +172,9 @@ impl Match for Any {
     fn matches(&self, args: &[TypeId], outputs: &[TypeId]) -> Result<(), Error> {
         if args == outputs {
             //TODO: subtyping, etc.
-            return Ok(());
+            Ok(())
         } else {
-            return Err(Error::TypeMismatch);
+            Err(Error::TypeMismatch)
         }
     }
     fn try_get_outputs(&self, tys: &[TypeId]) -> Result<MatchedTy, Error> {
@@ -206,10 +207,10 @@ impl Match for bool {
         if &args[0] != BOOL_TY.deref() {
             return Err(Error::TypeMismatch);
         }
-        if outputs.len() != 0 {
+        if !outputs.is_empty() {
             return Err(Error::TupleLengthMismatch);
         }
-        return Ok(());
+        Ok(())
     }
     fn try_get_outputs(&self, tys: &[TypeId]) -> Result<MatchedTy, Error> {
         // Filter for a single boolean argument
@@ -257,7 +258,7 @@ pub struct Empty;
 impl Match for Empty {
     fn matches(&self, _args: &[TypeId], _outputs: &[TypeId]) -> Result<(), Error> {
         // `Empty` matches any input/output pair since the actual match always fails
-        return Ok(());
+        Ok(())
     }
     fn try_get_outputs(&self, _ty: &[TypeId]) -> Result<MatchedTy, Error> {
         Ok(MatchedTy(vec![]))

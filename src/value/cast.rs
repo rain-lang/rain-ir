@@ -177,9 +177,7 @@ impl From<Cast> for ValueEnum {
 
 impl From<Cast> for NormalValue {
     fn from(cast: Cast) -> NormalValue {
-        if cast.ty() != cast.value().ty() {
-            NormalValue(cast.into())
-        } else if cast.lifetime() != cast.value().lifetime() {
+        if cast.ty() != cast.value().ty() || cast.lifetime() != cast.value().lifetime() {
             NormalValue(cast.into())
         } else {
             cast.take_value().into()

@@ -178,7 +178,7 @@ impl Value for () {
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
-        self.into()
+        ().into()
     }
 }
 

@@ -407,7 +407,7 @@ impl Logical {
             let shift = if value { 1 << arity } else { 0 };
             let mask = LOGICAL_OP_ARITY_MASKS[arity as usize] << shift;
             Either::Right(Logical {
-                arity: arity,
+                arity,
                 data: (self.data & mask) >> shift,
             })
         }
@@ -571,7 +571,7 @@ impl Apply for Logical {
         _ctx: Option<&mut EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         // Null evaluation
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(Application::Stop(
                 self.lifetime().clone_lifetime(),
                 self.ty().clone_ty(),
@@ -613,13 +613,13 @@ impl Apply for Logical {
             }
         }
         if cut_ix == args.len() {
-            return Ok(Application::Success(&[], l.into()));
+            Ok(Application::Success(&[], l.into()))
         } else {
             let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
             let lifetime = Lifetime::default()
                 .sep_conj(lifetimes)
                 .map_err(|_| Error::LifetimeError)?;
-            return Ok(Application::Incomplete(lifetime, Bool.into()));
+            Ok(Application::Incomplete(lifetime, Bool.into()))
         }
     }
 }
@@ -1087,6 +1087,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
     fn bitwise_on_binary_operations_work() {
         let binary_ops = (0b0000..=0b1111).map(|b| Logical::try_new(2, b).unwrap());
         for op in binary_ops {
@@ -1103,6 +1104,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
     fn is_const_works() {
         for arity in 1..=7 {
             let tc = Logical::try_const(arity, true).unwrap();

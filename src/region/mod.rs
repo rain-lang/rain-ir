@@ -251,7 +251,7 @@ impl Deref for RegionBorrow<'_> {
     type Target = RegionData;
     #[inline]
     fn deref(&self) -> &RegionData {
-        self.0.as_ref().map(|r| r.deref()).unwrap_or(&NULL_REGION)
+        self.0.as_deref().unwrap_or(&NULL_REGION)
     }
 }
 

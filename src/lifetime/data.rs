@@ -16,7 +16,7 @@ pub static STATIC_LIFETIME: LifetimeData = LifetimeData {
 };
 
 /// The data describing a `rain` lifetime
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq)]
 pub struct LifetimeData {
     /// The affine members of this lifetime
     affine: Option<HashMap<Color, Affine>>,
@@ -109,13 +109,13 @@ impl LifetimeData {
     #[inline]
     pub fn borrowed(self, source: ValId) -> LifetimeData {
         if self.idempotent {
-            return self
+            return self;
         }
         let mut affine = if let Some(affine) = self.affine {
-            affine.clone()
+            affine
         } else {
             // Should be idempotent in this case... consider panicking...
-            return self
+            return self;
         };
         //TODO: optimize memory usage?
         for (_key, value) in affine.iter_mut() {
@@ -258,6 +258,13 @@ impl Borrowed {
 impl Hash for LifetimeData {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.region.hash(hasher);
+        self.affine.hash(hasher);
+    }
+}
+
+impl PartialEq for LifetimeData {
+    fn eq(&self, other: &LifetimeData) -> bool {
+        self.region == other.region && self.affine == other.affine
     }
 }
 

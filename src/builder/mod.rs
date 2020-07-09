@@ -187,9 +187,9 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         let mut result = true;
         if let Some(first) = iter.next() {
             let first = first?;
-            while let Some(next) = iter.next() {
-                if first != next? {
-                    result = false
+            for item in iter {
+                if first != item? {
+                    result = false;
                 }
             }
         }
@@ -242,10 +242,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                             base = Sexpr::try_new(vec![
                                 base.clone(),
                                 Index::try_new(Finite(p.len() as u128), ix)
-                                    .map_err(|_| Error::IndexOutOfBounds {
-                                        ix: ix,
-                                        max: p.len(),
-                                    })?
+                                    .map_err(|_| Error::IndexOutOfBounds { ix, max: p.len() })?
                                     .into(),
                             ])?
                             .into();
@@ -344,7 +341,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
             self.stack
                 .last()
                 .map(|(r, _)| r.clone())
-                .unwrap_or(Region::default()),
+                .unwrap_or_default(),
         ));
         self.push_scope();
         for (i, (id, _)) in args.iter().enumerate() {

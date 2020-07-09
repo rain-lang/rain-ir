@@ -223,14 +223,14 @@ impl<A, P> ValArr<A, P> {
     /// Coerce a reference to this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
     fn coerce_ref<B, Q>(&self) -> &ValArr<B, Q> {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &*(self as *const _ as *const ValArr<B, Q>) }
     }
     /// Coerce this container into a slice of `VarId<V>`, asserting that the predicate holds *for each container element*!
     /// While this method can be called incorrectly, it is *safe* as regardless of `V`, all `VarId<V>` are guaranteed to have
     /// the same representation.
     #[inline]
     fn coerce_slice<U>(&self) -> &[ValId<U>] {
-        unsafe { std::mem::transmute(self.arr.as_slice()) }
+        unsafe { &*(self.arr.as_slice() as *const _ as *const [ValId<U>]) }
     }
 }
 
@@ -540,7 +540,7 @@ mod tests {
 
         // Convert a dereference to a pointer
         fn get_ptr(v: &ValArr) -> *const ValId {
-            if v.len() == 0 {
+            if v.is_empty() {
                 std::ptr::null()
             } else {
                 &v[0]
