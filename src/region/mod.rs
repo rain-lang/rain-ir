@@ -240,6 +240,11 @@ impl<'a> RegionBorrow<'a> {
         }
         ptr
     }
+    /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
+    #[inline]
+    pub fn param(self, ix: usize) -> Result<Parameter, ()> {
+        self.clone_region().param(ix)
+    }
     /// Get this region borrow as a region
     #[inline]
     pub fn as_region(&self) -> &Region {
