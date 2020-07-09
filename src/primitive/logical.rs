@@ -880,8 +880,8 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "parser")]
     use crate::builder::Builder;
-    use crate::prettyprinter::PrettyPrint;
 
     #[test]
     fn basic_boolean_properties() {
@@ -898,8 +898,10 @@ mod tests {
         assert_eq!(false.no_deps(), 0);
     }
 
+    #[cfg(all(feature = "parser", feature = "prettyprinter"))]
     #[test]
     fn booleans_parse_properly() {
+        use crate::prettyprinter::PrettyPrint;
         let mut builder = Builder::<&str>::new();
         let f_true = format!("{}", true.prp());
         let f_false = format!("{}", false.prp());
@@ -967,6 +969,7 @@ mod tests {
     }
 
     /// Test a binary operation exhaustively
+    #[cfg(feature = "parser")]
     fn test_binary_operation(
         op: Logical,
         partial_table: &[Logical; 2],
@@ -1041,10 +1044,12 @@ mod tests {
         }
     }
 
+    #[cfg_attr(not(feature = "parser"), allow(unused))]
     fn cl(b: bool) -> Logical {
         Logical::try_const(1, b).unwrap()
     }
 
+    #[cfg(feature = "parser")]
     #[test]
     fn test_binary_operations() {
         let mut builder = Builder::<String>::new();

@@ -227,10 +227,11 @@ mod rand_impl {
 mod tests {
     use super::*;
     use crate::lifetime::{LifetimeBorrow, Live};
-    use crate::builder::Builder;
-    use crate::value::ValId;
     #[test]
+    #[cfg(feature = "parser")]
     fn basic_indexing_works() {
+        use crate::value::ValId;
+        use crate::builder::Builder;
         let mut builder = Builder::<&str>::new();
         let exprs: &[(&str, ValId)] = &[
             ("[#true #false ()] #ix(3)[1]", false.into()),

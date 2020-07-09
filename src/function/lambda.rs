@@ -199,7 +199,7 @@ impl ValueData for Lambda {}
 
 substitute_to_valid!(Lambda);
 debug_from_display!(Lambda);
-pretty_display!(Lambda, "#lambda |...| {...}");
+pretty_display!(Lambda, "#lambda |...| {{...}}");
 enum_convert! {
     impl InjectionRef<ValueEnum> for Lambda {}
     impl TryFrom<NormalValue> for Lambda { as ValueEnum, }
@@ -235,6 +235,7 @@ mod prettyprint_impl {
 }
 
 #[cfg(test)]
+#[cfg(feature = "parser")]
 mod tests {
     use super::*;
     use crate::builder::Builder;
