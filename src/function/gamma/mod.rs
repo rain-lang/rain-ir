@@ -344,7 +344,7 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::builder::Builder;
+    use crate::builder::Builder;
     use crate::value::expr::Sexpr;
     use std::convert::TryInto;
 

@@ -1,9 +1,8 @@
 /*!
 Finite-valued types
 */
-
 use crate::eval::Apply;
-use crate::prettyprinter::tokens::*;
+use crate::tokens::*;
 use crate::typing::{Type, Typed};
 use crate::value::{
     universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum,
@@ -228,7 +227,7 @@ mod rand_impl {
 mod tests {
     use super::*;
     use crate::lifetime::{LifetimeBorrow, Live};
-    use crate::parser::builder::Builder;
+    use crate::builder::Builder;
     use crate::value::ValId;
     #[test]
     fn basic_indexing_works() {

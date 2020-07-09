@@ -413,8 +413,9 @@ impl ValueData for Product {}
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
     use crate::primitive::Unit;
+    use crate::tokens::*;
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Tuple {
@@ -482,7 +483,7 @@ mod prettyprint_impl {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::parser::builder::Builder;
+        use crate::builder::Builder;
         use crate::valarr;
 
         #[test]
@@ -507,7 +508,10 @@ mod prettyprint_impl {
             );
             let anchor: ValId = Tuple::const_anchor().into();
             assert_eq!(&format!("{}", anchor), &format!("{}[]", KEYWORD_ANCHORED));
-            assert_eq!(&format!("{}", anchor.ty()), &format!("{}[]", KEYWORD_ANCHOR));
+            assert_eq!(
+                &format!("{}", anchor.ty()),
+                &format!("{}[]", KEYWORD_ANCHOR)
+            );
         }
 
         #[test]

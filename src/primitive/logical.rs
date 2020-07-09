@@ -1,12 +1,11 @@
 /*!
 Boolean types and logical operations
 */
-
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
-use crate::prettyprinter::tokens::*;
 use crate::region::{Region, RegionData};
+use crate::tokens::*;
 use crate::typing::{Type, Typed};
 use crate::value::{
     universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
@@ -860,10 +859,8 @@ make_logical!(Iff = 0b1001);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
-    use crate::prettyprinter::{
-        tokens::{KEYWORD_FALSE, KEYWORD_TRUE},
-        PrettyPrint, PrettyPrinter,
-    };
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use crate::tokens::{KEYWORD_FALSE, KEYWORD_TRUE};
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for bool {
@@ -883,7 +880,7 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::builder::Builder;
+    use crate::builder::Builder;
     use crate::prettyprinter::PrettyPrint;
 
     #[test]

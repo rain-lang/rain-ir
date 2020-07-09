@@ -213,7 +213,8 @@ substitute_to_valid!(Sexpr);
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
-    use crate::prettyprinter::{tokens::*, PrettyPrint, PrettyPrinter};
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use crate::tokens::*;
     use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Sexpr {

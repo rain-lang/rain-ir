@@ -7,7 +7,7 @@ use super::ast::{
     Pi as PiExpr, Product as ProductExpr, Scope, Sexpr as SExpr, Simple, Statement,
     Tuple as TupleExpr, TypeOf,
 };
-use super::{parse_expr, parse_statement};
+use super::parser::{parse_expr, parse_statement};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
     finite::{Finite, Index},

@@ -1,7 +1,7 @@
 /*!
 Test `rain` by compiling a variety of sample programs, and checking their output is correct.
 */
-use rain_ir::parser::builder::Builder;
+use rain_ir::builder::Builder;
 use rain_ir::value::{expr::Sexpr, tuple::Tuple, Value};
 
 /// Indexed projections from `(bool, bool)` pairs to a member.
