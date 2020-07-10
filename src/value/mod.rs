@@ -152,7 +152,7 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             //TODO: this...
             return Err(Error::TypeMismatch);
         }
-        ty
+        Ok(ty)
     }
     /// Cast a value to a given type and lifetime
     #[inline]
