@@ -112,6 +112,31 @@ impl Value for Tuple {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
+    #[inline]
+    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
+        if ty.is_none() && lt.is_none() {
+            return Ok(self.into_val());
+        }
+        let lt = if let Some(lt) = lt {
+            self.cast_target_lt(lt)?
+        } else {
+            self.lifetime().clone_lifetime()
+        };
+        let ty = if let Some(ty) = ty {
+            self.cast_target_ty(ty)?
+        } else {
+            self.ty().clone_ty()
+        };
+        if lt == self.lifetime() && ty == self.ty() {
+            return Ok(self.into_val());
+        }
+        Ok(NormalValue(ValueEnum::Tuple(Tuple {
+            elems: self.elems.clone(),
+            ty,
+            lifetime: lt,
+        }))
+        .into())
+    }
 }
 
 impl ValueData for Tuple {}
@@ -405,6 +430,33 @@ impl Value for Product {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
+    }
+    #[inline]
+    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
+        if ty.is_none() && lt.is_none() {
+            return Ok(self.into_val());
+        }
+        let lt = if let Some(lt) = lt {
+            self.cast_target_lt(lt)?
+        } else {
+            self.lifetime().clone_lifetime()
+        };
+        //TODO: proper universe casting...
+        if let Some(ty) = ty {
+            if ty != self.ty() {
+                return Err(Error::TypeMismatch);
+            }
+        }
+        if lt == self.lifetime() {
+            return Ok(self.into_val());
+        }
+        Ok(NormalValue(ValueEnum::Product(Product {
+            elems: self.elems.clone(),
+            ty: self.ty.clone(),
+            lifetime: lt,
+            flags: self.flags,
+        }))
+        .into())
     }
 }
 

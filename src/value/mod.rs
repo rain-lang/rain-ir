@@ -3,7 +3,7 @@
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
@@ -24,7 +24,6 @@ use std::hash::Hash;
 use std::ops::{Deref, RangeBounds};
 
 pub mod arr;
-pub mod cast;
 pub mod expr;
 pub mod predicate;
 pub mod tuple;
@@ -125,20 +124,72 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Convert a value into a `NormalValue`
     fn into_norm(self) -> NormalValue;
     /// Convert a value into a `ValueEnum`
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         self.into_norm().into()
     }
     /// Convert a value into a `ValId`
+    #[inline]
     fn into_val(self) -> ValId {
         self.into_norm().into()
     }
     /// Convert a value into a `TypeId`, if it is a type, otherwise return it
+    #[inline]
     fn try_into_ty(self) -> Result<TypeId, Self> {
         if self.is_ty() {
             Ok(self.into_val().coerce())
         } else {
             Err(self)
         }
+    }
+    /// Get the cast target lifetime for a given lifetime
+    fn cast_target_lt(&self, lt: Lifetime) -> Result<Lifetime, Error> {
+        self.lifetime().as_lifetime() * lt
+    }
+    /// Get the cast target type for a given type
+    fn cast_target_ty(&self, ty: TypeId) -> Result<TypeId, Error> {
+        if ty != self.ty() {
+            //TODO: this...
+            return Err(Error::TypeMismatch);
+        }
+        Ok(ty)
+    }
+    /// Cast a value to a given type and lifetime
+    #[inline]
+    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
+        if ty.is_none() && lt.is_none() {
+            return Ok(self.into_val());
+        }
+        let lt = if let Some(lt) = lt {
+            self.cast_target_lt(lt)?
+        } else {
+            self.lifetime().clone_lifetime()
+        };
+        let ty = if let Some(ty) = ty {
+            self.cast_target_ty(ty)?
+        } else {
+            self.ty().clone_ty()
+        };
+        if lt == self.lifetime() && ty == self.ty() {
+            return Ok(self.into_val());
+        }
+        let val = self.into_val();
+        Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
+            args: vec![val].into(),
+            ty,
+            lifetime: lt,
+        }))
+        .into())
+    }
+    /// Cast a value to a given lifetime
+    #[inline]
+    fn cast_lt(self, lt: Lifetime) -> Result<ValId, Error> {
+        self.cast(None, Some(lt))
+    }
+    /// Cast a value to a given type
+    #[inline]
+    fn cast_ty(self, ty: TypeId) -> Result<ValId, Error> {
+        self.cast(Some(ty), None)
     }
 }
 
@@ -194,8 +245,7 @@ impl Substitute for ValueEnum {
 impl Substitute<NormalValue> for ValueEnum {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
-        self.substitute(ctx)
-            .map(|val: ValueEnum| val.into())
+        self.substitute(ctx).map(|val: ValueEnum| val.into())
     }
 }
 
