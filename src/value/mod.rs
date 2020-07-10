@@ -3,7 +3,7 @@
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
@@ -124,20 +124,54 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Convert a value into a `NormalValue`
     fn into_norm(self) -> NormalValue;
     /// Convert a value into a `ValueEnum`
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         self.into_norm().into()
     }
     /// Convert a value into a `ValId`
+    #[inline]
     fn into_val(self) -> ValId {
         self.into_norm().into()
     }
     /// Convert a value into a `TypeId`, if it is a type, otherwise return it
+    #[inline]
     fn try_into_ty(self) -> Result<TypeId, Self> {
         if self.is_ty() {
             Ok(self.into_val().coerce())
         } else {
             Err(self)
         }
+    }
+    /// Cast a value to a given type and lifetime
+    #[inline]
+    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
+        if ty.is_none() && lt.is_none() {
+            return Ok(self.into_val());
+        }
+        let lt = if let Some(lt) = lt {
+            (self.lifetime().as_lifetime() * lt)?
+        } else {
+            self.lifetime().clone_lifetime()
+        };
+        let ty = if let Some(ty) = ty {
+            if ty != self.ty() {
+                //TODO: this...
+                return Err(Error::TypeMismatch);
+            }
+            ty
+        } else {
+            self.ty().clone_ty()
+        };
+        let val = self.into_val();
+        if lt == self.lifetime() && ty == self.ty() {
+            return Ok(val);
+        }
+        Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
+            args: vec![val],
+            ty,
+            lifetime: lt,
+        }))
+        .into())
     }
 }
 
@@ -193,8 +227,7 @@ impl Substitute for ValueEnum {
 impl Substitute<NormalValue> for ValueEnum {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
-        self.substitute(ctx)
-            .map(|val: ValueEnum| val.into())
+        self.substitute(ctx).map(|val: ValueEnum| val.into())
     }
 }
 
