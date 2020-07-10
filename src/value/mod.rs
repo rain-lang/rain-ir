@@ -181,6 +181,11 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
         }))
         .into())
     }
+    /// Cast a value to a given lifetime
+    #[inline]
+    fn cast_lt(self, lt: Lifetime) -> Result<ValId, Error> {
+        self.cast(None, Some(lt))
+    }
 }
 
 /// A trait implemented by non-pointer `rain` values
