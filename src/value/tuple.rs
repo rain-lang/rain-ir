@@ -112,6 +112,32 @@ impl Value for Tuple {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
+    /// Cast a value to a given type and lifetime
+    #[inline]
+    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
+        if ty.is_none() && lt.is_none() {
+            return Ok(self.into_val());
+        }
+        let lt = if let Some(lt) = lt {
+            self.cast_target_lt(lt)?
+        } else {
+            self.lifetime().clone_lifetime()
+        };
+        let ty = if let Some(ty) = ty {
+            self.cast_target_ty(ty)?
+        } else {
+            self.ty().clone_ty()
+        };
+        if lt == self.lifetime() && ty == self.ty() {
+            return Ok(self.into_val());
+        }
+        Ok(NormalValue(ValueEnum::Tuple(Tuple {
+            elems: self.elems.clone(),
+            ty,
+            lifetime: lt,
+        }))
+        .into())
+    }
 }
 
 impl ValueData for Tuple {}
