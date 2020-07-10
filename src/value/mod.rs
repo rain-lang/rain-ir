@@ -170,10 +170,10 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
         } else {
             self.ty().clone_ty()
         };
-        let val = self.into_val();
         if lt == self.lifetime() && ty == self.ty() {
             return Ok(val);
         }
+        let val = self.into_val();
         Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
             args: vec![val].into(),
             ty,
