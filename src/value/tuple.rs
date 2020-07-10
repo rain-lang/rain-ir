@@ -112,7 +112,6 @@ impl Value for Tuple {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
-    /// Cast a value to a given type and lifetime
     #[inline]
     fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
         if ty.is_none() && lt.is_none() {
