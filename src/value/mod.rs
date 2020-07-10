@@ -142,6 +142,18 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             Err(self)
         }
     }
+    /// Get the cast target lifetime for a given lifetime
+    fn cast_target_lt(&self, lt: Lifetime) -> Result<Lifetime, Error> {
+        self.lifetime().as_lifetime() * lt
+    }
+    /// Get the cast target type for a given type
+    fn cast_target_ty(&self, ty: TypeId) -> Result<TypeId, Error> {
+        if ty != self.ty() {
+            //TODO: this...
+            return Err(Error::TypeMismatch);
+        }
+        ty
+    }
     /// Cast a value to a given type and lifetime
     #[inline]
     fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
@@ -149,16 +161,12 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             return Ok(self.into_val());
         }
         let lt = if let Some(lt) = lt {
-            (self.lifetime().as_lifetime() * lt)?
+            self.cast_target_lt(lt)?
         } else {
             self.lifetime().clone_lifetime()
         };
         let ty = if let Some(ty) = ty {
-            if ty != self.ty() {
-                //TODO: this...
-                return Err(Error::TypeMismatch);
-            }
-            ty
+            self.cast_target_ty(ty)?
         } else {
             self.ty().clone_ty()
         };
