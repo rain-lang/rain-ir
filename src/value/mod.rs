@@ -175,7 +175,7 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             return Ok(val);
         }
         Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
-            args: vec![val],
+            args: vec![val].into(),
             ty,
             lifetime: lt,
         }))
