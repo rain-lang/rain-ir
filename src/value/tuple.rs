@@ -441,6 +441,7 @@ impl Value for Product {
         } else {
             self.lifetime().clone_lifetime()
         };
+        //TODO: proper universe casting...
         if let Some(ty) = ty {
             if ty != self.ty() {
                 return Err(Error::TypeMismatch);
