@@ -24,7 +24,6 @@ use std::hash::Hash;
 use std::ops::{Deref, RangeBounds};
 
 pub mod arr;
-pub mod cast;
 pub mod expr;
 pub mod predicate;
 pub mod tuple;
