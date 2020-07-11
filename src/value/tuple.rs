@@ -131,7 +131,7 @@ impl Value for Tuple {
             return Ok(self.into_val());
         }
         Ok(NormalValue(ValueEnum::Tuple(Tuple {
-            elems: self.elems.clone(),
+            elems: self.elems,
             ty,
             lifetime: lt,
         }))
@@ -451,8 +451,8 @@ impl Value for Product {
             return Ok(self.into_val());
         }
         Ok(NormalValue(ValueEnum::Product(Product {
-            elems: self.elems.clone(),
-            ty: self.ty.clone(),
+            elems: self.elems,
+            ty: self.ty,
             lifetime: lt,
             flags: self.flags,
         }))

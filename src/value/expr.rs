@@ -179,7 +179,7 @@ impl Value for Sexpr {
             return Ok(self.into_val());
         }
         Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
-            args: self.args.clone(),
+            args: self.args,
             ty,
             lifetime: lt,
         }))
