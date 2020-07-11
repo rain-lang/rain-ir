@@ -4,6 +4,7 @@
 use crate::value::{arr::TyArr, Error, TypeId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
+use im::{vector, Vector};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -25,12 +26,10 @@ pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 /// The data composing a `rain` region
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RegionData {
-    /// The parent of this region
-    parent: Region,
+    /// The parents of this region
+    parents: Option<Vector<Region>>,
     /// The parameter types of this region
     param_tys: TyArr,
-    /// The depth of this region above the null region
-    depth: usize,
 }
 
 /// A trait for objects which have a region
@@ -336,18 +335,22 @@ impl Deref for RegionData {
 impl RegionData {
     /// The null region data
     pub const NULL: RegionData = RegionData {
-        parent: Region(None),
+        parents: None,
         param_tys: TyArr::EMPTY,
-        depth: 0,
     };
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
     pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
-        let depth = parent.depth + 1;
+        let parents = if let Some(parents) = &parent.parents {
+            let mut result = parents.clone();
+            result.push_back(parent);
+            result
+        } else {
+            vector![parent]
+        };
         RegionData {
             param_tys,
-            parent,
-            depth,
+            parents: Some(parents),
         }
     }
     /// Create data for a new, empty region with an optional parent region
@@ -358,15 +361,19 @@ impl RegionData {
     /// Get the depth of this region
     #[inline]
     pub fn depth(&self) -> usize {
-        self.depth
+        if let Some(parents) = &self.parents {
+            parents.len()
+        } else {
+            0
+        }
     }
     /// Get the parent of this region
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
-        if self.is_null() {
-            None
+        if let Some(parents) = &self.parents {
+            parents.last()
         } else {
-            Some(&self.parent)
+            None
         }
     }
     /// Get the parameter types of this region
@@ -377,7 +384,7 @@ impl RegionData {
     /// Check if this region is the null region
     #[inline]
     pub fn is_null(&self) -> bool {
-        self.depth == 0
+        self.depth() == 0
     }
 }
 
@@ -389,64 +396,16 @@ impl PartialOrd for RegionData {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        use Ordering::*;
-        match self.depth.cmp(&other.depth) {
-            Less => {
-                if self < other {
-                    Some(Less)
-                } else {
-                    None
-                }
-            }
-            Equal => {
-                if self == other {
-                    Some(Equal)
-                } else {
-                    None
-                }
-            }
-            Greater => {
-                if self > other {
-                    Some(Greater)
-                } else {
-                    None
-                }
-            }
+        let left_depth = self.depth();
+        let right_depth = other.depth();
+        let min_depth = left_depth.min(right_depth);
+        if min_depth == 0
+            || self.parents.as_ref().unwrap()[min_depth - 1]
+                == other.parents.as_ref().unwrap()[min_depth - 1]
+        {
+            Some(left_depth.cmp(&right_depth))
+        } else {
+            None
         }
-    }
-    /**
-    Check whether the right region is a parent of the left region.
-    */
-    #[inline]
-    fn lt(&self, other: &RegionData) -> bool {
-        if self.depth >= other.depth {
-            return false;
-        }
-        let mut other_p = other.parent().expect("Impossible: self.depth < other.depth implies other.depth >= 2, i.e. other has a parent");
-        while other_p.depth > self.depth {
-            other_p = other.parent().expect("Impossible: self.depth < other_p.depth implies other.depth >= 2, i.e. other has a parent");
-        }
-        other_p.deref() == self
-    }
-    /**
-    Check whether the left region is a parent of the right region
-    */
-    #[inline]
-    fn gt(&self, other: &RegionData) -> bool {
-        other.lt(self)
-    }
-    /**
-    Check whether the left and right regions are equal, or the left is a parent of the right
-    */
-    #[inline]
-    fn le(&self, other: &RegionData) -> bool {
-        self == other || self.lt(other)
-    }
-    /**
-    Check whether the left and right regions are equal, or the right is a parent of the left
-    */
-    #[inline]
-    fn ge(&self, other: &RegionData) -> bool {
-        other.le(self)
     }
 }
