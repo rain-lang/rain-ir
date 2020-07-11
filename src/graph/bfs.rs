@@ -2,7 +2,7 @@
 Breadth-first search
 */
 
-use crate::value::{Value, ValId};
+use crate::value::{ValId, Value};
 
 /// A breadth-first search of a value's dependencies matching a given filter.
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
@@ -25,6 +25,9 @@ where
 {
     type Item = V;
     fn next(&mut self) -> Option<V> {
-        unimplemented!()
+        let top = self.frontier.pop()?;
+        self.frontier
+            .extend(top.deps().iter().filter_map(&mut self.filter));
+        Some(top)
     }
 }
