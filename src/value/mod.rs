@@ -13,15 +13,13 @@ use crate::typing::{Type, TypeValue, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
-use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
-use smallvec::SmallVec;
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
-use std::ops::{Deref, RangeBounds};
+use std::ops::Deref;
 
 pub mod arr;
 pub mod expr;
@@ -355,37 +353,6 @@ impl Regional for NormalValue {
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
-
-const DEP_SEARCH_STACK_SIZE: usize = 16;
-
-impl<V: Value> Deps<V> {
-    /// Collect the immediate dependencies of this value within a given depth range which match a given filter
-    pub fn collect_deps<R, F>(&self, range: R, filter: F) -> Vec<ValId>
-    where
-        V: Clone,
-        R: RangeBounds<usize>,
-        F: Fn(&ValId) -> bool,
-    {
-        let mut result = Vec::new();
-        // Simple edge case
-        if range.contains(&self.0.depth()) {
-            return vec![self.0.clone().into_val()];
-        }
-        let mut searched = FxHashSet::<&ValId>::default();
-        let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
-        while let Some(dep) = frontier.pop() {
-            searched.insert(dep);
-            if range.contains(&dep.depth()) {
-                if filter(dep) {
-                    result.push(dep.clone())
-                }
-            } else {
-                frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
-            }
-        }
-        result
-    }
-}
 
 impl<V: Value> std::ops::Index<usize> for Deps<V> {
     type Output = ValId;

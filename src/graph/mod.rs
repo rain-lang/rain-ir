@@ -1,8 +1,11 @@
 /*!
 Graph-theoretic utilities for `rain`
 */
-use crate::value::ValId;
+use crate::region::Regional;
+use crate::value::{Deps, ValId, Value};
 use fxhash::FxHashSet;
+use smallvec::SmallVec;
+use std::ops::RangeBounds;
 
 pub mod dfs;
 
@@ -70,5 +73,36 @@ impl VisitedFilter {
             }
             filter(valid)
         }
+    }
+}
+
+const DEP_SEARCH_STACK_SIZE: usize = 16;
+
+impl<V: Value> Deps<V> {
+    /// Collect the immediate dependencies of this value within a given depth range which match a given filter
+    pub fn collect_deps<R, F>(&self, range: R, filter: F) -> Vec<ValId>
+    where
+        V: Clone,
+        R: RangeBounds<usize>,
+        F: Fn(&ValId) -> bool,
+    {
+        let mut result = Vec::new();
+        // Simple edge case
+        if range.contains(&self.0.depth()) {
+            return vec![self.0.clone().into_val()];
+        }
+        let mut searched = FxHashSet::<&ValId>::default();
+        let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
+        while let Some(dep) = frontier.pop() {
+            searched.insert(dep);
+            if range.contains(&dep.depth()) {
+                if filter(dep) {
+                    result.push(dep.clone())
+                }
+            } else {
+                frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
+            }
+        }
+        result
     }
 }
