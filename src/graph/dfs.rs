@@ -16,6 +16,19 @@ pub struct DepDFS<V, F> {
     filter: F,
 }
 
+impl<V, F> DepDFS<V, F> {
+    /// Create a new BFS starting at a given position frontier
+    #[inline]
+    pub fn new(frontier: Vec<(V, usize)>, filter: F) -> DepDFS<V, F> {
+        DepDFS { frontier, filter }
+    }
+    /// Create a new BFS starting at a given value
+    #[inline]
+    pub fn new_at(start: V, filter: F) -> DepDFS<V, F> {
+        Self::new(vec![(start, 0)], filter)
+    }
+}
+
 impl<V, F> Iterator for DepDFS<V, F>
 where
     V: Value,
