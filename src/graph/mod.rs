@@ -12,6 +12,10 @@ pub mod dfs;
 pub struct VisitedFilter(pub FxHashSet<usize>);
 
 impl VisitedFilter {
+    /// Create a new, empty visited filter
+    pub fn new() -> VisitedFilter {
+        VisitedFilter(FxHashSet::default())
+    }
     /// Filter `ValId`'s, ignoring ones which have already been seen. Add seen ValIds to the seen set
     pub fn valid_filter(&mut self) -> impl FnMut(&ValId) -> Option<&ValId> + '_ {
         move |valid| {
