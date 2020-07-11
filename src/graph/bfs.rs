@@ -2,11 +2,11 @@
 Breadth-first search
 */
 
-use super::*;
 use crate::value::{Value, ValId};
 
 /// A breadth-first search of a value's dependencies matching a given filter.
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
+/// Fallible filters are supported: in this case, the search will halt.
 /// May repeat dependencies.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct DepBFS<V, F> {

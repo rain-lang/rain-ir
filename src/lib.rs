@@ -16,6 +16,7 @@ Contributions, ideas and collaboration proposals are welcome: please make an iss
 pub mod data;
 pub mod eval;
 pub mod function;
+pub mod graph;
 pub mod lifetime;
 pub mod primitive;
 pub mod region;
@@ -28,8 +29,8 @@ pub use rain_ast::tokens;
 #[cfg(feature = "parser")]
 pub mod builder;
 #[cfg(feature = "parser")]
-pub use rain_ast::parser;
-#[cfg(feature = "parser")]
 pub use rain_ast::ast;
+#[cfg(feature = "parser")]
+pub use rain_ast::parser;
 #[cfg(feature = "prettyprinter")]
 pub mod prettyprinter;

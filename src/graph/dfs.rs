@@ -2,7 +2,6 @@
 Depth-first search
 */
 
-use super::*;
 use crate::value::{Value, ValId};
 
 /// A depth-first search of a value's dependencies matching a given filter.
@@ -44,35 +43,5 @@ where
             }
         }
         self.frontier.pop().map(|(b, _)| b)
-    }
-}
-
-impl<'a, V, F> Iterator for DepDFS<Borrowed<'a, V>, F>
-where
-    V: Value,
-    F: FnMut(&'a ValId) -> Option<&'a V>,
-{
-    type Item = &'a V;
-    fn next(&mut self) -> Option<&'a V> {
-        loop {
-            let mut push_to_top = None;
-            {
-                let (top, ix) = self.frontier.last_mut()?;
-                while *ix < top.0.no_deps() {
-                    *ix += 1;
-                    if let Some(dep) = (self.filter)(top.0.get_dep(*ix - 1)) {
-                        push_to_top = Some(Borrowed(dep));
-                        break; // Push this to the top of the dependency stack, repeat
-                    }
-                }
-            }
-            if let Some(to_push) = push_to_top {
-                self.frontier.push((to_push, 0));
-                continue;
-            } else {
-                break;
-            }
-        }
-        self.frontier.pop().map(|(b, _)| b.0)
     }
 }
