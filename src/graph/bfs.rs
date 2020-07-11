@@ -14,8 +14,19 @@ pub struct DepBFS<V, F> {
     frontier: Vec<V>,
     /// The filter to apply
     filter: F,
-    /// The value type
-    value: std::marker::PhantomData<V>,
+}
+
+impl<V, F> DepBFS<V, F> {
+    /// Create a new BFS starting at a given frontier
+    #[inline]
+    pub fn new(frontier: Vec<V>, filter: F) -> DepBFS<V, F> {
+        DepBFS { frontier, filter }
+    }
+    /// Create a new BFS starting at a given value
+    #[inline]
+    pub fn new_at(start: V, filter: F) -> DepBFS<V, F> {
+        Self::new(vec![start], filter)
+    }
 }
 
 impl<V, F> Iterator for DepBFS<V, F>
