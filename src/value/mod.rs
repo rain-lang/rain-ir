@@ -13,15 +13,13 @@ use crate::typing::{Type, TypeValue, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
-use fxhash::FxHashSet;
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
-use smallvec::SmallVec;
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
-use std::ops::{Deref, RangeBounds};
+use std::ops::Deref;
 
 pub mod arr;
 pub mod expr;
@@ -213,7 +211,9 @@ impl<V: Value> Deps<V> {
         self.0.no_deps() == 0
     }
     /// Iterate over the dependencies of this value
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
+    pub fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'a ValId> + DoubleEndedIterator + ExactSizeIterator + 'a {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
 }
@@ -353,164 +353,6 @@ impl Regional for NormalValue {
 
 debug_from_display!(NormalValue);
 pretty_display!(NormalValue, s, fmt => write!(fmt, "{}", s.deref()));
-
-const DEP_SEARCH_STACK_SIZE: usize = 16;
-
-impl<V: Value> Deps<V> {
-    /// Collect the immediate dependencies of this value within a given depth range which match a given filter
-    pub fn collect_deps<R, F>(&self, range: R, filter: F) -> Vec<ValId>
-    where
-        V: Clone,
-        R: RangeBounds<usize>,
-        F: Fn(&ValId) -> bool,
-    {
-        let mut result = Vec::new();
-        // Simple edge case
-        if range.contains(&self.0.depth()) {
-            return vec![self.0.clone().into_val()];
-        }
-        let mut searched = FxHashSet::<&ValId>::default();
-        let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
-        while let Some(dep) = frontier.pop() {
-            searched.insert(dep);
-            if range.contains(&dep.depth()) {
-                if filter(dep) {
-                    result.push(dep.clone())
-                }
-            } else {
-                frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
-            }
-        }
-        result
-    }
-}
-
-/// A wrapper for a reference
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, RefCast)]
-#[repr(transparent)]
-pub struct Borrowed<'a, V>(&'a V);
-
-/// A depth-first search of a value's dependencies matching a given filter.
-/// This filter maps the results, and may morph their dependencies and/or assert a certain value type.
-/// Dependencies not matching the filter are ignored *along with all their descendants*.
-/// May repeat dependencies.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct DepDFS<V, F> {
-    /// The frontier of this search
-    frontier: Vec<(V, usize)>,
-    /// The filter to apply
-    filter: F,
-}
-
-impl<V, F> Iterator for DepDFS<V, F>
-where
-    V: Value,
-    F: FnMut(&ValId) -> Option<V>,
-{
-    type Item = V;
-    fn next(&mut self) -> Option<V> {
-        loop {
-            let mut push_to_top = None;
-            {
-                let (top, ix) = self.frontier.last_mut()?;
-                while *ix < top.no_deps() {
-                    *ix += 1;
-                    if let Some(dep) = (self.filter)(top.get_dep(*ix - 1)) {
-                        push_to_top = Some(dep);
-                        break; // Push this to the top of the dependency stack, repeat
-                    }
-                }
-            }
-            if let Some(to_push) = push_to_top {
-                self.frontier.push((to_push, 0));
-                continue;
-            } else {
-                break;
-            }
-        }
-        self.frontier.pop().map(|(b, _)| b)
-    }
-}
-
-impl<'a, V, F> Iterator for DepDFS<Borrowed<'a, V>, F>
-where
-    V: Value,
-    F: FnMut(&'a ValId) -> Option<&'a V>,
-{
-    type Item = &'a V;
-    fn next(&mut self) -> Option<&'a V> {
-        loop {
-            let mut push_to_top = None;
-            {
-                let (top, ix) = self.frontier.last_mut()?;
-                while *ix < top.0.no_deps() {
-                    *ix += 1;
-                    if let Some(dep) = (self.filter)(top.0.get_dep(*ix - 1)) {
-                        push_to_top = Some(Borrowed(dep));
-                        break; // Push this to the top of the dependency stack, repeat
-                    }
-                }
-            }
-            if let Some(to_push) = push_to_top {
-                self.frontier.push((to_push, 0));
-                continue;
-            } else {
-                break;
-            }
-        }
-        self.frontier.pop().map(|(b, _)| b.0)
-    }
-}
-
-/// A naive depth-first search of a value's dependencies matching a given filter.
-/// A depth-first search of a value's dependencies matching a given filter.
-/// This filter maps the results, and may morph their dependencies and/or assert a certain value type.
-/// Dependencies not matching the filter are ignored *along with all their descendants*.
-/// This search relies on the filter to mark nodes as already visited: if not, expect an explosion of memory use.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct NaiveDFS<V, F> {
-    /// The frontier of this search
-    frontier: Vec<V>,
-    /// The filter to apply
-    filter: F,
-    /// The value type
-    value: std::marker::PhantomData<V>,
-}
-
-impl<V, F> Iterator for NaiveDFS<V, F>
-where
-    V: Value,
-    F: FnMut(&ValId) -> Option<V>,
-{
-    type Item = V;
-    fn next(&mut self) -> Option<V> {
-        unimplemented!()
-    }
-}
-
-/// A breadth-first search of a value's dependencies matching a given filter.
-/// Dependencies not matching the filter are ignored *along with all their descendants*.
-/// May repeat dependencies.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct DepBFS<V, F> {
-    /// The frontier of this search
-    frontier: Vec<V>,
-    /// The filter to apply
-    filter: F,
-    /// The value type
-    value: std::marker::PhantomData<V>,
-}
-
-impl<V, F> Iterator for DepBFS<V, F>
-where
-    V: Value,
-    F: FnMut(&ValId) -> Option<V>,
-{
-    type Item = V;
-    fn next(&mut self) -> Option<V> {
-        unimplemented!()
-    }
-}
 
 impl<V: Value> std::ops::Index<usize> for Deps<V> {
     type Output = ValId;
