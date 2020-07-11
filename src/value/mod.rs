@@ -213,7 +213,9 @@ impl<V: Value> Deps<V> {
         self.0.no_deps() == 0
     }
     /// Iterate over the dependencies of this value
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a ValId> + 'a {
+    pub fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'a ValId> + DoubleEndedIterator + ExactSizeIterator + 'a {
         (0..self.len()).map(move |ix| self.0.get_dep(ix))
     }
 }
