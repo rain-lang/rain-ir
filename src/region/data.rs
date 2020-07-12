@@ -27,7 +27,7 @@ impl RegionData {
         };
         RegionData {
             param_tys,
-            parents: parents,
+            parents,
         }
     }
     /// Create data for a new, empty region with an optional parent region
@@ -95,12 +95,10 @@ impl PartialOrd for RegionData {
                 } else {
                     None
                 }
+            } else if self.parents[min_ix] == *other {
+                Some(Ordering::Greater)
             } else {
-                if self.parents[min_ix] == *other {
-                    Some(Ordering::Greater)
-                } else {
-                    None
-                }
+                None
             }
         }
     }

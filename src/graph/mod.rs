@@ -10,7 +10,7 @@ use std::ops::RangeBounds;
 pub mod dfs;
 
 /// Filter already-visited addresses
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct VisitedFilter(pub FxHashSet<usize>);
 
 impl VisitedFilter {
@@ -45,7 +45,7 @@ impl VisitedFilter {
             if self.0.contains(&addr) {
                 return None;
             }
-            return Some(valid);
+            Some(valid)
         }
     }
     /// Add this filter to an `FnMut`
