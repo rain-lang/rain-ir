@@ -49,10 +49,14 @@ impl Pi {
     }
     /// Get the universe associated with a parametrized `TypeId`
     pub fn universe(param: &Parametrized<TypeId>) -> UniverseId {
-        param
-            .value()
-            .universe()
-            .union_all(param.def_region().data().unwrap().iter().map(|ty| ty.universe()))
+        param.value().universe().union_all(
+            param
+                .def_region()
+                .data()
+                .unwrap()
+                .iter()
+                .map(|ty| ty.universe()),
+        )
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
     pub fn try_new(value: TypeId, region: Region, base_lt: Lifetime) -> Result<Pi, Error> {
@@ -66,7 +70,9 @@ impl Pi {
     /// Get the defining region of this pi type
     #[inline]
     pub fn def_region(&self) -> RegionBorrow {
-        self.result_lt.region()
+        self.result_lt
+            .region()
+            .expect("Pi type cannot have null region!")
     }
     /// Get the parameter types of this pi type
     #[inline]
@@ -101,8 +107,10 @@ impl Live for Pi {
 
 impl Regional for Pi {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.result.region()
+    fn region(&self) -> Option<RegionBorrow> {
+        self.def_region()
+            .parent()
+            .map(|parent| parent.borrow_region())
     }
 }
 

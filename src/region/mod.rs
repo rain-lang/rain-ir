@@ -4,7 +4,6 @@
 use crate::value::{arr::TyArr, Error, TypeId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
-use im::vector;
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -30,13 +29,52 @@ pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 pub trait Regional {
     /// Get the region of this object
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        RegionBorrow::default()
+    fn region(&self) -> Option<RegionBorrow> {
+        None
+    }
+    /// Get the region of this object, cloned
+    #[inline]
+    fn cloned_region(&self) -> Option<Region> {
+        self.region().map(|region| region.clone_region())
     }
     /// Get the depth of this object's region
     #[inline]
     fn depth(&self) -> usize {
         self.region().depth()
+    }
+    /// Get the ancestor of this region up to a given depth, or this value's region if `depth >= self.depth()`
+    #[inline]
+    fn ancestor(&self, depth: usize) -> Option<RegionBorrow> {
+        if let Some(region) = self.region() {
+            let data = region.data().unwrap();
+            Some(data.parents.get(depth).map(|region| region.borrow_region()).unwrap_or(region))
+        } else {
+            None
+        }
+    }
+}
+
+impl Regional for Option<Region> {
+    #[inline]
+    fn region(&self) -> Option<RegionBorrow> {
+        None
+    }
+    /// Get the depth of this object's region
+    #[inline]
+    fn depth(&self) -> usize {
+        0
+    }
+}
+
+impl Regional for Option<RegionBorrow<'_>> {
+    #[inline]
+    fn region(&self) -> Option<RegionBorrow> {
+        None
+    }
+    /// Get the depth of this object's region
+    #[inline]
+    fn depth(&self) -> usize {
+        0
     }
 }
 
@@ -58,12 +96,12 @@ impl Region {
     }
     /// Create a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Region) -> Region {
+    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Region {
         Region::new(RegionData::with(param_tys, parent))
     }
     /// Create a new region with a given parent region and no parameters
     #[inline]
-    pub fn with_parent(parent: Region) -> Region {
+    pub fn with_parent(parent: Option<Region>) -> Region {
         Region::new(RegionData::with_parent(parent))
     }
     /// Get a reference to a borrow of this region. More efficient than taking an `&Region`.
@@ -126,25 +164,16 @@ impl Region {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
-    /// Get the ancestor of this region up to a given depth
-    #[inline]
-    pub fn ancestor(&self, depth: usize) -> &Region {
-        //TODO: fixme
-        let mut ptr: &Region = self;
-        while ptr.depth() > depth {
-            ptr = ptr
-                .parent()
-                .expect("Depth > 0, so region must have a parent");
-        }
-        ptr
-    }
     /// Get the conjunction of two regions, if any
     #[inline]
-    pub fn conj<'a>(&'a self, other: &'a Region) -> Result<&'a Region, Error> {
+    pub fn conj<'a>(
+        this: &'a Option<Region>,
+        other: &'a Option<Region>,
+    ) -> Result<&'a Option<Region>, Error> {
         use Ordering::*;
-        match self.partial_cmp(other) {
+        match this.partial_cmp(other) {
             None => Err(Error::IncomparableRegions),
-            Some(Less) | Some(Equal) => Ok(self),
+            Some(Less) | Some(Equal) => Ok(this),
             Some(Greater) => Ok(other),
         }
     }
@@ -266,19 +295,6 @@ impl<'a> RegionBorrow<'a> {
     #[inline]
     pub fn parent(&self) -> Option<&'a Region> {
         self.data().map(|data| data.parent()).flatten()
-    }
-    /// Get the ancestor of this region up to a given depth
-    #[inline]
-    pub fn ancestor(&self, depth: usize) -> RegionBorrow {
-        //TODO: fixme
-        let mut ptr: RegionBorrow = *self;
-        while ptr.depth() > depth {
-            ptr = ptr
-                .parent()
-                .expect("Depth > 0, so region must have a parent")
-                .borrow_region();
-        }
-        ptr
     }
     /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
     #[inline]

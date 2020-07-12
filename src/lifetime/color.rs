@@ -20,13 +20,13 @@ use std::sync::atomic::AtomicIsize;
 /// fields, are not colors) nor composed out of multiple colors. A lifetime is implemented as a set of tagged colors.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Color {
-    region: Region,
+    region: Option<Region>,
     ix: isize,
 }
 
 impl Regional for Color {
-    fn region(&self) -> RegionBorrow {
-        self.region.borrow_region()
+    fn region(&self) -> Option<RegionBorrow> {
+        self.region.region()
     }
 }
 
@@ -48,14 +48,14 @@ pub static COLOR_COUNTER: ColorCounter = ColorCounter(AtomicIsize::new(-1));
 impl Color {
     /// Create a unique new color in a given region
     #[inline]
-    pub fn new_in(region: Region) -> Color {
+    pub fn new_in(region: Option<Region>) -> Color {
         let ix = COLOR_COUNTER.next();
         Color { region, ix }
     }
     /// Create a unique new color in the null region
     #[inline]
     pub fn new() -> Color {
-        Self::new_in(Region::NULL)
+        Self::new_in(None)
     }
     /// Create the color of a parameter to a region. Return a `None` if the index is out of bounds or to an unrestricted parameter
     pub fn param(region: Region, ix: usize) -> Option<Color> {
@@ -63,7 +63,7 @@ impl Color {
             return None;
         }
         let ix = ix as isize; // Might get bugs around 2 billion parameters on 32-bit systems, but... lazy...
-        Some(Color { region, ix })
+        Some(Color { region: Some(region), ix })
     }
 }
 
@@ -81,16 +81,13 @@ mod test {
 
     #[test]
     fn new_colors_are_not_equal() {
-        let unary_region = Region::with(vec![Bool.into()].into(), Region::NULL);
+        let unary_region = Region::with(vec![Bool.into()].into(), None);
         assert_ne!(Color::new(), Color::new());
-        assert_ne!(Color::new_in(unary_region.clone()), Color::new_in(unary_region));
+        assert_ne!(Color::new_in(Some(unary_region.clone())), Color::new_in(Some(unary_region)));
     }
     #[test]
     fn new_region_color_construction() {
-        let null_region = Region::NULL;
-        assert_eq!(Color::param(null_region.clone(), 0), None);
-        assert_eq!(Color::param(null_region.clone(), 1), None);
-        let unary_region = Region::with(vec![Bool.into()].into(), null_region);
+        let unary_region = Region::with(vec![Bool.into()].into(), None);
         // Bool is substructural so *does not get a color*
         assert_eq!(Color::param(unary_region.clone(), 0), None);
         assert_eq!(Color::param(unary_region, 1), None);

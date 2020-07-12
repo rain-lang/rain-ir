@@ -338,10 +338,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
         let tys: Result<Vec<_>, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
         let region = Region::with(
             tys?.into_iter().collect(),
-            self.stack
-                .last()
-                .map(|(r, _)| r.clone())
-                .unwrap_or_default(),
+            self.stack.last().map(|(r, _)| r.clone()),
         );
         self.push_scope();
         for (i, (id, _)) in args.iter().enumerate() {

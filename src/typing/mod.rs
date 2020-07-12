@@ -70,7 +70,7 @@ impl Live for TypeValue {
 
 impl Regional for TypeValue {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.deref().region()
     }
 }

@@ -9,21 +9,21 @@ use std::hash::{Hash, Hasher};
 #[derive(Debug, Clone, Eq)]
 pub struct RegionData {
     /// The parents of this region
-    parents: Vector<Region>,
+    pub(super) parents: Vector<Region>,
     /// The parameter types of this region
-    param_tys: TyArr,
+    pub(super) param_tys: TyArr,
 }
 
 impl RegionData {
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
-        let parents = if let Some(parents) = parent.data().map(|data| &data.parents) {
-            let mut result = parents.clone();
+    pub fn with(param_tys: TyArr, parent: Option<Region>) -> RegionData {
+        let parents = if let Some(parent) = parent {
+            let mut result = parent.data().unwrap().parents.clone();
             result.push_back(parent);
             result
         } else {
-            vector![parent]
+            Vector::new()
         };
         RegionData {
             param_tys,
@@ -32,7 +32,7 @@ impl RegionData {
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
-    pub fn with_parent(parent: Region) -> RegionData {
+    pub fn with_parent(parent: Option<Region>) -> RegionData {
         Self::with(TyArr::default(), parent)
     }
     /// Get the depth of this region

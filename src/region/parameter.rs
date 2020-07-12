@@ -77,8 +77,8 @@ impl Live for Parameter {
 }
 
 impl Regional for Parameter {
-    fn region(&self) -> RegionBorrow {
-        self.get_region().borrow_region()
+    fn region(&self) -> Option<RegionBorrow> {
+        Some(self.get_region().borrow_region())
     }
 }
 
