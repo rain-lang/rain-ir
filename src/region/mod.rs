@@ -4,15 +4,18 @@
 use crate::value::{arr::TyArr, Error, TypeId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
-use im::{vector, Vector};
+use im::vector;
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, Index};
 
+pub mod data;
+
 mod parametrized;
 pub use parametrized::*;
 mod parameter;
+use data::*;
 pub use parameter::*;
 
 /// A `rain` region
@@ -22,15 +25,6 @@ pub struct Region(Option<Arc<RegionData>>);
 /// A borrow of a `rain` region
 #[derive(Debug, Copy, Clone, Eq, Default)]
 pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
-
-/// The data composing a `rain` region
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RegionData {
-    /// The parents of this region
-    parents: Vector<Region>,
-    /// The parameter types of this region
-    param_tys: TyArr,
-}
 
 /// A trait for objects which have a region
 pub trait Regional {
@@ -60,11 +54,7 @@ impl Region {
     /// Create a new reference from a given `RegionData`, caching if possible
     #[inline]
     pub fn new(data: RegionData) -> Region {
-        if data.is_null() {
-            Region(None)
-        } else {
-            Region(Some(REGION_CACHE.cache(data)))
-        }
+        Region(Some(REGION_CACHE.cache(data)))
     }
     /// Create a new region with a given parameter type vector and a parent region
     #[inline]
@@ -364,89 +354,5 @@ impl PartialOrd<Region> for RegionBorrow<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
         self.data().partial_cmp(&other.data())
-    }
-}
-
-impl Deref for RegionData {
-    type Target = [TypeId];
-    #[inline]
-    fn deref(&self) -> &[TypeId] {
-        self.param_tys.deref()
-    }
-}
-
-impl RegionData {
-    /// Create data for a new region with a given parameter type vector and a parent region
-    #[inline]
-    pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
-        let parents = if let Some(parents) = parent.data().map(|data| &data.parents) {
-            let mut result = parents.clone();
-            result.push_back(parent);
-            result
-        } else {
-            vector![parent]
-        };
-        RegionData {
-            param_tys,
-            parents: parents,
-        }
-    }
-    /// Create data for a new, empty region with an optional parent region
-    #[inline]
-    pub fn with_parent(parent: Region) -> RegionData {
-        Self::with(TyArr::default(), parent)
-    }
-    /// Get the depth of this region
-    #[inline]
-    pub fn depth(&self) -> usize {
-        self.parents.len() + 1
-    }
-    /// Get the parent of this region
-    #[inline]
-    pub fn parent(&self) -> Option<&Region> {
-        self.parents.last()
-    }
-    /// Get the parameter types of this region
-    #[inline]
-    pub fn param_tys(&self) -> &TyArr {
-        &self.param_tys
-    }
-    /// Check if this region is the null region
-    #[inline]
-    pub fn is_null(&self) -> bool {
-        self.depth() == 0
-    }
-}
-
-impl PartialOrd for RegionData {
-    /**
-    We define a region to be a subregion of another region if every value in one region lies in the other,
-    which is true if and only if one of the regions is a parent of another. This naturally induces a partial
-    ordering on the set of regions.
-    */
-    #[inline]
-    fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        if self.parents.len() == other.parents.len() {
-            if self == other {
-                Some(Ordering::Equal)
-            } else {
-                None
-            }
-        } else {
-            let min_ix = self.parents.len().min(other.parents.len());
-            if min_ix == self.parents.len() {
-                if other.parents[min_ix] == *self {
-                    Some(Ordering::Less)
-                } else {
-                    None
-                }
-            } else {
-                if self.parents[min_ix] == *other {
-                    Some(Ordering::Greater)
-                } else {
-                    None
-                }
-            }
-        }
     }
 }

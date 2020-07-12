@@ -4,7 +4,7 @@ Boolean types and logical operations
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
-use crate::region::{Region, RegionData};
+use crate::region::Region;
 use crate::tokens::*;
 use crate::typing::{Type, Typed};
 use crate::value::{
@@ -254,13 +254,13 @@ trivial_substitute!(Bool);
 lazy_static! {
     /// Regions corresponding to primitive logical operations
     pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
-        Region::new(RegionData::with(vararr![Bool.into(); 1], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 2], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 3], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 4], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 5], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 6], Region::default())),
-        Region::new(RegionData::with(vararr![Bool.into(); 7], Region::default())),
+        Region::with(vararr![Bool.into(); 1], Region::default()),
+        Region::with(vararr![Bool.into(); 2], Region::default()),
+        Region::with(vararr![Bool.into(); 3], Region::default()),
+        Region::with(vararr![Bool.into(); 4], Region::default()),
+        Region::with(vararr![Bool.into(); 5], Region::default()),
+        Region::with(vararr![Bool.into(); 6], Region::default()),
+        Region::with(vararr![Bool.into(); 7], Region::default()),
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
