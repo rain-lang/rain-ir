@@ -1,5 +1,5 @@
 /*!
-Finite-valued types
+Finite-valued types.
 */
 use crate::eval::Apply;
 use crate::tokens::*;
@@ -14,14 +14,16 @@ use ref_cast::RefCast;
 use std::cmp::Ordering;
 use std::ops::Deref;
 
-/// A type with `n` values
+/// A type with `n` values.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
 #[repr(transparent)]
 pub struct Finite(pub u128);
 
 debug_from_display!(Finite);
 quick_pretty!(Finite, s, fmt => write!(fmt, "{}({})", KEYWORD_FINITE, s.0));
+trivial_lifetime!(Finite);
 trivial_substitute!(Finite);
+
 enum_convert! {
     impl InjectionRef<ValueEnum> for Finite {}
     impl TryFrom<NormalValue> for Finite { as ValueEnum, }
@@ -29,7 +31,7 @@ enum_convert! {
 }
 
 impl Finite {
-    /// Get an index into this type. Return an error if out of bounds
+    /// Get an index into this type. Return an error if out of bounds.
     pub fn ix<I: ToPrimitive>(self, ix: I) -> Result<Index, ()> {
         let ix = if let Some(ix) = ix.to_u128() {
             ix
@@ -39,8 +41,6 @@ impl Finite {
         Index::try_new(self, ix)
     }
 }
-
-trivial_lifetime!(Finite);
 
 impl Typed for Finite {
     #[inline]
@@ -135,7 +135,7 @@ enum_convert! {
 }
 
 impl Index {
-    /// Try to make a new index into a finite type. Return an error if out of bounds
+    /// Try to make a new index into a finite type. Return an error if out of bounds.
     pub fn try_new<F: Into<VarId<Finite>>>(ty: F, ix: u128) -> Result<Index, ()> {
         let ty = ty.into();
         if ix >= ty.deref().0 {
@@ -144,11 +144,11 @@ impl Index {
             Ok(Index { ty, ix })
         }
     }
-    /// Get this index
+    /// Get this index.
     pub fn ix(&self) -> u128 {
         self.ix
     }
-    /// Get the (finite) type of this index
+    /// Get the (finite) type of this index.
     pub fn get_ty(&self) -> VarRef<Finite> {
         self.ty.borrow_var()
     }
@@ -230,8 +230,8 @@ mod tests {
     #[test]
     #[cfg(feature = "parser")]
     fn basic_indexing_works() {
-        use crate::value::ValId;
         use crate::builder::Builder;
+        use crate::value::ValId;
         let mut builder = Builder::<&str>::new();
         let exprs: &[(&str, ValId)] = &[
             ("[#true #false ()] #ix(3)[1]", false.into()),
@@ -246,29 +246,29 @@ mod tests {
     }
     #[test]
     fn indices_work() {
-        // Index construction
+        // Index construction.
         let ix20 = Finite(2).ix(0).unwrap();
         let ix21 = Finite(2).ix(1).unwrap();
         assert!(Finite(2).ix(2).is_err());
         let ix10 = Finite(1).ix(0).unwrap();
         assert!(Finite(1).ix(1).is_err());
 
-        // Index printing
+        // Index printing.
         assert_eq!(format!("{}", ix20), "#ix(2)[0]");
         assert_eq!(format!("{}", ix21), "#ix(2)[1]");
         assert_eq!(format!("{}", ix10), "#ix(1)[0]");
 
-        // Indices into unequal types are unequal
+        // Indices into unequal types are unequal.
         assert_ne!(ix20, ix10);
         assert_ne!(ix21, ix10);
 
-        // Indices into unequal types are incomparable
+        // Indices into unequal types are incomparable.
         assert_eq!(ix20.partial_cmp(&ix10), None);
         assert_eq!(ix21.partial_cmp(&ix10), None);
         assert_eq!(ix10.partial_cmp(&ix20), None);
         assert_eq!(ix10.partial_cmp(&ix21), None);
 
-        // Indices into the same type compare properly
+        // Indices into the same type compare properly.
         assert_eq!(ix20.partial_cmp(&ix20), Some(Ordering::Equal));
         assert_eq!(ix20.partial_cmp(&ix21), Some(Ordering::Less));
         assert_eq!(ix21.partial_cmp(&ix20), Some(Ordering::Greater));
@@ -277,7 +277,7 @@ mod tests {
         let f2 = VarId::<Finite>::from(Finite(2));
         let f1 = VarId::<Finite>::from(Finite(1));
 
-        // Finite types have the right types
+        // Finite types have the right types.
         assert_eq!(ix20.get_ty(), f2);
         assert_eq!(ix20.ty(), f2);
         assert_eq!(ix21.get_ty(), f2);
@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(ix10.ty(), f1);
         assert_ne!(f1, f2);
 
-        // Finite types and indices have no dependences
+        // Finite types and indices have no dependences.
         assert_eq!(f1.no_deps(), 0);
         assert_eq!(Finite(1).no_deps(), 0);
         assert_eq!(ix10.no_deps(), 0);
@@ -295,13 +295,13 @@ mod tests {
         assert_eq!(ix20.no_deps(), 0);
         assert_eq!(ix21.no_deps(), 0);
 
-        // Finite types are types but not universes, indices are not types
+        // Finite types are types but not universes, indices are not types.
         assert!(f1.is_ty());
         assert!(!ix10.is_ty());
         assert!(!f1.is_universe());
         assert_eq!(f1.universe(), FINITE_TY.borrow_var());
 
-        // Finite types and indices live for the static lifetime
+        // Finite types and indices live for the static lifetime.
         assert_eq!(f1.lifetime(), LifetimeBorrow::default());
         assert_eq!(f2.lifetime(), LifetimeBorrow::default());
         assert_eq!(Finite(1).lifetime(), LifetimeBorrow::default());

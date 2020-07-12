@@ -5,6 +5,7 @@ use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
+    bits::Bits,
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -53,62 +54,64 @@ pub struct ValRef<'a, P = ()> {
     variant: std::marker::PhantomData<P>,
 }
 
-/// An enumeration of possible `rain` values
+/// An enumeration of possible `rain` values.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {
-    /// An S-expression
+    /// An S-expression.
     Sexpr(Sexpr),
-    /// A parameter
+    /// A parameter.
     Parameter(Parameter),
-    /// A tuple of `rain` values
+    /// A tuple of `rain` values.
     Tuple(Tuple),
     /// A finite Cartesian product of `rain` types, at least some of which are distinct.
     Product(Product),
-    /// A typing universe
+    /// A typing universe.
     Universe(Universe),
-    /// The type of booleans
+    /// The type of booleans.
     BoolTy(Bool),
-    /// A boolean value
+    /// A boolean value.
     Bool(bool),
-    /// A finite type
+    /// A finite type.
     Finite(Finite),
-    /// An index into a finite type
+    /// An index into a finite type.
     Index(Index),
-    /// A pi type
+    /// A pi type.
     Pi(Pi),
-    /// A lambda function
+    /// A lambda function.
     Lambda(Lambda),
-    /// A gamma node
+    /// A gamma node.
     Gamma(Gamma),
-    /// A phi node
+    /// A phi node.
     Phi(Phi),
-    /// Logical operations on booleans
+    /// Logical operations on booleans.
     Logical(Logical),
+    /// A bitset type.
+    Bits(Bits),
 }
 
-// Common value type aliases:
+// Common value type aliases.
 
-/// A `rain` type
+/// A `rain` type.
 pub type TypeId = VarId<TypeValue>;
 
-/// A `rain` type reference
+/// A `rain` type reference.
 pub type TypeRef<'a> = VarRef<'a, TypeValue>;
 
-/// A reference-counted pointer to a value guaranteed to be a typing universe
+/// A reference-counted pointer to a value guaranteed to be a typing universe.
 pub type UniverseId = VarId<Universe>;
 
-/// A pointer to a value guaranteed to be a typing universe
+/// A pointer to a value guaranteed to be a typing universe.
 pub type UniverseRef<'a> = VarRef<'a, Universe>;
 
-/// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+/// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant).
 pub type VarId<V> = ValId<Is<V>>;
 
-/// A borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
+/// A borrowed value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant).
 pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
 
 // The `Value` trait:
 
-/// A trait implemented by `rain` values
+/// A trait implemented by `rain` values.
 pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Get the number of dependencies of this value
     fn no_deps(&self) -> usize;
@@ -419,6 +422,7 @@ macro_rules! forv {
             ValueEnum::Gamma($i) => $e,
             ValueEnum::Phi($i) => $e,
             ValueEnum::Logical($i) => $e,
+            ValueEnum::Bits($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -495,6 +499,7 @@ normal_valid!(Parameter);
 normal_valid!(Gamma);
 normal_valid!(Phi);
 normal_valid!(Logical);
+normal_valid!(Bits);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
@@ -520,6 +525,7 @@ impl_to_type!(Universe);
 impl_to_type!(Bool);
 impl_to_type!(Finite);
 impl_to_type!(Pi);
+impl_to_type!(Bits);
 
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
