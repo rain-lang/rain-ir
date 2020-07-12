@@ -398,7 +398,7 @@ mod tests {
             .expect("This is a complete gamma node");
 
         assert_eq!(gamma.branches().len(), 2);
-        assert_eq!(gamma.region(), Region::NULL);
+        assert_eq!(gamma.region(), None);
 
         let gamma = gamma.into_val();
 
