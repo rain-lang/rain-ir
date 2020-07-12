@@ -697,7 +697,7 @@ impl From<LifetimeData> for Lifetime {
 impl From<Region> for Lifetime {
     #[inline]
     fn from(region: Region) -> Lifetime {
-        if region.is_null() {
+        if region.depth() == 0 {
             Lifetime(None)
         } else {
             Lifetime::new(LifetimeData::from(region))

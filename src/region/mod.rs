@@ -8,7 +8,7 @@ use im::{vector, Vector};
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::ops::Deref;
+use std::ops::{Deref, Index};
 
 mod parametrized;
 pub use parametrized::*;
@@ -27,7 +27,7 @@ pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RegionData {
     /// The parents of this region
-    parents: Option<Vector<Region>>,
+    parents: Vector<Region>,
     /// The parameter types of this region
     param_tys: TyArr,
 }
@@ -45,9 +45,6 @@ pub trait Regional {
         self.region().depth()
     }
 }
-
-/// The null region, with a given unique address
-pub static NULL_REGION: RegionData = RegionData::NULL;
 
 lazy_static! {
     /// The global cache of constructed regions.
@@ -94,6 +91,39 @@ impl Region {
     pub fn param(self, ix: usize) -> Result<Parameter, ()> {
         Parameter::try_new(self, ix)
     }
+    /// Get the data behind this `Region`, if any
+    #[inline]
+    pub fn data(&self) -> Option<&RegionData> {
+        self.0.as_deref()
+    }
+    /// Get a pointer to the data behind this `Region`, or null if there is none
+    #[inline]
+    pub fn data_ptr(&self) -> *const RegionData {
+        self.0
+            .as_deref()
+            .map(|ptr| ptr as *const _)
+            .unwrap_or(std::ptr::null())
+    }
+    /// Check whether this `Region` has any parameters
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data().map(|data| data.is_empty()).unwrap_or(false)
+    }
+    /// Get the number of parameters of this `Region`
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data().map(|data| data.len()).unwrap_or(0)
+    }
+    /// Get the depth of this region
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.data().map(|data| data.depth()).unwrap_or(0)
+    }
+    /// Get the parent of this region if any
+    #[inline]
+    pub fn parent(&self) -> Option<&Region> {
+        self.0.as_ref().map(|data| data.parent()).flatten()
+    }
     /// Iterate over the parameters of this `Region`.
     #[inline]
     pub fn params(self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
@@ -109,6 +139,7 @@ impl Region {
     /// Get the ancestor of this region up to a given depth
     #[inline]
     pub fn ancestor(&self, depth: usize) -> &Region {
+        //TODO: fixme
         let mut ptr: &Region = self;
         while ptr.depth() > depth {
             ptr = ptr
@@ -129,37 +160,33 @@ impl Region {
     }
 }
 
-impl Deref for Region {
-    type Target = RegionData;
+impl Index<usize> for Region {
+    type Output = TypeId;
     #[inline]
-    fn deref(&self) -> &RegionData {
-        if let Some(region) = &self.0 {
-            region.deref()
-        } else {
-            &NULL_REGION
-        }
+    fn index(&self, ix: usize) -> &TypeId {
+        self.data().unwrap().index(ix)
     }
 }
 
 impl PartialEq for Region {
     fn eq(&self, other: &Region) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
+        let self_ptr = self.data_ptr();
+        let other_ptr = other.data_ptr();
         self_ptr == other_ptr
     }
 }
 
 impl PartialEq<RegionBorrow<'_>> for Region {
     fn eq(&self, other: &RegionBorrow) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
+        let self_ptr = self.data_ptr();
+        let other_ptr = other.data_ptr();
         self_ptr == other_ptr
     }
 }
 
 impl PartialEq<RegionData> for Region {
     fn eq(&self, other: &RegionData) -> bool {
-        self.deref() == other
+        self.data() == Some(other)
     }
 }
 
@@ -171,7 +198,7 @@ impl PartialOrd for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
-        self.deref().partial_cmp(other.deref())
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -201,22 +228,13 @@ impl PartialOrd<RegionBorrow<'_>> for Region {
 
 impl Hash for Region {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+        std::ptr::hash(self.data_ptr(), hasher)
     }
 }
 
 impl<'a> RegionBorrow<'a> {
     /// A borrow of the null region
     pub const NULL: RegionBorrow<'a> = RegionBorrow(None);
-    /// Like `deref`, but using the lifetime of the `RegionBorrow` (which is incompatible with the `Deref` trait).
-    #[inline]
-    pub fn get(&self) -> &'a RegionData {
-        if let Some(region) = self.0 {
-            region.get()
-        } else {
-            &NULL_REGION
-        }
-    }
     /// Clone this region. This bumps the refcount
     #[inline]
     pub fn clone_region(&self) -> Region {
@@ -226,13 +244,46 @@ impl<'a> RegionBorrow<'a> {
     pub fn get_borrow(&self) -> Option<ArcBorrow<'a, RegionData>> {
         self.0
     }
+    /// Get the data behind this `Region`, if any
+    #[inline]
+    pub fn data(&self) -> Option<&'a RegionData> {
+        self.0.map(|borrow| borrow.get())
+    }
+    /// Get a pointer to the data behind this `Region`, or null if there is none
+    #[inline]
+    pub fn data_ptr(&self) -> *const RegionData {
+        self.0
+            .as_deref()
+            .map(|ptr| ptr as *const _)
+            .unwrap_or(std::ptr::null())
+    }
+    /// Check whether this `Region` has any parameters
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data().map(|data| data.is_empty()).unwrap_or(false)
+    }
+    /// Get the number of parameters of this `Region`
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data().map(|data| data.len()).unwrap_or(0)
+    }
+    /// Get the depth of this region
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.data().map(|data| data.depth()).unwrap_or(0)
+    }
+    /// Get the parent of this region if any
+    #[inline]
+    pub fn parent(&self) -> Option<&'a Region> {
+        self.data().map(|data| data.parent()).flatten()
+    }
     /// Get the ancestor of this region up to a given depth
     #[inline]
     pub fn ancestor(&self, depth: usize) -> RegionBorrow {
+        //TODO: fixme
         let mut ptr: RegionBorrow = *self;
         while ptr.depth() > depth {
             ptr = ptr
-                .get()
                 .parent()
                 .expect("Depth > 0, so region must have a parent")
                 .borrow_region();
@@ -251,26 +302,18 @@ impl<'a> RegionBorrow<'a> {
     }
 }
 
-impl Deref for RegionBorrow<'_> {
-    type Target = RegionData;
-    #[inline]
-    fn deref(&self) -> &RegionData {
-        self.0.as_deref().unwrap_or(&NULL_REGION)
-    }
-}
-
 impl PartialEq for RegionBorrow<'_> {
     fn eq(&self, other: &RegionBorrow) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
+        let self_ptr = self.data_ptr();
+        let other_ptr = other.data_ptr();
         self_ptr == other_ptr
     }
 }
 
 impl PartialEq<Region> for RegionBorrow<'_> {
     fn eq(&self, other: &Region) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
+        let self_ptr = self.data_ptr();
+        let other_ptr = other.data_ptr();
         self_ptr == other_ptr
     }
 }
@@ -278,13 +321,13 @@ impl PartialEq<Region> for RegionBorrow<'_> {
 impl PartialEq<RegionData> for RegionBorrow<'_> {
     fn eq(&self, other: &RegionData) -> bool {
         //TODO: pointer check?
-        self.deref() == other
+        self.data() == Some(other)
     }
 }
 
 impl Hash for RegionBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+        std::ptr::hash(self.data_ptr(), hasher)
     }
 }
 
@@ -296,7 +339,7 @@ impl PartialOrd for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionBorrow<'_>) -> Option<Ordering> {
-        self.deref().partial_cmp(other.deref())
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -308,7 +351,7 @@ impl PartialOrd<RegionData> for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        self.deref().partial_cmp(other)
+        self.data().partial_cmp(&Some(other))
     }
 }
 
@@ -320,7 +363,7 @@ impl PartialOrd<Region> for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
-        self.deref().partial_cmp(other)
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -333,15 +376,10 @@ impl Deref for RegionData {
 }
 
 impl RegionData {
-    /// The null region data
-    pub const NULL: RegionData = RegionData {
-        parents: None,
-        param_tys: TyArr::EMPTY,
-    };
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
     pub fn with(param_tys: TyArr, parent: Region) -> RegionData {
-        let parents = if let Some(parents) = &parent.parents {
+        let parents = if let Some(parents) = parent.data().map(|data| &data.parents) {
             let mut result = parents.clone();
             result.push_back(parent);
             result
@@ -350,7 +388,7 @@ impl RegionData {
         };
         RegionData {
             param_tys,
-            parents: Some(parents),
+            parents: parents,
         }
     }
     /// Create data for a new, empty region with an optional parent region
@@ -361,20 +399,12 @@ impl RegionData {
     /// Get the depth of this region
     #[inline]
     pub fn depth(&self) -> usize {
-        if let Some(parents) = &self.parents {
-            parents.len()
-        } else {
-            0
-        }
+        self.parents.len() + 1
     }
     /// Get the parent of this region
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
-        if let Some(parents) = &self.parents {
-            parents.last()
-        } else {
-            None
-        }
+        self.parents.last()
     }
     /// Get the parameter types of this region
     #[inline]
@@ -396,16 +426,27 @@ impl PartialOrd for RegionData {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        let left_depth = self.depth();
-        let right_depth = other.depth();
-        let min_depth = left_depth.min(right_depth);
-        if min_depth == 0
-            || self.parents.as_ref().unwrap()[min_depth - 1]
-                == other.parents.as_ref().unwrap()[min_depth - 1]
-        {
-            Some(left_depth.cmp(&right_depth))
+        if self.parents.len() == other.parents.len() {
+            if self == other {
+                Some(Ordering::Equal)
+            } else {
+                None
+            }
         } else {
-            None
+            let min_ix = self.parents.len().min(other.parents.len());
+            if min_ix == self.parents.len() {
+                if other.parents[min_ix] == *self {
+                    Some(Ordering::Less)
+                } else {
+                    None
+                }
+            } else {
+                if self.parents[min_ix] == *other {
+                    Some(Ordering::Greater)
+                } else {
+                    None
+                }
+            }
         }
     }
 }

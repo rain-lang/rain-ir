@@ -52,7 +52,7 @@ impl Pi {
         param
             .value()
             .universe()
-            .union_all(param.def_region().iter().map(|ty| ty.universe()))
+            .union_all(param.def_region().data().unwrap().iter().map(|ty| ty.universe()))
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
     pub fn try_new(value: TypeId, region: Region, base_lt: Lifetime) -> Result<Pi, Error> {
@@ -71,7 +71,7 @@ impl Pi {
     /// Get the parameter types of this pi type
     #[inline]
     pub fn param_tys(&self) -> &TyArr {
-        self.def_region().get().param_tys()
+        self.def_region().data().unwrap().param_tys()
     }
     /// Get the parameters of this pi type
     //TODO: parameter lifetimes...
