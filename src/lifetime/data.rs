@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 /// The static `rain` lifetime, with a constant address
 pub static STATIC_LIFETIME: LifetimeData = LifetimeData {
     affine: None,
-    region: Region::NULL,
+    region: None,
     idempotent: true,
 };
 
@@ -21,12 +21,25 @@ pub struct LifetimeData {
     /// The affine members of this lifetime
     affine: Option<HashMap<Color, Affine>>,
     /// The region of this lifetime
-    region: Region,
+    pub(super) region: Option<Region>,
     /// Whether this lifetime is self-intersectable
     idempotent: bool,
 }
 
 impl LifetimeData {
+    /// Get this lifetime data, but within a given region
+    #[inline]
+    pub fn in_region(&self, region: Option<Region>) -> Result<LifetimeData, Error> {
+        if self.region <= region {
+            Ok(LifetimeData {
+                affine: self.affine.clone(),
+                region,
+                idempotent: self.idempotent,
+            })
+        } else {
+            Err(Error::IncomparableRegions)
+        }
+    }
     /// A helper function to take the separating conjunction of two affine lifetime sets
     #[inline]
     pub fn affine_star(
@@ -86,7 +99,7 @@ impl LifetimeData {
     /// Get the conjunction of this lifetime with itself
     #[inline]
     pub fn conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        let region = self.region.conj(&other.region)?;
+        let region = Region::conj(&self.region, &other.region)?;
         let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
             (l, None) => l.cloned(),
             (None, r) => r.cloned(),
@@ -130,7 +143,7 @@ impl LifetimeData {
     /// Get the separating conjunction of this lifetime with another
     #[inline]
     pub fn star(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        let region = self.region.conj(&other.region)?;
+        let region = Region::conj(&self.region, &other.region)?;
         let affine = match (self.affine.as_ref(), other.affine.as_ref()) {
             (l, None) => l.cloned(),
             (None, r) => r.cloned(),
@@ -156,7 +169,7 @@ impl LifetimeData {
     /// Gets a lifetime which only owns a given color
     #[inline]
     pub fn owns(color: Color) -> LifetimeData {
-        let region = color.region().clone_region();
+        let region = color.cloned_region();
         // Not idempotent since owned
         LifetimeData {
             affine: Some(hashmap! { color => Affine::Owned }),
@@ -274,9 +287,9 @@ impl PartialOrd for LifetimeData {
     }
 }
 
-impl From<Region> for LifetimeData {
+impl From<Option<Region>> for LifetimeData {
     #[inline]
-    fn from(region: Region) -> LifetimeData {
+    fn from(region: Option<Region>) -> LifetimeData {
         LifetimeData {
             affine: None,
             region,
@@ -285,10 +298,17 @@ impl From<Region> for LifetimeData {
     }
 }
 
+impl From<Region> for LifetimeData {
+    #[inline]
+    fn from(region: Region) -> LifetimeData {
+        LifetimeData::from(Some(region))
+    }
+}
+
 impl Regional for LifetimeData {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.region.borrow_region()
+    fn region(&self) -> Option<RegionBorrow> {
+        self.region.as_ref().map(|region| region.borrow_region())
     }
 }
 

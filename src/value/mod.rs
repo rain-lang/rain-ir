@@ -346,7 +346,7 @@ impl Live for NormalValue {
 
 impl Regional for NormalValue {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.deref().region()
     }
 }
@@ -445,7 +445,7 @@ impl Live for ValueEnum {
 
 impl Regional for ValueEnum {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         forv!(match (self) {
             s => s.region(),
         })

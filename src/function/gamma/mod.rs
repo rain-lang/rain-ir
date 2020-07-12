@@ -5,7 +5,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, RegionBorrow, RegionData, Regional};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
 use crate::value::{
     arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
@@ -267,8 +267,7 @@ impl Branch {
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
     pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
-        let region = RegionData::with(matched.into(), value.region().clone_region());
-        let region = Region::new(region);
+        let region = Region::with(matched.into(), value.cloned_region());
         let func = Lambda::try_new(value, region)?.into();
         Ok(Branch { pattern, func })
     }
@@ -399,7 +398,7 @@ mod tests {
             .expect("This is a complete gamma node");
 
         assert_eq!(gamma.branches().len(), 2);
-        assert_eq!(gamma.region(), Region::NULL);
+        assert_eq!(gamma.region(), None);
 
         let gamma = gamma.into_val();
 

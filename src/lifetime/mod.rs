@@ -577,12 +577,24 @@ impl Lifetime {
         if self.depth() <= depth {
             return self.clone();
         }
-        self.region().ancestor(depth).clone_region().into()
+        self.region().ancestor(depth).cloned_region().into()
     }
     /// Escape a lifetime up to the current depth - 1
     #[inline]
     pub fn escape(&self) -> Lifetime {
         self.escape_upto(self.depth().saturating_sub(1))
+    }
+    /// Set a lifetime to be within a given region
+    #[inline]
+    pub fn in_region(&self, region: Option<Region>) -> Result<Lifetime, Error> {
+        if let Some(data) = &self.0 {
+            if data.region == region { // Avoid the hash table...
+                return Ok(self.clone())
+            }
+            data.in_region(region).map(Lifetime::from)
+        } else {
+            Ok(region.into())
+        }
     }
 }
 
@@ -682,7 +694,7 @@ impl Mul<&'_ Lifetime> for &'_ Lifetime {
 
 impl Regional for Lifetime {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.deref().region()
     }
 }
@@ -694,14 +706,17 @@ impl From<LifetimeData> for Lifetime {
     }
 }
 
+impl From<Option<Region>> for Lifetime {
+    #[inline]
+    fn from(region: Option<Region>) -> Lifetime {
+        region.map(Lifetime::from).unwrap_or(Lifetime(None))
+    }
+}
+
 impl From<Region> for Lifetime {
     #[inline]
     fn from(region: Region) -> Lifetime {
-        if region.is_null() {
-            Lifetime(None)
-        } else {
-            Lifetime::new(LifetimeData::from(region))
-        }
+        Lifetime::new(LifetimeData::from(region))
     }
 }
 
@@ -758,11 +773,8 @@ impl<'a> LifetimeBorrow<'a> {
     }
     /// Get the region of this lifetime
     #[inline]
-    pub fn get_region(&self) -> RegionBorrow<'a> {
-        match self.0 {
-            None => RegionBorrow::NULL,
-            Some(r) => r.get().region(),
-        }
+    pub fn get_region(&self) -> Option<RegionBorrow<'a>> {
+        self.0.map(|r| r.get().region()).flatten()
     }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
@@ -773,7 +785,7 @@ impl<'a> LifetimeBorrow<'a> {
 
 impl Regional for LifetimeBorrow<'_> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.deref().region()
     }
 }
@@ -790,7 +802,7 @@ macro_rules! lifetime_region {
     ($t:ty) => {
         impl $crate::region::Regional for $t {
             #[inline]
-            fn region(&self) -> $crate::region::RegionBorrow {
+            fn region(&self) -> Option<$crate::region::RegionBorrow> {
                 #[allow(unused_imports)]
                 use $crate::lifetime::Live;
                 self.lifetime().get_region()
@@ -805,8 +817,16 @@ macro_rules! trivial_lifetime {
     ($t:ty) => {
         impl $crate::region::Regional for $t {
             #[inline]
-            fn region(&self) -> $crate::region::RegionBorrow {
-                $crate::region::RegionBorrow::default()
+            fn region(&self) -> Option<$crate::region::RegionBorrow> {
+                None
+            }
+            #[inline]
+            fn cloned_region(&self) -> Option<$crate::region::Region> {
+                None
+            }
+            #[inline]
+            fn depth(&self) -> usize {
+                0
             }
         }
         impl $crate::lifetime::Live for $t {

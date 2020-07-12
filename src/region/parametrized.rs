@@ -26,7 +26,7 @@ impl<V: Value + Clone> Parametrized<V> {
     */
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
-        match value.region().partial_cmp(&region) {
+        match value.region().partial_cmp(&Some(region.borrow_region())) {
             None | Some(Greater) => Err(Error::IncomparableRegions),
             Some(Equal) => {
                 let mut deps = value.deps().collect_deps(..value.depth(), |_| true);
@@ -142,7 +142,7 @@ impl<V: Value> Live for Parametrized<V> {
 }
 
 impl<V: Value> Regional for Parametrized<V> {
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.lifetime().get_region()
     }
 }

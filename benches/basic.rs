@@ -16,7 +16,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let ix: u128 = rng.gen_range(0, finite.0);
         b.iter(|| {
             let ix = finite.ix(ix).unwrap();
-            let region = Region::with(vec![ix.ty().clone_ty()].into(), Region::default());
+            let region = Region::with(vec![ix.ty().clone_ty()].into(), None);
             let param = region.clone().param(0).unwrap();
             let id = Lambda::try_new(param.into(), region).unwrap();
             let ixv: ValId = ix.into();
@@ -30,7 +30,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let finite = Finite(rng.gen::<u128>().max(1));
         let ix: u128 = rng.gen_range(0, finite.0);
         let ix = finite.ix(ix).unwrap();
-        let region = Region::with(vec![ix.ty().clone_ty()].into(), Region::default());
+        let region = Region::with(vec![ix.ty().clone_ty()].into(), None);
         let param = region.clone().param(0).unwrap();
         let id: ValId = Lambda::try_new(param.into(), region).unwrap().into();
         let ixv: ValId = ix.into();
@@ -50,7 +50,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let region = Region::with(
                 vec![Bool.into(), Bool.into(), Bool.into()].into(),
-                Region::default(),
+                None,
             );
             let select: ValId = region.clone().param(0).unwrap().into();
             let high = region.clone().param(1).unwrap();
@@ -92,7 +92,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let in_sel: ValId = in_sel.into();
         let region = Region::with(
             vec![Bool.into(), Bool.into(), Bool.into()].into(),
-            Region::default(),
+            None,
         );
         let select: ValId = region.clone().param(0).unwrap().into();
         let high = region.clone().param(1).unwrap();

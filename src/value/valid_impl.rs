@@ -349,14 +349,14 @@ impl<P> Substitute<ValId> for ValRef<'_, P> {
 
 impl<P> Regional for ValId<P> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.as_norm().region()
     }
 }
 
 impl<P> Regional for ValRef<'_, P> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn region(&self) -> Option<RegionBorrow> {
         self.as_norm().region()
     }
 }

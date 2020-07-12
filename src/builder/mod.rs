@@ -14,7 +14,7 @@ use crate::primitive::{
     logical::{And, Bool, Id as LogicalId, Iff, Logical, Nand, Nor, Not, Or, Xor},
     Unit, UNIT,
 };
-use crate::region::{Parametrized, Region, RegionData};
+use crate::region::{Parametrized, Region};
 use crate::typing::Typed;
 use crate::value::{
     self,
@@ -336,13 +336,10 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     pub fn push_args(&mut self, args: &ParamArgs<'a>) -> Result<(), Error<'a>> {
         //TODO: more efficiency for type vector construction...
         let tys: Result<Vec<_>, _> = args.iter().map(|(_, ty)| self.build_ty(ty)).collect();
-        let region = Region::new(RegionData::with(
+        let region = Region::with(
             tys?.into_iter().collect(),
-            self.stack
-                .last()
-                .map(|(r, _)| r.clone())
-                .unwrap_or_default(),
-        ));
+            self.stack.last().map(|(r, _)| r.clone()),
+        );
         self.push_scope();
         for (i, (id, _)) in args.iter().enumerate() {
             match id.get_sym() {
