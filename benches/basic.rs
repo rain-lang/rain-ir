@@ -50,7 +50,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let region = Region::with(
                 vec![Bool.into(), Bool.into(), Bool.into()].into(),
-                Region::default(),
+                None,
             );
             let select: ValId = region.clone().param(0).unwrap().into();
             let high = region.clone().param(1).unwrap();
