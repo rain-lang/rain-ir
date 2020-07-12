@@ -19,7 +19,7 @@ impl RegionData {
     #[inline]
     pub fn with(param_tys: TyArr, parent: Option<Region>) -> RegionData {
         let parents = if let Some(parent) = parent {
-            let mut result = parent.data().unwrap().parents.clone();
+            let mut result = parent.data().parents.clone();
             result.push_back(parent);
             result
         } else {

@@ -584,6 +584,18 @@ impl Lifetime {
     pub fn escape(&self) -> Lifetime {
         self.escape_upto(self.depth().saturating_sub(1))
     }
+    /// Set a lifetime to be within a given region
+    #[inline]
+    pub fn in_region(&self, region: Option<Region>) -> Result<Lifetime, Error> {
+        if let Some(data) = &self.0 {
+            if data.region == region { // Avoid the hash table...
+                return Ok(self.clone())
+            }
+            data.in_region(region).map(Lifetime::from)
+        } else {
+            Ok(region.into())
+        }
+    }
 }
 
 impl BitAnd for Lifetime {

@@ -32,8 +32,8 @@ impl Pi {
     /// Create a new pi type from a parametrized `TypeId`
     pub fn new(result: Parametrized<TypeId>, base_lt: Lifetime) -> Result<Pi, Error> {
         let ty = Self::universe(&result);
-        let (_region, result, deps, lt) = result.destruct();
-        let result_lt = (result.lifetime().as_lifetime() & base_lt)?;
+        let (region, result, deps, lt) = result.destruct();
+        let result_lt = (result.lifetime().clone_lifetime().in_region(Some(region))? & base_lt)?;
         Ok(Pi {
             result,
             ty,
@@ -49,14 +49,10 @@ impl Pi {
     }
     /// Get the universe associated with a parametrized `TypeId`
     pub fn universe(param: &Parametrized<TypeId>) -> UniverseId {
-        param.value().universe().union_all(
-            param
-                .def_region()
-                .data()
-                .unwrap()
-                .iter()
-                .map(|ty| ty.universe()),
-        )
+        param
+            .value()
+            .universe()
+            .union_all(param.def_region().data().iter().map(|ty| ty.universe()))
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
     pub fn try_new(value: TypeId, region: Region, base_lt: Lifetime) -> Result<Pi, Error> {
@@ -72,12 +68,12 @@ impl Pi {
     pub fn def_region(&self) -> RegionBorrow {
         self.result_lt
             .region()
-            .expect("Pi type cannot have null region!")
+            .expect("Pi type cannot have a null region!")
     }
     /// Get the parameter types of this pi type
     #[inline]
     pub fn param_tys(&self) -> &TyArr {
-        self.def_region().data().unwrap().param_tys()
+        self.def_region().data().param_tys()
     }
     /// Get the parameters of this pi type
     //TODO: parameter lifetimes...

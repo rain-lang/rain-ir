@@ -41,7 +41,7 @@ impl Parameter {
     Trying to make a parameter out of bounds returns `Err`:
     ```rust
     use rain_ir::region::{Region, Parameter};
-    let empty_region = Region::with_parent(Region::default());
+    let empty_region = Region::with_parent(None);
     assert_eq!(Parameter::try_new(empty_region, 1), Err(()));
     ```
     */

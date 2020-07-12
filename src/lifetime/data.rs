@@ -21,12 +21,25 @@ pub struct LifetimeData {
     /// The affine members of this lifetime
     affine: Option<HashMap<Color, Affine>>,
     /// The region of this lifetime
-    region: Option<Region>,
+    pub(super) region: Option<Region>,
     /// Whether this lifetime is self-intersectable
     idempotent: bool,
 }
 
 impl LifetimeData {
+    /// Get this lifetime data, but within a given region
+    #[inline]
+    pub fn in_region(&self, region: Option<Region>) -> Result<LifetimeData, Error> {
+        if self.region <= region {
+            Ok(LifetimeData {
+                affine: self.affine.clone(),
+                region,
+                idempotent: self.idempotent,
+            })
+        } else {
+            Err(Error::IncomparableRegions)
+        }
+    }
     /// A helper function to take the separating conjunction of two affine lifetime sets
     #[inline]
     pub fn affine_star(
@@ -295,7 +308,7 @@ impl From<Region> for LifetimeData {
 impl Regional for LifetimeData {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        self.region.region()
+        self.region.as_ref().map(|region| region.borrow_region())
     }
 }
 
