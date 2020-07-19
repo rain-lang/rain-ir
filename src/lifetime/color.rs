@@ -26,7 +26,7 @@ pub struct Color {
 
 impl Regional for Color {
     fn region(&self) -> Option<RegionBorrow> {
-        self.region.region()
+        self.region.as_ref().map(Region::borrow_region)
     }
 }
 
@@ -63,7 +63,10 @@ impl Color {
             return None;
         }
         let ix = ix as isize; // Might get bugs around 2 billion parameters on 32-bit systems, but... lazy...
-        Some(Color { region: Some(region), ix })
+        Some(Color {
+            region: Some(region),
+            ix,
+        })
     }
 }
 
@@ -83,7 +86,10 @@ mod test {
     fn new_colors_are_not_equal() {
         let unary_region = Region::with(vec![Bool.into()].into(), None);
         assert_ne!(Color::new(), Color::new());
-        assert_ne!(Color::new_in(Some(unary_region.clone())), Color::new_in(Some(unary_region)));
+        assert_ne!(
+            Color::new_in(Some(unary_region.clone())),
+            Color::new_in(Some(unary_region))
+        );
     }
     #[test]
     fn new_region_color_construction() {

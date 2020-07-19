@@ -6,24 +6,46 @@ use super::*;
 impl Regional for Option<Region> {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        None
+        self.as_ref().map(Region::borrow_region)
     }
     /// Get the depth of this object's region
     #[inline]
     fn depth(&self) -> usize {
-        0
+        self.as_ref().map(Regional::depth).unwrap_or(0)
+    }
+}
+
+impl Regional for Region {
+    #[inline]
+    fn region(&self) -> Option<RegionBorrow> {
+        Some(self.borrow_region())
+    }
+    #[inline]
+    fn depth(&self) -> usize {
+        self.data().depth()
     }
 }
 
 impl Regional for Option<RegionBorrow<'_>> {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        None
+        *self
     }
     /// Get the depth of this object's region
     #[inline]
     fn depth(&self) -> usize {
-        0
+        self.as_ref().map(Regional::depth).unwrap_or(0)
+    }
+}
+
+impl Regional for RegionBorrow<'_> {
+    #[inline]
+    fn region(&self) -> Option<RegionBorrow> {
+        None
+    }
+    #[inline]
+    fn depth(&self) -> usize {
+        self.data().depth()
     }
 }
 

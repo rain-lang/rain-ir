@@ -352,12 +352,20 @@ impl<P> Regional for ValId<P> {
     fn region(&self) -> Option<RegionBorrow> {
         self.as_norm().region()
     }
+    #[inline]
+    fn depth(&self) -> usize {
+        self.as_norm().depth()
+    }
 }
 
 impl<P> Regional for ValRef<'_, P> {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
         self.as_norm().region()
+    }
+    #[inline]
+    fn depth(&self) -> usize {
+        self.as_norm().depth()
     }
 }
 

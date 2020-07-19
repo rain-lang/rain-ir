@@ -349,6 +349,10 @@ impl Regional for NormalValue {
     fn region(&self) -> Option<RegionBorrow> {
         self.deref().region()
     }
+    #[inline]
+    fn depth(&self) -> usize {
+        self.deref().depth()
+    }
 }
 
 debug_from_display!(NormalValue);
@@ -448,6 +452,12 @@ impl Regional for ValueEnum {
     fn region(&self) -> Option<RegionBorrow> {
         forv!(match (self) {
             s => s.region(),
+        })
+    }
+    #[inline]
+    fn depth(&self) -> usize {
+        forv!(match (self) {
+            s => s.depth(),
         })
     }
 }

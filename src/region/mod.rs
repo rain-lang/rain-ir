@@ -120,11 +120,6 @@ impl Region {
     pub fn len(&self) -> usize {
         self.data().len()
     }
-    /// Get the depth of this region
-    #[inline]
-    pub fn depth(&self) -> usize {
-        self.data().depth()
-    }
     /// Get the parent of this region if any
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
@@ -200,11 +195,6 @@ impl<'a> RegionBorrow<'a> {
     #[inline]
     pub fn len(&self) -> usize {
         self.data().len()
-    }
-    /// Get the depth of this region
-    #[inline]
-    pub fn depth(&self) -> usize {
-        self.data().depth()
     }
     /// Get the parent of this region if any
     #[inline]
