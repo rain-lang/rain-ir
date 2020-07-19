@@ -28,12 +28,18 @@ impl<V: Value + Clone> Parametrized<V> {
         let depth = region.depth();
         let deps: ValSet = match value.region().partial_cmp(&Some(region.borrow_region())) {
             None | Some(Greater) => return Err(Error::IncomparableRegions),
-            Some(Equal) => value
-                .deps()
-                .search(|dep| dep.depth() <= depth - 1)
-                .filter(|dep| dep.depth() == depth - 1)
-                .cloned()
-                .collect(),
+            Some(Equal) => {
+                let mut results = Vec::new();
+                for _ in value.deps().search(|dep| {
+                    if dep.depth() >= depth {
+                        true
+                    } else {
+                        results.push(dep.clone());
+                        false
+                    }
+                }) {}
+                results.into_iter().collect()
+            }
             Some(Less) => std::iter::once(value.clone().into_val()).collect(),
         };
         let lifetime = Lifetime::default()
