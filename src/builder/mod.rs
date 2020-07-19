@@ -23,7 +23,7 @@ use crate::value::{
     TypeId, ValId, ValueEnum,
 };
 use ahash::RandomState;
-use hayami::SymbolTable;
+use hayami::{SymbolMap, SymbolTable};
 use num::ToPrimitive;
 use std::borrow::Borrow;
 use std::convert::TryInto;
@@ -50,7 +50,7 @@ impl<'a, S: Hash + Eq + From<&'a str>> Builder<S> {
     /// Create a new builder
     pub fn new() -> Builder<S> {
         Builder {
-            symbols: SymbolTable::new(),
+            symbols: SymbolTable::default(),
             stack: Vec::new(),
         }
     }
@@ -351,7 +351,7 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
                         .expect("Index must be in bounds")
                         .into(),
                 ),
-                Ok(None) => None,
+                Ok(None) => {},
                 Err(_) => {
                     self.pop_scope();
                     return Err(Error::Message("Cannot assign to this symbol!"));
@@ -370,7 +370,9 @@ impl<'a, S: Hash + Eq + Borrow<str> + From<&'a str>, B: BuildHasher> Builder<S, 
     /// Pop the top region from the region stack, along with any scopes in the region. Return it, if any
     pub fn pop_region(&mut self) -> Option<Region> {
         if let Some((region, depth)) = self.stack.pop() {
-            self.symbols.jump(depth);
+            while self.symbols.depth() > depth {
+                self.symbols.pop();
+            }
             Some(region)
         } else {
             None

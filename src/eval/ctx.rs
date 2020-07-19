@@ -9,7 +9,7 @@ use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
-use hayami::SymbolTable;
+use hayami::{SymbolMap, SymbolTable};
 use smallvec::{smallvec, SmallVec};
 use std::iter::Iterator;
 
@@ -29,8 +29,8 @@ impl EvalCtx {
     #[inline]
     pub fn with_capacity(e: usize, l: usize) -> EvalCtx {
         EvalCtx {
-            eval_cache: SymbolTable::with_capacity(e),
-            lt_cache: SymbolTable::with_capacity(l),
+            eval_cache: SymbolTable::with_capacity_and_hasher(e, FxBuildHasher::default()),
+            lt_cache: SymbolTable::with_capacity_and_hasher(l, FxBuildHasher::default()),
             minimum_depths: smallvec![usize::MAX],
         }
     }
@@ -57,11 +57,9 @@ impl EvalCtx {
         //TODO
         false
     }
-    /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch.
-    ///
-    /// Return whether the substitution is already registred, in which case nothing happens.
+    /// Register a substitution in the given scope. Return an error on a type/lifetime mismatch.    
     #[inline]
-    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<bool, Error> {
+    pub fn substitute(&mut self, lhs: ValId, rhs: ValId, check: bool) -> Result<(), Error> {
         let llt = lhs.lifetime();
         if check {
             if !(llt >= rhs.lifetime()) {
@@ -75,7 +73,8 @@ impl EvalCtx {
                 *top = (*top).min(llt.depth());
             }
         }
-        Ok(self.eval_cache.try_insert(lhs, rhs).is_err())
+        self.eval_cache.insert(lhs, rhs);
+        Ok(())
     }
     /// Register substitutes values for each value in a region.
     ///
