@@ -80,6 +80,11 @@ impl Regional for Parameter {
     fn region(&self) -> Option<RegionBorrow> {
         Some(self.get_region().borrow_region())
     }
+    fn depth(&self) -> usize {
+        let depth = self.get_region().depth();
+        debug_assert!(depth > 0);
+        depth
+    }
 }
 
 impl Typed for Parameter {
