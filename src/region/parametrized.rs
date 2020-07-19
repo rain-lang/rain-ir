@@ -7,7 +7,6 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
 use crate::value::{arr::ValSet, Error, TypeId, ValId, Value};
-use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 
@@ -26,35 +25,26 @@ impl<V: Value + Clone> Parametrized<V> {
     */
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
-        match value.region().partial_cmp(&Some(region.borrow_region())) {
-            None | Some(Greater) => Err(Error::IncomparableRegions),
-            Some(Equal) => {
-                let mut deps = value.deps().collect_deps(..value.depth(), |_| true);
-                deps.shrink_to_fit();
-                let lifetime = Lifetime::default()
-                    .sep_conj(deps.iter().map(|dep: &ValId| dep.lifetime()))
-                    .map_err(|_| Error::LifetimeError)?;
-                Ok(Parametrized {
-                    region,
-                    value,
-                    deps: deps.into_iter().collect(),
-                    lifetime,
-                })
-            }
-            Some(Less) => {
-                let mut deps: SmallVec<[ValId; 0]> = smallvec![value.clone().into_val()];
-                deps.shrink_to_fit();
-                let lifetime = Lifetime::default()
-                    .sep_conj(deps.iter().map(|dep: &ValId| dep.lifetime()))
-                    .map_err(|_| Error::LifetimeError)?;
-                Ok(Parametrized {
-                    region,
-                    value,
-                    deps: deps.into_iter().collect(),
-                    lifetime,
-                })
-            }
-        }
+        let depth = region.depth();
+        let deps: ValSet = match value.region().partial_cmp(&Some(region.borrow_region())) {
+            None | Some(Greater) => return Err(Error::IncomparableRegions),
+            Some(Equal) => value
+                .deps()
+                .search(|dep| dep.depth() <= depth - 1)
+                .filter(|dep| dep.depth() == depth - 1)
+                .cloned()
+                .collect(),
+            Some(Less) => std::iter::once(value.clone().into_val()).collect(),
+        };
+        let lifetime = Lifetime::default()
+            .sep_conj(deps.iter().map(|dep: &ValId| dep.lifetime()))
+            .map_err(|_| Error::LifetimeError)?;
+        Ok(Parametrized {
+            region,
+            value,
+            deps,
+            lifetime,
+        })
     }
 }
 

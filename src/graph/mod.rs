@@ -1,11 +1,8 @@
 /*!
 Graph-theoretic utilities for `rain`
 */
-use crate::region::Regional;
 use crate::value::{Deps, ValId, Value};
 use fxhash::FxHashSet;
-use smallvec::SmallVec;
-use std::ops::RangeBounds;
 
 pub mod dfs;
 
@@ -14,14 +11,17 @@ pub mod dfs;
 pub struct VisitedFilter(pub FxHashSet<usize>);
 
 /// A filter for `ValId`s
-pub trait ValIdFilter<V> {
+pub trait ValIdFilter<'a, V> {
     /// Filter a `ValId`, determining whether it is included
-    fn filter<'a>(&mut self, value: &'a ValId) -> Option<&'a V>;
+    fn filter(&mut self, value: &'a ValId) -> Option<&'a V>;
 }
 
-impl<F, V> ValIdFilter<V> for F where F: FnMut(&ValId) -> Option<&V> {
+impl<'a, F, V: 'a> ValIdFilter<'a, V> for F
+where
+    F: FnMut(&'a ValId) -> Option<&'a V>,
+{
     #[inline]
-    fn filter<'a>(&mut self, value: &'a ValId) -> Option<&'a V> {
+    fn filter(&mut self, value: &'a ValId) -> Option<&'a V> {
         self(value)
     }
 }
@@ -33,9 +33,9 @@ impl VisitedFilter {
     }
 }
 
-impl ValIdFilter<ValId> for VisitedFilter {
+impl<'a> ValIdFilter<'a, ValId> for VisitedFilter {
     #[inline]
-    fn filter<'a>(&mut self, value: &'a ValId) -> Option<&'a ValId> {
+    fn filter(&mut self, value: &'a ValId) -> Option<&'a ValId> {
         let addr = value.as_ptr() as usize;
         if self.0.insert(addr) {
             Some(value)
@@ -45,33 +45,27 @@ impl ValIdFilter<ValId> for VisitedFilter {
     }
 }
 
-const DEP_SEARCH_STACK_SIZE: usize = 16;
+impl<'a> ValIdFilter<'a, ValId> for &'_ mut VisitedFilter {
+    #[inline]
+    fn filter(&mut self, value: &'a ValId) -> Option<&'a ValId> {
+        (**self).filter(value)
+    }
+}
 
 impl<V: Value> Deps<V> {
-    /// Collect the immediate dependencies of this value within a given depth range which match a given filter
-    pub fn collect_deps<R, F>(&self, range: R, filter: F) -> Vec<ValId>
+    /// Search the dependencies of a value matching a given predicate
+    pub fn search<'a, P>(&'a self, mut predicate: P) -> impl Iterator<Item = &'a ValId> + 'a
     where
         V: Clone,
-        R: RangeBounds<usize>,
-        F: Fn(&ValId) -> bool,
+        P: FnMut(&ValId) -> bool + 'a,
     {
-        let mut result = Vec::new();
-        // Simple edge case
-        if range.contains(&self.0.depth()) {
-            return vec![self.0.clone().into_val()];
-        }
-        let mut searched = FxHashSet::<&ValId>::default();
-        let mut frontier: SmallVec<[&ValId; DEP_SEARCH_STACK_SIZE]> = self.iter().collect();
-        while let Some(dep) = frontier.pop() {
-            searched.insert(dep);
-            if range.contains(&dep.depth()) {
-                if filter(dep) {
-                    result.push(dep.clone())
-                }
-            } else {
-                frontier.extend(dep.deps().iter().filter(|dep| !searched.contains(dep)))
-            }
-        }
-        result
+        let mut visited = VisitedFilter::new();
+        let dfs: dfs::DepDFS<'a, _, _> = dfs::DepDFS::new(
+            self.iter().collect(),
+            move |value: &'a ValId| -> Option<&'a ValId> {
+                visited.filter(value).filter(|value| predicate(*value))
+            },
+        );
+        dfs
     }
 }

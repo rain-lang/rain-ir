@@ -32,7 +32,7 @@ impl<'a, V, F> DepDFS<'a, V, F> {
 impl<'a, V, F> Iterator for DepDFS<'a, V, F>
 where
     V: Value,
-    F: ValIdFilter<V>,
+    F: ValIdFilter<'a, V>,
 {
     type Item = &'a V;
     fn next(&mut self) -> Option<&'a V> {
