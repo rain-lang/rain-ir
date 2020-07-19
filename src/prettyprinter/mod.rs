@@ -6,7 +6,7 @@ use crate::typing::{Type, Typed};
 use crate::value::{NormalValue, ValRef, Value};
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
-use hayami::SymbolTable;
+use hayami::{SymbolMap, SymbolTable};
 use ref_cast::RefCast;
 use smallvec::SmallVec;
 use std::default::Default;
@@ -64,7 +64,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     /// Create a new prettyprinter
     pub fn new() -> PrettyPrinter<I> {
         PrettyPrinter {
-            symbols: SymbolTable::new(),
+            symbols: SymbolTable::default(),
             unique: 0,
             scope: Vec::new(),
             open_scopes: 0,
