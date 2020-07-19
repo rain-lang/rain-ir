@@ -881,8 +881,6 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "parser")]
-    use crate::builder::Builder;
 
     #[test]
     fn basic_boolean_properties() {
@@ -897,43 +895,6 @@ mod tests {
         assert_eq!(Bool.no_deps(), 0);
         assert_eq!(true.no_deps(), 0);
         assert_eq!(false.no_deps(), 0);
-    }
-
-    #[cfg(all(feature = "parser", feature = "prettyprinter"))]
-    #[test]
-    fn booleans_parse_properly() {
-        use crate::prettyprinter::PrettyPrint;
-        let mut builder = Builder::<&str>::new();
-        let f_true = format!("{}", true.prp());
-        let f_false = format!("{}", false.prp());
-        let f_bool = format!("{}", Bool);
-        let f_bool_prp = format!("{}", Bool.prp());
-
-        let (rest, expr) = builder.parse_expr(&f_true).expect(KEYWORD_TRUE);
-        assert_eq!(rest, "");
-        assert_eq!(expr, true.into_val());
-        let (rest, expr) = builder.parse_expr(&KEYWORD_TRUE).expect(KEYWORD_TRUE);
-        assert_eq!(rest, "");
-        assert_eq!(expr, true.into_val());
-
-        let (rest, expr) = builder.parse_expr(&f_false).expect(KEYWORD_FALSE);
-        assert_eq!(rest, "");
-        assert_eq!(expr, false.into_val());
-        let (rest, expr) = builder.parse_expr(&KEYWORD_FALSE).expect(KEYWORD_FALSE);
-        assert_eq!(rest, "");
-        assert_eq!(expr, false.into_val());
-
-        let (rest, expr) = builder.parse_expr(&f_bool).expect(KEYWORD_BOOL);
-        assert_eq!(rest, "");
-        assert_eq!(expr, Bool.into_val());
-        let (rest, expr) = builder.parse_expr(&f_bool_prp).expect(KEYWORD_BOOL);
-        assert_eq!(rest, "");
-        assert_eq!(expr, Bool.into_val());
-        let (rest, expr) = builder.parse_expr(&KEYWORD_BOOL).expect(KEYWORD_BOOL);
-        assert_eq!(rest, "");
-        assert_eq!(expr, Bool.into_val());
-
-        assert!(builder.parse_expr("#fals").is_err());
     }
 
     #[test]
@@ -967,124 +928,6 @@ mod tests {
             Logical::from(And).apply(true).right().unwrap().apply(true),
             Either::Left(true)
         );
-    }
-
-    /// Test a binary operation exhaustively
-    #[cfg(feature = "parser")]
-    fn test_binary_operation(
-        op: Logical,
-        partial_table: &[Logical; 2],
-        truth_table: &[bool; 4],
-        builder: &mut Builder<String>,
-    ) {
-        // Test parsing:
-        assert_eq!(
-            builder.parse_expr(&format!("{}", op)).unwrap(),
-            ("", op.into())
-        );
-        assert_eq!(
-            builder.parse_expr(&format!("{}", op.print_raw())).unwrap(),
-            ("", op.into())
-        );
-
-        for left in [true, false].iter().copied() {
-            for right in [true, false].iter().copied() {
-                let ix = left as u8 | (right as u8) << 1;
-                assert_eq!(op.get_bit(ix), truth_table[ix as usize]);
-                let partial = op
-                    .apply(left)
-                    .right()
-                    .expect("Expected binary operation, got unary!");
-                assert_eq!(
-                    partial, partial_table[left as usize],
-                    "Incorrect partial evaluation of ({} {})",
-                    op, left
-                );
-                assert_eq!(
-                    builder.parse_expr(&format!("{} #{}", op, left)).unwrap(),
-                    ("", partial.into())
-                );
-                assert_eq!(
-                    builder.parse_expr(&format!("{}", partial)).unwrap(),
-                    ("", partial.into())
-                );
-                assert_eq!(
-                    builder
-                        .parse_expr(&format!("{}", partial.print_raw()))
-                        .unwrap(),
-                    ("", partial.into())
-                );
-                let fin = partial
-                    .apply(right)
-                    .left()
-                    .expect("Expected binary operation, got arity > 2!");
-                assert_eq!(
-                    fin, truth_table[ix as usize],
-                    "Incorrect total evaluation of ({} {} {}) == ({} {})",
-                    op, left, right, partial, right
-                );
-                assert_eq!(
-                    builder
-                        .parse_expr(&format!("{} #{} #{}", op, left, right))
-                        .unwrap(),
-                    ("", fin.into())
-                );
-                assert_eq!(
-                    builder
-                        .parse_expr(&format!("({} #{}) #{}", op, left, right))
-                        .unwrap(),
-                    ("", fin.into())
-                );
-                assert_eq!(
-                    builder
-                        .parse_expr(&format!("{} #{}", partial, right))
-                        .unwrap(),
-                    ("", fin.into())
-                );
-            }
-        }
-    }
-
-    #[cfg_attr(not(feature = "parser"), allow(unused))]
-    fn cl(b: bool) -> Logical {
-        Logical::try_const(1, b).unwrap()
-    }
-
-    #[cfg(feature = "parser")]
-    #[test]
-    fn test_binary_operations() {
-        let mut builder = Builder::<String>::new();
-        let binary_ops: &[(Logical, [Logical; 2], [bool; 4])] = &[
-            (
-                And.into(),
-                [cl(false), Id.into()],
-                [false, false, false, true],
-            ),
-            (Or.into(), [Id.into(), cl(true)], [false, true, true, true]),
-            (
-                Xor.into(),
-                [Id.into(), Not.into()],
-                [false, true, true, false],
-            ),
-            (
-                Nor.into(),
-                [Not.into(), cl(false)],
-                [true, false, false, false],
-            ),
-            (
-                Nand.into(),
-                [cl(true), Not.into()],
-                [true, true, true, false],
-            ),
-            (
-                Iff.into(),
-                [Not.into(), Id.into()],
-                [true, false, false, true],
-            ),
-        ];
-        for (op, partial_table, truth_table) in binary_ops.iter() {
-            test_binary_operation(*op, partial_table, truth_table, &mut builder);
-        }
     }
 
     #[test]

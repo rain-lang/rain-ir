@@ -8,6 +8,7 @@ repository = "https://gitlab.com/rain-lang/rain-ir"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rain-ast = { git = "https://gitlab.com/rain-lang/rain-ast.git", default-features = false }
 ahash = "^0.4"
 smallvec = "^1.4"
 elysees = "^0.2.0"
@@ -24,14 +25,6 @@ thin-dst = "^1.1.0"
 dashcache = "^0.2.0"
 im = "^15"
 hayami = "^0.3"
-
-# Parser
-rain-ast = { git = "https://gitlab.com/rain-lang/rain-ast.git", default-features = false, features = [] }
-
-# Parser dependencies
-nom = { version = "^5", optional = true }
-
-# Feature dependencies
 rand = { version = "^0.7", optional = true }
 
 [dev-dependencies]
@@ -43,16 +36,10 @@ criterion = "^0.3"
 
 [features]
 default = [
-    "parser", 
     "prettyprinter",
     "rand"
     ]
-parser = ["nom", "rain-ast/parser"]
 prettyprinter = []
-
-[[example]]
-name = "repl"
-required-features = ["parser", "prettyprinter"]
 
 [[bench]]
 name = "basic"

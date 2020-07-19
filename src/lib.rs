@@ -13,6 +13,7 @@ Contributions, ideas and collaboration proposals are welcome: please make an iss
 */
 #![forbid(missing_docs, missing_debug_implementations)]
 #![recursion_limit = "256"]
+#[warn(clippy::all)]
 
 pub mod data;
 pub mod eval;
@@ -27,11 +28,5 @@ pub mod value;
 
 pub use rain_ast::tokens;
 
-#[cfg(feature = "parser")]
-pub mod builder;
-#[cfg(feature = "parser")]
-pub use rain_ast::ast;
-#[cfg(feature = "parser")]
-pub use rain_ast::parser;
 #[cfg(feature = "prettyprinter")]
 pub mod prettyprinter;

@@ -413,7 +413,6 @@ impl<A, P> Deref for ValArr<A, P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg_attr(not(feature = "parser"), allow(unused))]
     use crate::primitive::finite::{Finite, Index};
 
     /// Basic set operations and construction

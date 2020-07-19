@@ -228,23 +228,6 @@ mod tests {
     use super::*;
     use crate::lifetime::{LifetimeBorrow, Live};
     #[test]
-    #[cfg(feature = "parser")]
-    fn basic_indexing_works() {
-        use crate::value::ValId;
-        use crate::builder::Builder;
-        let mut builder = Builder::<&str>::new();
-        let exprs: &[(&str, ValId)] = &[
-            ("[#true #false ()] #ix(3)[1]", false.into()),
-            ("[#false [#true] ()] #ix(3)[1] #ix(1)[0]", true.into()),
-            ("[#false #finite(6) #false] #ix(3)[1]", Finite(6).into()),
-        ];
-        for (expr, value) in exprs {
-            let (rest, expr) = builder.parse_expr(expr).expect(expr);
-            assert_eq!(&expr, value);
-            assert_eq!(rest, "");
-        }
-    }
-    #[test]
     fn indices_work() {
         // Index construction
         let ix20 = Finite(2).ix(0).unwrap();

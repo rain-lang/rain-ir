@@ -61,7 +61,7 @@ pub trait Regional {
     }
 }
 
-/// Get the least common region of a two regions.
+/// Get the least common region of two regions.
 pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<RegionBorrow<'a>> {
     use Ordering::*;
     let lr = left.region();

@@ -535,7 +535,6 @@ mod prettyprint_impl {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::builder::Builder;
         use crate::valarr;
 
         #[test]
@@ -563,25 +562,6 @@ mod prettyprint_impl {
             assert_eq!(
                 &format!("{}", anchor.ty()),
                 &format!("{}[]", KEYWORD_ANCHOR)
-            );
-        }
-
-        #[test]
-        fn simple_projections_normalize_properly() {
-            let mut builder = Builder::<&str>::new();
-            assert_eq!(
-                builder.parse_expr("[#true #false].0").unwrap(),
-                ("", ValId::from(true))
-            );
-            assert_eq!(
-                builder.parse_expr("[#true #false].1").unwrap(),
-                ("", ValId::from(false))
-            );
-            assert_eq!(
-                builder
-                    .parse_expr("[[#true #false] [#false #true] []].1.0")
-                    .unwrap(),
-                ("", ValId::from(false))
             );
         }
     }
