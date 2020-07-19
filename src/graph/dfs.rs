@@ -1,45 +1,49 @@
 /*!
 Depth-first search
 */
-
-use crate::value::{Value, ValId};
-
+use super::ValIdFilter;
+use crate::value::Value;
 
 /// A depth-first search of a value's dependencies matching a given filter.
 /// Dependencies not matching the filter are ignored *along with all their descendants*.
 /// Fallible filters are supported: in this case, the search will halt.
 /// May repeat dependencies.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct DepDFS<V, F> {
+pub struct DepDFS<'a, V, F> {
     /// The frontier of this search
-    frontier: Vec<V>,
+    frontier: Vec<&'a V>,
     /// The filter to apply
     filter: F,
 }
 
-impl<V, F> DepDFS<V, F> {
+impl<'a, V, F> DepDFS<'a, V, F> {
     /// Create a new BFS starting at a given frontier
     #[inline]
-    pub fn new(frontier: Vec<V>, filter: F) -> DepDFS<V, F> {
+    pub fn new(frontier: Vec<&'a V>, filter: F) -> DepDFS<'a, V, F> {
         DepDFS { frontier, filter }
     }
     /// Create a new BFS starting at a given value
     #[inline]
-    pub fn new_at(start: V, filter: F) -> DepDFS<V, F> {
+    pub fn new_at(start: &'a V, filter: F) -> DepDFS<'a, V, F> {
         Self::new(vec![start], filter)
     }
 }
 
-impl<V, F> Iterator for DepDFS<V, F>
+impl<'a, V, F> Iterator for DepDFS<'a, V, F>
 where
     V: Value,
-    F: FnMut(&ValId) -> Option<V>,
+    F: ValIdFilter<V>,
 {
-    type Item = V;
-    fn next(&mut self) -> Option<V> {
+    type Item = &'a V;
+    fn next(&mut self) -> Option<&'a V> {
         let top = self.frontier.pop()?;
-        self.frontier
-            .extend(top.deps().iter().rev().filter_map(&mut self.filter));
+        let filter = &mut self.filter;
+        self.frontier.extend(
+            top.deps()
+                .iter()
+                .rev()
+                .filter_map(|value| filter.filter(value)),
+        );
         Some(top)
     }
 }
@@ -131,18 +135,18 @@ mod tests {
             Product::try_new(vec![f5.clone(), p234.clone(), p3456.clone()].into())
                 .unwrap()
                 .into();
-        let filter = VisitedFilter::new().into_filter(|v| Some(v.clone()));
-        let dfs = DepDFS::new_at(p5_234_3456.clone_val(), filter);
+        let filter = VisitedFilter::new();
+        let dfs = DepDFS::new_at(p5_234_3456.as_val(), filter);
         let deps: Vec<_> = dfs.collect();
         let expected_deps = &[
-            p5_234_3456.clone_val(),
-            f5.clone_val(),
-            p234.clone_val(),
-            f2.clone_val(),
-            f3.clone_val(),
-            f4.clone_val(),
-            p3456.clone_val(),
-            f6.clone_val(),
+            p5_234_3456.as_val(),
+            f5.as_val(),
+            p234.as_val(),
+            f2.as_val(),
+            f3.as_val(),
+            f4.as_val(),
+            p3456.as_val(),
+            f6.as_val(),
         ];
         assert_eq!(&deps[..], expected_deps);
     }
