@@ -61,6 +61,18 @@ pub trait Regional {
     }
 }
 
+/// Get the least common region of a two regions.
+pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<RegionBorrow<'a>> {
+    use Ordering::*;
+    let lr = left.region();
+    let rr = right.region();
+    match lr.partial_cmp(&rr) {
+        Some(Less) | Some(Equal) => lr,
+        Some(Greater) => rr,
+        None => None
+    }
+} 
+
 lazy_static! {
     /// The global cache of constructed regions.
     ///
