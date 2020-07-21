@@ -5,7 +5,7 @@
 use super::Lifetime;
 use dashcache::{
     arr::{CachedArr, EmptyPredicate, Sorted, Uniq},
-    DashCache, GlobalCache
+    DashCache, GlobalCache,
 };
 use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
@@ -69,3 +69,19 @@ pub type LifetimeBag = LifetimeArr<Sorted>;
 
 /// A set of `rain` lifetimes
 pub type LifetimeSet = LifetimeArr<Uniq>;
+
+#[cfg(test)]
+mod tests {
+    use crate::region::Region;
+    use crate::typing::Typed;
+    use crate::value::{tuple::Tuple, Value};
+
+    #[test]
+    fn simple_double_anchor_use_fails() {
+        let anchor = Tuple::const_anchor();
+        let anchor_ty = anchor.ty().clone_ty();
+        let region = Region::with(vec![anchor_ty].into(), None);
+        let anchor_param = region.param(0).unwrap().into_val();
+        Tuple::try_new(vec![anchor_param.clone(), anchor_param].into()).unwrap_err();
+    }
+}
