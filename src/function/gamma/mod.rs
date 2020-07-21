@@ -39,6 +39,10 @@ impl Gamma {
     pub fn branches(&self) -> &[Branch] {
         &self.branches.slice
     }
+    /// Get the type of this gamma node, guaranteed to be a pi type
+    pub fn get_ty(&self) -> &VarId<Pi> {
+        &self.ty
+    }
 }
 
 impl Typed for Gamma {
