@@ -13,12 +13,12 @@ use std::ops::Deref;
 /// An S-expression
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Sexpr {
-    /// The arguments of this S-expression
-    pub(super) args: ValArr,
+    /// The arguments of this S-expression, *or* a single element (stored inline for efficiency)
+    args: ValArr,
     /// The (cached) lifetime of this S-expression
-    pub(super) lifetime: Lifetime,
+    lifetime: Lifetime,
     /// The (cached) type of this S-expression
-    pub(super) ty: TypeId,
+    ty: TypeId,
 }
 
 debug_from_display!(Sexpr);
@@ -114,6 +114,14 @@ impl Sexpr {
             args: valarr![value],
             lifetime,
             ty,
+        }
+    }
+    /// Create an S-expression corrsponding to a cast
+    pub(super) fn cast_singleton(value: ValId, lifetime: Lifetime, ty: TypeId) -> Sexpr {
+        Sexpr {
+            args: vec![value].into(),
+            lifetime,
+            ty
         }
     }
 }

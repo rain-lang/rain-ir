@@ -172,11 +172,7 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             return Ok(self.into_val());
         }
         let val = self.into_val();
-        Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
-            args: vec![val].into(),
-            ty,
-            lifetime: lt,
-        }))
+        Ok(NormalValue(ValueEnum::Sexpr(Sexpr::cast_singleton(val, lt, ty)))
         .into())
     }
     /// Cast a value to a given lifetime
