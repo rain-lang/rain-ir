@@ -116,6 +116,14 @@ impl Sexpr {
             ty,
         }
     }
+    /// Create an S-expression corresponding to a cast
+    pub(super) fn cast_singleton(value: ValId, lifetime: Lifetime, ty: TypeId) -> Sexpr {
+        Sexpr {
+            args: vec![value].into(),
+            ty,
+            lifetime,
+        }
+    }
 }
 
 impl Live for Sexpr {
