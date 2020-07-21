@@ -596,6 +596,11 @@ impl Lifetime {
             Ok(region.into())
         }
     }
+    /// Get a lifetime which owns only a given color
+    #[inline]
+    pub fn owns(color: Color) -> Lifetime {
+        LifetimeData::owns(color).into()
+    }
 }
 
 impl BitAnd for Lifetime {

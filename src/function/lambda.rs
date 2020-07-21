@@ -237,9 +237,10 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lifetime::Color;
     use crate::primitive::{finite::Finite, logical::*};
     use crate::typing::Type;
-    use crate::value::expr::Sexpr;
+    use crate::value::{expr::Sexpr, tuple::Tuple};
 
     #[test]
     fn boolean_identity_works_properly() {
@@ -266,6 +267,29 @@ mod tests {
                 ix.into_val()
             );
         }
+    }
+
+    #[test]
+    fn anchor_identity_works_properly() {
+        let anchor = Tuple::const_anchor();
+        let anchor_val = anchor.clone().into_val();
+        let anchor_ty = anchor.ty().clone_ty();
+        let id = Lambda::id(anchor_ty);
+        let id_val = id.clone().into_val();
+        assert_eq!(
+            Sexpr::try_new(vec![id_val, anchor_val.clone()])
+                .unwrap()
+                .into_val(),
+            anchor_val
+        );
+        // Different lifetimes!
+        assert_ne!(*id.result(), anchor_val);
+        // Specifically, color static vs. color param 0
+        let region = id.def_region();
+        let color = Color::param(region.clone_region(), 0).unwrap();
+        let lt = Lifetime::owns(color);
+        assert_eq!(id.result().lifetime(), lt);
+        assert_eq!(anchor.lifetime(), Lifetime::STATIC);
     }
 
     #[test]
