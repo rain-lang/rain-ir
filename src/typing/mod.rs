@@ -22,6 +22,10 @@ pub trait Typed {
 
 /// A trait implemented by `rain` values which are a type
 pub trait Type: Value {
+    /// Convert this type into a `TypeId`
+    fn into_ty(self) -> TypeId {
+        self.into_val().coerce()
+    }
     /// Get the universe of this type
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe

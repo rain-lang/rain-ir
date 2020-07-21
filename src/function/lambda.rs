@@ -237,7 +237,8 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::{finite::Finite, logical::Bool};
+    use crate::primitive::{finite::Finite, logical::*};
+    use crate::typing::Type;
     use crate::value::expr::Sexpr;
 
     #[test]
@@ -259,9 +260,49 @@ mod tests {
         let id = Lambda::id(finite.into()).into_val();
         for ix in finite.iter() {
             assert_eq!(
-                Sexpr::try_new(vec![id.clone(), ix.clone().into()]).expect("Valid application").into_val(),
+                Sexpr::try_new(vec![id.clone(), ix.clone().into()])
+                    .expect("Valid application")
+                    .into_val(),
                 ix.into_val()
             );
+        }
+    }
+
+    #[test]
+    fn boolean_mux_works_properly() {
+        let region = Region::with(
+            vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into(),
+            None,
+        );
+        let select = region.clone().param(0).unwrap().into_val();
+        let high = region.clone().param(1).unwrap().into_val();
+        let low = region.clone().param(2).unwrap().into_val();
+        let not_select = Sexpr::try_new(vec![Not.into(), select.clone()])
+            .unwrap()
+            .into_val();
+        let high_select = Sexpr::try_new(vec![And.into(), select, high])
+            .unwrap()
+            .into_val();
+        let low_select = Sexpr::try_new(vec![And.into(), not_select, low])
+            .unwrap()
+            .into_val();
+        let mux_res = Sexpr::try_new(vec![Or.into(), high_select, low_select])
+            .unwrap()
+            .into_val();
+        let mux = Lambda::try_new(mux_res, region).unwrap().into_val();
+        for h in [true, false].iter().copied() {
+            let h = h.into_val();
+            for l in [true, false].iter().copied() {
+                let l = l.into_val();
+                for s in [true, false].iter().copied() {
+                    assert_eq!(
+                        Sexpr::try_new(vec![mux.clone(), s.into(), h.clone(), l.clone()])
+                            .unwrap()
+                            .into_val(),
+                        *if s { &h } else { &l }
+                    )
+                }
+            }
         }
     }
 }

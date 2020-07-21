@@ -163,7 +163,7 @@ impl<P> ValId<P> {
     }
     /// Coerce this `ValId` into another predicated value
     #[inline]
-    pub(super) fn coerce<Q>(self) -> ValId<Q> {
+    pub(crate) fn coerce<Q>(self) -> ValId<Q> {
         ValId {
             ptr: unsafe { std::mem::transmute(self) },
             variant: std::marker::PhantomData,
@@ -171,7 +171,7 @@ impl<P> ValId<P> {
     }
     /// Coerce this `ValId` into a reference to another predicated value
     #[inline]
-    pub(super) fn coerce_ref<Q>(&self) -> &ValId<Q> {
+    pub(crate) fn coerce_ref<Q>(&self) -> &ValId<Q> {
         let ptr_ref = &self.ptr;
         unsafe { &*(ptr_ref as *const _ as *const ValId<Q>) }
     }
