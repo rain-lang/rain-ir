@@ -237,28 +237,31 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitive::{finite::Finite, logical::Bool};
     use crate::value::expr::Sexpr;
-    use crate::primitive::{
-        //finite::{Finite, Index},
-        logical::Bool,
-    };
 
     #[test]
     fn boolean_identity_works_properly() {
         let id = Lambda::id(Bool.into()).into_val();
         for b in [true, false].iter().copied() {
             assert_eq!(
-                Sexpr::try_new(vec![id.clone(), b.into()]).expect("Valid application").into_val(),
+                Sexpr::try_new(vec![id.clone(), b.into()])
+                    .expect("Valid application")
+                    .into_val(),
                 b.into_val()
             );
         }
     }
 
-    /*
     #[test]
     fn small_finite_identity_works_properly() {
         let finite = Finite(16);
         let id = Lambda::id(finite.into()).into_val();
+        for ix in finite.iter() {
+            assert_eq!(
+                Sexpr::try_new(vec![id.clone(), ix.clone().into()]).expect("Valid application").into_val(),
+                ix.into_val()
+            );
+        }
     }
-    */
 }
