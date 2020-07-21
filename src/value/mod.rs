@@ -131,6 +131,11 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     fn into_val(self) -> ValId {
         self.into_norm().into()
     }
+    /// Convert a value into a `VarId`
+    #[inline]
+    fn into_var(self) -> VarId<Self> {
+        self.into_val().coerce()
+    }
     /// Convert a value into a `TypeId`, if it is a type, otherwise return it
     #[inline]
     fn try_into_ty(self) -> Result<TypeId, Self> {
