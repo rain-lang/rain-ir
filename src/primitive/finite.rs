@@ -40,7 +40,7 @@ impl Finite {
     }
     /// Iterate over the members of this finite type
     pub fn iter(self) -> impl Iterator<Item = Index> + DoubleEndedIterator {
-        VarId::<Finite>::from(self).into_iter()
+        VarId::<Finite>::from(self).owned_iter()
     }
 }
 
@@ -59,7 +59,7 @@ impl VarId<Finite> {
         (0..(self.0)).map(move |ix| self.clone().ix(ix).expect("Index must be in bounds!"))
     }
     /// Iterate over the members of this finite type
-    pub fn into_iter(self) -> impl Iterator<Item = Index> + DoubleEndedIterator {
+    pub fn owned_iter(self) -> impl Iterator<Item = Index> + DoubleEndedIterator {
         (0..(self.0)).map(move |ix| self.clone().ix(ix).expect("Index must be in bounds!"))
     }
 }
