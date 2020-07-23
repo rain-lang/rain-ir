@@ -321,15 +321,15 @@ impl<P> Typed for ValRef<'_, P> {
 
 impl<P> Apply for ValId<P> {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.as_norm().do_apply(args, inline)
+    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+        self.as_norm().apply_in(args, ctx)
     }
 }
 
 impl<P> Apply for ValRef<'_, P> {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.as_norm().do_apply(args, inline)
+    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+        self.as_norm().apply_in(args, ctx)
     }
 }
 

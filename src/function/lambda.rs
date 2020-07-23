@@ -107,21 +107,18 @@ impl Live for Lambda {
 lifetime_region!(Lambda);
 
 impl Apply for Lambda {
-    fn do_apply_in_ctx<'a>(
+    fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        inline: bool,
-        ctx: Option<&mut EvalCtx>,
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        let ctx = if let Some(ctx) = ctx {
-            ctx
-        } else {
+        let ctx = ctx.get_or_insert_with(|| {
             let eval_capacity = 0; //TODO
             let lt_capacity = 0; //TODO
-            let mut ctx = EvalCtx::with_capacity(eval_capacity, lt_capacity);
-            return self.do_apply_in_ctx(args, inline, Some(&mut ctx));
-        };
-        if self.def_region().len() > args.len() && !inline {
+            EvalCtx::with_capacity(eval_capacity, lt_capacity)
+        });
+
+        if self.def_region().len() > args.len() {
             // Do a typecheck and lifetime check, then return partial application
             unimplemented!(
                 "Partial lambda application (args == {:?}, region_len == {:?})",
@@ -135,7 +132,7 @@ impl Apply for Lambda {
             self.def_region().as_region(),
             args.iter().cloned(),
             !ctx.is_checked(),
-            inline,
+            false
         )?;
 
         // Evaluate the result

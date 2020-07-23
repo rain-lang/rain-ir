@@ -63,11 +63,10 @@ impl Live for Gamma {
 }
 
 impl Apply for Gamma {
-    fn do_apply_in_ctx<'a>(
+    fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _inline: bool,
-        ctx: Option<&mut EvalCtx>,
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         let param_tys = self.ty.param_tys().iter();
         let mut ix = 0;
@@ -90,14 +89,12 @@ impl Apply for Gamma {
             } else {
                 continue;
             };
-            if let Some(ctx) = ctx {
-                return branch.do_apply_with_ctx(&inp.0, rest, true, ctx);
-            } else {
+            let ctx = ctx.get_or_insert_with(|| {
                 let eval_capacity = 0; //TODO
                 let lt_capacity = 0; //TODO
-                let mut ctx = EvalCtx::with_capacity(eval_capacity, lt_capacity);
-                return branch.do_apply_with_ctx(&inp.0, rest, true, &mut ctx);
-            }
+                EvalCtx::with_capacity(eval_capacity, lt_capacity)
+            });
+            return branch.do_apply_with_ctx(&inp.0, rest, true, ctx);
         }
         panic!(
             "Complete gamma node has no matching branches!\nNODE: {:#?}\nARGV: {:#?}",

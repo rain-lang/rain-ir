@@ -79,44 +79,29 @@ macro_rules! substitute_to_valid {
 /// An object which can be applied to a list of `rain` values
 pub trait Apply: Typed + Live {
     /**
-    Attempt to apply an object to a list of `rain` values, returning an `Application`.
+    Attempt to apply an object to a list of `rain` values, returning an `Application` on success.
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
-    Use a loop to be sure!
+    Use a loop (or call `applied`) to be sure!
     */
     #[inline]
     fn apply<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
-        self.do_apply(args, false)
+        self.apply_in(args, &mut None)
     }
     /**
-    Attempt to apply an object to a list of `rain` values, returning an `Application` and always inlining.
-    Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
-    Use a loop to be sure!
+    Attempt to apply an object to a list of `rain` values, returning an `Application` on success.
+    Automatically curries as necessary
     */
     #[inline]
-    fn inline<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
-        self.do_apply(args, true)
+    fn applied<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
+        self.applied_in(args, &mut None)
     }
     /**
-    Attempt to apply an object to a list of `rain` values, returning an `Application`, and optionally inlining.
-
+    Attempt to apply an object to a list of `rain` values in a given context, returning an `Application` on success.
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
-    Use a loop to be sure!
+    Use a loop (or call `applied_in`) to be sure!
     */
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.do_apply_in_ctx(args, inline, None)
-    }
-    /**
-    Attempt to apply an object to a list of `rain` values within an (optional) evaluation context
-
-    Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
-    Use a loop to be sure!
-    */
-    fn do_apply_in_ctx<'a>(
-        &self,
-        args: &'a [ValId],
-        _inline: bool,
-        _ctx: Option<&mut EvalCtx>,
-    ) -> Result<Application<'a>, Error> {
+    #[inline]
+    fn apply_in<'a>(&self, args: &'a [ValId], _ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
         if args.is_empty() {
             Ok(Application::Complete(
                 self.lifetime().clone_lifetime(),
@@ -125,5 +110,30 @@ pub trait Apply: Typed + Live {
         } else {
             Err(Error::NotAFunction)
         }
+    }
+    /**
+    Attempt to apply an object to a list of `rain` values in a context, returning an `Application` on success.
+    Automatically curries as necessary
+    */
+    #[inline]
+    fn applied_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+        let applied = self.apply_in(args, ctx)?;
+        let (mut rest, mut value) = match applied {
+            Application::Success(rest, value) => (rest, value),
+            app => return Ok(app)
+        };
+        while rest.len() > 0 {
+            let applied = value.apply_in(rest, ctx)?;
+            let (new_rest, new_value) = match applied {
+                Application::Success(rest, value) => (rest, value),
+                app => return Ok(app)
+            };
+            if value == new_value || new_rest == rest {
+                break
+            }
+            rest = new_rest;
+            value = new_value
+        }
+        Ok(Application::Success(rest, value))
     }
 }

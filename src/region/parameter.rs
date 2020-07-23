@@ -99,11 +99,10 @@ impl Typed for Parameter {
 }
 
 impl Apply for Parameter {
-    fn do_apply_in_ctx<'a>(
+    fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _inline: bool,
-        _ctx: Option<&mut EvalCtx>,
+        _ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.is_empty() {
             return Ok(Application::Success(args, self.clone().into()));

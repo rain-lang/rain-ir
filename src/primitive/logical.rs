@@ -565,11 +565,10 @@ impl Typed for Logical {
 }
 
 impl Apply for Logical {
-    fn do_apply_in_ctx<'a>(
+    fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _inline: bool,
-        _ctx: Option<&mut EvalCtx>,
+        _ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         // Null evaluation
         if args.is_empty() {
@@ -701,13 +700,12 @@ macro_rules! make_logical {
         trivial_substitute!($t);
         normal_valid!($t);
         impl Apply for $t {
-            fn do_apply_in_ctx<'a>(
+            fn apply_in<'a>(
                 &self,
                 args: &'a [ValId],
-                inline: bool,
-                ctx: Option<&mut EvalCtx>,
+                ctx: &mut Option<EvalCtx>
             ) -> Result<Application<'a>, Error> {
-                Logical::from(*self).do_apply_in_ctx(args, inline, ctx)
+                Logical::from(*self).apply_in(args, ctx)
             }
         }
         impl Value for $t {

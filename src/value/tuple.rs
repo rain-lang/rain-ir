@@ -145,7 +145,7 @@ impl Apply for Tuple {
     /**
     Tuples accept finite indices as arguments, which is the `rain` syntax for a member access.
     */
-    fn do_apply<'a>(&self, args: &'a [ValId], _inline: bool) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(&self, args: &'a [ValId], _ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
         // Check for a null application
         if args.is_empty() {
             return Ok(Application::Complete(

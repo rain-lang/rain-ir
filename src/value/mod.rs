@@ -317,8 +317,8 @@ impl Typed for NormalValue {
 
 impl Apply for NormalValue {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
-        self.deref().do_apply(args, inline)
+    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+        self.0.apply_in(args, ctx)
     }
 }
 
@@ -367,9 +367,9 @@ impl<V: Value> std::ops::Index<usize> for Deps<V> {
 
 impl Apply for ValueEnum {
     #[inline]
-    fn do_apply<'a>(&self, args: &'a [ValId], inline: bool) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
         forv! {match (self) {
-            v => v.do_apply(args, inline),
+            v => v.apply_in(args, ctx),
         }}
     }
 }
