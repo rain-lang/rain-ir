@@ -588,8 +588,9 @@ impl Lifetime {
     #[inline]
     pub fn in_region(&self, region: Option<Region>) -> Result<Lifetime, Error> {
         if let Some(data) = &self.0 {
-            if data.region == region { // Avoid the hash table...
-                return Ok(self.clone())
+            if data.region == region {
+                // Avoid the hash table...
+                return Ok(self.clone());
             }
             data.in_region(region).map(Lifetime::from)
         } else {
@@ -631,6 +632,14 @@ impl BitAnd<&'_ Lifetime> for Lifetime {
     }
 }
 
+impl BitAnd<LifetimeBorrow<'_>> for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.bitand(other.as_lifetime())
+    }
+}
+
 impl BitAnd<Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
@@ -644,6 +653,38 @@ impl BitAnd<&'_ Lifetime> for &'_ Lifetime {
     #[inline]
     fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
         other.join(self)
+    }
+}
+
+impl BitAnd<LifetimeBorrow<'_>> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.bitand(other.as_lifetime())
+    }
+}
+
+impl BitAnd<Lifetime> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().bitand(other)
+    }
+}
+
+impl BitAnd<&'_ Lifetime> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().bitand(other)
+    }
+}
+
+impl BitAnd<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.as_lifetime().bitand(other.as_lifetime())
     }
 }
 

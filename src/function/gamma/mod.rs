@@ -13,8 +13,6 @@ use crate::value::{
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
-use itertools::Itertools;
-use thin_dst::ThinBox;
 
 pub mod pattern;
 use pattern::{Match, MatchedTy, Pattern};
@@ -23,29 +21,21 @@ use pattern::{Match, MatchedTy, Pattern};
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Gamma {
     /// The branches of this gamma node
-    branches: ThinBox<(), Branch>,
-    /// The dependencies of this gamma node, taken as a whole.
-    /// Sorted by address
-    deps: ValSet,
+    branches: Box<[Branch]>,
     /// The lifetime of this gamma node
     lifetime: Lifetime,
     /// The type of this gamma node
-    //TODO: GammaPi? Replace Lambda with Gamma?
     ty: VarId<Pi>,
 }
 
 impl Gamma {
     /// Get the branches of this gamma node
     pub fn branches(&self) -> &[Branch] {
-        &self.branches.slice
+        &self.branches
     }
     /// Get the type of this gamma node, guaranteed to be a pi type
     pub fn get_ty(&self) -> &VarId<Pi> {
         &self.ty
-    }
-    /// Get the dependency-set of this gamma node
-    pub fn depset(&self) -> &ValSet {
-        &self.deps
     }
 }
 
@@ -121,10 +111,10 @@ impl From<Gamma> for NormalValue {
 
 impl Value for Gamma {
     fn no_deps(&self) -> usize {
-        self.deps.len()
+        self.branches.len()
     }
     fn get_dep(&self, ix: usize) -> &ValId {
-        &self.deps[ix]
+        self.branches[ix].expr()
     }
     #[inline]
     fn into_enum(self) -> ValueEnum {
@@ -133,10 +123,6 @@ impl Value for Gamma {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
-    }
-    #[inline]
-    fn clone_depset(&self) -> ValSet {
-        self.deps.clone()
     }
 }
 
@@ -159,6 +145,8 @@ pub struct GammaBuilder {
     branches: Vec<Branch>,
     /// The desired type of this gamma node
     ty: VarId<Pi>,
+    /// The lifetime of this gamma node
+    lifetime: Lifetime,
     /// The current pattern matched by this builder
     pattern: Pattern,
 }
@@ -169,6 +157,7 @@ impl GammaBuilder {
         GammaBuilder {
             branches: Vec::new(),
             pattern: Pattern::empty(),
+            lifetime: Lifetime::STATIC,
             ty,
         }
     }
@@ -182,10 +171,7 @@ impl GammaBuilder {
             return Ok(None);
         }
         let branch = Branch::try_const(pattern, self.ty.param_tys(), value)?;
-        self.pattern.take_disjunction(&branch.pattern);
-        let ix = self.branches.len();
-        self.branches.push(branch);
-        Ok(Some(ix))
+        self.add_unchecked(branch).map(Some)
     }
     /// Push a branch onto this gamma node returning it's index *in the builder*, if any
     pub fn add(&mut self, branch: Branch) -> Result<Option<usize>, Error> {
@@ -193,63 +179,37 @@ impl GammaBuilder {
         if self.pattern.is_subset(&branch.pattern) {
             return Ok(None);
         }
+        self.add_unchecked(branch).map(Some)
+    }
+    /// Push a branch onto this gamma node, without checking completeness or subset factors
+    fn add_unchecked(&mut self, branch: Branch) -> Result<usize, Error> {
+        let mut temp = Lifetime::STATIC;
+        std::mem::swap(&mut self.lifetime, &mut temp);
+        self.lifetime = (temp & branch.expr().lifetime())?;
         self.pattern.take_disjunction(&branch.pattern);
         let ix = self.branches.len();
         self.branches.push(branch);
-        Ok(Some(ix))
-    }
-    /// Compute all the dependencies of this gamma builder, as of now, *without caching*. Slow!
-    ///
-    /// Dependencies are returned sorted by address, and deduplicated. The gamma lifetime is also returned.
-    pub fn deps(&self) -> Result<(Lifetime, Vec<ValId>), (Error, Vec<ValId>)> {
-        let mut lifetime = Lifetime::default();
-        let mut has_error = None;
-        let deps = self
-            .branches
-            .iter()
-            .map(|branch| {
-                let branch_lifetime =
-                    lifetime.sep_conj(branch.deps().iter().map(|dep| dep.lifetime()));
-                lifetime = match branch_lifetime.map(|branch_lifetime| &lifetime & branch_lifetime)
-                {
-                    Ok(Ok(lifetime)) => lifetime,
-                    Err(err) | Ok(Err(err)) => {
-                        has_error = Some(err);
-                        Lifetime::default()
-                    }
-                };
-                branch.deps().iter()
-            })
-            .kmerge_by(|a, b| a.as_ptr() < b.as_ptr())
-            .dedup()
-            .cloned()
-            .collect();
-        if let Some(err) = has_error {
-            return Err((err, deps));
-        }
-        Ok((lifetime, deps))
+        Ok(ix)
     }
     /// Check whether this gamma node is complete
+    ///
+    /// If this returns `true`, `finish` will always succeed
     #[inline]
     pub fn is_complete(&self) -> bool {
         self.pattern.is_complete()
     }
     /// Finish constructing this gamma node
-    /// On failure, return an unchanged object to try again, along with a reason
-    pub fn finish(&self) -> Result<Gamma, Error> {
+    pub fn finish(self) -> Result<Gamma, Error> {
         // First, check completeness
         if !self.is_complete() {
             return Err(Error::IncompleteMatch);
         }
 
         // Then, actually make the gamma node
-        let ty = self.ty.clone();
-        let (lifetime, deps) = self.deps().map_err(|err| err.0)?;
         Ok(Gamma {
-            deps: deps.into(),
-            branches: ThinBox::new((), self.branches.iter().cloned()),
-            lifetime,
-            ty,
+            branches: self.branches.into_boxed_slice(),
+            lifetime: self.lifetime,
+            ty: self.ty,
         })
     }
     /// Get the current pattern matched by this builder
