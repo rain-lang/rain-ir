@@ -75,23 +75,21 @@ impl Apply for Gamma {
         // Successful application
         let rest = &args[ix..];
         let inp = &args[..ix];
-        for branch in self.branches() {
-            let inp = if let Ok(inp) = branch.pattern().try_match(inp) {
-                inp
+        let mut matching_branches = self.branches().iter().filter_map(|branch| {
+            if let Ok(inp) = branch.pattern().try_match(inp) {
+                Some((branch, inp))
             } else {
-                continue;
-            };
-            let ctx = ctx.get_or_insert_with(|| {
-                let eval_capacity = 0; //TODO
-                let lt_capacity = 0; //TODO
-                EvalCtx::with_capacity(eval_capacity, lt_capacity)
-            });
-            return branch.do_apply_with_ctx(&inp.0, rest, true, ctx);
+                None
+            }
+        });
+        if let Some((branch, inp)) = matching_branches.next() {
+            Ok(branch.do_apply_with_ctx(&inp.0, rest, ctx))
+        } else {
+            panic!(
+                "Complete gamma node has no matching branches!\nNODE: {:#?}\nARGV: {:#?}",
+                self, args
+            );
         }
-        panic!(
-            "Complete gamma node has no matching branches!\nNODE: {:#?}\nARGV: {:#?}",
-            self, args
-        );
     }
 }
 
@@ -255,14 +253,29 @@ impl Branch {
         self.expr.as_val()
     }
     /// Evaluate a branch with a given argument vector and context
-    fn do_apply_with_ctx<'a>(
+    fn do_apply_with_ctx<'a, 'b>(
         &self,
-        _args: &[ValId],
-        _rest: &'a [ValId],
-        _inline: bool,
-        _ctx: &mut EvalCtx,
-    ) -> Result<Application<'a>, Error> {
-        unimplemented!()
+        args: &[ValId],
+        rest: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Application<'a> {
+        match self
+            .expr
+            .apply_in(args, ctx)
+            .expect("Matched branch application must always succeed")
+        {
+            Application::Success(remaining_args, value) => {
+                debug_assert!(
+                    remaining_args.is_empty(),
+                    "Not all pattern arguments were consumed: remaining = {:?}",
+                    remaining_args
+                );
+                Application::Success(rest, value)
+            }
+            Application::Complete(lt, ty) => Application::Complete(lt, ty),
+            Application::Incomplete(lt, ty) => Application::Incomplete(lt, ty),
+            Application::Stop(lt, ty) => Application::Stop(lt, ty),
+        }
     }
 }
 
