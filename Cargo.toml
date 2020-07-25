@@ -4,6 +4,7 @@ version = "0.0.0"
 authors = ["Jad Ghalayini <jad.ghalayini@hotmail.com>"]
 edition = "2018"
 repository = "https://gitlab.com/rain-lang/rain-ir"
+license = "MIT/Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

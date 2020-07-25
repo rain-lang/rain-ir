@@ -5,7 +5,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{
     arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
@@ -256,71 +256,57 @@ pub struct Branch {
     /// The pattern of this branch
     pattern: Pattern,
     /// The function corresponding to this branch
-    func: VarId<Lambda>,
+    func: ValId,
+    /// The dependency set of this branch
+    deps: ValSet,
 }
 
 impl Branch {
     /// Attempt to create a new branch from a pattern and a function
     pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
         //TODO: check if function is compatible with pattern
-        Ok(Branch { pattern, func })
+        let deps = func.depset().clone();
+        let func = func.into_val();
+        Ok(Branch {
+            pattern,
+            func,
+            deps,
+        })
     }
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
     pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
         let region = Region::with(matched.into(), value.cloned_region());
-        let func = Lambda::try_new(value, region)?.into();
-        Ok(Branch { pattern, func })
+        let func = Lambda::try_new(value, region)?;
+        let deps = func.depset().clone();
+        let func = func.into_val();
+        Ok(Branch {
+            pattern,
+            func,
+            deps,
+        })
     }
     /// Return the dependencies of this branch
     pub fn deps(&self) -> &ValSet {
-        self.func.depset()
+        &self.deps
     }
     /// Get the pattern of this branch
     pub fn pattern(&self) -> &Pattern {
         &self.pattern
     }
-    /// Get the result of this branch
-    pub fn result(&self) -> &ValId {
-        &self.func.result()
-    }
-    /// Get the defining region of this branch
-    pub fn def_region(&self) -> RegionBorrow {
-        self.func.def_region()
-    }
-    /// Get the function corresponding to this branch
-    pub fn func(&self) -> &VarId<Lambda> {
-        &self.func
+    /// Get the expression this branch evaluates
+    pub fn expr(&self) -> &ValId {
+        self.func.as_val()
     }
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
         &self,
-        args: &[ValId],
-        rest: &'a [ValId],
-        inline: bool,
-        ctx: &mut EvalCtx,
+        _args: &[ValId],
+        _rest: &'a [ValId],
+        _inline: bool,
+        _ctx: &mut EvalCtx,
     ) -> Result<Application<'a>, Error> {
-        // Substitute
-        let region = ctx.push_region(
-            self.def_region().as_region(),
-            args.iter().cloned(),
-            !ctx.is_checked(),
-            inline,
-        )?;
-
-        // Evaluate the result
-        let result = ctx.evaluate(self.result());
-        // Pop the evaluation context
-        ctx.pop();
-        let result = result?;
-
-        if let Some(region) = region {
-            Lambda::try_new(result, region)
-                .map(|lambda| Application::Success(rest, lambda.into()))
-                .map_err(|_| Error::IncomparableRegions)
-        } else {
-            Ok(Application::Success(rest, result))
-        }
+        unimplemented!()
     }
 }
 
