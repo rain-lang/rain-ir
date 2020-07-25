@@ -11,6 +11,7 @@ use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum,
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
+use std::ops::Deref;
 
 pub mod pattern;
 use pattern::{Match, MatchedTy, Pattern};
@@ -170,11 +171,12 @@ impl GammaBuilder {
         self.add_unchecked(branch).map(Some)
     }
     /// Push a branch onto this gamma node returning it's index *in the builder*, if any
-    pub fn add(&mut self, branch: Branch) -> Result<Option<usize>, Error> {
+    pub fn add(&mut self, pattern: Pattern, expr: ValId) -> Result<Option<usize>, Error> {
         //TODO: check compatibility of this gamma node and branch
-        if self.pattern.is_subset(&branch.pattern) {
+        if self.pattern.is_subset(&pattern) {
             return Ok(None);
         }
+        let branch = Branch::try_new(pattern, self.ty.param_tys(), expr)?;
         self.add_unchecked(branch).map(Some)
     }
     /// Push a branch onto this gamma node, without checking completeness or subset factors
@@ -224,14 +226,24 @@ pub struct Branch {
 }
 
 impl Branch {
-    /// Attempt to create a new branch from a pattern and a function
-    pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
-        //TODO: check if function is compatible with pattern
-        let expr = func.into_val();
-        Ok(Branch { pattern, expr })
+    /// Attempt to create a new branch from a pattern, an input type vector, and an expression
+    fn try_new(pattern: Pattern, args: &[TypeId], expr: ValId) -> Result<Branch, Error> {
+        let MatchedTy(matched) = pattern.try_get_outputs(args)?;
+        if matched.len() == 0 {
+            return Ok(Branch { pattern, expr });
+        }
+        if let ValueEnum::Pi(pi) = expr.as_enum() {
+            if pi.param_tys().deref().eq(&matched[..]) {
+                return Err(Error::TypeMismatch);
+            }
+            Ok(Branch { pattern, expr })
+        } else {
+            //TODO: think about this...
+            Err(Error::NotAFunction)
+        }
     }
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
-    pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
+    fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
         if matched.len() == 0 {
             return Ok(Branch {
