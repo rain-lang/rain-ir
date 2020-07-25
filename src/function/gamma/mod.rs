@@ -260,24 +260,37 @@ pub struct Branch {
     pattern: Pattern,
     /// The function corresponding to this branch
     func: VarId<Lambda>,
+    /// The dependency set of this branch
+    deps: ValSet,
 }
 
 impl Branch {
     /// Attempt to create a new branch from a pattern and a function
     pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
         //TODO: check if function is compatible with pattern
-        Ok(Branch { pattern, func })
+        let deps = func.depset().clone();
+        Ok(Branch {
+            pattern,
+            func,
+            deps,
+        })
     }
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
     pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
         let region = Region::with(matched.into(), value.cloned_region());
-        let func = Lambda::try_new(value, region)?.into();
-        Ok(Branch { pattern, func })
+        let func = Lambda::try_new(value, region)?;
+        let deps = func.depset().clone();
+        let func = VarId::from(func);
+        Ok(Branch {
+            pattern,
+            func,
+            deps,
+        })
     }
     /// Return the dependencies of this branch
     pub fn deps(&self) -> &ValSet {
-        self.func.depset()
+        &self.deps
     }
     /// Get the pattern of this branch
     pub fn pattern(&self) -> &Pattern {
