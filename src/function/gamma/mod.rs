@@ -259,7 +259,7 @@ pub struct Branch {
     /// The pattern of this branch
     pattern: Pattern,
     /// The function corresponding to this branch
-    func: VarId<Lambda>,
+    func: ValId,
     /// The dependency set of this branch
     deps: ValSet,
 }
@@ -269,6 +269,7 @@ impl Branch {
     pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
         //TODO: check if function is compatible with pattern
         let deps = func.depset().clone();
+        let func = func.into_val();
         Ok(Branch {
             pattern,
             func,
@@ -281,7 +282,7 @@ impl Branch {
         let region = Region::with(matched.into(), value.cloned_region());
         let func = Lambda::try_new(value, region)?;
         let deps = func.depset().clone();
-        let func = VarId::from(func);
+        let func = func.into_val();
         Ok(Branch {
             pattern,
             func,
@@ -303,32 +304,12 @@ impl Branch {
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
         &self,
-        args: &[ValId],
-        rest: &'a [ValId],
-        inline: bool,
-        ctx: &mut EvalCtx,
+        _args: &[ValId],
+        _rest: &'a [ValId],
+        _inline: bool,
+        _ctx: &mut EvalCtx,
     ) -> Result<Application<'a>, Error> {
-        // Substitute
-        let region = ctx.push_region(
-            self.func.def_region().as_region(),
-            args.iter().cloned(),
-            !ctx.is_checked(),
-            inline,
-        )?;
-
-        // Evaluate the result
-        let result = ctx.evaluate(self.func.result());
-        // Pop the evaluation context
-        ctx.pop();
-        let result = result?;
-
-        if let Some(region) = region {
-            Lambda::try_new(result, region)
-                .map(|lambda| Application::Success(rest, lambda.into()))
-                .map_err(|_| Error::IncomparableRegions)
-        } else {
-            Ok(Application::Success(rest, result))
-        }
+        unimplemented!()
     }
 }
 
