@@ -303,7 +303,7 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "UNIMPLEMENTED!")
+            write!(fmt, "(Gamma printing is unimplemented)")
         }
     }
 }
