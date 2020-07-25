@@ -43,6 +43,10 @@ impl Gamma {
     pub fn get_ty(&self) -> &VarId<Pi> {
         &self.ty
     }
+    /// Get the dependency-set of this gamma node
+    pub fn depset(&self) -> &ValSet {
+        &self.deps
+    }
 }
 
 impl Typed for Gamma {
@@ -129,6 +133,10 @@ impl Value for Gamma {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
+    }
+    #[inline]
+    fn clone_depset(&self) -> ValSet {
+        self.deps.clone()
     }
 }
 

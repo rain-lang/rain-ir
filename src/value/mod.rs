@@ -31,6 +31,7 @@ use expr::Sexpr;
 use predicate::Is;
 use tuple::{Product, Tuple};
 use universe::Universe;
+use arr::ValSet;
 
 mod error;
 mod valid_impl;
@@ -118,6 +119,11 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     #[inline]
     fn deps(&self) -> &Deps<Self> {
         RefCast::ref_cast(self)
+    }
+    /// Clone the dependency-set of this value
+    #[inline]
+    fn clone_depset(&self) -> ValSet {
+        self.deps().iter().cloned().collect()
     }
     /// Convert a value into a `NormalValue`
     fn into_norm(self) -> NormalValue;

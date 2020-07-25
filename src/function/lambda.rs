@@ -170,6 +170,10 @@ impl Value for Lambda {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
+    #[inline]
+    fn clone_depset(&self) -> ValSet {
+        self.depset().clone()
+    }
 }
 
 impl Substitute for Lambda {
