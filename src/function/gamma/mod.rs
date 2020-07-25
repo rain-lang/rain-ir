@@ -7,9 +7,7 @@ use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
-use crate::value::{
-    arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
-};
+use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
@@ -223,40 +221,30 @@ impl GammaBuilder {
 pub struct Branch {
     /// The pattern of this branch
     pattern: Pattern,
-    /// The function corresponding to this branch
-    func: ValId,
-    /// The dependency set of this branch
-    deps: ValSet,
+    /// The expression corresponding to this branch
+    expr: ValId,
 }
 
 impl Branch {
     /// Attempt to create a new branch from a pattern and a function
     pub fn try_new(pattern: Pattern, func: VarId<Lambda>) -> Result<Branch, Error> {
         //TODO: check if function is compatible with pattern
-        let deps = func.depset().clone();
-        let func = func.into_val();
-        Ok(Branch {
-            pattern,
-            func,
-            deps,
-        })
+        let expr = func.into_val();
+        Ok(Branch { pattern, expr })
     }
     /// Attempt to create a new branch with a constant (with respect to the pattern) value and a given input type vector
     pub fn try_const(pattern: Pattern, args: &[TypeId], value: ValId) -> Result<Branch, Error> {
         let MatchedTy(matched) = pattern.try_get_outputs(args)?;
+        if matched.len() == 0 {
+            return Ok(Branch {
+                pattern,
+                expr: value,
+            });
+        }
         let region = Region::with(matched.into(), value.cloned_region());
         let func = Lambda::try_new(value, region)?;
-        let deps = func.depset().clone();
-        let func = func.into_val();
-        Ok(Branch {
-            pattern,
-            func,
-            deps,
-        })
-    }
-    /// Return the dependencies of this branch
-    pub fn deps(&self) -> &ValSet {
-        &self.deps
+        let expr = func.into_val();
+        Ok(Branch { pattern, expr })
     }
     /// Get the pattern of this branch
     pub fn pattern(&self) -> &Pattern {
@@ -264,7 +252,7 @@ impl Branch {
     }
     /// Get the expression this branch evaluates
     pub fn expr(&self) -> &ValId {
-        self.func.as_val()
+        self.expr.as_val()
     }
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
