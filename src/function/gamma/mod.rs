@@ -5,7 +5,7 @@ Gamma nodes, representing pattern matching and primitive recursion
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{
     arr::ValSet, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
@@ -296,17 +296,9 @@ impl Branch {
     pub fn pattern(&self) -> &Pattern {
         &self.pattern
     }
-    /// Get the result of this branch
-    pub fn result(&self) -> &ValId {
-        &self.func.result()
-    }
-    /// Get the defining region of this branch
-    pub fn def_region(&self) -> RegionBorrow {
-        self.func.def_region()
-    }
-    /// Get the function corresponding to this branch
-    pub fn func(&self) -> &VarId<Lambda> {
-        &self.func
+    /// Get the expression this branch evaluates
+    pub fn expr(&self) -> &ValId {
+        self.func.as_val()
     }
     /// Evaluate a branch with a given argument vector and context
     fn do_apply_with_ctx<'a>(
@@ -318,14 +310,14 @@ impl Branch {
     ) -> Result<Application<'a>, Error> {
         // Substitute
         let region = ctx.push_region(
-            self.def_region().as_region(),
+            self.func.def_region().as_region(),
             args.iter().cloned(),
             !ctx.is_checked(),
             inline,
         )?;
 
         // Evaluate the result
-        let result = ctx.evaluate(self.result());
+        let result = ctx.evaluate(self.func.result());
         // Pop the evaluation context
         ctx.pop();
         let result = result?;
