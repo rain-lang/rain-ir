@@ -274,6 +274,16 @@ lazy_static! {
     ];
 }
 
+/// The type of a unary function
+pub fn unary_ty() -> VarId<Pi> {
+    LOGICAL_OP_TYS[0].clone()
+}
+
+/// The type of a binary function
+pub fn binary_ty() -> VarId<Pi> {
+    LOGICAL_OP_TYS[1].clone()
+}
+
 /// Masks corresponding to what bits must be set for operations of a given arity
 pub const LOGICAL_OP_ARITY_MASKS: [u128; 8] = [
     0b1,                                // Nullary

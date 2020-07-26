@@ -271,6 +271,9 @@ impl Branch {
         rest: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Application<'a> {
+        if args.len() == 0 {
+            return Application::Success(rest, self.expr.clone());
+        }
         match self
             .expr
             .apply_in(args, ctx)
@@ -304,6 +307,78 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(Gamma printing is unimplemented)")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primitive::logical::unary_ty;
+    use crate::value::expr::Sexpr;
+    #[test]
+    fn not_as_gamma_works() {
+        let unary = unary_ty();
+        let mut builder = GammaBuilder::new(unary.clone());
+        assert_eq!(builder.branches().len(), 0);
+        assert!(!builder.is_complete());
+
+        // Adding a true branch succeeds
+        assert_eq!(
+            builder.add_const(true.into(), false.into()).unwrap(),
+            Some(0)
+        );
+        assert_eq!(builder.branches().len(), 1);
+        assert!(!builder.is_complete());
+
+        // Adding it again fails
+        assert_eq!(builder.add_const(true.into(), true.into()).unwrap(), None);
+        assert_eq!(builder.branches().len(), 1);
+        assert!(!builder.is_complete());
+
+        // Adding a false branch succeeds
+        assert_eq!(
+            builder.add_const(false.into(), true.into()).unwrap(),
+            Some(1)
+        );
+        assert_eq!(builder.branches().len(), 2);
+        assert!(builder.is_complete());
+        // Adding it again fails
+        assert_eq!(builder.add_const(false.into(), false.into()).unwrap(), None);
+        assert_eq!(builder.branches().len(), 2);
+        assert!(builder.is_complete());
+
+        // Adding true again fails
+        assert_eq!(builder.add_const(true.into(), true.into()).unwrap(), None);
+        assert_eq!(builder.branches().len(), 2);
+        assert!(builder.is_complete());
+
+        // Completing the builder succeeds
+        let gamma = builder.finish().unwrap();
+
+        // Applying the gamma succeeds
+        for b in [true, false].iter().copied() {
+            assert_eq!(
+                gamma.apply(&[b.into()]).unwrap(),
+                Application::Success(&[], (!b).into())
+            )
+        }
+
+        // Generating a ValId succeeds
+        let gamma = gamma.into_val();
+
+        // Applying the ValId succeeds
+        for b in [true, false].iter().copied() {
+            assert_eq!(
+                gamma.apply(&[b.into()]).unwrap(),
+                Application::Success(&[], (!b).into())
+            );
+            assert_eq!(
+                Sexpr::try_new(vec![gamma.clone(), b.into()])
+                    .unwrap()
+                    .into_val(),
+                (!b).into_val()
+            );
         }
     }
 }
