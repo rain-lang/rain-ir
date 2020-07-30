@@ -3,7 +3,7 @@ The `rain` type system
 */
 use super::{
     eval::{Apply, EvalCtx, Substitute},
-    lifetime::{LifetimeBorrow, Live},
+    lifetime::{Lifetime, LifetimeBorrow, Live},
     region::{RegionBorrow, Regional},
     value::{Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum},
 };
@@ -44,15 +44,24 @@ pub trait Type: Value {
     fn is_substruct(&self) -> bool {
         self.is_affine() || self.is_relevant()
     }
-    /**
-    Apply this type to a set of arguments, yielding a result type and lifetime
-    */
-    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error>
+    /// Apply this type to a set of arguments, yielding a result type and lifetime
+    fn apply_ty(&self, args: &[ValId]) -> Result<(Lifetime, TypeId), Error>
+    where
+        Self: Clone,
+    {
+        self.apply_ty_in(args, &mut None)
+    }
+    /// Apply this type to a set of arguments, yielding a result type and lifetime
+    fn apply_ty_in(
+        &self,
+        args: &[ValId],
+        _ctx: &mut Option<EvalCtx>,
+    ) -> Result<(Lifetime, TypeId), Error>
     where
         Self: Clone,
     {
         if args.is_empty() {
-            Ok(self.clone().into_ty())
+            Ok((self.lifetime().clone_lifetime(), self.clone().into_ty()))
         } else {
             Err(Error::NotAFunction)
         }
@@ -60,7 +69,7 @@ pub trait Type: Value {
 }
 
 /// A value guaranteed to be a type
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct TypeValue(NormalValue);
 
@@ -226,6 +235,26 @@ impl Type for TypeValue {
             ValueEnum::Finite(f) => f.is_substruct(),
             u => panic!(
                 "Impossible (TypeValue::is_substruct): TypeValue({}) is not a type",
+                u
+            ),
+        }
+    }
+    #[inline]
+    fn apply_ty_in(
+        &self,
+        args: &[ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<(Lifetime, TypeId), Error> {
+        match self.borrow() {
+            ValueEnum::Universe(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
+            ValueEnum::Parameter(_p) => unimplemented!(),
+            ValueEnum::Sexpr(_s) => unimplemented!(),
+            ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
+            ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
+            ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
+            u => panic!(
+                "Impossible (TypeValue::apply_ty): TypeValue({}) is not a type",
                 u
             ),
         }

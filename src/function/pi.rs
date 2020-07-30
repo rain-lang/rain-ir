@@ -11,6 +11,7 @@ use crate::value::{
     ValueEnum,
 };
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
+use std::convert::TryInto;
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -151,6 +152,59 @@ impl Type for Pi {
     #[inline]
     fn is_relevant(&self) -> bool {
         unimplemented!("Pi type relevance")
+    }
+    #[inline]
+    fn apply_ty_in(
+        &self,
+        args: &[ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<(Lifetime, TypeId), Error> {
+        // Rename context
+        let ctx_handle = ctx;
+
+        // Initialize context
+        let ctx = ctx_handle.get_or_insert_with(|| {
+            let eval_capacity = 0; //TODO
+            let lt_capacity = 0; //TODO
+            EvalCtx::with_capacity(eval_capacity, lt_capacity)
+        });
+
+        // Substitute
+        let region = ctx.push_region(
+            self.def_region().as_region(),
+            args.iter().cloned(),
+            !ctx.is_checked(),
+            false,
+        )?;
+
+        // Evaluate the result type and lifetime
+        let result = ctx.evaluate(self.result().as_val());
+        let result_lt = ctx.evaluate_lt(&self.result_lt); //TODO: think about this...
+                                                          // Pop the evaluation context
+        ctx.pop();
+        let result = result?;
+        let result_lt = result_lt?;
+
+        let rest_args = &args[self.def_region().len()..];
+
+        if let Some(region) = region {
+            let new_pi = Pi::try_new(
+                result.try_into().expect("Partial pi result must be a type"),
+                region,
+                result_lt,
+            )?;
+            Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
+        } else if rest_args.is_empty() {
+            Ok((
+                result_lt,
+                result.try_into().expect("Pi result must be a type"),
+            ))
+        } else {
+            let result: TypeId = result.try_into().expect("Nested pi result must be a type");
+            let (lt, ty) = result.apply_ty_in(rest_args, ctx_handle)?;
+            let lt = (lt & result_lt)?;
+            Ok((lt, ty))
+        }
     }
 }
 

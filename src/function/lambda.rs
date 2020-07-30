@@ -6,7 +6,7 @@ use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::Live;
 use crate::lifetime::{Lifetime, LifetimeBorrow};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow};
-use crate::typing::Typed;
+use crate::typing::{Type, Typed};
 use crate::value::{
     arr::{TySet, ValSet},
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
@@ -112,27 +112,25 @@ impl Apply for Lambda {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
+        // Partial application check
+        if self.def_region().len() > args.len() {
+            let (lt, ty) = self.get_ty().apply_ty_in(args, ctx)?;
+            return Ok(Application::Incomplete(lt, ty));
+        }
+
+        // Initialize context
         let ctx = ctx.get_or_insert_with(|| {
             let eval_capacity = 0; //TODO
             let lt_capacity = 0; //TODO
             EvalCtx::with_capacity(eval_capacity, lt_capacity)
         });
 
-        if self.def_region().len() > args.len() {
-            // Do a typecheck and lifetime check, then return partial application
-            unimplemented!(
-                "Partial lambda application (args == {:?}, region_len == {:?})",
-                args,
-                self.def_region().len()
-            )
-        }
-
         // Substitute
         let region = ctx.push_region(
             self.def_region().as_region(),
             args.iter().cloned(),
             !ctx.is_checked(),
-            false
+            false,
         )?;
 
         // Evaluate the result

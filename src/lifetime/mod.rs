@@ -314,20 +314,23 @@ impl BitAnd<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
     }
 }
 
+
+
+
+
+
+
 impl Mul for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
-        if self == other {
-            return self.star_self().map(|_| self);
+        if self == other || other.is_static() {
+            return Ok(self);
         }
         if self.is_static() {
             return Ok(other);
         }
-        if other.is_static() {
-            return Ok(self);
-        }
-        self.deref().star(other.deref()).map(Lifetime::new)
+        self.deref().conj(other.deref()).map(Lifetime::new)
     }
 }
 
@@ -335,16 +338,21 @@ impl Mul<&'_ Lifetime> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        if self == *other {
-            return self.star_self().map(|_| self);
+        if self == *other || other.is_static() {
+            return Ok(self);
         }
         if self.is_static() {
             return Ok(other.clone());
         }
-        if other.is_static() {
-            return Ok(self);
-        }
-        self.deref().star(other.deref()).map(Lifetime::new)
+        self.deref().conj(other.deref()).map(Lifetime::new)
+    }
+}
+
+impl Mul<LifetimeBorrow<'_>> for Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.mul(other.as_lifetime())
     }
 }
 
@@ -360,9 +368,42 @@ impl Mul<&'_ Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        self.star(other)
+        other.join(self)
     }
 }
+
+impl Mul<LifetimeBorrow<'_>> for &'_ Lifetime {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.mul(other.as_lifetime())
+    }
+}
+
+impl Mul<Lifetime> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().mul(other)
+    }
+}
+
+impl Mul<&'_ Lifetime> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().mul(other)
+    }
+}
+
+impl Mul<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
+    type Output = Result<Lifetime, Error>;
+    #[inline]
+    fn mul(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.as_lifetime().mul(other.as_lifetime())
+    }
+}
+
 
 impl Regional for Lifetime {
     #[inline]
