@@ -139,7 +139,7 @@ impl Apply for Lambda {
         ctx.pop();
         let result = result?;
 
-        let rest_args = &args[self.def_region().len()..];
+        let rest_args = &args[self.def_region().len().min(args.len())..];
 
         if let Some(region) = region {
             Lambda::try_new(result, region)

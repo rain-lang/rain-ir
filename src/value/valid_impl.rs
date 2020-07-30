@@ -406,6 +406,13 @@ impl<'a, V> VarId<V> {
     {
         self.coerce_ref()
     }
+    /// Clone this `VarId` as a `TypeId`
+    pub fn clone_ty(&self) -> TypeId
+    where
+        V: Type,
+    {
+        self.as_ty().clone()
+    }
     /// Borrow this `VarId` as a `TypeRef`
     pub fn borrow_ty(&self) -> TypeRef
     where

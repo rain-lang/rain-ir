@@ -46,12 +46,15 @@ pub trait Regional {
     /// Get the ancestor of this region up to a given depth, or this value's region if `depth >= self.depth()`
     #[inline]
     fn ancestor(&self, depth: usize) -> Option<RegionBorrow> {
+        if depth == 0 {
+            return None
+        }
         if let Some(region) = self.region() {
             Some(
                 region
                     .data()
                     .parents
-                    .get(depth)
+                    .get(depth - 1)
                     .map(|region| region.borrow_region())
                     .unwrap_or(region),
             )
