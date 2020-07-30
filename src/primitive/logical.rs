@@ -274,6 +274,11 @@ lazy_static! {
     ];
 }
 
+/// The region of a function taking in a single boolean
+pub fn unary_region() -> Region {
+    LOGICAL_OP_REGIONS[0].clone()
+}
+
 /// The type of a unary function
 pub fn unary_ty() -> VarId<Pi> {
     LOGICAL_OP_TYS[0].clone()
