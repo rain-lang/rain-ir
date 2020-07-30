@@ -7,7 +7,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::lifetime_region;
 use crate::primitive::logical::BOOL_TY;
 use crate::typing::Typed;
-use crate::value::{Error, TypeId, TypeRef, ValId, ValueEnum, VarId};
+use crate::value::{Error, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 
 /// A ternary operation
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -127,5 +127,27 @@ impl Apply for Ternary {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primitive::finite::Finite;
+
+    #[test]
+    fn basic_conditional_application() {
+        let finite: VarId<Finite> = Finite(6).into();
+        let high = finite.clone().ix(3).unwrap().into_val();
+        let low = finite.ix(1).unwrap().into_val();
+        let ternary = Ternary::conditional(high.clone(), low.clone()).unwrap();
+        assert_eq!(
+            ternary.apply(&[true.into()]).unwrap(),
+            Application::Success(&[], high)
+        );
+        assert_eq!(
+            ternary.apply(&[false.into()]).unwrap(),
+            Application::Success(&[], low)
+        );
     }
 }
