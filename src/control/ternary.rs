@@ -6,7 +6,7 @@ use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::logical::unary_region;
 use crate::primitive::logical::BOOL_TY;
-use crate::typing::Typed;
+use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{lifetime_region, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
@@ -107,7 +107,7 @@ impl Apply for Ternary {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _ctx: &mut Option<EvalCtx>,
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         // Empty application
         if args.is_empty() {
@@ -123,11 +123,9 @@ impl Apply for Ternary {
                         Ok(Application::Success(rest, self.low.clone()))
                     }
                 } else {
-                    if args[0].ty() == BOOL_TY.borrow_ty() {
-                        unimplemented!("Unevaluated ternary nodes")
-                    } else {
-                        Err(Error::TypeMismatch)
-                    }
+                    self.ty
+                        .apply_ty_in(args, ctx)
+                        .map(|(lt, ty)| Application::Stop(lt, ty))
                 }
             }
         }
@@ -267,7 +265,10 @@ mod tests {
             ternary.apply(&[false.into()]).unwrap(),
             Application::Success(&[], ix.clone())
         );
-        assert_eq!(ternary.clone().into_norm(), const_lambda.clone().into_norm());
+        assert_eq!(
+            ternary.clone().into_norm(),
+            const_lambda.clone().into_norm()
+        );
         let ternary = ternary.into_val();
         assert_eq!(ternary, const_lambda.into_val());
         assert_eq!(
