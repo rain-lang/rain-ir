@@ -2,7 +2,7 @@
 `rain` values
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::function::{gamma::Gamma, lambda::Lambda, phi::Phi, pi::Pi};
+use crate::function::{lambda::Lambda, phi::Phi, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
@@ -27,11 +27,11 @@ pub mod predicate;
 pub mod tuple;
 pub mod universe;
 
+use arr::ValSet;
 use expr::Sexpr;
 use predicate::Is;
 use tuple::{Product, Tuple};
 use universe::Universe;
-use arr::ValSet;
 
 mod error;
 mod valid_impl;
@@ -79,8 +79,6 @@ pub enum ValueEnum {
     Pi(Pi),
     /// A lambda function
     Lambda(Lambda),
-    /// A gamma node
-    Gamma(Gamma),
     /// A phi node
     Phi(Phi),
     /// Logical operations on booleans
@@ -323,7 +321,11 @@ impl Typed for NormalValue {
 
 impl Apply for NormalValue {
     #[inline]
-    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         self.0.apply_in(args, ctx)
     }
 }
@@ -373,7 +375,11 @@ impl<V: Value> std::ops::Index<usize> for Deps<V> {
 
 impl Apply for ValueEnum {
     #[inline]
-    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         forv! {match (self) {
             v => v.apply_in(args, ctx),
         }}
@@ -426,7 +432,6 @@ macro_rules! forv {
             ValueEnum::Index($i) => $e,
             ValueEnum::Pi($i) => $e,
             ValueEnum::Lambda($i) => $e,
-            ValueEnum::Gamma($i) => $e,
             ValueEnum::Phi($i) => $e,
             ValueEnum::Logical($i) => $e,
         }
@@ -508,7 +513,6 @@ normal_valid!(Index); //TODO: unit?
 normal_valid!(Pi);
 normal_valid!(Lambda);
 normal_valid!(Parameter);
-normal_valid!(Gamma);
 normal_valid!(Phi);
 normal_valid!(Logical);
 
