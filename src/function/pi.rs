@@ -15,16 +15,16 @@ use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_vali
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Pi {
-    /// The result of this lambda function
+    /// The result type of this pi type
     result: TypeId,
     /// The type of this lambda function
     /// TODO: extract from region
     ty: UniverseId,
     /// The direct dependencies of this pi type
     deps: ValSet,
-    /// The lifetime of this lambda function
+    /// The lifetime of this pi type itself
     lt: Lifetime,
-    /// The lifetime of this lambda function's result
+    /// The lifetime of this pi type's result
     result_lt: Lifetime,
 }
 
