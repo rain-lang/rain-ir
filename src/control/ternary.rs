@@ -215,6 +215,7 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::primitive::finite::Finite;
+    use crate::value::expr::Sexpr;
 
     #[test]
     fn basic_conditional_application() {
@@ -224,11 +225,28 @@ mod tests {
         let ternary = Ternary::conditional(high.clone(), low.clone()).unwrap();
         assert_eq!(
             ternary.apply(&[true.into()]).unwrap(),
-            Application::Success(&[], high)
+            Application::Success(&[], high.clone())
         );
         assert_eq!(
             ternary.apply(&[false.into()]).unwrap(),
-            Application::Success(&[], low)
+            Application::Success(&[], low.clone())
+        );
+        let ternary = ternary.into_val();
+        assert_eq!(
+            ternary.apply(&[true.into()]).unwrap(),
+            Application::Success(&[], high.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[false.into()]).unwrap(),
+            Application::Success(&[], low.clone())
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), true.into()]).unwrap().into_val(),
+            high
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), false.into()]).unwrap().into_val(),
+            low
         );
     }
 }
