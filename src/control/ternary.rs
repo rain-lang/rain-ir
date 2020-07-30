@@ -1,13 +1,14 @@
 /*!
 A ternary operation
 */
-use crate::eval::{Application, Apply, EvalCtx};
-use crate::function::pi::Pi;
+use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::lifetime_region;
 use crate::primitive::logical::BOOL_TY;
 use crate::typing::Typed;
-use crate::value::{Error, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::{lifetime_region, substitute_to_valid, pretty_display};
+use std::convert::TryInto;
 
 /// A ternary operation
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -21,6 +22,9 @@ pub struct Ternary {
     /// The second branch of this ternary operation
     high: ValId,
 }
+
+//debug_from_display!(Ternary);
+pretty_display!(Ternary, "#ternary {...}");
 
 impl Ternary {
     /// Construct conditional ternary operation with the smallest possible type
@@ -129,6 +133,83 @@ impl Apply for Ternary {
         }
     }
 }
+
+impl Substitute for Ternary {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Ternary, Error> {
+        Ok(Ternary {
+            ty: self
+                .ty
+                .substitute(ctx)?
+                .try_into()
+                //TODO
+                .map_err(|_val| Error::InvalidSubKind)?,
+            lt: ctx.evaluate_lt(&self.lt)?,
+            low: self.low.substitute(ctx)?,
+            high: self.high.substitute(ctx)?,
+        })
+    }
+}
+
+substitute_to_valid!(Ternary);
+
+impl Value for Ternary {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        2
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        match ix {
+            0 => &self.low,
+            1 => &self.high,
+            _ => panic!("Invalid dependency index {}", ix),
+        }
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
+}
+
+impl From<Ternary> for ValueEnum {
+    fn from(ternary: Ternary) -> ValueEnum {
+        ValueEnum::Ternary(ternary)
+    }
+}
+
+impl From<Ternary> for NormalValue {
+    fn from(ternary: Ternary) -> NormalValue {
+        if ternary.is_const() {
+            // Cast this ternary to a constant lambda
+            NormalValue(ValueEnum::Lambda(Lambda {
+                result: ternary.high,
+                ty: ternary.ty,
+                lt: ternary.lt,
+                deps: std::iter::once(ternary.low).collect(),
+            }))
+        } else {
+            NormalValue(ValueEnum::Ternary(ternary))
+        }
+    }
+}
+
+#[cfg(feature = "prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use std::fmt::{self, Formatter, Display};
+
+    impl PrettyPrint for Ternary {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "(ternary prettyprinting unimplemented)")
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

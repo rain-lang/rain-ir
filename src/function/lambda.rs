@@ -20,13 +20,13 @@ use std::convert::TryInto;
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Lambda {
     /// The result of this lambda function
-    result: ValId,
+    pub(crate) result: ValId,
     /// The type of this lambda function
-    ty: VarId<Pi>,
+    pub(crate) ty: VarId<Pi>,
     /// The direct dependencies of this lambda function
-    deps: ValSet,
+    pub(crate) deps: ValSet,
     /// The lifetime of this lambda function
-    lt: Lifetime,
+    pub(crate) lt: Lifetime,
 }
 
 impl Lambda {

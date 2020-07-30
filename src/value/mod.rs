@@ -1,6 +1,7 @@
 /*!
 `rain` values
 */
+use crate::control::ternary::Ternary;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, phi::Phi, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
@@ -79,6 +80,8 @@ pub enum ValueEnum {
     Pi(Pi),
     /// A lambda function
     Lambda(Lambda),
+    /// A ternary operation
+    Ternary(Ternary),
     /// A phi node
     Phi(Phi),
     /// Logical operations on booleans
@@ -432,6 +435,7 @@ macro_rules! forv {
             ValueEnum::Index($i) => $e,
             ValueEnum::Pi($i) => $e,
             ValueEnum::Lambda($i) => $e,
+            ValueEnum::Ternary($i) => $e,
             ValueEnum::Phi($i) => $e,
             ValueEnum::Logical($i) => $e,
         }
@@ -515,6 +519,7 @@ normal_valid!(Lambda);
 normal_valid!(Parameter);
 normal_valid!(Phi);
 normal_valid!(Logical);
+normal_valid!(Ternary);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
