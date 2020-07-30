@@ -6,7 +6,7 @@ use super::{
     lifetime::{Lifetime, Live},
     typing::Typed,
 };
-use crate::value::{Error, TypeId, ValId};
+use crate::value::{expr::Sexpr, Error, TypeId, ValId, Value};
 mod ctx;
 pub use ctx::EvalCtx;
 
@@ -21,6 +21,25 @@ pub enum Application<'a, V = ValId> {
     Incomplete(Lifetime, TypeId),
     /// A successful evaluation to a value
     Success(&'a [ValId], V),
+}
+
+impl<'a> Application<'a> {
+    /// Convert any application into a successful application
+    pub(crate) fn valid_to_success<V: Value>(self, value: V, args: &[ValId]) -> (&'a [ValId], ValId) {
+        let (lt, ty) = match self {
+            Application::Stop(lt, ty) => (lt, ty),
+            Application::Complete(lt, ty) => (lt, ty),
+            Application::Incomplete(lt, ty) => (lt, ty),
+            Application::Success(rest, val) => return (rest, val),
+        };
+        let mut new_args = Vec::with_capacity(1 + args.len());
+        new_args.push(value.into_val());
+        new_args.extend_from_slice(args);
+        (
+            &[],
+            Sexpr::new_unchecked(new_args.into_iter().collect(), lt, ty).into_val(),
+        )
+    }
 }
 
 /// An object which can have its components substituted to yield another (of type `S`)
@@ -92,8 +111,8 @@ pub trait Apply: Typed + Live {
     Automatically curries as necessary
     */
     #[inline]
-    fn applied<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
-        self.applied_in(args, &mut None)
+    fn curried<'a>(&self, args: &'a [ValId]) -> Result<Application<'a>, Error> {
+        self.curried_in(args, &mut None)
     }
     /**
     Attempt to apply an object to a list of `rain` values in a given context, returning an `Application` on success.
@@ -101,7 +120,11 @@ pub trait Apply: Typed + Live {
     Use a loop (or call `applied_in`) to be sure!
     */
     #[inline]
-    fn apply_in<'a>(&self, args: &'a [ValId], _ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        _ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         if args.is_empty() {
             Ok(Application::Complete(
                 self.lifetime().clone_lifetime(),
@@ -116,20 +139,24 @@ pub trait Apply: Typed + Live {
     Automatically curries as necessary
     */
     #[inline]
-    fn applied_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn curried_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         let applied = self.apply_in(args, ctx)?;
         let (mut rest, mut value) = match applied {
             Application::Success(rest, value) => (rest, value),
-            app => return Ok(app)
+            app => return Ok(app),
         };
         while rest.len() > 0 {
             let applied = value.apply_in(rest, ctx)?;
             let (new_rest, new_value) = match applied {
                 Application::Success(rest, value) => (rest, value),
-                app => return Ok(app)
+                app => return Ok(app),
             };
             if value == new_value || new_rest == rest {
-                break
+                break;
             }
             rest = new_rest;
             value = new_value

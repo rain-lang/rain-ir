@@ -143,6 +143,19 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     fn into_var(self) -> VarId<Self> {
         self.into_val().coerce()
     }
+    /// Apply this value to a set of arguments, if possible
+    #[inline]
+    fn applied(self, args: &[ValId]) -> Result<ValId, Error> {
+        let application = self.curried(args)?;
+        let (rest, success) = application.valid_to_success(self, args);
+        debug_assert!(
+            rest.is_empty(),
+            "Incomplete currying: {:?} left, got {:?}",
+            rest,
+            success
+        );
+        Ok(success)
+    }
     /// Convert a value into a `TypeId`, if it is a type, otherwise return it
     #[inline]
     fn try_into_ty(self) -> Result<TypeId, Self> {

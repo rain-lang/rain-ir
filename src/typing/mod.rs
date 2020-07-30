@@ -44,6 +44,19 @@ pub trait Type: Value {
     fn is_substruct(&self) -> bool {
         self.is_affine() || self.is_relevant()
     }
+    /**
+    Apply this type to a set of arguments, yielding a result type and lifetime
+    */
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error>
+    where
+        Self: Clone,
+    {
+        if args.is_empty() {
+            Ok(self.clone().into_ty())
+        } else {
+            Err(Error::NotAFunction)
+        }
+    }
 }
 
 /// A value guaranteed to be a type
@@ -217,7 +230,6 @@ impl Type for TypeValue {
             ),
         }
     }
-    
 }
 
 impl From<TypeValue> for ValId {

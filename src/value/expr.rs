@@ -31,6 +31,10 @@ enum_convert! {
 }
 
 impl Sexpr {
+    /// Create a new S-expression fron unchecked components
+    pub(crate) fn new_unchecked(args: ValArr, lifetime: Lifetime, ty: TypeId) -> Sexpr {
+        Sexpr { args, lifetime, ty }
+    }
     /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.
     pub fn try_new(mut args: Vec<ValId>) -> Result<Sexpr, Error> {
         // Simple cases
