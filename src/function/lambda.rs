@@ -5,7 +5,7 @@ use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::Live;
 use crate::lifetime::{Lifetime, LifetimeBorrow};
-use crate::region::{Parameter, Parametrized, Region, RegionBorrow};
+use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
     arr::{TySet, ValSet},
@@ -119,6 +119,13 @@ impl Apply for Lambda {
         }
 
         // Initialize context
+        if self.def_region().depth() > self.result().depth() {
+            return Ok(Application::Success(
+                &args[self.def_region().len()..],
+                self.result().clone(),
+            ));
+        }
+
         let ctx = ctx.get_or_insert_with(|| {
             let eval_capacity = 0; //TODO
             let lt_capacity = 0; //TODO
