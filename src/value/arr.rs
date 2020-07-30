@@ -90,6 +90,18 @@ impl<A: EmptyPredicate, P> ValArr<A, P> {
     };
 }
 
+impl<A, P> Drop for ValArr<A, P> {
+    #[inline]
+    fn drop(&mut self) {
+        if self.arr.is_empty() {
+            return;
+        }
+        let mut tmp = CachedArr::<ValId>::EMPTY.coerce();
+        std::mem::swap(&mut self.arr, &mut tmp);
+        ARRAY_CACHE.try_gc(&mut tmp.coerce());
+    }
+}
+
 impl<A, P> ValArr<A, P> {
     /// Get the length of this array
     #[inline]
@@ -215,10 +227,7 @@ impl<A, P> ValArr<A, P> {
     /// Coerce this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
     fn coerce<B, Q>(self) -> ValArr<B, Q> {
-        ValArr {
-            arr: self.arr.coerce(),
-            variant: std::marker::PhantomData,
-        }
+        unsafe { std::mem::transmute(self) }
     }
     /// Coerce a reference to this container into a set of `VarId<V>`, asserting the predicate holds *for each container element*!
     #[inline]
