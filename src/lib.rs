@@ -25,6 +25,7 @@ pub mod region;
 pub mod typing;
 pub mod util;
 pub mod value;
+pub mod control;
 
 pub use rain_ast::tokens;
 
