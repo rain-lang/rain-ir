@@ -1,11 +1,13 @@
 /*!
 A ternary operation
 */
+use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::lifetime_region;
+use crate::primitive::logical::BOOL_TY;
 use crate::typing::Typed;
-use crate::value::{Error, TypeRef, ValId, VarId};
+use crate::value::{Error, TypeId, TypeRef, ValId, ValueEnum, VarId};
 
 /// A ternary operation
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -35,6 +37,11 @@ impl Ternary {
         };
         Ok(Ternary { ty, lt, low, high })
     }
+    /// Get the parameter type type of this ternary operation
+    #[inline]
+    pub fn param_ty(&self) -> &TypeId {
+        &self.ty.param_tys()[0]
+    }
     /// Get the type of this ternary operation
     #[inline]
     pub fn get_ty(&self) -> &VarId<Pi> {
@@ -50,6 +57,26 @@ impl Ternary {
     pub fn high(&self) -> &ValId {
         &self.high
     }
+    /// Get whether this ternary node is constant. Should always be `false` for a normalized node!
+    #[inline]
+    pub fn is_const(&self) -> bool {
+        self.low == self.high
+    }
+    /// Get the ternary kind of this node
+    #[inline]
+    pub fn ternary_kind(&self) -> TernaryKind {
+        if *self.param_ty() == BOOL_TY.borrow_ty() {
+            TernaryKind::Bool
+        } else {
+            panic!("Invalid ternary node: {:#?}", self)
+        }
+    }
+}
+/// Kinds of ternary node
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum TernaryKind {
+    /// A boolean branch
+    Bool,
 }
 
 impl Typed for Ternary {
@@ -71,3 +98,34 @@ impl Live for Ternary {
 }
 
 lifetime_region!(Ternary);
+
+impl Apply for Ternary {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        _ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        // Empty application
+        if args.is_empty() {
+            return Ok(Application::Complete(self.lt.clone(), self.ty().clone_ty()));
+        }
+        match self.ternary_kind() {
+            TernaryKind::Bool => {
+                if let ValueEnum::Bool(b) = args[0].as_enum() {
+                    let rest = &args[1..];
+                    if *b {
+                        Ok(Application::Success(rest, self.high.clone()))
+                    } else {
+                        Ok(Application::Success(rest, self.low.clone()))
+                    }
+                } else {
+                    if args[0].ty() == BOOL_TY.borrow_ty() {
+                        unimplemented!("Unevaluated ternary nodes")
+                    } else {
+                        Err(Error::TypeMismatch)
+                    }
+                }
+            }
+        }
+    }
+}
