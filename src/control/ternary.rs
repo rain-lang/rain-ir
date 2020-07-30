@@ -4,10 +4,11 @@ A ternary operation
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::primitive::logical::unary_region;
 use crate::primitive::logical::BOOL_TY;
 use crate::typing::Typed;
 use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
-use crate::{lifetime_region, substitute_to_valid, pretty_display};
+use crate::{lifetime_region, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
 
 /// A ternary operation
@@ -30,7 +31,6 @@ impl Ternary {
     /// Construct conditional ternary operation with the smallest possible type
     #[inline]
     pub fn conditional(high: ValId, low: ValId) -> Result<Ternary, Error> {
-        use crate::primitive::logical::unary_region;
         let high_ty = high.ty();
         let low_ty = low.ty();
         let lt = (low.lifetime() & high.lifetime())?;
@@ -197,7 +197,7 @@ impl From<Ternary> for NormalValue {
 mod prettyprint_impl {
     use super::*;
     use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
-    use std::fmt::{self, Formatter, Display};
+    use std::fmt::{self, Display, Formatter};
 
     impl PrettyPrint for Ternary {
         fn prettyprint<I: From<usize> + Display>(
@@ -209,7 +209,6 @@ mod prettyprint_impl {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -241,12 +240,55 @@ mod tests {
             Application::Success(&[], low.clone())
         );
         assert_eq!(
-            Sexpr::try_new(vec![ternary.clone(), true.into()]).unwrap().into_val(),
+            Sexpr::try_new(vec![ternary.clone(), true.into()])
+                .unwrap()
+                .into_val(),
             high
         );
         assert_eq!(
-            Sexpr::try_new(vec![ternary.clone(), false.into()]).unwrap().into_val(),
+            Sexpr::try_new(vec![ternary.clone(), false.into()])
+                .unwrap()
+                .into_val(),
             low
+        );
+    }
+
+    #[test]
+    fn constant_conditional_application_and_norm() {
+        let finite: VarId<Finite> = Finite(6).into();
+        let ix = finite.clone().ix(3).unwrap().into_val();
+        let ternary = Ternary::conditional(ix.clone(), ix.clone()).unwrap();
+        let const_lambda = Lambda::try_new(ix.clone(), unary_region()).unwrap();
+        assert_eq!(
+            ternary.apply(&[true.into()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[false.into()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(ternary.clone().into_norm(), const_lambda.clone().into_norm());
+        let ternary = ternary.into_val();
+        assert_eq!(ternary, const_lambda.into_val());
+        assert_eq!(
+            ternary.apply(&[true.into()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[false.into()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), true.into()])
+                .unwrap()
+                .into_val(),
+            ix
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), false.into()])
+                .unwrap()
+                .into_val(),
+            ix
         );
     }
 }
