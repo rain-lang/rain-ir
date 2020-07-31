@@ -91,10 +91,10 @@ impl Ternary {
     /// Get the ternary kind of this node
     #[inline]
     pub fn ternary_kind(&self) -> TernaryKind {
-        if *self.param_ty() == BOOL_TY.borrow_ty() {
-            TernaryKind::Bool
-        } else {
-            panic!("Invalid ternary node: {:#?}", self)
+        match self.param_ty().as_enum() {
+            ValueEnum::BoolTy(_) => TernaryKind::Bool,
+            ValueEnum::Finite(f) if *f == Finite(2) => TernaryKind::Switch,
+            p => panic!("Invalid ternary parameter type {}", p)
         }
     }
 }
@@ -103,6 +103,8 @@ impl Ternary {
 pub enum TernaryKind {
     /// A boolean branch
     Bool,
+    /// A branch on `#finite(2)`
+    Switch
 }
 
 impl Typed for Ternary {
@@ -140,6 +142,23 @@ impl Apply for Ternary {
                 if let ValueEnum::Bool(b) = args[0].as_enum() {
                     let rest = &args[1..];
                     if *b {
+                        Ok(Application::Success(rest, self.high.clone()))
+                    } else {
+                        Ok(Application::Success(rest, self.low.clone()))
+                    }
+                } else {
+                    self.ty
+                        .apply_ty_in(args, ctx)
+                        .map(|(lt, ty)| Application::Stop(lt, ty))
+                }
+            },
+            TernaryKind::Switch => {
+                if let ValueEnum::Index(ix) = args[0].as_enum() {
+                    if *ix.get_ty() != Finite(2) {
+                        return Err(Error::TypeMismatch);
+                    }
+                    let rest = &args[1..];
+                    if ix.ix() != 0 {
                         Ok(Application::Success(rest, self.high.clone()))
                     } else {
                         Ok(Application::Success(rest, self.low.clone()))
