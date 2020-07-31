@@ -4,8 +4,9 @@ A ternary operation
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::primitive::logical::unary_region;
+use crate::primitive::finite::Finite;
 use crate::primitive::logical::BOOL_TY;
+use crate::region::{Region, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{lifetime_region, pretty_display, substitute_to_valid};
@@ -34,8 +35,29 @@ impl Ternary {
         let high_ty = high.ty();
         let low_ty = low.ty();
         let lt = (low.lifetime() & high.lifetime())?;
+        let unary_region = Region::with(
+            std::iter::once(BOOL_TY.clone_ty()).collect(),
+            lt.region().map(|region| region.clone_region()),
+        );
         let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), unary_region(), lt.clone())?.into()
+            Pi::try_new(high_ty.clone_ty(), unary_region, lt.clone())?.into()
+        } else {
+            unimplemented!("Dependently typed conditional: {} or {}", high, low);
+        };
+        Ok(Ternary { ty, lt, low, high })
+    }
+    /// Construct a switch ternary operation with the smallest possible type
+    #[inline]
+    pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
+        let high_ty = high.ty();
+        let low_ty = low.ty();
+        let lt = (low.lifetime() & high.lifetime())?;
+        let switch_region = Region::with(
+            std::iter::once(Finite(2).into_ty()).collect(),
+            lt.region().map(|region| region.clone_region()),
+        );
+        let ty = if high_ty == low_ty {
+            Pi::try_new(high_ty.clone_ty(), switch_region, lt.clone())?.into()
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
@@ -211,7 +233,7 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::finite::Finite;
+    use crate::primitive::logical::unary_region;
     use crate::value::expr::Sexpr;
 
     #[test]
