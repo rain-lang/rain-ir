@@ -56,6 +56,9 @@ pub struct ValRef<'a, P = ()> {
 }
 
 /// An enumeration of possible `rain` values
+/// 
+/// The `ValueEnum` is the central data-structure defining the `rain` intermediate representation:
+/// it lays out all the possible kinds of nodes which can make up part of the `rain`-graph.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum ValueEnum {
     /// An S-expression
@@ -110,11 +113,17 @@ pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
 
 // The `Value` trait:
 
-/// A trait implemented by `rain` values
+/// A trait implemented by all `rain` values
 pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Get the number of dependencies of this value
+    /// 
+    /// Note that this does *not* include the type: as all `rain` values have exactly one type, this is counted
+    /// separately from normal dependencies (but is important in, e.g., lifetime considerations!)
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
+    /// 
+    /// The result of this function is unspecified if the `dep` index is out of bounds, though it will always either
+    /// return a valid [`&ValId`](ValId) or panic. This function must never panic if the `dep` index is in bounds.
     fn get_dep(&self, dep: usize) -> &ValId;
     /// Get the dependencies of this value
     #[inline]
@@ -122,6 +131,8 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
         RefCast::ref_cast(self)
     }
     /// Clone the dependency-set of this value
+    /// 
+    /// This returns an owned `ValSet` of the dependencies of this value, i.e. a sorted, de-duplicated dependency array.
     #[inline]
     fn clone_depset(&self) -> ValSet {
         self.deps().iter().cloned().collect()
@@ -129,6 +140,8 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Convert a value into a `NormalValue`
     fn into_norm(self) -> NormalValue;
     /// Convert a value into a `ValueEnum`
+    /// 
+    /// Note that the return value of this function is *not necessarily normalized*! For that, use [`self.into_norm()`](Value::into_norm)
     #[inline]
     fn into_enum(self) -> ValueEnum {
         self.into_norm().into()
