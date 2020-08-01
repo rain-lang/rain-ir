@@ -34,7 +34,7 @@ pub trait Regional {
     /// Unlike [`cloned_region`](Regional::cloned_region), returns a borrowed [`RegionBorrow`](RegionBorrow) (instead of a [`Region`](Region)) on success.
     /// For correctness, this method should otherwise return the same result as [`cloned_region`](Regional::cloned_region).
     /// 
-    /// # Examples
+    /// # Example
     /// ```rust
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
@@ -72,16 +72,80 @@ pub trait Regional {
     /// 
     /// Returns the region this object is in, or `None` if the object is in the null region.
     /// Unlike [`region`](Regional::region), returns an owned [`Region`](Region) (instead of a [`RegionBorrow`](RegionBorrow)) on success.
-    /// For correctness, this method should otherwise return the same result as [`region`](Regional::region).
+    /// For correctness, this method should otherwise return the same result as [`region`](Regional::region).    
+    /// 
+    /// TODO: consider renaming to `clone_region`...
+    /// 
+    /// # Example
+    /// ```rust
+    /// use rain_ir::region::{Region, Regional};
+    /// use rain_ir::primitive::logical::Bool;
+    /// use rain_ir::typing::Type;
+    /// 
+    /// // Constants reside in the null region:
+    /// 
+    /// assert_eq!(true.cloned_region(), None);
+    /// assert_eq!(false.cloned_region(), None);
+    /// 
+    /// // Parameters reside in their region:
+    /// 
+    /// // We construct the region of a function taking a single bool as a parameter
+    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
+    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// 
+    /// // We extract the first parameter
+    /// let param = region.clone().param(0).unwrap();
+    /// assert_eq!(param.cloned_region(), Some(region.clone()));
+    /// 
+    /// // Regions return themselves as a region
+    /// assert_eq!(region.cloned_region(), Some(region.clone()));
+    /// 
+    /// // An `Option` works too
+    /// let mut opt = Some(region.clone());
+    /// assert_eq!(opt.cloned_region(), Some(region));
+    /// opt = None;
+    /// assert_eq!(opt.cloned_region(), None);
+    /// ```
     #[inline]
     fn cloned_region(&self) -> Option<Region> {
         self.region().map(|region| region.clone_region())
     }
-    /// Get the depth of this object's region
+    /// Get the depth of the region associated with this object
     /// 
     /// The depth of a region is defined inductively as follows
     /// - The null region has depth `0`
     /// - A region has the depth of it's parent plus one
+    /// For correctness, we must have `self.depth() == self.region.depth()`
+    /// 
+    /// # Example
+    /// ```rust
+    /// use rain_ir::region::{Region, Regional};
+    /// use rain_ir::primitive::logical::Bool;
+    /// use rain_ir::typing::Type;
+    /// 
+    /// // Constants reside in the null region:
+    /// 
+    /// assert_eq!(true.depth(), 0);
+    /// assert_eq!(false.depth(), 0);
+    /// 
+    /// // Parameters reside in their region:
+    /// 
+    /// // We construct the region of a function taking a single bool as a parameter
+    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
+    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// 
+    /// // We extract the first parameter
+    /// let param = region.clone().param(0).unwrap();
+    /// assert_eq!(param.depth(), 1);
+    /// 
+    /// // We can, of course, call this function directly on a region
+    /// assert_eq!(region.depth(), 1);
+    /// 
+    /// // An `Option` works too, with `None` representing the null region
+    /// let mut opt = Some(region.clone());
+    /// assert_eq!(opt.depth(), 1);
+    /// opt = None;
+    /// assert_eq!(opt.depth(), 0);
     #[inline]
     fn depth(&self) -> usize {
         self.region().depth()
