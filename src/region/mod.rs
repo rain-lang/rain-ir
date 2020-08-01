@@ -29,16 +29,28 @@ pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
 /// A trait for objects which have a region
 pub trait Regional {
     /// Get the region of this object
+    /// 
+    /// Returns the region this object is in, or `None` if the object is in the null region
+    /// Unlike [`cloned_region`](Regional::cloned_region), returns a borrowed [`RegionBorrow`](RegionBorrow) (instead of a [`Region`](Region)) on success.
+    /// For correctness, this method should otherwise return the same result as [`cloned_region`](Regional::cloned_region).
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
         None
     }
     /// Get the region of this object, cloned
+    /// 
+    /// Returns the region this object is in, or `None` if the object is in the null region.
+    /// Unlike [`region`](Regional::region), returns an owned [`Region`](Region) (instead of a [`RegionBorrow`](RegionBorrow)) on success.
+    /// For correctness, this method should otherwise return the same result as [`region`](Regional::region).
     #[inline]
     fn cloned_region(&self) -> Option<Region> {
         self.region().map(|region| region.clone_region())
     }
     /// Get the depth of this object's region
+    /// 
+    /// The depth of a region is defined inductively as follows
+    /// - The null region has depth `0`
+    /// - A region has the depth of it's parent plus one
     #[inline]
     fn depth(&self) -> usize {
         self.region().depth()
@@ -64,7 +76,12 @@ pub trait Regional {
     }
 }
 
-/// Get the least common region of two regions.
+/// Get the smallest region containing two objects or regions
+/// 
+/// Returns the smallest region containing two objects or regions if such a region exists. If the regions of the
+/// objects are incomparable, return `None`.
+/// 
+/// TODO: think about this behaviour: would returning `Err` be more appropriate?
 pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<RegionBorrow<'a>> {
     use Ordering::*;
     let lr = left.region();
