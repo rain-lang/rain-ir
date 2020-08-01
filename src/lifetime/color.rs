@@ -47,17 +47,25 @@ pub static COLOR_COUNTER: ColorCounter = ColorCounter(AtomicIsize::new(-1));
 
 impl Color {
     /// Create a unique new color in a given region
+    /// 
+    /// This color is guaranteed not to be equal to *any* other color (in *any* region)
     #[inline]
     pub fn new_in(region: Option<Region>) -> Color {
         let ix = COLOR_COUNTER.next();
         Color { region, ix }
     }
     /// Create a unique new color in the null region
+    /// 
+    /// This color is guaranteed not to be equal to *any* other color (in *any* region).
+    /// This method is equivalent to calling `Color::new_in(None)`.
     #[inline]
     pub fn new() -> Color {
         Self::new_in(None)
     }
     /// Create the color of a parameter to a region. Return a `None` if the index is out of bounds or to an unrestricted parameter
+    /// 
+    /// Every parameter to a region which is substructural (i.e. restricted) is assigned a unique color. Calling this function
+    /// twice for the same [`Region`](Region) and index is guaranteed to yield the same color.
     pub fn param(region: Region, ix: usize) -> Option<Color> {
         if ix >= region.len() || !region[ix].is_substruct() {
             return None;
