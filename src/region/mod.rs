@@ -191,7 +191,7 @@ lazy_static! {
 }
 
 impl Region {
-    /// Create a new reference from a given `RegionData`, caching if possible
+    /// Create a new reference from a given [`RegionData`](RegionData), caching if possible
     #[inline]
     pub fn new(data: RegionData) -> Region {
         Region(REGION_CACHE.cache(data))
@@ -206,32 +206,32 @@ impl Region {
     pub fn with_parent(parent: Option<Region>) -> Region {
         Region::new(RegionData::with_parent(parent))
     }
-    /// Get a reference to a borrow of this region. More efficient than taking an `&Region`.
+    /// Get a reference to a borrow of this region. More efficient than taking an [`&Region`](Region).
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
         RegionBorrow(self.0.borrow_arc())
     }
-    /// Get the underlying `Arc` of this `Region`, if any
+    /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
     #[inline]
     pub fn get_arc(&self) -> &Arc<RegionData> {
         &self.0
     }
-    /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
+    /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
     pub fn param(self, ix: usize) -> Result<Parameter, ()> {
         Parameter::try_new(self, ix)
     }
-    /// Get the data behind this `Region`
+    /// Get the data behind this [`Region`](Region)
     #[inline]
     pub fn data(&self) -> &RegionData {
         &self.0
     }
-    /// Get a pointer to the data behind this `Region`
+    /// Get a pointer to the data behind this [`Region`](Region)
     #[inline]
     pub fn data_ptr(&self) -> *const RegionData {
         self.data() as *const _
     }
-    /// Check whether this `Region` has any parameters
+    /// Check whether this [`Region`](Region) has any parameters
     ///
     /// This method will return `true` if and only if `self.len() == 0`
     /// 
@@ -256,7 +256,7 @@ impl Region {
     pub fn is_empty(&self) -> bool {
         self.data().is_empty()
     }
-    /// Get the number of parameters of this `Region`
+    /// Get the number of parameters of this [`Region`](Region)
     /// 
     /// # Examples
     /// ```rust
@@ -284,12 +284,12 @@ impl Region {
     pub fn len(&self) -> usize {
         self.data().len()
     }
-    /// Get the parent of this region if any
+    /// Get the parent of this region, if any
     #[inline]
     pub fn parent(&self) -> Option<&Region> {
         self.data().parent()
     }
-    /// Iterate over the parameters of this `Region`.
+    /// Iterate over the parameters of this [`Region`](Region).
     #[inline]
     pub fn params(self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
         let l = self.len();
