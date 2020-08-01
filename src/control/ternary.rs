@@ -295,7 +295,7 @@ mod tests {
                 .into_val(),
             low
         );
-        assert!(Sexpr::try_new(vec![ternary.clone(), ix1]).is_err());
+        assert!(Sexpr::try_new(vec![ternary, ix1]).is_err());
     }
 
     #[test]
@@ -338,7 +338,7 @@ mod tests {
                 .into_val(),
             low
         );
-        assert!(Sexpr::try_new(vec![ternary.clone(), true.into()]).is_err());
+        assert!(Sexpr::try_new(vec![ternary, true.into()]).is_err());
     }
 
     #[test]
@@ -346,7 +346,7 @@ mod tests {
         //FIXME: lambda type mismatches
         // let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
-        let ix = finite.clone().ix(3).unwrap().into_val();
+        let ix = finite.ix(3).unwrap().into_val();
         let ternary = Ternary::conditional(ix.clone(), ix.clone()).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), unary_region()).unwrap();
         // let ix1 = finite2.clone().ix(1).unwrap().into_val();
@@ -382,7 +382,7 @@ mod tests {
             ix
         );
         assert_eq!(
-            Sexpr::try_new(vec![ternary.clone(), false.into()])
+            Sexpr::try_new(vec![ternary, false.into()])
                 .unwrap()
                 .into_val(),
             ix
@@ -394,7 +394,7 @@ mod tests {
     fn constant_switch_application_and_norm() {
         let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
-        let ix = finite.clone().ix(3).unwrap().into_val();
+        let ix = finite.ix(3).unwrap().into_val();
         let ternary = Ternary::switch(ix.clone(), ix.clone()).unwrap();
         let ix1 = finite2.clone().ix(1).unwrap().into_val();
         let ix0 = finite2.clone().ix(0).unwrap().into_val();
@@ -429,7 +429,7 @@ mod tests {
             ix
         );
         assert_eq!(
-            Sexpr::try_new(vec![ternary.clone(),ix0])
+            Sexpr::try_new(vec![ternary,ix0])
                 .unwrap()
                 .into_val(),
             ix

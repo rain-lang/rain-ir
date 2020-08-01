@@ -149,7 +149,7 @@ pub trait Apply: Typed + Live {
             Application::Success(rest, value) => (rest, value),
             app => return Ok(app),
         };
-        while rest.len() > 0 {
+        while !rest.is_empty() {
             let applied = value.apply_in(rest, ctx)?;
             let (new_rest, new_value) = match applied {
                 Application::Success(rest, value) => (rest, value),
