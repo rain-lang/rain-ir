@@ -343,6 +343,7 @@ mod tests {
 
     #[test]
     fn constant_conditional_application_and_norm() {
+        //FIXME: lambda type mismatches
         // let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
         let ix = finite.clone().ix(3).unwrap().into_val();
