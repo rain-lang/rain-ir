@@ -33,6 +33,37 @@ pub trait Regional {
     /// Returns the region this object is in, or `None` if the object is in the null region
     /// Unlike [`cloned_region`](Regional::cloned_region), returns a borrowed [`RegionBorrow`](RegionBorrow) (instead of a [`Region`](Region)) on success.
     /// For correctness, this method should otherwise return the same result as [`cloned_region`](Regional::cloned_region).
+    /// 
+    /// # Examples
+    /// ```rust
+    /// use rain_ir::region::{Region, Regional};
+    /// use rain_ir::primitive::logical::Bool;
+    /// use rain_ir::typing::Type;
+    /// 
+    /// // Constants reside in the null region:
+    /// 
+    /// assert_eq!(true.region(), None);
+    /// assert_eq!(false.region(), None);
+    /// 
+    /// // Parameters reside in their region:
+    /// 
+    /// // We construct the region of a function taking a single bool as a parameter
+    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
+    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// 
+    /// // We extract the first parameter
+    /// let param = region.clone().param(0).unwrap();
+    /// assert_eq!(param.region(), Some(region.borrow_region()));
+    /// 
+    /// // Regions return themselves as a region
+    /// assert_eq!(region.region(), Some(region.borrow_region()));
+    /// 
+    /// // An `Option` works too
+    /// let mut opt = Some(region.clone());
+    /// assert_eq!(opt.region(), Some(region.borrow_region()));
+    /// opt = None;
+    /// assert_eq!(opt.region(), None);
+    /// ```
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
         None
