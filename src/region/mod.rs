@@ -29,35 +29,34 @@ pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
 /// A trait for objects which have a region
 pub trait Regional {
     /// Get the region of this object
-    /// 
+    ///
     /// Returns the region this object is in, or `None` if the object is in the null region
     /// Unlike [`cloned_region`](Regional::cloned_region), returns a borrowed [`RegionBorrow`](RegionBorrow) (instead of a [`Region`](Region)) on success.
     /// For correctness, this method should otherwise return the same result as [`cloned_region`](Regional::cloned_region).
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
-    /// 
+    ///
     /// // Constants reside in the null region:
-    /// 
+    ///
     /// assert_eq!(true.region(), None);
     /// assert_eq!(false.region(), None);
-    /// 
+    ///
     /// // Parameters reside in their region:
-    /// 
+    ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
     /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
-    /// 
+    ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
     /// assert_eq!(param.region(), Some(region.borrow_region()));
-    /// 
+    ///
     /// // Regions return themselves as a region
     /// assert_eq!(region.region(), Some(region.borrow_region()));
-    /// 
+    ///
     /// // An `Option` works too
     /// let mut opt = Some(region.clone());
     /// assert_eq!(opt.region(), Some(region.borrow_region()));
@@ -69,37 +68,36 @@ pub trait Regional {
         None
     }
     /// Get the region of this object, cloned
-    /// 
+    ///
     /// Returns the region this object is in, or `None` if the object is in the null region.
     /// Unlike [`region`](Regional::region), returns an owned [`Region`](Region) (instead of a [`RegionBorrow`](RegionBorrow)) on success.
     /// For correctness, this method should otherwise return the same result as [`region`](Regional::region).    
-    /// 
+    ///
     /// TODO: consider renaming to `clone_region`...
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
-    /// 
+    ///
     /// // Constants reside in the null region:
-    /// 
+    ///
     /// assert_eq!(true.cloned_region(), None);
     /// assert_eq!(false.cloned_region(), None);
-    /// 
+    ///
     /// // Parameters reside in their region:
-    /// 
+    ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
     /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
-    /// 
+    ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
     /// assert_eq!(param.cloned_region(), Some(region.clone()));
-    /// 
+    ///
     /// // Regions return themselves as a region
     /// assert_eq!(region.cloned_region(), Some(region.clone()));
-    /// 
+    ///
     /// // An `Option` works too
     /// let mut opt = Some(region.clone());
     /// assert_eq!(opt.cloned_region(), Some(region));
@@ -111,36 +109,35 @@ pub trait Regional {
         self.region().map(|region| region.clone_region())
     }
     /// Get the depth of the region associated with this object
-    /// 
+    ///
     /// The depth of a region is defined inductively as follows
     /// - The null region has depth `0`
     /// - A region has the depth of it's parent plus one
     /// For correctness, we must have `self.depth() == self.region.depth()`
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
-    /// 
+    ///
     /// // Constants reside in the null region:
-    /// 
+    ///
     /// assert_eq!(true.depth(), 0);
     /// assert_eq!(false.depth(), 0);
-    /// 
+    ///
     /// // Parameters reside in their region:
-    /// 
+    ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// // This can also be obtained using the `unary_region` helper from the `primitive::logical` module.
     /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
-    /// 
+    ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
     /// assert_eq!(param.depth(), 1);
-    /// 
+    ///
     /// // We can, of course, call this function directly on a region
     /// assert_eq!(region.depth(), 1);
-    /// 
+    ///
     /// // An `Option` works too, with `None` representing the null region
     /// let mut opt = Some(region.clone());
     /// assert_eq!(opt.depth(), 1);
@@ -154,7 +151,7 @@ pub trait Regional {
     #[inline]
     fn ancestor(&self, depth: usize) -> Option<RegionBorrow> {
         if depth == 0 {
-            return None
+            return None;
         }
         if let Some(region) = self.region() {
             Some(
@@ -172,10 +169,10 @@ pub trait Regional {
 }
 
 /// Get the smallest region containing two objects or regions
-/// 
+///
 /// Returns the smallest region containing two objects or regions if such a region exists. If the regions of the
 /// objects are incomparable, return `None`.
-/// 
+///
 /// TODO: think about this behaviour: would returning `Err` be more appropriate?
 pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<RegionBorrow<'a>> {
     use Ordering::*;
@@ -184,15 +181,12 @@ pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<Re
     match lr.partial_cmp(&rr) {
         Some(Less) | Some(Equal) => lr,
         Some(Greater) => rr,
-        None => None
+        None => None,
     }
-} 
+}
 
 lazy_static! {
     /// The global cache of constructed regions.
-    ///
-    /// Note: region caching is not actually necessary for correctness, so consider exponsing a constructor
-    /// for `Region`/`RegionBorrow` from `Arc<RegionData>` and `Arc<Region>`...
     pub static ref REGION_CACHE: DashCache<Arc<RegionData>> = DashCache::new();
 }
 
@@ -227,17 +221,37 @@ impl Region {
     pub fn param(self, ix: usize) -> Result<Parameter, ()> {
         Parameter::try_new(self, ix)
     }
-    /// Get the data behind this `Region`, if any
+    /// Get the data behind this `Region`
     #[inline]
     pub fn data(&self) -> &RegionData {
         &self.0
     }
-    /// Get a pointer to the data behind this `Region`, or null if there is none
+    /// Get a pointer to the data behind this `Region`
     #[inline]
     pub fn data_ptr(&self) -> *const RegionData {
         self.data() as *const _
     }
     /// Check whether this `Region` has any parameters
+    ///
+    /// This method will return true if and only if `self.len() == 0`
+    /// 
+    /// # Examples
+    /// ```rust
+    /// use rain_ir::region::Region;
+    /// use rain_ir::primitive::logical::Bool;
+    /// use rain_ir::typing::Type;
+    /// 
+    /// let empty_region = Region::with_parent(None);
+    /// let nested_empty = Region::with_parent(Some(empty_region.clone()));
+    /// let nested_full = Region::with(
+    ///     std::iter::once(Bool.into_ty()).collect(), 
+    ///     Some(nested_empty.clone())
+    /// );
+    /// 
+    /// assert!(empty_region.is_empty());
+    /// assert!(nested_empty.is_empty());
+    /// assert!(!nested_full.is_empty());
+    /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.data().is_empty()
