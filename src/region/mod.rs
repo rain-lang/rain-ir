@@ -233,7 +233,7 @@ impl Region {
     }
     /// Check whether this `Region` has any parameters
     ///
-    /// This method will return true if and only if `self.len() == 0`
+    /// This method will return `true` if and only if `self.len() == 0`
     /// 
     /// # Examples
     /// ```rust
@@ -257,6 +257,29 @@ impl Region {
         self.data().is_empty()
     }
     /// Get the number of parameters of this `Region`
+    /// 
+    /// # Examples
+    /// ```rust
+    /// use rain_ir::region::Region;
+    /// use rain_ir::primitive::logical::Bool;
+    /// use rain_ir::typing::Type;
+    /// 
+    /// let empty_region = Region::with_parent(None);
+    /// let nested_empty = Region::with_parent(Some(empty_region.clone()));
+    /// let nested_full = Region::with(
+    ///     std::iter::once(Bool.into_ty()).collect(), 
+    ///     Some(nested_empty.clone())
+    /// );
+    /// let nested_many = Region::with(
+    ///     vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into_iter().collect(),
+    ///     Some(empty_region.clone())
+    /// );
+    /// 
+    /// assert_eq!(empty_region.len(), 0);
+    /// assert_eq!(nested_empty.len(), 0);
+    /// assert_eq!(nested_full.len(), 1);
+    /// assert_eq!(nested_many.len(), 3);
+    /// ```
     #[inline]
     pub fn len(&self) -> usize {
         self.data().len()
