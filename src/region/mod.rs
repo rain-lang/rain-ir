@@ -19,14 +19,41 @@ pub use parameter::*;
 mod region_impl;
 
 /// A `rain` region
+/// 
+/// Regions are one of the central constructs in `rain`, and are, in essence, our take on the
+/// "Regionalized" in "Regionalized Value-State Dependence Graph" (RVSDG). Every `rain` value is
+/// assigned exactly one region, and, as a rule of thumb, values may depend only on values in the
+/// same region or an ancestor of that region. All regions have the null region as ancestors, in
+/// which only constants reside.
+/// 
+/// As of now, regions are defined by a set of parameters coupled with a parent. Various extensions
+/// are planned to this, including, but not limited to
+/// - Termination typing, for potentially non-terminating nodes such as phi-nodes
+/// - Monadic regions
 #[derive(Debug, Clone, Eq)]
 pub struct Region(Arc<RegionData>);
 
 /// A borrow of a `rain` region
+/// 
+/// This, in essence, serves as a more efficient version of [`&Region`](Region): 
+/// since [`Region`](Region) is `Arc`-backed, an [`&Region`](Region) requires two
+/// pointer dereferences to access the underlying [`RegionData`](RegionData). This
+/// struct, on the other hand, stores a direct pointer to the [`RegionData`](RegionData)
+/// using `elysees`' `ArcBorrow`. This also removes the need to have a ]`Region`](Region) 
+/// instance on the stack at all, which can be helpful in certain cases.
+/// 
+/// In cases where an [`&Region`](Region) is needed, a [`RegionBorrow`](RegionBorrow) can
+/// be dereferenced into one with the [`as_region`](RegionBorrow::as_region) method.
 #[derive(Debug, Copy, Clone, Eq)]
 pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
 
-/// A trait for objects which have a region
+/// A trait for objects which lie in a region, or representations of regions
+/// 
+/// This trait is designed to both handle region representations polymorphically
+/// (e.g., handling [`Region`](Region), [`Option<Region>`](Region) and [`RegionBorrow`](RegionBorrow) using the same function)
+/// as well as to group objects (such as `rain` [`Value`](crate::value)s) which are known to lie in a single-region.
+/// 
+/// TODO: consider making `lcr` et. al. a method of `Regional`...
 pub trait Regional {
     /// Get the region of this object
     ///
@@ -201,17 +228,21 @@ impl Region {
     pub fn with(param_tys: TyArr, parent: Option<Region>) -> Region {
         Region::new(RegionData::with(param_tys, parent))
     }
-    /// Create a new region with a given parent region and no parameters
+    /// Create a new region with a given parent region, having no parameters
+    /// 
+    /// This is a bit useless now, but eventually when termination typing comes around this may come in handy.
     #[inline]
     pub fn with_parent(parent: Option<Region>) -> Region {
         Region::new(RegionData::with_parent(parent))
     }
-    /// Get a reference to a borrow of this region. More efficient than taking an [`&Region`](Region).
+    /// Get a reference to a borrow of this region. More efficient than taking an [`&Region`](Region)
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
         RegionBorrow(self.0.borrow_arc())
     }
     /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
+    /// 
+    /// TODO: add an `into_arc` method?
     #[inline]
     pub fn get_arc(&self) -> &Arc<RegionData> {
         &self.0
@@ -219,14 +250,19 @@ impl Region {
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
     pub fn param(self, ix: usize) -> Result<Parameter, ()> {
+        //TODO: `into_param` pattern
         Parameter::try_new(self, ix)
     }
     /// Get the data behind this [`Region`](Region)
+    /// 
+    /// This method will always return the same value as `self.deref()`
     #[inline]
     pub fn data(&self) -> &RegionData {
         &self.0
     }
     /// Get a pointer to the data behind this [`Region`](Region)
+    /// 
+    /// This method will always return the same value as `self.data() as *const _` or `self.deref() as *const _`.
     #[inline]
     pub fn data_ptr(&self) -> *const RegionData {
         self.data() as *const _
@@ -302,6 +338,10 @@ impl Region {
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
     /// Get the conjunction of two regions, if any
+    /// 
+    /// The conjunction of two regions is defined to be the largest region contained in both
+    /// regions. It is guaranteed, in the current design, to be one of the two regions if it
+    /// exists. If two regions have no conjunction, this function returns a [`value::Error`](Error).
     #[inline]
     pub fn conj<'a>(
         this: &'a Option<Region>,
