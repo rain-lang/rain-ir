@@ -94,7 +94,7 @@ impl Ternary {
         match self.param_ty().as_enum() {
             ValueEnum::BoolTy(_) => TernaryKind::Bool,
             ValueEnum::Finite(f) if *f == Finite(2) => TernaryKind::Switch,
-            p => panic!("Invalid ternary parameter type {}", p)
+            p => panic!("Invalid ternary parameter type {}", p),
         }
     }
 }
@@ -104,7 +104,7 @@ pub enum TernaryKind {
     /// A boolean branch
     Bool,
     /// A branch on `#finite(2)`
-    Switch
+    Switch,
 }
 
 impl Typed for Ternary {
@@ -151,7 +151,7 @@ impl Apply for Ternary {
                         .apply_ty_in(args, ctx)
                         .map(|(lt, ty)| Application::Stop(lt, ty))
                 }
-            },
+            }
             TernaryKind::Switch => {
                 if let ValueEnum::Index(ix) = args[0].as_enum() {
                     if *ix.get_ty() != Finite(2) {
@@ -257,10 +257,13 @@ mod tests {
 
     #[test]
     fn basic_conditional_application() {
+        let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
         let high = finite.clone().ix(3).unwrap().into_val();
         let low = finite.ix(1).unwrap().into_val();
         let ternary = Ternary::conditional(high.clone(), low.clone()).unwrap();
+        let ix1 = finite2.clone().ix(1).unwrap().into_val();
+        let ix0 = finite2.ix(0).unwrap().into_val();
         assert_eq!(
             ternary.apply(&[true.into()]).unwrap(),
             Application::Success(&[], high.clone())
@@ -269,6 +272,7 @@ mod tests {
             ternary.apply(&[false.into()]).unwrap(),
             Application::Success(&[], low.clone())
         );
+        assert!(ternary.apply(&[ix0.clone()]).is_err());
         let ternary = ternary.into_val();
         assert_eq!(
             ternary.apply(&[true.into()]).unwrap(),
@@ -278,6 +282,7 @@ mod tests {
             ternary.apply(&[false.into()]).unwrap(),
             Application::Success(&[], low.clone())
         );
+        assert!(ternary.apply(&[ix0]).is_err());
         assert_eq!(
             Sexpr::try_new(vec![ternary.clone(), true.into()])
                 .unwrap()
@@ -290,14 +295,61 @@ mod tests {
                 .into_val(),
             low
         );
+        assert!(Sexpr::try_new(vec![ternary.clone(), ix1]).is_err());
+    }
+
+    #[test]
+    fn basic_switch_application() {
+        let finite2: VarId<Finite> = Finite(2).into();
+        let finite: VarId<Finite> = Finite(9).into();
+        let high = finite.clone().ix(4).unwrap().into_val();
+        let low = finite.ix(7).unwrap().into_val();
+        let ternary = Ternary::switch(high.clone(), low.clone()).unwrap();
+        let ix1 = finite2.clone().ix(1).unwrap().into_val();
+        let ix0 = finite2.ix(0).unwrap().into_val();
+        assert_eq!(
+            ternary.apply(&[ix1.clone()]).unwrap(),
+            Application::Success(&[], high.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[ix0.clone()]).unwrap(),
+            Application::Success(&[], low.clone())
+        );
+        assert!(ternary.apply(&[true.into()]).is_err());
+        let ternary = ternary.into_val();
+        assert_eq!(
+            ternary.apply(&[ix1.clone()]).unwrap(),
+            Application::Success(&[], high.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[ix0.clone()]).unwrap(),
+            Application::Success(&[], low.clone())
+        );
+        assert!(ternary.apply(&[true.into()]).is_err());
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), ix1])
+                .unwrap()
+                .into_val(),
+            high
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), ix0])
+                .unwrap()
+                .into_val(),
+            low
+        );
+        assert!(Sexpr::try_new(vec![ternary.clone(), true.into()]).is_err());
     }
 
     #[test]
     fn constant_conditional_application_and_norm() {
+        // let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
         let ix = finite.clone().ix(3).unwrap().into_val();
         let ternary = Ternary::conditional(ix.clone(), ix.clone()).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), unary_region()).unwrap();
+        // let ix1 = finite2.clone().ix(1).unwrap().into_val();
+        // let ix0 = finite2.clone().ix(0).unwrap().into_val();
         assert_eq!(
             ternary.apply(&[true.into()]).unwrap(),
             Application::Success(&[], ix.clone())
@@ -310,6 +362,7 @@ mod tests {
             ternary.clone().into_norm(),
             const_lambda.clone().into_norm()
         );
+       // assert!(ternary.apply(&[ix1.clone()]).is_err());
         let ternary = ternary.into_val();
         assert_eq!(ternary, const_lambda.into_val());
         assert_eq!(
@@ -320,6 +373,7 @@ mod tests {
             ternary.apply(&[false.into()]).unwrap(),
             Application::Success(&[], ix.clone())
         );
+        // assert!(ternary.apply(&[ix1]).is_err());
         assert_eq!(
             Sexpr::try_new(vec![ternary.clone(), true.into()])
                 .unwrap()
@@ -328,6 +382,53 @@ mod tests {
         );
         assert_eq!(
             Sexpr::try_new(vec![ternary.clone(), false.into()])
+                .unwrap()
+                .into_val(),
+            ix
+        );
+        // assert!(Sexpr::try_new(vec![ternary.clone(), ix0]).is_err());
+    }
+
+    #[test]
+    fn constant_switch_application_and_norm() {
+        let finite2: VarId<Finite> = Finite(2).into();
+        let finite: VarId<Finite> = Finite(6).into();
+        let ix = finite.clone().ix(3).unwrap().into_val();
+        let ternary = Ternary::switch(ix.clone(), ix.clone()).unwrap();
+        let ix1 = finite2.clone().ix(1).unwrap().into_val();
+        let ix0 = finite2.clone().ix(0).unwrap().into_val();
+        let finite_region = Region::with(std::iter::once(finite2.into_ty()).collect(), None);
+        let const_lambda = Lambda::try_new(ix.clone(), finite_region).unwrap();
+        assert_eq!(
+            ternary.apply(&[ix1.clone()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[ix0.clone()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            ternary.clone().into_norm(),
+            const_lambda.clone().into_norm()
+        );
+        let ternary = ternary.into_val();
+        assert_eq!(ternary, const_lambda.into_val());
+        assert_eq!(
+            ternary.apply(&[ix1.clone()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            ternary.apply(&[ix0.clone()]).unwrap(),
+            Application::Success(&[], ix.clone())
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(), ix1])
+                .unwrap()
+                .into_val(),
+            ix
+        );
+        assert_eq!(
+            Sexpr::try_new(vec![ternary.clone(),ix0])
                 .unwrap()
                 .into_val(),
             ix
