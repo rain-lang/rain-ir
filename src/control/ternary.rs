@@ -455,8 +455,13 @@ mod tests {
     #[test]
     fn nested_ternary_xor() {
         let id = Ternary::conditional(true.into(), false.into()).unwrap();
+        assert_eq!(id.lifetime(), Lifetime::STATIC);
         let not = Ternary::conditional(false.into(), true.into()).unwrap();
-        let xor = Ternary::conditional(not.into(), id.into()).unwrap().into_val();
+        assert_eq!(not.lifetime(), Lifetime::STATIC);
+        let xor = Ternary::conditional(not.into(), id.into()).unwrap();
+        assert_eq!(xor.lifetime(), Lifetime::STATIC);
+        let xor = xor.into_val();
+        assert_eq!(xor.lifetime(), Lifetime::STATIC);
         for l in [true, false].iter().copied() {
             let lv = l.into_val();
             for r in [true, false].iter().copied() {
