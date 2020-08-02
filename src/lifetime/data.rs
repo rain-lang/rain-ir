@@ -192,12 +192,17 @@ impl LifetimeData {
     where
         F: Fn(&Color) -> Option<&Color>,
     {
+        // Ignore shallow lifetimes
+        if self.depth() < depth {
+            return Ok(self.clone());
+        }
+        let region = self.region.ancestor(depth).cloned_region();
         let affine = if let Some(affine) = &self.affine {
             affine
         } else {
             return Ok(LifetimeData {
                 affine: None,
-                region: self.region.clone(),
+                region,
                 idempotent: true,
             });
         };
@@ -207,12 +212,16 @@ impl LifetimeData {
         for (color, affinity) in affine.iter() {
             // Filter out shallow colors, but check for non-idempotence
             if color.depth() < depth {
-                if idempotent && !affinity.idempotent() { idempotent = false }
+                if idempotent && !affinity.idempotent() {
+                    idempotent = false
+                }
                 continue;
             }
             let target_color = if let Some(color) = color_map(color) {
                 // Non-filtered, non-idempotent colors also guarantee non-idempotence
-                if idempotent && !affinity.idempotent() { idempotent = false }
+                if idempotent && !affinity.idempotent() {
+                    idempotent = false
+                }
                 color
             } else {
                 new_affine.remove(color);
@@ -235,7 +244,7 @@ impl LifetimeData {
         idempotent |= self.idempotent;
         Ok(LifetimeData {
             affine: Some(new_affine),
-            region: self.region.clone(),
+            region,
             idempotent,
         })
     }

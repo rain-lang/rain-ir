@@ -200,10 +200,7 @@ impl Lifetime {
     /// Escape a lifetime up to a given depth
     #[inline]
     pub fn escape_upto(&self, depth: usize) -> Lifetime {
-        if self.depth() <= depth {
-            return self.clone();
-        }
-        self.region().ancestor(depth).cloned_region().into()
+        self.color_map(|_| None, depth).expect("Null mapping cannot fail")
     }
     /// Escape a lifetime up to the current depth - 1
     #[inline]
@@ -227,6 +224,16 @@ impl Lifetime {
     #[inline]
     pub fn owns(color: Color) -> Lifetime {
         LifetimeData::owns(color).into()
+    }
+    /// Map the colors in a lifetime, up to a given depth
+    #[inline]
+    pub fn color_map<F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error> where F: Fn(&Color) -> Option<&Color> {
+        // Skip shallow lifetimes
+        if self.depth() < depth {
+            return Ok(self.clone());
+        }
+        // Map this lifetime's underlying data, and transform it to a Lifetime
+        self.deref().color_map(color_map, depth).map(Lifetime::new)
     }
 }
 
@@ -314,12 +321,6 @@ impl BitAnd<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
     }
 }
 
-
-
-
-
-
-
 impl Mul for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
@@ -403,7 +404,6 @@ impl Mul<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
         self.as_lifetime().mul(other.as_lifetime())
     }
 }
-
 
 impl Regional for Lifetime {
     #[inline]
