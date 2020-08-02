@@ -30,7 +30,7 @@ pretty_display!(Ternary, "#ternary {...}");
 
 impl Ternary {
     /// Construct a conditional node with the smallest possible type
-    /// 
+    ///
     /// This constructs a conditional node, which is a function taking a single boolean parameter and returning
     /// `high` when the parameter is `true` and `low` when the parameter is `false`, assigned the smallest
     /// possible pi-type which can contain both `high` and `low`.
@@ -51,14 +51,14 @@ impl Ternary {
         Ok(Ternary { ty, lt, low, high })
     }
     /// Construct a switch ternary operation with the smallest possible type
-    /// 
+    ///
     /// This constructs a ternary switch, which is a function taking in a single parameter of type `#finite(2)`
     /// and returning `high` when the parameter is equal to `#ix(2)[1]` and `low` when the parameter is equal to
     /// `#ix(2)[0]`, assigned the smallest possible pi-type which can contain both `high` and `low.
     ///
     /// This has the exact same behaviour as a `switch` node for `#finite(2)`, which in fact is normalized to this node type [^1]
     /// (when non-constant, as constant ternary nodes and switch nodes both normalize to a lambda)
-    /// 
+    ///
     /// [^1]: `switch` nodes are not actually implemented yet, but their design is mostly completed
     #[inline]
     pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
@@ -77,7 +77,7 @@ impl Ternary {
         Ok(Ternary { ty, lt, low, high })
     }
     /// Get the parameter type type of this ternary operation
-    /// 
+    ///
     /// Ternary operations always consume a single parameter, which currently can either be of type `#bool` or `#finite(2)`.
     /// This returns the type of that parameter.
     #[inline]
@@ -85,7 +85,7 @@ impl Ternary {
         &self.ty.param_tys()[0]
     }
     /// Get the type of this ternary operation
-    /// 
+    ///
     /// This is provided as a convenience method as the type of a ternary operation is guaranteed to be a valid pi-type, so
     /// the need for a downcast is avoided.
     #[inline]
@@ -103,7 +103,7 @@ impl Ternary {
         &self.high
     }
     /// Get whether this ternary node is constant. Should always be `false` for a normalized node!
-    /// 
+    ///
     /// Note that constant ternary nodes are normalized into constant lambda functions.
     #[inline]
     pub fn is_const(&self) -> bool {
@@ -384,7 +384,7 @@ mod tests {
             ternary.clone().into_norm(),
             const_lambda.clone().into_norm()
         );
-       // assert!(ternary.apply(&[ix1.clone()]).is_err());
+        // assert!(ternary.apply(&[ix1.clone()]).is_err());
         let ternary = ternary.into_val();
         assert_eq!(ternary, const_lambda.into_val());
         assert_eq!(
@@ -449,11 +449,24 @@ mod tests {
                 .into_val(),
             ix
         );
-        assert_eq!(
-            Sexpr::try_new(vec![ternary,ix0])
-                .unwrap()
-                .into_val(),
-            ix
-        );
+        assert_eq!(Sexpr::try_new(vec![ternary, ix0]).unwrap().into_val(), ix);
+    }
+
+    #[test]
+    fn nested_ternary_xor() {
+        let id = Ternary::conditional(true.into(), false.into()).unwrap();
+        let not = Ternary::conditional(false.into(), true.into()).unwrap();
+        let xor = Ternary::conditional(not.into(), id.into()).unwrap().into_val();
+        for l in [true, false].iter().copied() {
+            let lv = l.into_val();
+            for r in [true, false].iter().copied() {
+                let x = l != r;
+                let rv = r.into_val();
+                assert_eq!(
+                    xor.clone().applied(&[lv.clone(), rv.clone()]),
+                    Ok(x.into_val())
+                );
+            }
+        }
     }
 }
