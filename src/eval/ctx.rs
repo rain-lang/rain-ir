@@ -4,7 +4,7 @@ A `rain` evaluation context
 
 use super::Error;
 use super::Substitute;
-use crate::lifetime::{Lifetime, Live};
+use crate::lifetime::{Color, Lifetime, Live};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{ValId, Value};
@@ -18,6 +18,8 @@ use std::iter::Iterator;
 pub struct EvalCtx {
     /// The cache for evaluated values
     eval_cache: SymbolTable<ValId, ValId, FxBuildHasher>,
+    /// The cache for color substitutions
+    color_cache: SymbolTable<Color, Color, FxBuildHasher>,
     /// The cache for lifetime substitutions
     lt_cache: SymbolTable<Lifetime, Lifetime, FxBuildHasher>,
     /// The minimum region depths at each scope level
@@ -27,9 +29,10 @@ pub struct EvalCtx {
 impl EvalCtx {
     /// Create a new, empty evaluation context with a given capacity
     #[inline]
-    pub fn with_capacity(e: usize, l: usize) -> EvalCtx {
+    pub fn with_capacity(e: usize, l: usize, c: usize) -> EvalCtx {
         EvalCtx {
             eval_cache: SymbolTable::with_capacity_and_hasher(e, FxBuildHasher::default()),
+            color_cache: SymbolTable::with_capacity_and_hasher(c, FxBuildHasher::default()),
             lt_cache: SymbolTable::with_capacity_and_hasher(l, FxBuildHasher::default()),
             minimum_depths: smallvec![usize::MAX],
         }

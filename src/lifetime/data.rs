@@ -4,7 +4,7 @@ Lifetime data
 use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::value::{Error, ValId};
-use im::{hashmap, HashMap};
+use im::{hashmap, hashmap::Entry, HashMap};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -185,6 +185,59 @@ impl LifetimeData {
         } else {
             LifetimeData::from(region)
         }
+    }
+    /// Attempt to apply a color mapping to this lifetime data
+    #[inline]
+    pub fn color_map<F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
+    where
+        F: Fn(&Color) -> Option<&Color>,
+    {
+        let affine = if let Some(affine) = &self.affine {
+            affine
+        } else {
+            return Ok(LifetimeData {
+                affine: None,
+                region: self.region.clone(),
+                idempotent: true,
+            });
+        };
+        let mut new_affine = affine.clone();
+        // Set to false if self is idempotent to avoid checks
+        let mut idempotent = !self.idempotent;
+        for (color, affinity) in affine.iter() {
+            // Filter out shallow colors, but check for non-idempotence
+            if color.depth() < depth {
+                if idempotent && !affinity.idempotent() { idempotent = false }
+                continue;
+            }
+            let target_color = if let Some(color) = color_map(color) {
+                // Non-filtered, non-idempotent colors also guarantee non-idempotence
+                if idempotent && !affinity.idempotent() { idempotent = false }
+                color
+            } else {
+                new_affine.remove(color);
+                continue;
+            };
+            match new_affine.entry(target_color.clone()) {
+                Entry::Occupied(mut o) => {
+                    let new_affinity = o.get().star(affinity)?;
+                    // Avoid unnecessary cloning in the immutable map!
+                    if new_affinity != *o.get() {
+                        *o.get_mut() = new_affinity
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(affinity.clone());
+                }
+            }
+        }
+        // Now, set to true if self is idempotent as idempotent is preserved under color mappings
+        idempotent |= self.idempotent;
+        Ok(LifetimeData {
+            affine: Some(new_affine),
+            region: self.region.clone(),
+            idempotent,
+        })
     }
 }
 

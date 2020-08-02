@@ -129,7 +129,8 @@ impl Apply for Lambda {
         let ctx = ctx.get_or_insert_with(|| {
             let eval_capacity = 0; //TODO
             let lt_capacity = 0; //TODO
-            EvalCtx::with_capacity(eval_capacity, lt_capacity)
+            let color_capacity = 0; //TODO
+            EvalCtx::with_capacity(eval_capacity, lt_capacity, color_capacity)
         });
 
         // Substitute
