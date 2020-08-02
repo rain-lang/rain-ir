@@ -77,11 +77,17 @@ impl Ternary {
         Ok(Ternary { ty, lt, low, high })
     }
     /// Get the parameter type type of this ternary operation
+    /// 
+    /// Ternary operations always consume a single parameter, which currently can either be of type `#bool` or `#finite(2)`.
+    /// This returns the type of that parameter.
     #[inline]
     pub fn param_ty(&self) -> &TypeId {
         &self.ty.param_tys()[0]
     }
     /// Get the type of this ternary operation
+    /// 
+    /// This is provided as a convenience method as the type of a ternary operation is guaranteed to be a valid pi-type, so
+    /// the need for a downcast is avoided.
     #[inline]
     pub fn get_ty(&self) -> &VarId<Pi> {
         &self.ty
