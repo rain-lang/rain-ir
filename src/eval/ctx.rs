@@ -159,7 +159,6 @@ impl EvalCtx {
     /// Evaulate a given lifetime. Return an error on evaluation failure.
     #[inline]
     pub fn evaluate_lt(&mut self, lifetime: &Lifetime) -> Result<Lifetime, Error> {
-        //TODO: color substitutions!
         // Ignore lifetimes out of the minimum depth
         if lifetime.depth() < self.minimum_depth() {
             return Ok(lifetime.clone());
@@ -168,7 +167,10 @@ impl EvalCtx {
         if let Some(lifetime) = self.lt_cache.get(lifetime) {
             return Ok(lifetime.clone());
         }
-        let result = lifetime.escape_upto(self.minimum_depth().saturating_sub(1));
+        let result = lifetime.color_map(
+            |color| self.color_cache.get(color),
+            self.minimum_depth()
+        )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());
         Ok(result)
     }

@@ -227,7 +227,7 @@ impl Lifetime {
     }
     /// Map the colors in a lifetime, up to a given depth
     #[inline]
-    pub fn color_map<F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error> where F: Fn(&Color) -> Option<&Color> {
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error> where F: Fn(&Color) -> Option<&'a Color> {
         // Skip shallow lifetimes
         if self.depth() < depth {
             return Ok(self.clone());

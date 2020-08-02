@@ -188,15 +188,15 @@ impl LifetimeData {
     }
     /// Attempt to apply a color mapping to this lifetime data
     #[inline]
-    pub fn color_map<F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
     where
-        F: Fn(&Color) -> Option<&Color>,
+        F: Fn(&Color) -> Option<&'a Color>,
     {
         // Ignore shallow lifetimes
         if self.depth() < depth {
             return Ok(self.clone());
         }
-        let region = self.region.ancestor(depth).cloned_region();
+        let region = self.region.ancestor(depth.saturating_sub(1)).cloned_region();
         let affine = if let Some(affine) = &self.affine {
             affine
         } else {
