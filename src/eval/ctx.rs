@@ -34,7 +34,7 @@ impl EvalCtx {
             eval_cache: SymbolTable::with_capacity_and_hasher(e, FxBuildHasher::default()),
             color_map: SymbolTable::with_capacity_and_hasher(c, FxBuildHasher::default()),
             lt_cache: SymbolTable::with_capacity_and_hasher(l, FxBuildHasher::default()),
-            minimum_depths: smallvec![usize::MAX],
+            minimum_depths: smallvec![std::usize::MAX],
         }
     }
     /// Get the current minimum depth
@@ -46,13 +46,26 @@ impl EvalCtx {
     #[inline]
     pub fn push(&mut self) {
         self.eval_cache.push();
+        self.color_map.push();
+        self.lt_cache.push();
         self.minimum_depths.push(self.minimum_depth());
     }
     /// Pop a scope from the evaluation context
     #[inline]
     pub fn pop(&mut self) {
         self.eval_cache.pop();
+        self.color_map.pop();
+        self.lt_cache.pop();
         self.minimum_depths.pop();
+    }
+    /// Get the current scope depth
+    #[inline]
+    pub fn scope_depth(&self) -> usize {
+        let depth = self.minimum_depths.len() - 1;
+        debug_assert_eq!(depth, self.eval_cache.depth());
+        debug_assert_eq!(depth, self.lt_cache.depth());
+        debug_assert_eq!(depth, self.color_map.depth());
+        depth
     }
     /// Check whether this is a pre-checked context
     #[inline]
@@ -72,9 +85,8 @@ impl EvalCtx {
                 //TODO: subtyping
                 return Err(Error::TypeMismatch);
             }
-            if let Some(top) = self.minimum_depths.last_mut() {
-                *top = (*top).min(llt.depth());
-            }
+            let top = self.minimum_depths.last_mut().unwrap();
+            *top = (*top).min(llt.depth());
         }
         self.eval_cache.insert(lhs, rhs);
         Ok(())
@@ -151,15 +163,20 @@ impl EvalCtx {
     /// Evaluate a given value in the current scope. Return an error on evaluation failure.
     #[inline]
     pub fn evaluate(&mut self, value: &ValId) -> Result<ValId, Error> {
-        // Substitute the value
-        // (TODO: depth first search to avoid stack overflow, maybe...)
-        value.substitute(self)
+        let current_depth = self.minimum_depth();
+        let scope_depth = self.scope_depth();
+        //NOTE: caching via try_evaluate is done in the implementation of Substitute for `ValId`
+        let result = value.substitute(self);
+        debug_assert_eq!(self.minimum_depth(), current_depth);
+        debug_assert_eq!(self.scope_depth(), scope_depth);
+        result
     }
     /// Evaulate a given lifetime. Return an error on evaluation failure.
     #[inline]
     pub fn evaluate_lt(&mut self, lifetime: &Lifetime) -> Result<Lifetime, Error> {
+        let current_depth = self.minimum_depth();
         // Ignore lifetimes out of the minimum depth
-        if lifetime.depth() < self.minimum_depth() {
+        if lifetime.depth() < current_depth {
             return Ok(lifetime.clone());
         }
         // Check if the lifetime has been cached
@@ -168,7 +185,7 @@ impl EvalCtx {
         }
         let result = lifetime.color_map(
             |color| self.color_map.get(color).map(|arr| &arr[..]).unwrap_or(&[]),
-            self.minimum_depth(),
+            current_depth,
         )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());
         Ok(result)
