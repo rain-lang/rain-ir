@@ -103,6 +103,8 @@ impl Ternary {
         &self.high
     }
     /// Get whether this ternary node is constant. Should always be `false` for a normalized node!
+    /// 
+    /// Note that constant ternary nodes are normalized into constant lambda functions.
     #[inline]
     pub fn is_const(&self) -> bool {
         self.low == self.high
