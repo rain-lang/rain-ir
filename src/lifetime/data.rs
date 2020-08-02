@@ -190,7 +190,7 @@ impl LifetimeData {
     #[inline]
     pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
     where
-        F: Fn(&Color) -> Option<&'a Color>,
+        F: Fn(&Color) -> &'a [Color],
     {
         // Ignore shallow lifetimes
         if self.depth() < depth {
@@ -217,26 +217,24 @@ impl LifetimeData {
                 }
                 continue;
             }
-            let target_color = if let Some(color) = color_map(color) {
-                // Non-filtered, non-idempotent colors also guarantee non-idempotence
+            // Remove the given color's mapping
+            new_affine.remove(color);
+            // Insert target color mappings
+            for target_color in color_map(color) {
                 if idempotent && !affinity.idempotent() {
                     idempotent = false
                 }
-                color
-            } else {
-                new_affine.remove(color);
-                continue;
-            };
-            match new_affine.entry(target_color.clone()) {
-                Entry::Occupied(mut o) => {
-                    let new_affinity = o.get().star(affinity)?;
-                    // Avoid unnecessary cloning in the immutable map!
-                    if new_affinity != *o.get() {
-                        *o.get_mut() = new_affinity
+                match new_affine.entry(target_color.clone()) {
+                    Entry::Occupied(mut o) => {
+                        let new_affinity = o.get().star(affinity)?;
+                        // Avoid unnecessary cloning in the immutable map!
+                        if new_affinity != *o.get() {
+                            *o.get_mut() = new_affinity
+                        }
                     }
-                }
-                Entry::Vacant(v) => {
-                    v.insert(affinity.clone());
+                    Entry::Vacant(v) => {
+                        v.insert(affinity.clone());
+                    }
                 }
             }
         }

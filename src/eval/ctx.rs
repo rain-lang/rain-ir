@@ -18,8 +18,8 @@ use std::iter::Iterator;
 pub struct EvalCtx {
     /// The cache for evaluated values
     eval_cache: SymbolTable<ValId, ValId, FxBuildHasher>,
-    /// The cache for color substitutions
-    color_cache: SymbolTable<Color, Color, FxBuildHasher>,
+    /// The color map
+    color_map: SymbolTable<Color, SmallVec<[Color; 1]>, FxBuildHasher>,
     /// The cache for lifetime substitutions
     lt_cache: SymbolTable<Lifetime, Lifetime, FxBuildHasher>,
     /// The minimum region depths at each scope level
@@ -32,7 +32,7 @@ impl EvalCtx {
     pub fn with_capacity(e: usize, l: usize, c: usize) -> EvalCtx {
         EvalCtx {
             eval_cache: SymbolTable::with_capacity_and_hasher(e, FxBuildHasher::default()),
-            color_cache: SymbolTable::with_capacity_and_hasher(c, FxBuildHasher::default()),
+            color_map: SymbolTable::with_capacity_and_hasher(c, FxBuildHasher::default()),
             lt_cache: SymbolTable::with_capacity_and_hasher(l, FxBuildHasher::default()),
             minimum_depths: smallvec![usize::MAX],
         }
@@ -168,8 +168,8 @@ impl EvalCtx {
             return Ok(lifetime.clone());
         }
         let result = lifetime.color_map(
-            |color| self.color_cache.get(color),
-            self.minimum_depth()
+            |color| self.color_map.get(color).map(|arr| &arr[..]).unwrap_or(&[]),
+            self.minimum_depth(),
         )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());
         Ok(result)

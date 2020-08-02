@@ -200,7 +200,7 @@ impl Lifetime {
     /// Escape a lifetime up to a given depth
     #[inline]
     pub fn escape_upto(&self, depth: usize) -> Lifetime {
-        self.color_map(|_| None, depth).expect("Null mapping cannot fail")
+        self.color_map(|_| &[], depth).expect("Null mapping cannot fail")
     }
     /// Escape a lifetime up to the current depth - 1
     #[inline]
@@ -227,7 +227,7 @@ impl Lifetime {
     }
     /// Map the colors in a lifetime, up to a given depth
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error> where F: Fn(&Color) -> Option<&'a Color> {
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error> where F: Fn(&Color) -> &'a [Color] {
         // Skip shallow lifetimes
         if self.depth() < depth {
             return Ok(self.clone());
