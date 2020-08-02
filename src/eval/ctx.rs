@@ -99,8 +99,7 @@ impl EvalCtx {
             if let Some(value) = values.next() {
                 self.substitute(param.clone(), value, check)?;
             } else if inline {
-                //TODO: this
-                break;
+                unimplemented!("Partial region substitution")
             } else {
                 return Err(Error::NoInlineError);
             }

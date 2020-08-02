@@ -271,11 +271,10 @@ mod tests {
             binary.apply_ty(&[true.into(), false.into()]).unwrap(),
             (Lifetime::STATIC, (*BOOL_TY).clone_ty())
         );
-        /*
-        assert_eq!(
-            binary.apply_ty(&[false.into()]).unwrap(),
-            (Lifetime::STATIC, unary.clone_ty())
-        );
-        */
+        //FIXME: this should return an error or succeed, but it's returning the wrong result now...
+        // assert_eq!(
+        //     binary.apply_ty(&[false.into()]).unwrap(),
+        //     (Lifetime::STATIC, unary.clone_ty())
+        // );
     }
 }
