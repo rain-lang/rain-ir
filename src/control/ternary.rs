@@ -29,7 +29,11 @@ pub struct Ternary {
 pretty_display!(Ternary, "#ternary {...}");
 
 impl Ternary {
-    /// Construct conditional ternary operation with the smallest possible type
+    /// Construct a conditional node with the smallest possible type
+    /// 
+    /// This constructs a conditional node, which is a function taking a single boolean parameter and returning
+    /// `high` when the parameter is `true` and `low` when the parameter is `false`, assigned the smallest
+    /// possible pi-type which can contain both `high` and `low`.
     #[inline]
     pub fn conditional(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
@@ -47,6 +51,15 @@ impl Ternary {
         Ok(Ternary { ty, lt, low, high })
     }
     /// Construct a switch ternary operation with the smallest possible type
+    /// 
+    /// This constructs a ternary switch, which is a function taking in a single parameter of type `#finite(2)`
+    /// and returning `high` when the parameter is equal to `#ix(2)[1]` and `low` when the parameter is equal to
+    /// `#ix(2)[0]`, assigned the smallest possible pi-type which can contain both `high` and `low.
+    ///
+    /// This has the exact same behaviour as a `switch` node for `#finite(2)`, which in fact is normalized to this node type [^1]
+    /// (when non-constant, as constant ternary nodes and switch nodes both normalize to a lambda)
+    /// 
+    /// [^1]: `switch` nodes are not actually implemented yet, but their design is mostly completed
     #[inline]
     pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
