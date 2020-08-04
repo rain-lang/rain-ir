@@ -5,12 +5,21 @@ use super::*;
 use im::HashMap;
 
 /// The data describing a purely relevant lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ReleventData {
     /// The relevant data
     data: HashMap<Color, Relevant>,
     /// Whether this data, taken together, is relevant
     relevant: bool,
+}
+
+impl Default for ReleventData {
+    fn default() -> ReleventData {
+        ReleventData {
+            data: HashMap::default(),
+            relevant: false,
+        }
+    }
 }
 
 /// A relevant lifetime
