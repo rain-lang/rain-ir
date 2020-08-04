@@ -60,6 +60,10 @@ impl AffineData {
         }
         Ok(())
     }
+    /// Take the conjunction of this lifetime with another
+    pub fn conj(mut self, other: &AffineData) -> Result<AffineData, Error> {
+        unimplemented!()
+    }
 }
 
 /// The data describing an affine lifetime
