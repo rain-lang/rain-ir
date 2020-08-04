@@ -35,11 +35,6 @@ impl AffineData {
         }
         Ok(())
     }
-    /// Take the separating conjuntion of this lifetime with another
-    pub fn star(mut self, other: &AffineData) -> Result<AffineData, Error> {
-        self.star_self(other)?;
-        Ok(self)
-    }
     /// Take the conjunction of two affine lifetimes
     /// 
     /// Leaves this lifetime in an undetermined but valid state on failure
@@ -59,10 +54,6 @@ impl AffineData {
             }
         }
         Ok(())
-    }
-    /// Take the conjunction of this lifetime with another
-    pub fn conj(mut self, other: &AffineData) -> Result<AffineData, Error> {
-        unimplemented!()
     }
 }
 
