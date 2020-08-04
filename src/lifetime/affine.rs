@@ -17,8 +17,8 @@ pub struct AffineData {
 impl AffineData {
     /// Take the separating conjunction of two affine lifetimes
     ///
-    /// Leaves this lifetime in an undetermined but valid state on merge failure
-    pub fn try_star(&mut self, other: &AffineData) -> Result<(), Error> {
+    /// Leaves this lifetime in an undetermined but valid state on failure
+    pub fn star_self(&mut self, other: &AffineData) -> Result<(), Error> {
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
@@ -34,6 +34,11 @@ impl AffineData {
             }
         }
         Ok(())
+    }
+    /// Take the separating conjuntion of this lifetime with another
+    pub fn star(mut self, other: &AffineData) -> Result<AffineData, Error> {
+        self.star_self(other)?;
+        Ok(self)
     }
 }
 
