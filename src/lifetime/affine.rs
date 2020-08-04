@@ -68,6 +68,9 @@ impl AffineData {
         self.data.is_empty()
     }
     /// Whether data described by this lifetime is affine
+    /// 
+    /// Non affine data is guaranteed to be equal to itself under self-intersection, while
+    /// self-intersection of affine data is always an error
     pub fn is_affine(&self) -> bool {
         self.affine
     }
