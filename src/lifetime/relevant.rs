@@ -6,14 +6,14 @@ use im::HashMap;
 
 /// The data describing a purely relevant lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ReleventData {
+pub struct RelevantData {
     /// The relevant data
     data: HashMap<Color, Relevant>,
     /// Whether this data, taken together, is relevant
     relevant: bool,
 }
 
-impl Default for ReleventData {
+impl Default for RelevantData {
     fn default() -> ReleventData {
         ReleventData {
             data: HashMap::default(),
