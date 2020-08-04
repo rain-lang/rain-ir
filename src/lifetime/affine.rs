@@ -3,6 +3,16 @@ Affine lifetimes
 */
 use super::*;
 use crate::value::ValId;
+use im::HashMap;
+
+/// The data describing a purely affine lifetime
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct AffineData {
+    /// The affine data
+    data: Option<HashMap<Color, Affine>>,
+    /// Whether this data, taken together, is affine
+    affine: bool
+}
 
 /// The data describing an affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -11,6 +21,7 @@ pub enum Affine {
     Owned,
     /// Borrows an affine type from a source
     Borrowed(ValId),
+    //TODO: elemental ownership
 }
 
 impl Affine {
