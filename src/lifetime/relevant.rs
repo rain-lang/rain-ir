@@ -3,12 +3,13 @@ Relevant lifetimes
 */
 use super::*;
 use im::HashMap;
+use fxhash::FxBuildHasher;
 
 /// The data describing a purely relevant lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RelevantData {
     /// The relevant data
-    data: HashMap<Color, Relevant>,
+    data: HashMap<Color, Relevant, FxBuildHasher>,
     /// Whether this data, taken together, is relevant
     relevant: bool,
 }
