@@ -15,7 +15,7 @@ pub struct RelevantData {
 
 impl Default for RelevantData {
     fn default() -> RelevantData {
-        ReleventData {
+        RelevantData {
             data: HashMap::default(),
             relevant: false,
         }
