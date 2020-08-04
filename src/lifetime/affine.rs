@@ -67,6 +67,10 @@ impl AffineData {
     pub fn is_static(&self) -> bool {
         self.data.is_empty()
     }
+    /// Whether data described by this lifetime is affine
+    pub fn is_affine(&self) -> bool {
+        self.affine
+    }
 }
 
 /// The data describing an affine lifetime
