@@ -4,12 +4,13 @@ Affine lifetimes
 use super::*;
 use crate::value::ValId;
 use im::{hashmap::Entry, HashMap};
+use fxhash::FxBuildHasher;
 
 /// The data describing a purely affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AffineData {
     /// The affine data
-    data: HashMap<Color, Affine>,
+    data: HashMap<Color, Affine, FxBuildHasher>,
     /// Whether this data, taken together, is affine
     affine: bool,
 }
