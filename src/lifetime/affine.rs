@@ -6,12 +6,21 @@ use crate::value::ValId;
 use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AffineData {
     /// The affine data
     data: HashMap<Color, Affine>,
     /// Whether this data, taken together, is affine
     affine: bool,
+}
+
+impl Default for AffineData {
+    fn default() -> AffineData {
+        AffineData {
+            data: HashMap::default(),
+            affine: false
+        }
+    }
 }
 
 impl AffineData {
