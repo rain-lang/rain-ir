@@ -18,7 +18,7 @@ impl AffineData {
     /// Take the separating conjunction of two affine lifetimes
     ///
     /// Leaves this lifetime in an undetermined but valid state on failure
-    pub fn star_self(&mut self, other: &AffineData) -> Result<(), Error> {
+    pub fn star(&mut self, other: &AffineData) -> Result<(), Error> {
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
@@ -38,7 +38,7 @@ impl AffineData {
     /// Take the conjunction of two affine lifetimes
     /// 
     /// Leaves this lifetime in an undetermined but valid state on failure
-    pub fn conj_self(&mut self, other: &AffineData) -> Result<(), Error> {
+    pub fn conj(&mut self, other: &AffineData) -> Result<(), Error> {
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
