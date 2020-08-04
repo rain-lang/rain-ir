@@ -19,6 +19,10 @@ impl AffineData {
     ///
     /// Leaves this lifetime in an undetermined but valid state on failure
     pub fn star(&mut self, other: &AffineData) -> Result<(), Error> {
+        if self.is_static() {
+            *self = other.clone();
+            return Ok(())
+        }
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
@@ -39,6 +43,10 @@ impl AffineData {
     /// 
     /// Leaves this lifetime in an undetermined but valid state on failure
     pub fn conj(&mut self, other: &AffineData) -> Result<(), Error> {
+        if self.is_static() {
+            *self = other.clone();
+            return Ok(())
+        }
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
@@ -54,6 +62,10 @@ impl AffineData {
             }
         }
         Ok(())
+    }
+    /// Whether this affine lifetime is the static lifetime
+    pub fn is_static(&self) -> bool {
+        self.data.is_empty()
     }
 }
 
