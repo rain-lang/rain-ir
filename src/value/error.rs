@@ -5,6 +5,18 @@ pub enum Error {
     NotAFunction,
     /// Type mismatch
     TypeMismatch,
+    /// Mismatched borrow merger
+    BorrowedMismatch,
+    /// Mismatched borrow source
+    BorrowingMismatch,
+    /// Multiple usage of an affine resource
+    AffineUsed,
+    /// Indirect multiple usage of an affine resource
+    AffineBranched,
+    /// Borrow of a used affine resource
+    BorrowUsed,
+    /// Unused relevant type
+    RelevantUnused,
     /// Lifetime error
     LifetimeError,
     /// Incomparable regions

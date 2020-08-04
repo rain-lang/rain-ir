@@ -120,25 +120,22 @@ impl LifetimeData {
     }
     /// Apply the borrow transformation to this lifetime at a given `ValId`
     #[inline]
-    pub fn borrowed(self, source: ValId) -> LifetimeData {
-        if self.idempotent {
-            return self;
-        }
+    pub fn borrow_from(self, source: ValId) -> Result<LifetimeData, Error> {
         let mut affine = if let Some(affine) = self.affine {
             affine
         } else {
             // Should be idempotent in this case... consider panicking...
-            return self;
+            return Ok(self);
         };
         //TODO: optimize memory usage?
         for (_key, value) in affine.iter_mut() {
-            *value = value.borrowed(source.clone());
+            *value = value.borrow_from(source.clone())?;
         }
-        LifetimeData {
+        Ok(LifetimeData {
             affine: Some(affine),
             region: self.region,
             idempotent: true,
-        }
+        })
     }
     /// Get the separating conjunction of this lifetime with another
     #[inline]
@@ -196,7 +193,10 @@ impl LifetimeData {
         if self.depth() < depth {
             return Ok(self.clone());
         }
-        let region = self.region.ancestor(depth.saturating_sub(1)).cloned_region();
+        let region = self
+            .region
+            .ancestor(depth.saturating_sub(1))
+            .cloned_region();
         let affine = if let Some(affine) = &self.affine {
             affine
         } else {
@@ -245,86 +245,6 @@ impl LifetimeData {
             region,
             idempotent,
         })
-    }
-}
-
-/// The data describing an affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Affine {
-    /// Owns an affine type completely
-    Owned,
-    /// Borrows an affine type from a source
-    Borrowed(Borrowed),
-    //TODO: own/borrow field set
-}
-
-impl Affine {
-    /// Borrow this lifetime at a given source point
-    pub fn borrowed(&self, source: ValId) -> Affine {
-        match self {
-            Affine::Owned => Affine::Borrowed(Borrowed(source)),
-            b => b.clone(),
-        }
-    }
-    /// Take the separating conjunction of this lifetime with another
-    pub fn star(&self, other: &Affine) -> Result<Affine, Error> {
-        use Affine::*;
-        match (self, other) {
-            (Borrowed(l), Borrowed(r)) => l.star(r).map(Borrowed),
-            _ => Err(Error::LifetimeError),
-        }
-    }
-    /// Take the conjunction of this lifetime with another
-    pub fn conj(&self, other: &Affine) -> Result<Affine, Error> {
-        use Affine::*;
-        match (self, other) {
-            (Owned, _) => Ok(Owned),
-            (_, Owned) => Ok(Owned),
-            (Borrowed(l), Borrowed(r)) => l.conj(r).map(Borrowed),
-        }
-    }
-    /// Whether this lifetime is idempotent under separating conjunction
-    pub fn idempotent(&self) -> bool {
-        use Affine::*;
-        match self {
-            Owned => false,
-            Borrowed(_) => true,
-        }
-    }
-    /// Take the separating conjunction of this affine lifetime with itself
-    pub fn star_self(&self) -> Result<(), Error> {
-        use Affine::*;
-        match self {
-            Owned => Err(Error::LifetimeError),
-            Borrowed(_) => Ok(()),
-        }
-    }
-}
-
-/// An owned affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
-pub struct Owned {
-    //TODO: optional source + field-set
-}
-
-/// A completely borrowed affine lifetime with a given source
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Borrowed(pub ValId);
-
-impl Borrowed {
-    /// Take the conjunction of this lifetime with itself
-    #[inline]
-    pub fn conj(&self, other: &Borrowed) -> Result<Borrowed, Error> {
-        if self.0 == other.0 {
-            Ok(self.clone())
-        } else {
-            Err(Error::LifetimeError)
-        }
-    }
-    /// Take the separating conjunction of this lifetime with itself
-    #[inline]
-    pub fn star(&self, other: &Borrowed) -> Result<Borrowed, Error> {
-        self.conj(other)
     }
 }
 
@@ -400,7 +320,7 @@ mod tests {
                 .expect("Gamma owns alpha, but a branch is OK"),
             gamma
         );
-        let a = alpha.clone().borrowed(().into());
+        let a = alpha.clone().borrow_from(().into()).unwrap();
         assert!(a.idempotent());
         assert_eq!(a, a);
         assert_ne!(alpha, a);

@@ -23,6 +23,10 @@ mod color;
 pub use color::*;
 mod data;
 pub use data::*;
+mod affine;
+pub use affine::*;
+mod relevant;
+pub use relevant::*;
 
 lazy_static! {
     /// The global lifetime cache
