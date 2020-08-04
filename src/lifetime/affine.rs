@@ -40,6 +40,26 @@ impl AffineData {
         self.star_self(other)?;
         Ok(self)
     }
+    /// Take the conjunction of two affine lifetimes
+    /// 
+    /// Leaves this lifetime in an undetermined but valid state on failure
+    pub fn conj_self(&mut self, other: &AffineData) -> Result<(), Error> {
+        for (color, affinity) in other.data.iter() {
+            match self.data.entry(color.clone()) {
+                Entry::Occupied(mut o) => {
+                    let other_affinity = o.get();
+                    let new_affinity = affinity.conj(other_affinity)?;
+                    if new_affinity != *affinity {
+                        o.insert(new_affinity);
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(affinity.clone());
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// The data describing an affine lifetime
