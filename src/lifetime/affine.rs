@@ -3,15 +3,38 @@ Affine lifetimes
 */
 use super::*;
 use crate::value::ValId;
-use im::HashMap;
+use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct AffineData {
     /// The affine data
-    data: Option<HashMap<Color, Affine>>,
+    data: HashMap<Color, Affine>,
     /// Whether this data, taken together, is affine
-    affine: bool
+    affine: bool,
+}
+
+impl AffineData {
+    /// Take the separating conjunction of two affine lifetimes
+    ///
+    /// Leaves this lifetime in an undetermined but valid state on merge failure
+    pub fn try_star(&mut self, other: &AffineData) -> Result<(), Error> {
+        for (color, affinity) in other.data.iter() {
+            match self.data.entry(color.clone()) {
+                Entry::Occupied(mut o) => {
+                    let other_affinity = o.get();
+                    let new_affinity = affinity.star(other_affinity)?;
+                    if new_affinity != *affinity {
+                        o.insert(new_affinity);
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(affinity.clone());
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// The data describing an affine lifetime
