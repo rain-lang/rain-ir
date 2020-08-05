@@ -129,6 +129,14 @@ impl LifetimeData {
             Err(Error::IncomparableRegions)
         }
     }
+    /// Attempt to color map a lifetime while truncating it's region to a given level
+    #[inline]
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
+    where
+        F: FnMut(&Color) -> &'a Lifetime,
+    {
+        unimplemented!()
+    }
 }
 
 impl PartialOrd for LifetimeData {

@@ -186,8 +186,15 @@ impl Lifetime {
     }
     /// Attempt to color map a lifetime while truncating it's region to a given level
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) where F: FnMut(&Color) -> &'a Lifetime {
-        unimplemented!()
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error>
+    where
+        F: FnMut(&Color) -> &'a Lifetime,
+    {
+        if let Some(data) = self.data() {
+            data.color_map(color_map, depth).map(Lifetime::new)
+        } else {
+            Ok(Lifetime::STATIC)
+        }
     }
 }
 
