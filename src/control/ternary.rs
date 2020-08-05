@@ -38,7 +38,7 @@ impl Ternary {
     pub fn conditional(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
         let low_ty = low.ty();
-        let lt = (low.lifetime() & high.lifetime())?;
+        let lt = (low.lifetime() + high.lifetime())?;
         let unary_region = Region::with(
             std::iter::once(BOOL_TY.clone_ty()).collect(),
             lt.region().map(|region| region.clone_region()),
@@ -64,7 +64,7 @@ impl Ternary {
     pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
         let low_ty = low.ty();
-        let lt = (low.lifetime() & high.lifetime())?;
+        let lt = (low.lifetime() + high.lifetime())?;
         let switch_region = Region::with(
             std::iter::once(Finite(2).into_ty()).collect(),
             lt.region().map(|region| region.clone_region()),

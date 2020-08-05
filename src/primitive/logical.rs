@@ -632,7 +632,7 @@ impl Apply for Logical {
         } else {
             let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
             let lifetime = Lifetime::default()
-                .sep_conj(lifetimes)
+                .sep_conjs(lifetimes)
                 .map_err(|_| Error::LifetimeError)?;
             Ok(Application::Incomplete(lifetime, Bool.into()))
         }

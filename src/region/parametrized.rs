@@ -43,7 +43,7 @@ impl<V: Value + Clone> Parametrized<V> {
             Some(Less) => std::iter::once(value.clone().into_val()).collect(),
         };
         let lifetime = Lifetime::default()
-            .sep_conj(deps.iter().map(|dep: &ValId| dep.lifetime()))
+            .sep_conjs(deps.iter().map(|dep: &ValId| dep.lifetime()))
             .map_err(|_| Error::LifetimeError)?;
         Ok(Parametrized {
             region,

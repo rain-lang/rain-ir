@@ -15,7 +15,7 @@ use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use std::ops::{Add, BitAnd, Mul};
+use std::ops::{Add, Mul};
 
 mod arr;
 pub use arr::*;
@@ -43,144 +43,76 @@ pub struct Lifetime(Option<Arc<LifetimeData>>);
 #[derive(Debug, Copy, Clone, Eq, Default)]
 pub struct LifetimeBorrow<'a>(Option<ArcBorrow<'a, LifetimeData>>);
 
+impl Deref for Lifetime {
+    type Target = LifetimeData;
+    fn deref(&self) -> &LifetimeData {
+        if let Some(ptr) = &self.0 {
+            &ptr
+        } else {
+            &STATIC_LIFETIME_DATA
+        }
+    }
+}
+
 impl Lifetime {
     /// The static `rain` lifetime
     pub const STATIC: Lifetime = Lifetime(None);
-    /// Create a new `Lifetime` from `LifetimeData`
+    /// Create a new lifetime from given data
+    #[inline]
     pub fn new(data: LifetimeData) -> Lifetime {
-        if data == STATIC_LIFETIME {
-            return Lifetime(None);
+        if data.is_static() {
+            Self::STATIC
+        } else {
+            Lifetime(Some(LIFETIME_CACHE.cache(data)))
         }
-        Lifetime(Some(LIFETIME_CACHE.cache(data)))
     }
-    /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
+    /// Get the lifetime associated with a single parameter of a given region
+    /// 
+    /// Return a standard region lifetime on OOB
     #[inline]
     pub fn param(region: Region, ix: usize) -> Lifetime {
-        Lifetime::new(LifetimeData::param(region, ix))
+        unimplemented!()
     }
-    /// Deduplicate an `Arc<LifetimeData>` into a `Lifetime`
-    pub fn dedup(arc: Arc<LifetimeData>) -> Lifetime {
-        Lifetime(Some(LIFETIME_CACHE.cache(arc)))
-    }
-    /// Borrow this lifetime
-    #[inline]
-    pub fn borrow_lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow(self.0.as_ref().map(|v| v.borrow_arc()))
-    }
-    /// Check whether this lifetime is the static (null) lifetime
-    #[inline]
-    pub fn is_static(&self) -> bool {
-        self.0.is_none()
-    }
-    /// Check whether this lifetime is idempotent, i.e. is equal to it's self intersection
-    #[inline]
-    pub fn idempotent(&self) -> bool {
-        self.deref().idempotent()
-    }
-    /// Find the separating conjunction of this lifetime with itself.
-    #[inline]
-    pub fn star_self(&self) -> Result<(), Error> {
-        self.deref().star_self()
-    }
-    /// Find the separating conjunction of this lifetime with another.
-    #[inline]
-    pub fn star(&self, other: &Lifetime) -> Result<Lifetime, Error> {
-        if self == other {
-            return self.star_self().map(|_| self.clone());
-        }
-        if self.is_static() {
-            return Ok(other.clone());
-        }
-        if other.is_static() {
-            return Ok(self.clone());
-        }
-        self.deref().star(other.deref()).map(Lifetime::new)
-    }
-    /// Find the conjunction of this lifetime with another
-    #[inline]
-    pub fn join(&self, other: &Lifetime) -> Result<Lifetime, Error> {
-        if self == other || other.is_static() {
-            return Ok(self.clone());
-        }
-        if self.is_static() {
-            return Ok(other.clone());
-        }
-        self.deref().conj(other.deref()).map(Lifetime::new)
-    }
-    /// Find the conjunction of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
-    #[inline]
-    pub fn conj<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
-    where
-        I: Iterator<Item = LifetimeBorrow<'a>>,
-    {
-        let mut base = self.clone();
-        for lifetime in lifetimes {
-            if lifetime != base {
-                base = base.join(lifetime.as_lifetime())?;
-            }
-        }
-        Ok(base)
-    }
-    /// Find the separating conjunction of a set of lifetimes and this lifetime. Return an error if the lifetimes are incompatible.
-    #[inline]
-    pub fn sep_conj<'a, I>(&'a self, lifetimes: I) -> Result<Lifetime, Error>
-    where
-        I: Iterator<Item = LifetimeBorrow<'a>>,
-    {
-        let mut base = self.clone();
-        let mut base_idempotent = false;
-        for lifetime in lifetimes {
-            if lifetime != base {
-                base = base.star(lifetime.as_lifetime())?;
-                base_idempotent = false;
-            } else if !base_idempotent {
-                base.star_self()?;
-                base_idempotent = true;
-            }
-        }
-        Ok(base)
-    }
-    /// Escape a lifetime up to a given depth
-    #[inline]
-    pub fn escape_upto(&self, depth: usize) -> Lifetime {
-        self.color_map(|_| &[], depth)
-            .expect("Null mapping cannot fail")
-    }
-    /// Escape a lifetime up to the current depth - 1
-    #[inline]
-    pub fn escape(&self) -> Lifetime {
-        self.escape_upto(self.depth().saturating_sub(1))
-    }
-    /// Set a lifetime to be within a given region
+    /// Get this lifetime in a given region
     #[inline]
     pub fn in_region(&self, region: Option<Region>) -> Result<Lifetime, Error> {
-        if let Some(data) = &self.0 {
-            if data.region == region {
-                // Avoid the hash table...
-                return Ok(self.clone());
-            }
-            data.in_region(region).map(Lifetime::from)
+        if let Some(data) = self.data() {
+            Ok(Lifetime::new(data.in_region(region)?))
         } else {
-            Ok(region.into())
+            Ok(Lifetime::from(region))
         }
     }
-    /// Get a lifetime which owns only a given color
+    /// Get a lifetime which owns a single color
     #[inline]
     pub fn owns(color: Color) -> Lifetime {
-        LifetimeData::owns(color).into()
+        unimplemented!()
     }
-    /// Map the colors in a lifetime, up to a given depth
+    /// Borrow a lifetime
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error>
-    where
-        F: Fn(&Color) -> &'a [Color],
-    {
-        // Skip shallow lifetimes
-        if self.depth() < depth {
-            return Ok(self.clone());
-        }
-        // Map this lifetime's underlying data, and transform it to a Lifetime
-        self.deref().color_map(color_map, depth).map(Lifetime::new)
+    pub fn borrow_lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow(self.0.as_ref().map(Arc::borrow_arc))
+    }
+    /// Get the data backing this lifetime, if any
+    #[inline]
+    pub fn data(&self) -> Option<&LifetimeData> {
+        self.0.as_deref()
+    }
+    /// Get the data backing this lifetime
+    #[inline]
+    pub fn data_or_static(&self) -> &LifetimeData {
+        self.data().unwrap_or(&STATIC_LIFETIME_DATA)
+    }
+    /// Take the separating conjunction of a set of lifetimes
+    #[inline]
+    pub fn sep_conjs<'a, L>(&'a self, lifetimes: L) -> Result<Lifetime, Error> where L: Iterator<Item=LifetimeBorrow<'a>> {
+        unimplemented!()
+    }
+}
+
+impl Deref for LifetimeBorrow<'_> {
+    type Target = Lifetime;
+    fn deref(&self) -> &Lifetime {
+        self.as_lifetime()
     }
 }
 
@@ -194,6 +126,16 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn as_lifetime(&self) -> &Lifetime {
         unsafe { &*(self as *const _ as *const Lifetime) }
+    }
+    /// Get the data backing this lifetime, if any
+    #[inline]
+    pub fn data(&self) -> Option<&'a LifetimeData> {
+        self.0.map(|l| l.get())
+    }
+    /// Get the data backing this lifetime
+    #[inline]
+    pub fn data_or_static(&self) -> &'a LifetimeData {
+        self.data().unwrap_or(&STATIC_LIFETIME_DATA)
     }
     /// Get the region of this lifetime
     #[inline]

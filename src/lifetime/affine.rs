@@ -8,7 +8,7 @@ use fxhash::FxBuildHasher;
 use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely affine lifetime
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AffineData {
     /// The affine data
     data: HashMap<Color, Affine, FxBuildHasher>,

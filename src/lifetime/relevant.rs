@@ -6,7 +6,7 @@ use fxhash::FxBuildHasher;
 use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely relevant lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct RelevantData {
     /// The relevant data
     data: HashMap<Color, Relevant, FxBuildHasher>,

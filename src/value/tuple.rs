@@ -32,7 +32,7 @@ impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn try_new(elems: ValArr) -> Result<Tuple, Error> {
-        let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
+        let lifetime = Lifetime::default().sep_conjs(elems.iter().map(|t| t.lifetime()))?;
         let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
         Ok(Tuple {
             elems,
@@ -267,7 +267,7 @@ impl Product {
         force_affine: bool,
         force_relevant: bool,
     ) -> Result<Product, Error> {
-        let lifetime = Lifetime::default().sep_conj(elems.iter().map(|t| t.lifetime()))?;
+        let lifetime = Lifetime::default().sep_conjs(elems.iter().map(|t| t.lifetime()))?;
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
         let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
         let flags = ProductFlags::new(affine, force_affine, relevant, force_relevant);

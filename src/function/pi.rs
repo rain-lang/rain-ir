@@ -34,7 +34,7 @@ impl Pi {
     pub fn new(result: Parametrized<TypeId>, base_lt: Lifetime) -> Result<Pi, Error> {
         let ty = Self::universe(&result);
         let (region, result, deps, lt) = result.destruct();
-        let result_lt = (result.lifetime().clone_lifetime().in_region(Some(region))? & base_lt)?;
+        let result_lt = (result.lifetime().clone_lifetime().in_region(Some(region))? + base_lt)?;
         Ok(Pi {
             result,
             ty,
@@ -204,7 +204,7 @@ impl Type for Pi {
         } else {
             let result: TypeId = result.try_into().expect("Nested pi result must be a type");
             let (lt, ty) = result.apply_ty_in(rest_args, ctx_handle)?;
-            let lt = (lt & result_lt)?;
+            let lt = (lt + result_lt)?;
             Ok((lt, ty))
         }
     }

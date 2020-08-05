@@ -18,17 +18,6 @@ impl Hash for Lifetime {
     }
 }
 
-impl Deref for Lifetime {
-    type Target = LifetimeData;
-    fn deref(&self) -> &LifetimeData {
-        if let Some(ptr) = &self.0 {
-            &ptr
-        } else {
-            &STATIC_LIFETIME
-        }
-    }
-}
-
 impl PartialEq for LifetimeBorrow<'_> {
     fn eq(&self, other: &LifetimeBorrow) -> bool {
         let self_ptr = self.deref() as *const _;
@@ -49,105 +38,81 @@ impl PartialEq<LifetimeBorrow<'_>> for Lifetime {
     }
 }
 
-impl Deref for LifetimeBorrow<'_> {
-    type Target = LifetimeData;
-    fn deref(&self) -> &LifetimeData {
-        if let Some(ptr) = &self.0 {
-            &ptr
-        } else {
-            &STATIC_LIFETIME
-        }
-    }
-}
-
 impl Hash for LifetimeBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         std::ptr::hash(self.deref(), hasher)
     }
 }
 
-
-impl BitAnd for Lifetime {
+impl Add for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
-        if self == other || other.is_static() {
-            return Ok(self);
-        }
-        if self.is_static() {
-            return Ok(other);
-        }
-        self.deref().conj(other.deref()).map(Lifetime::new)
+    fn add(self, other: Lifetime) -> Result<Lifetime, Error> {
+        unimplemented!()
     }
 }
 
-impl BitAnd<&'_ Lifetime> for Lifetime {
+impl Add<&'_ Lifetime> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        if self == *other || other.is_static() {
-            return Ok(self);
-        }
-        if self.is_static() {
-            return Ok(other.clone());
-        }
-        self.deref().conj(other.deref()).map(Lifetime::new)
+    fn add(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        unimplemented!()
     }
 }
 
-impl BitAnd<LifetimeBorrow<'_>> for Lifetime {
+impl Add<LifetimeBorrow<'_>> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
-        self.bitand(other.as_lifetime())
+    fn add(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.add(other.as_lifetime())
     }
 }
 
-impl BitAnd<Lifetime> for &'_ Lifetime {
+impl Add<Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
-        other.bitand(self)
+    fn add(self, other: Lifetime) -> Result<Lifetime, Error> {
+        other.add(self)
     }
 }
 
-impl BitAnd<&'_ Lifetime> for &'_ Lifetime {
+impl Add<&'_ Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        other.join(self)
+    fn add(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        unimplemented!()
     }
 }
 
-impl BitAnd<LifetimeBorrow<'_>> for &'_ Lifetime {
+impl Add<LifetimeBorrow<'_>> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
-        self.bitand(other.as_lifetime())
+    fn add(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.add(other.as_lifetime())
     }
 }
 
-impl BitAnd<Lifetime> for LifetimeBorrow<'_> {
+impl Add<Lifetime> for LifetimeBorrow<'_> {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: Lifetime) -> Result<Lifetime, Error> {
-        self.as_lifetime().bitand(other)
+    fn add(self, other: Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().add(other)
     }
 }
 
-impl BitAnd<&'_ Lifetime> for LifetimeBorrow<'_> {
+impl Add<&'_ Lifetime> for LifetimeBorrow<'_> {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        self.as_lifetime().bitand(other)
+    fn add(self, other: &Lifetime) -> Result<Lifetime, Error> {
+        self.as_lifetime().add(other)
     }
 }
 
-impl BitAnd<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
+impl Add<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
     type Output = Result<Lifetime, Error>;
     #[inline]
-    fn bitand(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
-        self.as_lifetime().bitand(other.as_lifetime())
+    fn add(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
+        self.as_lifetime().add(other.as_lifetime())
     }
 }
 
@@ -155,13 +120,7 @@ impl Mul for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
-        if self == other || other.is_static() {
-            return Ok(self);
-        }
-        if self.is_static() {
-            return Ok(other);
-        }
-        self.deref().conj(other.deref()).map(Lifetime::new)
+        unimplemented!()
     }
 }
 
@@ -169,13 +128,7 @@ impl Mul<&'_ Lifetime> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        if self == *other || other.is_static() {
-            return Ok(self);
-        }
-        if self.is_static() {
-            return Ok(other.clone());
-        }
-        self.deref().conj(other.deref()).map(Lifetime::new)
+        unimplemented!()
     }
 }
 
@@ -199,7 +152,7 @@ impl Mul<&'_ Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        other.join(self)
+        unimplemented!()
     }
 }
 
@@ -269,7 +222,7 @@ impl PartialOrd for Lifetime {
     This naturally induces a partial ordering on the set of lifetimes.
     */
     fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        self.deref().partial_cmp(other.deref())
+        self.0.partial_cmp(&other.0)
     }
 }
 
@@ -279,7 +232,7 @@ impl PartialOrd<LifetimeBorrow<'_>> for Lifetime {
     This naturally induces a partial ordering on the set of lifetimes.
     */
     fn partial_cmp(&self, other: &LifetimeBorrow<'_>) -> Option<Ordering> {
-        self.deref().partial_cmp(other.deref())
+        self.partial_cmp(other.deref())
     }
 }
 
@@ -299,7 +252,7 @@ impl PartialOrd<Lifetime> for LifetimeBorrow<'_> {
     This naturally induces a partial ordering on the set of lifetimes.
     */
     fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        self.deref().partial_cmp(other.deref())
+        self.deref().partial_cmp(other)
     }
 }
 
