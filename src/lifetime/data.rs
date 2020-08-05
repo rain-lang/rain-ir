@@ -3,6 +3,7 @@ Lifetime data
 */
 use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
+use crate::typing::Type;
 use crate::value::Error;
 use lazy_static;
 use std::cmp::Ordering;
@@ -38,7 +39,25 @@ impl LifetimeData {
     /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
-        unimplemented!()
+        let ty = region.param_tys().get(ix).ok_or(Error::InvalidParam)?;
+        let mut affine = AffineData::default();
+        let mut relevant = RelevantData::default();
+        if ty.is_affine() {
+            affine.affine = true;
+            affine
+                .data
+                .insert(Color::param_unchecked(region.clone(), ix), Affine::Owned);
+        }
+        if ty.is_relevant() {
+            relevant
+                .data
+                .insert(Color::param_unchecked(region.clone(), ix), Relevant::Used);
+        }
+        Ok(LifetimeData {
+            affine,
+            relevant,
+            region: Some(region),
+        })
     }
     /// Whether this lifetime is static
     #[inline]

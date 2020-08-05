@@ -11,9 +11,9 @@ use im::{hashmap::Entry, HashMap};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AffineData {
     /// The affine data
-    data: HashMap<Color, Affine, FxBuildHasher>,
+    pub(super) data: HashMap<Color, Affine, FxBuildHasher>,
     /// Whether this data, taken together, is affine
-    affine: bool,
+    pub(super) affine: bool,
 }
 
 impl Default for AffineData {

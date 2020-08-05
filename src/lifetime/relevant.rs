@@ -9,7 +9,7 @@ use im::{hashmap::Entry, HashMap};
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct RelevantData {
     /// The relevant data
-    data: HashMap<Color, Relevant, FxBuildHasher>,
+    pub(super) data: HashMap<Color, Relevant, FxBuildHasher>,
 }
 
 impl RelevantData {

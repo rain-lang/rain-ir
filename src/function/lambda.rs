@@ -293,7 +293,7 @@ mod tests {
         assert_ne!(*id.result(), anchor_val);
         // Specifically, color static vs. color param 0
         let region = id.def_region();
-        let color = Color::param(region.clone_region(), 0).unwrap();
+        let color = Color::param(region.as_region(), 0).unwrap();
         let lt = Lifetime::owns(color);
         assert_eq!(id.result().lifetime(), lt);
         assert_eq!(anchor.lifetime(), Lifetime::STATIC);
