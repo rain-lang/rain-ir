@@ -100,6 +100,16 @@ impl Lifetime {
     pub fn data_or_static(&self) -> &LifetimeData {
         self.data().unwrap_or(&STATIC_LIFETIME_DATA)
     }
+    /// Take the separating conjunction of two lifetimes
+    #[inline]
+    pub fn sep_conj(&self, other: &Lifetime) -> Result<Lifetime, Error> {
+        match (self.0.as_ref(), other.0.as_ref()) {
+            (None, None) => Ok(Lifetime::STATIC),
+            (Some(_), None) => Ok(self.clone()),
+            (None, Some(_)) => Ok(other.clone()),
+            (Some(l), Some(r)) => (l.sep_conj(r)).map(Lifetime::new),
+        }
+    }
     /// Get the affine component of this lifetime
     #[inline]
     pub fn affine_component(&self) -> Lifetime {
