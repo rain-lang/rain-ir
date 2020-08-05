@@ -2,6 +2,7 @@
 Affine lifetimes
 */
 use super::*;
+use crate::region::Regional;
 use crate::value::ValId;
 use fxhash::FxBuildHasher;
 use im::{hashmap::Entry, HashMap};
@@ -95,6 +96,25 @@ impl AffineData {
     #[inline]
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+    /// Get the region of this lifetime
+    #[inline]
+    pub fn region(&self) -> Result<Option<RegionBorrow>, Error> {
+        let mut keys = self.data.keys();
+        let mut min = if let Some(first) = keys.next() {
+            first.region()
+        } else {
+            return Ok(None);
+        };
+        for color in keys {
+            let region = color.region();
+            match region.partial_cmp(&min) {
+                Some(Ordering::Less) => min = region,
+                Some(_) => {}
+                None => return Err(Error::IncomparableRegions),
+            }
+        }
+        Ok(min)
     }
 }
 
