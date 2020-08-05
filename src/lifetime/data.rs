@@ -47,7 +47,7 @@ impl LifetimeData {
         right: HashMap<Color, Affine>,
     ) -> Result<HashMap<Color, Affine>, Error> {
         let mut has_error: Option<Error> = None;
-        let result = left.symmetric_difference_with(right, |left, right| match left.star(&right) {
+        let result = left.symmetric_difference_with(right, |left, right| match left.sep_conj(&right) {
             Ok(int) => Some(int),
             Err(err) => {
                 has_error = Some(err);
@@ -66,7 +66,7 @@ impl LifetimeData {
         right: HashMap<Color, Affine>,
     ) -> Result<HashMap<Color, Affine>, Error> {
         let mut has_error: Option<Error> = None;
-        let result = left.symmetric_difference_with(right, |left, right| match left.conj(&right) {
+        let result = left.symmetric_difference_with(right, |left, right| match left.disj(&right) {
             Ok(int) => Some(int),
             Err(err) => {
                 has_error = Some(err);
@@ -226,7 +226,7 @@ impl LifetimeData {
                 }
                 match new_affine.entry(target_color.clone()) {
                     Entry::Occupied(mut o) => {
-                        let new_affinity = o.get().star(affinity)?;
+                        let new_affinity = o.get().sep_conj(affinity)?;
                         // Avoid unnecessary cloning in the immutable map!
                         if new_affinity != *o.get() {
                             *o.get_mut() = new_affinity

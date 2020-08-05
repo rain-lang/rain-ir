@@ -17,7 +17,7 @@ impl RelevantData {
     pub fn sep_conj(&mut self, other: &RelevantData) {
         for (color, relevance) in other.data.iter() {
             match self.data.entry(color.clone()) {
-                Entry::Occupied(o) => {
+                Entry::Occupied(mut o) => {
                     let other_relevance = o.get();
                     let new_relevance = other_relevance.sep_conj(other_relevance);
                     if new_relevance != *relevance {
@@ -30,11 +30,9 @@ impl RelevantData {
             }
         }
     }
-    /// Take the conjunction of this lifetime with another
-    pub fn conj(self, other: RelevantData) -> RelevantData {
-        let data = self
-            .data
-            .symmetric_difference_with(other.data, BitAnd::bitand);
+    /// Take the disjunction of this lifetime with another
+    pub fn disj(self, other: RelevantData) -> RelevantData {
+        let data = self.data.symmetric_difference_with(other.data, Add::add);
         RelevantData { data }
     }
     /// Whether this lifetime is the static lifetime
@@ -96,35 +94,35 @@ impl Mul<RelevantData> for &'_ RelevantData {
     }
 }
 
-impl BitAnd for RelevantData {
+impl Add for RelevantData {
     type Output = RelevantData;
     #[inline]
-    fn bitand(self, other: RelevantData) -> RelevantData {
-        self.conj(other)
+    fn add(self, other: RelevantData) -> RelevantData {
+        self.disj(other)
     }
 }
 
-impl BitAnd<&'_ RelevantData> for RelevantData {
+impl Add<&'_ RelevantData> for RelevantData {
     type Output = RelevantData;
     #[inline]
-    fn bitand(self, other: &RelevantData) -> RelevantData {
-        self.conj(other.clone())
+    fn add(self, other: &RelevantData) -> RelevantData {
+        self.disj(other.clone())
     }
 }
 
-impl BitAnd for &'_ RelevantData {
+impl Add for &'_ RelevantData {
     type Output = RelevantData;
     #[inline]
-    fn bitand(self, other: &RelevantData) -> RelevantData {
-        self.conj(other.clone())
+    fn add(self, other: &RelevantData) -> RelevantData {
+        self.clone().disj(other.clone())
     }
 }
 
-impl BitAnd<RelevantData> for &'_ RelevantData {
+impl Add<RelevantData> for &'_ RelevantData {
     type Output = RelevantData;
     #[inline]
-    fn bitand(self, other: RelevantData) -> RelevantData {
-        self.clone().conj(other)
+    fn add(self, other: RelevantData) -> RelevantData {
+        self.clone().disj(other)
     }
 }
 
@@ -137,10 +135,12 @@ pub enum Relevant {
 }
 
 impl Relevant {
+    /// Take the separating conjunction of two relevant lifetimes
     pub fn sep_conj(&self, _other: &Relevant) -> Relevant {
         Relevant::Used
     }
-    pub fn conj(&self, _other: &Relevant) -> Option<Relevant> {
+    /// Take the disjunction of two relevant lifetimes
+    pub fn disj(&self, _other: &Relevant) -> Option<Relevant> {
         Some(Relevant::Used)
     }
 }
@@ -173,30 +173,30 @@ impl Mul<Relevant> for &'_ Relevant {
     }
 }
 
-impl BitAnd for Relevant {
+impl Add for Relevant {
     type Output = Option<Relevant>;
-    fn bitand(self, other: Relevant) -> Option<Relevant> {
-        self.conj(&other)
+    fn add(self, other: Relevant) -> Option<Relevant> {
+        self.disj(&other)
     }
 }
 
-impl BitAnd<&'_ Relevant> for Relevant {
+impl Add<&'_ Relevant> for Relevant {
     type Output = Option<Relevant>;
-    fn bitand(self, other: &Relevant) -> Option<Relevant> {
-        self.conj(other)
+    fn add(self, other: &Relevant) -> Option<Relevant> {
+        self.disj(other)
     }
 }
 
-impl BitAnd for &'_ Relevant {
+impl Add for &'_ Relevant {
     type Output = Option<Relevant>;
-    fn bitand(self, other: &Relevant) -> Option<Relevant> {
-        self.conj(other)
+    fn add(self, other: &Relevant) -> Option<Relevant> {
+        self.disj(other)
     }
 }
 
-impl BitAnd<Relevant> for &'_ Relevant {
+impl Add<Relevant> for &'_ Relevant {
     type Output = Option<Relevant>;
-    fn bitand(self, other: Relevant) -> Option<Relevant> {
-        self.conj(&other)
+    fn add(self, other: Relevant) -> Option<Relevant> {
+        self.disj(&other)
     }
 }

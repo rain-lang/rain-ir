@@ -49,10 +49,10 @@ impl AffineData {
         }
         Ok(())
     }
-    /// Take the conjunction of this lifetime with another
+    /// Take the disjunction of this lifetime with another
     ///
     /// Leaves this lifetime in an undetermined but valid state on failure
-    pub fn conj(&mut self, other: &AffineData) -> Result<(), Error> {
+    pub fn disj(&mut self, other: &AffineData) -> Result<(), Error> {
         if self.is_static() {
             *self = other.clone();
             return Ok(());
@@ -61,7 +61,7 @@ impl AffineData {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
                     let other_affinity = o.get();
-                    let new_affinity = affinity.conj(other_affinity)?;
+                    let new_affinity = affinity.disj(other_affinity)?;
                     if new_affinity != *affinity {
                         o.insert(new_affinity);
                     }
@@ -138,7 +138,7 @@ impl Affine {
         }
     }
     /// Take the conjunction of this lifetime with another
-    pub fn conj(&self, other: &Affine) -> Result<Affine, Error> {
+    pub fn disj(&self, other: &Affine) -> Result<Affine, Error> {
         use Affine::*;
         match (self, other) {
             (Owned, _) => Ok(Owned),
@@ -198,30 +198,30 @@ impl Mul<Affine> for &'_ Affine {
     }
 }
 
-impl BitAnd for Affine {
+impl Add for Affine {
     type Output = Result<Affine, Error>;
-    fn bitand(self, other: Affine) -> Result<Affine, Error> {
-        self.conj(&other)
+    fn add(self, other: Affine) -> Result<Affine, Error> {
+        self.disj(&other)
     }
 }
 
-impl BitAnd<&'_ Affine> for Affine {
+impl Add<&'_ Affine> for Affine {
     type Output = Result<Affine, Error>;
-    fn bitand(self, other: &Affine) -> Result<Affine, Error> {
-        self.conj(other)
+    fn add(self, other: &Affine) -> Result<Affine, Error> {
+        self.disj(other)
     }
 }
 
-impl BitAnd for &'_ Affine {
+impl Add for &'_ Affine {
     type Output = Result<Affine, Error>;
-    fn bitand(self, other: &Affine) -> Result<Affine, Error> {
-        self.conj(other)
+    fn add(self, other: &Affine) -> Result<Affine, Error> {
+        self.disj(other)
     }
 }
 
-impl BitAnd<Affine> for &'_ Affine {
+impl Add<Affine> for &'_ Affine {
     type Output = Result<Affine, Error>;
-    fn bitand(self, other: Affine) -> Result<Affine, Error> {
-        self.conj(&other)
+    fn add(self, other: Affine) -> Result<Affine, Error> {
+        self.disj(&other)
     }
 }
