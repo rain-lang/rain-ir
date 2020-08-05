@@ -64,6 +64,16 @@ impl LifetimeData {
     pub fn is_static(&self) -> bool {
         self.region.is_none() && self.affine.is_static() && self.relevant.is_static()
     }
+    /// Whether this lifetime is affine
+    #[inline]
+    pub fn is_affine(&self) -> bool {
+        self.affine.is_affine()
+    }
+    /// Whether this lifetime is relevant
+    #[inline]
+    pub fn is_relevant(&self) -> bool {
+        self.relevant.is_relevant()
+    }
     /// Get this lifetime data, but within a given region
     #[inline]
     pub fn in_region(&self, region: Option<Region>) -> Result<LifetimeData, Error> {
