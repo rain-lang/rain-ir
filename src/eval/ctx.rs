@@ -19,7 +19,7 @@ pub struct EvalCtx {
     /// The cache for evaluated values
     eval_cache: SymbolTable<ValId, ValId, FxBuildHasher>,
     /// The color map
-    color_map: SymbolTable<Color, SmallVec<[Color; 1]>, FxBuildHasher>,
+    color_map: SymbolTable<Color, Lifetime, FxBuildHasher>,
     /// The cache for lifetime substitutions
     lt_cache: SymbolTable<Lifetime, Lifetime, FxBuildHasher>,
     /// The minimum region depths at each scope level
