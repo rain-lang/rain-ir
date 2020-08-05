@@ -2,7 +2,7 @@
 Lifetime data
 */
 use super::*;
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{lcr, Region, RegionBorrow, Regional};
 use crate::typing::Type;
 use crate::value::Error;
 use lazy_static;
@@ -74,6 +74,37 @@ impl LifetimeData {
     pub fn is_relevant(&self) -> bool {
         self.relevant.is_relevant()
     }
+    /// Get the separating conjunction of two lifetimes
+    #[inline]
+    pub fn sep_conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
+        let region = self.lcr(other)?.cloned_region();
+        //TODO: size optimizations?
+        let mut affine = self.affine.clone();
+        affine.sep_conj(&other.affine)?;
+        let relevant = &self.relevant * &other.relevant;
+        Ok(LifetimeData {
+            affine,
+            relevant,
+            region,
+        })
+    }
+    /*
+    /// Get the disjunction of two lifetimes
+    #[inline]
+    pub fn disj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
+
+    }
+    /// Get the affine component of this lifetime
+    #[inline]
+    pub fn affine_component(&self) -> LifetimeData {
+
+    }
+    /// Get the relevant component of this lifetime
+    #[inline]
+    pub fn relevant_component(&self) -> LifetimeData {
+
+    }
+    */
     /// Get this lifetime data, but within a given region
     #[inline]
     pub fn in_region(&self, region: Option<Region>) -> Result<LifetimeData, Error> {
