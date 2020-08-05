@@ -110,6 +110,16 @@ impl Lifetime {
             (Some(l), Some(r)) => (l.sep_conj(r)).map(Lifetime::new),
         }
     }
+    /// Take the disjunction of two lifetimes
+    #[inline]
+    pub fn disj(&self, other: &Lifetime) -> Result<Lifetime, Error> {
+        match (self.0.as_ref(), other.0.as_ref()) {
+            (None, None) => Ok(Lifetime::STATIC),
+            (Some(_), None) => Ok(self.affine_component()),
+            (None, Some(_)) => Ok(other.affine_component()),
+            (Some(l), Some(r)) => (l.disj(r)).map(Lifetime::new),
+        }
+    }
     /// Get the affine component of this lifetime
     #[inline]
     pub fn affine_component(&self) -> Lifetime {
