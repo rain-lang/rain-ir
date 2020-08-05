@@ -186,7 +186,7 @@ impl Lifetime {
     }
     /// Attempt to color map a lifetime while truncating it's region to a given level
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F) where F: FnMut(&Color) -> &'a Lifetime {
+    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) where F: FnMut(&Color) -> &'a Lifetime {
         unimplemented!()
     }
 }
