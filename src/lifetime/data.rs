@@ -88,12 +88,21 @@ impl LifetimeData {
             region,
         })
     }
-    /*
     /// Get the disjunction of two lifetimes
     #[inline]
     pub fn disj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-
+        let region = self.lcr(other)?.cloned_region();
+        //TODO: size optimizations?
+        let mut affine = self.affine.clone();
+        affine.disj(&other.affine)?;
+        let relevant = &self.relevant + &other.relevant;
+        Ok(LifetimeData {
+            affine,
+            relevant,
+            region,
+        })
     }
+    /*
     /// Get the affine component of this lifetime
     #[inline]
     pub fn affine_component(&self) -> LifetimeData {
