@@ -100,9 +100,21 @@ impl Lifetime {
     pub fn data_or_static(&self) -> &LifetimeData {
         self.data().unwrap_or(&STATIC_LIFETIME_DATA)
     }
+    /// Get the affine component of this lifetime
+    #[inline]
+    pub fn affine_component(&self) -> Lifetime {
+        if let Some(data) = self.data() {
+            Lifetime::new(data.affine_component())
+        } else {
+            Lifetime::STATIC
+        }
+    }
     /// Take the separating conjunction of a set of lifetimes
     #[inline]
-    pub fn sep_conjs<'a, L>(&'a self, lifetimes: L) -> Result<Lifetime, Error> where L: Iterator<Item=LifetimeBorrow<'a>> {
+    pub fn sep_conjs<'a, L>(&'a self, lifetimes: L) -> Result<Lifetime, Error>
+    where
+        L: Iterator<Item = LifetimeBorrow<'a>>,
+    {
         unimplemented!()
     }
 }
