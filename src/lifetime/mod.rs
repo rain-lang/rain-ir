@@ -109,6 +109,15 @@ impl Lifetime {
             Lifetime::STATIC
         }
     }
+    /// Get the relevant component of this lifetime
+    #[inline]
+    pub fn relevant_component(&self) -> Lifetime {
+        if let Some(data) = self.data() {
+            Lifetime::new(data.relevant_component())
+        } else {
+            Lifetime::STATIC
+        }
+    }
     /// Take the separating conjunction of a set of lifetimes
     #[inline]
     pub fn sep_conjs<'a, L>(&'a self, lifetimes: L) -> Result<Lifetime, Error>
