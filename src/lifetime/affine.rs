@@ -25,10 +25,10 @@ impl Default for AffineData {
 }
 
 impl AffineData {
-    /// Take the separating conjunction of two affine lifetimes
+    /// Take the separating conjunction of this lifetime with another
     ///
     /// Leaves this lifetime in an undetermined but valid state on failure
-    pub fn star(&mut self, other: &AffineData) -> Result<(), Error> {
+    pub fn sep_conj(&mut self, other: &AffineData) -> Result<(), Error> {
         if self.is_static() {
             *self = other.clone();
             return Ok(())
@@ -37,7 +37,7 @@ impl AffineData {
             match self.data.entry(color.clone()) {
                 Entry::Occupied(mut o) => {
                     let other_affinity = o.get();
-                    let new_affinity = affinity.star(other_affinity)?;
+                    let new_affinity = affinity.sep_conj(other_affinity)?;
                     if new_affinity != *affinity {
                         o.insert(new_affinity);
                     }
@@ -49,7 +49,7 @@ impl AffineData {
         }
         Ok(())
     }
-    /// Take the conjunction of two affine lifetimes
+    /// Take the conjunction of this lifetime with another
     /// 
     /// Leaves this lifetime in an undetermined but valid state on failure
     pub fn conj(&mut self, other: &AffineData) -> Result<(), Error> {
@@ -111,7 +111,7 @@ impl Affine {
         }
     }
     /// Take the separating conjunction of this lifetime with another
-    pub fn star(&self, other: &Affine) -> Result<Affine, Error> {
+    pub fn sep_conj(&self, other: &Affine) -> Result<Affine, Error> {
         use Affine::*;
         match (self, other) {
             (Owned, Owned) => Err(Error::AffineUsed),
@@ -161,28 +161,28 @@ impl Affine {
 impl Mul for Affine {
     type Output = Result<Affine, Error>;
     fn mul(self, other: Affine) -> Result<Affine, Error> {
-        self.star(&other)
+        self.sep_conj(&other)
     }
 }
 
 impl Mul<&'_ Affine> for Affine {
     type Output = Result<Affine, Error>;
     fn mul(self, other: &Affine) -> Result<Affine, Error> {
-        self.star(other)
+        self.sep_conj(other)
     }
 }
 
 impl Mul for &'_ Affine {
     type Output = Result<Affine, Error>;
     fn mul(self, other: &Affine) -> Result<Affine, Error> {
-        self.star(other)
+        self.sep_conj(other)
     }
 }
 
 impl Mul<Affine> for &'_ Affine {
     type Output = Result<Affine, Error>;
     fn mul(self, other: Affine) -> Result<Affine, Error> {
-        self.star(&other)
+        self.sep_conj(&other)
     }
 }
 
