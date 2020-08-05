@@ -39,6 +39,73 @@ impl RelevantData {
     }
 }
 
+impl Mul for RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn mul(self, other: RelevantData) -> RelevantData {
+        //TODO: think about this...
+        self * &other
+    }
+}
+
+impl Mul<&'_ RelevantData> for RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn mul(self, other: &RelevantData) -> RelevantData {
+        other * self
+    }
+}
+
+impl Mul for &'_ RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn mul(self, other: &RelevantData) -> RelevantData {
+        self * other.clone()
+    }
+}
+
+impl Mul<RelevantData> for &'_ RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn mul(self, mut other: RelevantData) -> RelevantData {
+        other.sep_conj(self);
+        other
+    }
+}
+
+impl BitAnd for RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn bitand(self, other: RelevantData) -> RelevantData {
+        self.conj(other)
+    }
+}
+
+impl BitAnd<&'_ RelevantData> for RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn bitand(self, other: &RelevantData) -> RelevantData {
+        self.conj(other.clone())
+    }
+}
+
+impl BitAnd for &'_ RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn bitand(self, other: &RelevantData) -> RelevantData {
+        self.conj(other.clone())
+    }
+}
+
+impl BitAnd<RelevantData> for &'_ RelevantData {
+    type Output = RelevantData;
+    #[inline]
+    fn bitand(self, other: RelevantData) -> RelevantData {
+        self.clone().conj(other)
+    }
+}
+
+
 /// A relevant lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Relevant {
