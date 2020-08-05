@@ -40,4 +40,6 @@ pub enum Error {
     IncompleteMatch,
     /// An invalid substitution kind
     InvalidSubKind,
+    /// An invalid parameter
+    InvalidParam
 }

@@ -249,7 +249,7 @@ impl Region {
     }
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
-    pub fn param(self, ix: usize) -> Result<Parameter, ()> {
+    pub fn param(self, ix: usize) -> Result<Parameter, Error> {
         //TODO: `into_param` pattern
         Parameter::try_new(self, ix)
     }
@@ -407,7 +407,7 @@ impl<'a> RegionBorrow<'a> {
     }
     /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
     #[inline]
-    pub fn param(self, ix: usize) -> Result<Parameter, ()> {
+    pub fn param(self, ix: usize) -> Result<Parameter, Error> {
         self.clone_region().param(ix)
     }
     /// Get this region borrow as a region

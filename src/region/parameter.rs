@@ -46,11 +46,11 @@ impl Parameter {
     ```
     */
     #[inline]
-    pub fn try_new(region: Region, ix: usize) -> Result<Parameter, ()> {
+    pub fn try_new(region: Region, ix: usize) -> Result<Parameter, Error> {
         if ix >= region.len() {
-            Err(())
+            Err(Error::InvalidParam)
         } else {
-            let lifetime = Lifetime::param(region.clone(), ix);
+            let lifetime = Lifetime::param(region.clone(), ix)?;
             Ok(Parameter {
                 region,
                 lifetime,

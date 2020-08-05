@@ -37,7 +37,7 @@ pub struct LifetimeData {
 impl LifetimeData {
     /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
     #[inline]
-    pub fn param(region: Region, ix: usize) -> LifetimeData {
+    pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
         unimplemented!()
     }
     /// Whether this lifetime is static

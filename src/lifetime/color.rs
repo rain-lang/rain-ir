@@ -20,8 +20,8 @@ use std::sync::atomic::AtomicIsize;
 /// fields, are not colors) nor composed out of multiple colors. A lifetime is implemented as a set of tagged colors.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Color {
-    region: Option<Region>,
-    ix: isize,
+    pub(super) region: Option<Region>,
+    pub(super) ix: isize,
 }
 
 impl Regional for Color {

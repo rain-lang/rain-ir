@@ -67,10 +67,8 @@ impl Lifetime {
         }
     }
     /// Get the lifetime associated with a single parameter of a given region
-    /// 
-    /// Return a standard region lifetime on OOB
     #[inline]
-    pub fn param(region: Region, ix: usize) -> Lifetime {
+    pub fn param(region: Region, ix: usize) -> Result<Lifetime, Error> {
         unimplemented!()
     }
     /// Get this lifetime in a given region
