@@ -138,13 +138,28 @@ impl Lifetime {
             Lifetime::STATIC
         }
     }
-    /// Take the separating conjunction of a set of lifetimes
+    /// Accumulate a lifetime under separating conjunction
+    ///
+    /// Leave this lifetime in an undetermined but valid state on failure
     #[inline]
-    pub fn sep_conjs<'a, L>(&'a self, lifetimes: L) -> Result<Lifetime, Error>
+    pub fn sep_conj_acc<'a, L>(&mut self, lifetimes: L) -> Result<(), Error>
     where
         L: Iterator<Item = LifetimeBorrow<'a>>,
     {
-        unimplemented!()
+        for lifetime in lifetimes {
+            *self = self.sep_conj(&*lifetime)?;
+        }
+        Ok(())
+    }
+    /// Take the separating conjunction of a set of lifetimes
+    #[inline]
+    pub fn sep_conjs<'a, L>(&self, lifetimes: L) -> Result<Lifetime, Error>
+    where
+        L: Iterator<Item = LifetimeBorrow<'a>>,
+    {
+        let mut result = self.clone();
+        result.sep_conj_acc(lifetimes)?;
+        Ok(result)
     }
 }
 
