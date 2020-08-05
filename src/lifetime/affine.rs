@@ -190,6 +190,75 @@ impl Affine {
     }
 }
 
+
+impl Mul for AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn mul(self, other: AffineData) -> Result<AffineData, Error> {
+        //TODO: think about this...
+        self * &other
+    }
+}
+
+impl Mul<&'_ AffineData> for AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn mul(self, other: &AffineData) -> Result<AffineData, Error> {
+        other * self
+    }
+}
+
+impl Mul for &'_ AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn mul(self, other: &AffineData) -> Result<AffineData, Error> {
+        self * other.clone()
+    }
+}
+
+impl Mul<AffineData> for &'_ AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn mul(self, mut other: AffineData) -> Result<AffineData, Error> {
+        other.sep_conj(self)?;
+        Ok(other)
+    }
+}
+
+impl Add for AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn add(self, other: AffineData) -> Result<AffineData, Error> {
+        //TODO: think about this
+        self + &other
+    }
+}
+
+impl Add<&'_ AffineData> for AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn add(mut self, other: &AffineData) -> Result<AffineData, Error> {
+        self.disj(other)?;
+        Ok(self)
+    }
+}
+
+impl Add for &'_ AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn add(self, other: &AffineData) -> Result<AffineData, Error> {
+        self.clone() + other
+    }
+}
+
+impl Add<AffineData> for &'_ AffineData {
+    type Output = Result<AffineData, Error>;
+    #[inline]
+    fn add(self, other: AffineData) -> Result<AffineData, Error> {
+        other + self
+    }
+}
+
 impl Mul for Affine {
     type Output = Result<Affine, Error>;
     fn mul(self, other: Affine) -> Result<Affine, Error> {
