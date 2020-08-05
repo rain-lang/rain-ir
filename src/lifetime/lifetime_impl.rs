@@ -48,7 +48,7 @@ impl Add for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn add(self, other: Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.disj(&other)
     }
 }
 
@@ -56,7 +56,7 @@ impl Add<&'_ Lifetime> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn add(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.disj(other)
     }
 }
 
@@ -80,7 +80,7 @@ impl Add<&'_ Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn add(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.disj(other)
     }
 }
 
