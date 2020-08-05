@@ -82,7 +82,7 @@ impl Lifetime {
     }
     /// Get a lifetime which owns a single color
     #[inline]
-    pub fn owns(color: Color) -> Lifetime {
+    pub fn owns(_color: Color) -> Lifetime {
         unimplemented!()
     }
     /// Borrow a lifetime
