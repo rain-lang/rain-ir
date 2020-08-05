@@ -183,6 +183,12 @@ impl EvalCtx {
         if let Some(lifetime) = self.lt_cache.get(lifetime) {
             return Ok(lifetime.clone());
         }
-        unimplemented!()
+        // Attempt to color map the lifetime
+        let result = lifetime.color_map(
+            |color| self.color_map.get(color).unwrap_or(&Lifetime::STATIC),
+            current_depth,
+        )?;
+        self.lt_cache.insert(lifetime.clone(), result.clone());
+        Ok(result)
     }
 }
