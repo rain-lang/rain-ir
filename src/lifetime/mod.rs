@@ -184,6 +184,11 @@ impl Lifetime {
         result.disj_acc(lifetimes)?;
         Ok(result)
     }
+    /// Attempt to color map a lifetime while truncating it's region to a given level
+    #[inline]
+    pub fn color_map<'a, F>(&self, color_map: F) where F: FnMut(&Color) -> &'a Lifetime {
+        unimplemented!()
+    }
 }
 
 impl Deref for LifetimeBorrow<'_> {
