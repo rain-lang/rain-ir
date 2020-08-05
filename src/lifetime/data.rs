@@ -102,18 +102,24 @@ impl LifetimeData {
             region,
         })
     }
-    /*
     /// Get the affine component of this lifetime
     #[inline]
     pub fn affine_component(&self) -> LifetimeData {
-
+        LifetimeData {
+            affine: self.affine.clone(),
+            relevant: RelevantData::default(),
+            region: self.region.clone(),
+        }
     }
     /// Get the relevant component of this lifetime
     #[inline]
     pub fn relevant_component(&self) -> LifetimeData {
-
+        LifetimeData {
+            affine: AffineData::default(),
+            relevant: self.relevant.clone(),
+            region: self.region.clone(),
+        }
     }
-    */
     /// Get this lifetime data, but within a given region
     #[inline]
     pub fn in_region(&self, region: Option<Region>) -> Result<LifetimeData, Error> {
