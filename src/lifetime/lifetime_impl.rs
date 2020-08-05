@@ -120,7 +120,7 @@ impl Mul for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.sep_conj(&other)
     }
 }
 
@@ -128,7 +128,7 @@ impl Mul<&'_ Lifetime> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.sep_conj(other)
     }
 }
 
@@ -136,7 +136,7 @@ impl Mul<LifetimeBorrow<'_>> for Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: LifetimeBorrow) -> Result<Lifetime, Error> {
-        self.mul(other.as_lifetime())
+        self.sep_conj(&other)
     }
 }
 
@@ -144,7 +144,7 @@ impl Mul<Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: Lifetime) -> Result<Lifetime, Error> {
-        other.mul(self)
+        self.sep_conj(&other)
     }
 }
 
@@ -152,7 +152,7 @@ impl Mul<&'_ Lifetime> for &'_ Lifetime {
     type Output = Result<Lifetime, Error>;
     #[inline]
     fn mul(self, other: &Lifetime) -> Result<Lifetime, Error> {
-        unimplemented!()
+        self.sep_conj(other)
     }
 }
 
