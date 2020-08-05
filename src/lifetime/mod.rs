@@ -69,7 +69,7 @@ impl Lifetime {
     /// Get the lifetime associated with a single parameter of a given region
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<Lifetime, Error> {
-        unimplemented!()
+        LifetimeData::param(region, ix).map(Lifetime::new)
     }
     /// Get this lifetime in a given region
     #[inline]
