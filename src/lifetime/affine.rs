@@ -3,8 +3,8 @@ Affine lifetimes
 */
 use super::*;
 use crate::value::ValId;
-use im::{hashmap::Entry, HashMap};
 use fxhash::FxBuildHasher;
+use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -19,7 +19,7 @@ impl Default for AffineData {
     fn default() -> AffineData {
         AffineData {
             data: HashMap::default(),
-            affine: false
+            affine: false,
         }
     }
 }
@@ -31,7 +31,7 @@ impl AffineData {
     pub fn sep_conj(&mut self, other: &AffineData) -> Result<(), Error> {
         if self.is_static() {
             *self = other.clone();
-            return Ok(())
+            return Ok(());
         }
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
@@ -50,12 +50,12 @@ impl AffineData {
         Ok(())
     }
     /// Take the conjunction of this lifetime with another
-    /// 
+    ///
     /// Leaves this lifetime in an undetermined but valid state on failure
     pub fn conj(&mut self, other: &AffineData) -> Result<(), Error> {
         if self.is_static() {
             *self = other.clone();
-            return Ok(())
+            return Ok(());
         }
         for (color, affinity) in other.data.iter() {
             match self.data.entry(color.clone()) {
@@ -73,16 +73,28 @@ impl AffineData {
         }
         Ok(())
     }
-    /// Whether this affine lifetime is the static lifetime
+    /// Whether this lifetime is the static lifetime
+    #[inline]
     pub fn is_static(&self) -> bool {
         self.data.is_empty()
     }
     /// Whether data described by this lifetime is affine
-    /// 
+    ///
     /// Non affine data is guaranteed to be equal to itself under self-intersection, while
     /// self-intersection of affine data is always an error
+    #[inline]
     pub fn is_affine(&self) -> bool {
         self.affine
+    }
+    /// Whether this lifetime contains any mappings
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+    /// The number of mappings this lifetime contains
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
 }
 

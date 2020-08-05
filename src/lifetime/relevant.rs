@@ -37,6 +37,29 @@ impl RelevantData {
             .symmetric_difference_with(other.data, BitAnd::bitand);
         RelevantData { data }
     }
+    /// Whether this lifetime is the static lifetime
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.data.is_empty()
+    }
+    /// Whether this lifetime contains any relevant data
+    ///
+    /// All purely relevant lifetimes are idempotent under separating conjunction, and
+    /// treat the static lifetime as a zero element under disjunction
+    #[inline]
+    pub fn is_relevant(&self) -> bool {
+        self.data.is_empty()
+    }
+    /// Whether this lifetime contains any mappings
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+    /// The number of mappings this lifetime contains
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl Mul for RelevantData {
@@ -104,7 +127,6 @@ impl BitAnd<RelevantData> for &'_ RelevantData {
         self.clone().conj(other)
     }
 }
-
 
 /// A relevant lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
