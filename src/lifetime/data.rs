@@ -2,7 +2,7 @@
 Lifetime data
 */
 use super::*;
-use crate::region::{lcr, Region, RegionBorrow, Regional};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Type;
 use crate::value::Error;
 use lazy_static;
@@ -78,9 +78,7 @@ impl LifetimeData {
     #[inline]
     pub fn sep_conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
         let region = self.lcr(other)?.cloned_region();
-        //TODO: size optimizations?
-        let mut affine = self.affine.clone();
-        affine.sep_conj(&other.affine)?;
+        let affine = (&self.affine * &other.affine)?;
         let relevant = &self.relevant * &other.relevant;
         Ok(LifetimeData {
             affine,
@@ -92,9 +90,7 @@ impl LifetimeData {
     #[inline]
     pub fn disj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
         let region = self.lcr(other)?.cloned_region();
-        //TODO: size optimizations?
-        let mut affine = self.affine.clone();
-        affine.disj(&other.affine)?;
+        let affine = (&self.affine * &other.affine)?;
         let relevant = &self.relevant + &other.relevant;
         Ok(LifetimeData {
             affine,
@@ -137,7 +133,7 @@ impl LifetimeData {
 
 impl PartialOrd for LifetimeData {
     fn partial_cmp(&self, other: &LifetimeData) -> Option<Ordering> {
-        unimplemented!("Lifetime data ordering")
+        unimplemented!("Lifetime data ordering: {:#?}, {:#?}", self, other)
     }
 }
 
