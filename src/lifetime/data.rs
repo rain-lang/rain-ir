@@ -7,7 +7,7 @@ use crate::typing::Type;
 use crate::value::Error;
 use fxhash::FxHashMap;
 use im::hashmap::Entry;
-use lazy_static;
+use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::Hash;
 
