@@ -188,6 +188,23 @@ impl Affine {
             }
         }
     }
+    /// Map this lifetime's borrow, if any, relative to another affinity
+    pub fn map_borrow<P>(
+        &self,
+        mut parametric_map: P,
+        relative_affinity: &Affine,
+    ) -> Result<Affine, Error>
+    where
+        P: FnMut(&ValId) -> Result<ValId, Error>,
+    {
+        use Affine::*;
+        match (self, relative_affinity) {
+            (Owned, Owned) => Ok(Owned),
+            (Borrowed(b), Owned) => parametric_map(b).map(Borrowed),
+            (Owned, Borrowed(_)) => Err(Error::AffineMove),
+            (Borrowed(_), Borrowed(b)) => Ok(Borrowed(b.clone())),
+        }
+    }
     /// Whether this lifetime is affine in itself
     pub fn is_affine(&self) -> bool {
         use Affine::*;

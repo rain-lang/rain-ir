@@ -13,6 +13,8 @@ pub enum Error {
     AffineUsed,
     /// Indirect multiple usage of an affine resource
     AffineBranched,
+    /// Try to "move" an affine parameter out of a borrow
+    AffineMove,
     /// Borrow of a used affine resource
     BorrowUsed,
     /// Unused relevant type

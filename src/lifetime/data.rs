@@ -149,7 +149,12 @@ impl LifetimeData {
     ///
     /// Leaves the lifetime in an undetermined but valid state on failure
     #[inline]
-    pub fn color_map<'a, F, P>(&mut self, mut color_map: F, parametric_map: P, depth: usize) -> Result<(), Error>
+    pub fn color_map<'a, F, P>(
+        &mut self,
+        mut color_map: F,
+        mut parametric_map: P,
+        depth: usize,
+    ) -> Result<(), Error>
     where
         F: FnMut(&Color) -> Option<&'a Lifetime>,
         P: FnMut(&ValId) -> Result<ValId, Error>,
@@ -160,21 +165,29 @@ impl LifetimeData {
             .cloned_region();
         let mut affine: FxHashMap<Color, Affine> = FxHashMap::default();
         let mut error = None;
-        self.affine.data.retain(|key, _value| {
+        self.affine.data.retain(|key, value| {
             use std::collections::hash_map::Entry;
             if key.depth() < depth || error.is_some() {
                 return true;
             }
             if let Some(lifetime) = color_map(key) {
-                //TODO: relative affinity!
-                for (color, affinity) in lifetime.affine.data.iter() {
-                    match affine.entry(color.clone()) {
-                        Entry::Occupied(mut o) => match o.get() * affinity {
-                            Ok(affinity) => *o.get_mut() = affinity,
-                            Err(err) => error = Some(err),
+                for (color, relative_affinity) in lifetime.affine.data.iter() {
+                    match value.map_borrow(&mut parametric_map, relative_affinity) {
+                        Ok(affinity) => match affine.entry(color.clone()) {
+                            Entry::Occupied(mut o) => match o.get() * affinity {
+                                Ok(affinity) => *o.get_mut() = affinity,
+                                Err(err) => {
+                                    error = Some(err);
+                                    break;
+                                }
+                            },
+                            Entry::Vacant(v) => {
+                                v.insert(affinity);
+                            }
                         },
-                        Entry::Vacant(v) => {
-                            v.insert(affinity.clone());
+                        Err(err) => {
+                            error = Some(err);
+                            break;
                         }
                     }
                 }
