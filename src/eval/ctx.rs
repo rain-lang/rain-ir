@@ -185,7 +185,7 @@ impl EvalCtx {
         }
         // Attempt to color map the lifetime
         let result = lifetime.color_map(
-            |color| self.color_map.get(color).unwrap_or(&Lifetime::STATIC),
+            |color| Some(self.color_map.get(color).unwrap_or(&Lifetime::STATIC)),
             current_depth,
         )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());

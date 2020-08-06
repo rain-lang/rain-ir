@@ -188,10 +188,12 @@ impl Lifetime {
     #[inline]
     pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error>
     where
-        F: FnMut(&Color) -> &'a Lifetime,
+        F: FnMut(&Color) -> Option<&'a Lifetime>,
     {
         if let Some(data) = self.data() {
-            data.color_map(color_map, depth).map(Lifetime::new)
+            let mut data = data.clone();
+            data.color_map(color_map, depth)?;
+            Ok(Lifetime::new(data))
         } else {
             Ok(Lifetime::STATIC)
         }

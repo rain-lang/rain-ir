@@ -157,7 +157,7 @@ impl Affine {
             }
         }
     }
-    /// Take the conjunction of this lifetime with another
+    /// Take the disjunction of this lifetime with another
     pub fn disj(&self, other: &Affine) -> Result<Affine, Error> {
         use Affine::*;
         match (self, other) {
@@ -189,7 +189,6 @@ impl Affine {
         }
     }
 }
-
 
 impl Mul for AffineData {
     type Output = Result<AffineData, Error>;

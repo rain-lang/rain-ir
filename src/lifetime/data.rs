@@ -5,6 +5,8 @@ use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Type;
 use crate::value::Error;
+use fxhash::FxHashMap;
+use im::hashmap::Entry;
 use lazy_static;
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -130,12 +132,91 @@ impl LifetimeData {
         }
     }
     /// Attempt to color map a lifetime while truncating it's region to a given level
+    ///
+    /// Leaves the lifetime in an undetermined but valid state on failure
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<LifetimeData, Error>
+    pub fn color_map<'a, F>(&mut self, mut color_map: F, depth: usize) -> Result<(), Error>
     where
-        F: FnMut(&Color) -> &'a Lifetime,
+        F: FnMut(&Color) -> Option<&'a Lifetime>,
     {
-        unimplemented!()
+        let mut affine: FxHashMap<Color, Affine> = FxHashMap::default();
+        let mut error = None;
+        self.affine.data.retain(|key, _value| {
+            use std::collections::hash_map::Entry;
+            if key.depth() < depth || error.is_some() {
+                return true;
+            }
+            if let Some(lifetime) = color_map(key) {
+                //TODO: relative affinity!
+                for (color, affinity) in lifetime.affine.data.iter() {
+                    match affine.entry(color.clone()) {
+                        Entry::Occupied(mut o) => match o.get() * affinity {
+                            Ok(affinity) => *o.get_mut() = affinity,
+                            Err(err) => error = Some(err),
+                        },
+                        Entry::Vacant(v) => {
+                            v.insert(affinity.clone());
+                        }
+                    }
+                }
+                false
+            } else {
+                unimplemented!("Single-color escape")
+            }
+        });
+        if let Some(err) = error {
+            return Err(err);
+        }
+        for (color, affinity) in affine.into_iter() {
+            match self.affine.data.entry(color) {
+                Entry::Occupied(mut o) => {
+                    let new_affinity = (o.get() * affinity)?;
+                    if new_affinity != *o.get() {
+                        *o.get_mut() = new_affinity
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(affinity);
+                }
+            }
+        }
+        let mut relevant: FxHashMap<Color, Relevant> = FxHashMap::default();
+        self.relevant.data.retain(|key, _value| {
+            use std::collections::hash_map::Entry;
+            if key.depth() < depth {
+                return true;
+            }
+            if let Some(lifetime) = color_map(key) {
+                for (color, relevance) in lifetime.relevant.data.iter() {
+                    //TODO: relative relevance!
+                    match relevant.entry(color.clone()) {
+                        Entry::Occupied(mut o) => {
+                            *o.get_mut() = o.get() * relevance;
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(relevance.clone());
+                        }
+                    }
+                }
+                false
+            } else {
+                unimplemented!("Single-color escape")
+            }
+        });
+        for (color, relevance) in relevant.into_iter() {
+            match self.relevant.data.entry(color) {
+                Entry::Occupied(mut o) => {
+                    let new_relevance = o.get() * relevance;
+                    if new_relevance != *o.get() {
+                        *o.get_mut() = new_relevance;
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(relevance);
+                }
+            }
+        }
+        Ok(())
     }
 }
 
