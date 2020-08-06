@@ -139,6 +139,7 @@ impl LifetimeData {
     where
         F: FnMut(&Color) -> Option<&'a Lifetime>,
     {
+        self.region = self.region.ancestor(depth.saturating_sub(1)).cloned_region();
         let mut affine: FxHashMap<Color, Affine> = FxHashMap::default();
         let mut error = None;
         self.affine.data.retain(|key, _value| {

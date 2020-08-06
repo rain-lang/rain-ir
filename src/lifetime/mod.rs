@@ -95,6 +95,15 @@ impl Lifetime {
     pub fn data(&self) -> Option<&LifetimeData> {
         self.0.as_deref()
     }
+    /// Get a pointer to this lifetime's data, if any, or null otherwise
+    #[inline]
+    pub fn data_ptr(&self) -> *const LifetimeData {
+        if let Some(data) = self.data() {
+            data
+        } else {
+            std::ptr::null()
+        }
+    }
     /// Get the data backing this lifetime
     #[inline]
     pub fn data_or_static(&self) -> &LifetimeData {
@@ -222,6 +231,15 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn data(&self) -> Option<&'a LifetimeData> {
         self.0.map(|l| l.get())
+    }
+    /// Get a pointer to this lifetime's data, if any, or null otherwise
+    #[inline]
+    pub fn data_ptr(&self) -> *const LifetimeData {
+        if let Some(data) = self.data() {
+            data
+        } else {
+            std::ptr::null()
+        }
     }
     /// Get the data backing this lifetime
     #[inline]

@@ -6,23 +6,19 @@ use super::*;
 
 impl PartialEq for Lifetime {
     fn eq(&self, other: &Lifetime) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
 impl Hash for Lifetime {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+        std::ptr::hash(self.data_ptr(), hasher)
     }
 }
 
 impl PartialEq for LifetimeBorrow<'_> {
     fn eq(&self, other: &LifetimeBorrow) -> bool {
-        let self_ptr = self.deref() as *const _;
-        let other_ptr = other.deref() as *const _;
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
@@ -40,7 +36,7 @@ impl PartialEq<LifetimeBorrow<'_>> for Lifetime {
 
 impl Hash for LifetimeBorrow<'_> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.deref(), hasher)
+        std::ptr::hash(self.data_ptr(), hasher)
     }
 }
 
