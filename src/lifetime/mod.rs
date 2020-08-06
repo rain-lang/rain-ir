@@ -82,8 +82,8 @@ impl Lifetime {
     }
     /// Get a lifetime which owns a single color
     #[inline]
-    pub fn owns(_color: Color) -> Lifetime {
-        unimplemented!()
+    pub fn owns(color: Color) -> Lifetime {
+        LifetimeData::owns(color).into()
     }
     /// Borrow a lifetime
     #[inline]

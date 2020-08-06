@@ -48,6 +48,12 @@ impl LifetimeData {
             relevant: RelevantData::default(),
         })
     }
+    /// Create a lifetime which only owns a particular color
+    #[inline]
+    pub fn owns(color: Color) -> LifetimeData {
+        let affine = AffineData::owns(color);
+        Self::try_from_affine(affine).expect("Single color lifetimes always have valid regions")
+    }
     /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
