@@ -39,6 +39,8 @@ pub struct LifetimeData {
 
 impl LifetimeData {
     /// Try to create a purely affine lifetime
+    /// 
+    /// Fails if the region is inconsistent
     #[inline]
     pub fn try_from_affine(affine: AffineData) -> Result<LifetimeData, Error> {
         let region = affine.region()?.cloned_region();
