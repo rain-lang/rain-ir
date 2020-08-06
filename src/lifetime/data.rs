@@ -38,18 +38,26 @@ pub struct LifetimeData {
 }
 
 impl LifetimeData {
+    /// Try to create a purely affine lifetime
+    #[inline]
+    pub fn try_from_affine(affine: AffineData) -> Result<LifetimeData, Error> {
+        let region = affine.region()?.cloned_region();
+        Ok(LifetimeData {
+            affine,
+            region,
+            relevant: RelevantData::default(),
+        })
+    }
     /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
         let ty = region.param_tys().get(ix).ok_or(Error::InvalidParam)?;
-        let mut affine = AffineData::default();
         let mut relevant = RelevantData::default();
-        if ty.is_affine() {
-            affine.affine = true;
-            affine
-                .data
-                .insert(Color::param_unchecked(region.clone(), ix), Affine::Owned);
-        }
+        let affine = if ty.is_affine() {
+            AffineData::owns(Color::param_unchecked(region.clone(), ix))
+        } else {
+            AffineData::default()
+        };
         if ty.is_relevant() {
             relevant
                 .data
@@ -139,7 +147,10 @@ impl LifetimeData {
     where
         F: FnMut(&Color) -> Option<&'a Lifetime>,
     {
-        self.region = self.region.ancestor(depth.saturating_sub(1)).cloned_region();
+        self.region = self
+            .region
+            .ancestor(depth.saturating_sub(1))
+            .cloned_region();
         let mut affine: FxHashMap<Color, Affine> = FxHashMap::default();
         let mut error = None;
         self.affine.data.retain(|key, _value| {

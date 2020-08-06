@@ -39,6 +39,7 @@ impl AffineData {
     }
     /// Create an affine lifetime only borrowing a given color from a source
     pub fn borrows(color: Color, source: ValId) -> AffineData {
+        //TODO: check borrow-region relationship
         Self::unit(color, Affine::Borrowed(source))
     }
     /// Take the separating conjunction of this lifetime with another
