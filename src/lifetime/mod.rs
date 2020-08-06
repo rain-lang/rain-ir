@@ -8,7 +8,7 @@ pointer-chasing) and implementations of a variety of algorithms used in the life
 
 */
 use crate::region::{Region, RegionBorrow, Regional};
-use crate::value::Error;
+use crate::value::{Error, ValId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
@@ -195,13 +195,19 @@ impl Lifetime {
     }
     /// Attempt to color map a lifetime while truncating it's region to a given level
     #[inline]
-    pub fn color_map<'a, F>(&self, color_map: F, depth: usize) -> Result<Lifetime, Error>
+    pub fn color_map<'a, F, P>(
+        &self,
+        color_map: F,
+        parametric_map: P,
+        depth: usize,
+    ) -> Result<Lifetime, Error>
     where
         F: FnMut(&Color) -> Option<&'a Lifetime>,
+        P: FnMut(&ValId) -> Result<ValId, Error>,
     {
         if let Some(data) = self.data() {
             let mut data = data.clone();
-            data.color_map(color_map, depth)?;
+            data.color_map(color_map, parametric_map, depth)?;
             Ok(Lifetime::new(data))
         } else {
             Ok(Lifetime::STATIC)

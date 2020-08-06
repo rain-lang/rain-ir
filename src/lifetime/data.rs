@@ -149,9 +149,10 @@ impl LifetimeData {
     ///
     /// Leaves the lifetime in an undetermined but valid state on failure
     #[inline]
-    pub fn color_map<'a, F>(&mut self, mut color_map: F, depth: usize) -> Result<(), Error>
+    pub fn color_map<'a, F, P>(&mut self, mut color_map: F, parametric_map: P, depth: usize) -> Result<(), Error>
     where
         F: FnMut(&Color) -> Option<&'a Lifetime>,
+        P: FnMut(&ValId) -> Result<ValId, Error>,
     {
         self.region = self
             .region

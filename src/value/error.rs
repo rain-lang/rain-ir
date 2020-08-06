@@ -41,5 +41,7 @@ pub enum Error {
     /// An invalid substitution kind
     InvalidSubKind,
     /// An invalid parameter
-    InvalidParam
+    InvalidParam,
+    /// An undefined parameter
+    UndefParam,
 }

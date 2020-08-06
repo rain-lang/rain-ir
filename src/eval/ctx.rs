@@ -186,6 +186,8 @@ impl EvalCtx {
         // Attempt to color map the lifetime
         let result = lifetime.color_map(
             |color| Some(self.color_map.get(color).unwrap_or(&Lifetime::STATIC)),
+            //TODO: shallow borrow restriction?
+            |value| self.eval_cache.get(value).cloned().ok_or(Error::UndefParam),
             current_depth,
         )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());
