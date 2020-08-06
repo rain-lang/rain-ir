@@ -26,6 +26,21 @@ impl Default for AffineData {
 }
 
 impl AffineData {
+    /// Create an affine lifetime from a single obligation
+    pub fn unit(color: Color, affinity: Affine) -> AffineData {
+        let affine = affinity.is_affine();
+        let mut data = HashMap::default();
+        data.insert(color, affinity);
+        AffineData { data, affine }
+    }
+    /// Create an affine lifetime only owning a given color
+    pub fn owns(color: Color) -> AffineData {
+        Self::unit(color, Affine::Owned)
+    }
+    /// Create an affine lifetime only borrowing a given color from a source
+    pub fn borrows(color: Color, source: ValId) -> AffineData {
+        Self::unit(color, Affine::Borrowed(source))
+    }
     /// Take the separating conjunction of this lifetime with another
     ///
     /// Leaves this lifetime in an undetermined but valid state on failure
@@ -172,12 +187,12 @@ impl Affine {
             }
         }
     }
-    /// Whether this lifetime is idempotent under separating conjunction
-    pub fn idempotent(&self) -> bool {
+    /// Whether this lifetime is affine in itself
+    pub fn is_affine(&self) -> bool {
         use Affine::*;
         match self {
-            Owned => false,
-            Borrowed(_) => true,
+            Owned => true,
+            Borrowed(_) => false,
         }
     }
     /// Take the separating conjunction of this affine lifetime with itself
