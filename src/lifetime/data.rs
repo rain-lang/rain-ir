@@ -56,7 +56,9 @@ impl LifetimeData {
         let affine = AffineData::owns(color);
         Self::try_from_affine(affine).expect("Single color lifetimes always have valid regions")
     }
-    /// Gets the lifetime for the nth parameter of a `Region`. Returns a regular lifetime `Region` on OOB
+    /// Gets the lifetime for the nth parameter of a `Region`.
+    /// 
+    /// Returns an error on index out of bounds
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
         let ty = region.param_tys().get(ix).ok_or(Error::InvalidParam)?;
