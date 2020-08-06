@@ -94,6 +94,11 @@ impl LifetimeData {
     pub fn is_relevant(&self) -> bool {
         self.relevant.is_relevant()
     }
+    /// Whether this lifetime is linear
+    #[inline]
+    pub fn is_linear(&self) -> bool {
+        self.is_affine() && self.is_relevant()
+    }
     /// Get the separating conjunction of two lifetimes
     #[inline]
     pub fn sep_conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
