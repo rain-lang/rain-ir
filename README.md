@@ -16,4 +16,4 @@
 
 `rain`, however, is not a programming language but an _intermediate representation_, and hence does not aim to necessarily be easily human-readable or human-writable. For instance, we only plan to support very limited type inference, with most of this responsibility being dedicated to front-ends.
 
-Contributions, ideas and collaboration proposals are welcome: please make an issue or e-mail jad.ghalayini@mail.utoronto.ca.
+Contributions, ideas and collaboration proposals are welcome: please make an issue or e-mail jad.ghalayini@gtc.ox.ac.uk.
