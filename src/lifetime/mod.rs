@@ -311,3 +311,28 @@ macro_rules! trivial_lifetime {
         }
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic_affine_lifetime_operations() {
+        let red = Color::new();
+        let black = Color::new();
+        let alpha = Lifetime::owns(red.clone());
+        let beta = Lifetime::owns(black.clone());
+        assert_ne!(red, black);
+        assert_ne!(alpha, beta);
+        assert_eq!(alpha, (&alpha + &alpha).unwrap());
+        assert_eq!(&alpha * &alpha, Err(Error::AffineUsed));
+        let gamma = (&alpha * &beta).unwrap();
+        assert_eq!(gamma, (&alpha + &beta).unwrap());
+        assert_ne!(gamma, alpha);
+        assert_ne!(gamma, beta);
+        assert_eq!(gamma, (&gamma + &alpha).unwrap());
+        assert_eq!(gamma, (&gamma + &beta).unwrap());
+        assert_eq!(&gamma * &alpha, Err(Error::AffineUsed));
+        assert_eq!(&gamma * &beta, Err(Error::AffineUsed));
+    }
+}

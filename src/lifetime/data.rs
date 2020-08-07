@@ -118,7 +118,7 @@ impl LifetimeData {
     #[inline]
     pub fn disj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
         let region = self.lcr(other)?.cloned_region();
-        let affine = (&self.affine * &other.affine)?;
+        let affine = (&self.affine + &other.affine)?;
         let relevant = &self.relevant + &other.relevant;
         Ok(LifetimeData {
             affine,
