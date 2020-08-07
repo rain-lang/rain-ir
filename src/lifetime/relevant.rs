@@ -2,7 +2,7 @@
 Relevant lifetimes
 */
 use super::*;
-use fxhash::FxBuildHasher;
+use fxhash::{FxBuildHasher, FxHashMap};
 use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely relevant lifetime
@@ -76,6 +76,52 @@ impl RelevantData {
             }
         }
         Ok(min)
+    }
+    /// Perform a color-mapping of this lifetime
+    ///
+    /// Leaves this lifetime in an undetermined but valid state upon failure
+    #[inline]
+    pub fn color_map<'a, F>(&mut self, mut color_map: F, depth: usize) -> Result<(), Error>
+    where
+        F: FnMut(&Color) -> Option<&'a Lifetime>,
+    {
+        let mut relevant: FxHashMap<Color, Relevant> = FxHashMap::default();
+        self.data.retain(|key, _value| {
+            use std::collections::hash_map::Entry;
+            if key.depth() < depth {
+                return true;
+            }
+            if let Some(lifetime) = color_map(key) {
+                for (color, relevance) in lifetime.relevant().data.iter() {
+                    //TODO: relative relevance!
+                    match relevant.entry(color.clone()) {
+                        Entry::Occupied(mut o) => {
+                            *o.get_mut() = o.get() * relevance;
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(relevance.clone());
+                        }
+                    }
+                }
+                false
+            } else {
+                unimplemented!("Single-color escape")
+            }
+        });
+        for (color, relevance) in relevant.into_iter() {
+            match self.data.entry(color) {
+                Entry::Occupied(mut o) => {
+                    let new_relevance = o.get() * relevance;
+                    if new_relevance != *o.get() {
+                        *o.get_mut() = new_relevance;
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(relevance);
+                }
+            }
+        }
+        Ok(())
     }
 }
 

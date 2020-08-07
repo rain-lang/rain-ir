@@ -5,8 +5,6 @@ use super::*;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Type;
 use crate::value::Error;
-use fxhash::FxHashMap;
-use im::hashmap::Entry;
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -189,42 +187,7 @@ impl LifetimeData {
             .cloned_region();
         self.affine
             .color_map(&mut color_map, &mut parametric_map, depth)?;
-        let mut relevant: FxHashMap<Color, Relevant> = FxHashMap::default();
-        self.relevant.data.retain(|key, _value| {
-            use std::collections::hash_map::Entry;
-            if key.depth() < depth {
-                return true;
-            }
-            if let Some(lifetime) = color_map(key) {
-                for (color, relevance) in lifetime.relevant.data.iter() {
-                    //TODO: relative relevance!
-                    match relevant.entry(color.clone()) {
-                        Entry::Occupied(mut o) => {
-                            *o.get_mut() = o.get() * relevance;
-                        }
-                        Entry::Vacant(v) => {
-                            v.insert(relevance.clone());
-                        }
-                    }
-                }
-                false
-            } else {
-                unimplemented!("Single-color escape")
-            }
-        });
-        for (color, relevance) in relevant.into_iter() {
-            match self.relevant.data.entry(color) {
-                Entry::Occupied(mut o) => {
-                    let new_relevance = o.get() * relevance;
-                    if new_relevance != *o.get() {
-                        *o.get_mut() = new_relevance;
-                    }
-                }
-                Entry::Vacant(v) => {
-                    v.insert(relevance);
-                }
-            }
-        }
+        self.relevant.color_map(&mut color_map, depth)?;
         Ok(())
     }
 }
