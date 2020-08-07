@@ -99,6 +99,11 @@ impl LifetimeData {
     pub fn is_linear(&self) -> bool {
         self.is_affine() && self.is_relevant()
     }
+    /// Whether this lifetime is substructural
+    #[inline]
+    pub fn is_substruct(&self) -> bool {
+        self.is_affine() || self.is_relevant()
+    }
     /// Get the separating conjunction of two lifetimes
     #[inline]
     pub fn sep_conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
