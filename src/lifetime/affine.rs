@@ -4,7 +4,7 @@ Affine lifetimes
 use super::*;
 use crate::region::Regional;
 use crate::value::ValId;
-use fxhash::FxBuildHasher;
+use fxhash::{FxBuildHasher, FxHashMap};
 use im::{hashmap::Entry, HashMap};
 
 /// The data describing a purely affine lifetime
@@ -131,6 +131,71 @@ impl AffineData {
             }
         }
         Ok(min)
+    }
+    /// Perform a color-mapping of this lifetime
+    ///
+    /// Leaves this lifetime in an undetermined but valid state upon failure
+    #[inline]
+    pub fn color_map<'a, F, P>(
+        &mut self,
+        mut color_map: F,
+        mut parametric_map: P,
+        depth: usize,
+    ) -> Result<(), Error>
+    where
+        F: FnMut(&Color) -> Option<&'a Lifetime>,
+        P: FnMut(&ValId) -> Result<ValId, Error>,
+    {
+        let mut error = None;
+        let mut updates: FxHashMap<Color, Affine> = FxHashMap::default();
+        self.data.retain(|key, value| {
+            use std::collections::hash_map::Entry;
+            if key.depth() < depth || error.is_some() {
+                return true;
+            }
+            if let Some(lifetime) = color_map(key) {
+                for (color, relative_affinity) in lifetime.affine().data.iter() {
+                    match value.map_borrow(&mut parametric_map, relative_affinity) {
+                        Ok(affinity) => match updates.entry(color.clone()) {
+                            Entry::Occupied(mut o) => match o.get() * affinity {
+                                Ok(affinity) => *o.get_mut() = affinity,
+                                Err(err) => {
+                                    error = Some(err);
+                                    break;
+                                }
+                            },
+                            Entry::Vacant(v) => {
+                                v.insert(affinity);
+                            }
+                        },
+                        Err(err) => {
+                            error = Some(err);
+                            break;
+                        }
+                    }
+                }
+                false
+            } else {
+                unimplemented!("Single-color escape")
+            }
+        });
+        if let Some(err) = error {
+            return Err(err);
+        }
+        for (color, affinity) in updates.into_iter() {
+            match self.data.entry(color) {
+                Entry::Occupied(mut o) => {
+                    let new_affinity = (o.get() * affinity)?;
+                    if new_affinity != *o.get() {
+                        *o.get_mut() = new_affinity
+                    }
+                }
+                Entry::Vacant(v) => {
+                    v.insert(affinity);
+                }
+            }
+        }
+        Ok(())
     }
 }
 

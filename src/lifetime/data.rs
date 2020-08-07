@@ -39,7 +39,7 @@ pub struct LifetimeData {
 
 impl LifetimeData {
     /// Try to create a purely affine lifetime
-    /// 
+    ///
     /// Fails if the region is inconsistent
     #[inline]
     pub fn try_from_affine(affine: AffineData) -> Result<LifetimeData, Error> {
@@ -57,7 +57,7 @@ impl LifetimeData {
         Self::try_from_affine(affine).expect("Single color lifetimes always have valid regions")
     }
     /// Gets the lifetime for the nth parameter of a `Region`.
-    /// 
+    ///
     /// Returns an error on index out of bounds
     #[inline]
     pub fn param(region: Region, ix: usize) -> Result<LifetimeData, Error> {
@@ -128,6 +128,16 @@ impl LifetimeData {
             region,
         })
     }
+    /// Get a reference to the affine component of this lifetime
+    #[inline]
+    pub fn affine(&self) -> &AffineData {
+        &self.affine
+    }
+    /// Get a reference to the relevant component of this lifetime
+    #[inline]
+    pub fn relevant(&self) -> &RelevantData {
+        &self.relevant
+    }
     /// Get the affine component of this lifetime
     #[inline]
     pub fn affine_component(&self) -> LifetimeData {
@@ -177,55 +187,8 @@ impl LifetimeData {
             .region
             .ancestor(depth.saturating_sub(1))
             .cloned_region();
-        let mut affine: FxHashMap<Color, Affine> = FxHashMap::default();
-        let mut error = None;
-        self.affine.data.retain(|key, value| {
-            use std::collections::hash_map::Entry;
-            if key.depth() < depth || error.is_some() {
-                return true;
-            }
-            if let Some(lifetime) = color_map(key) {
-                for (color, relative_affinity) in lifetime.affine.data.iter() {
-                    match value.map_borrow(&mut parametric_map, relative_affinity) {
-                        Ok(affinity) => match affine.entry(color.clone()) {
-                            Entry::Occupied(mut o) => match o.get() * affinity {
-                                Ok(affinity) => *o.get_mut() = affinity,
-                                Err(err) => {
-                                    error = Some(err);
-                                    break;
-                                }
-                            },
-                            Entry::Vacant(v) => {
-                                v.insert(affinity);
-                            }
-                        },
-                        Err(err) => {
-                            error = Some(err);
-                            break;
-                        }
-                    }
-                }
-                false
-            } else {
-                unimplemented!("Single-color escape")
-            }
-        });
-        if let Some(err) = error {
-            return Err(err);
-        }
-        for (color, affinity) in affine.into_iter() {
-            match self.affine.data.entry(color) {
-                Entry::Occupied(mut o) => {
-                    let new_affinity = (o.get() * affinity)?;
-                    if new_affinity != *o.get() {
-                        *o.get_mut() = new_affinity
-                    }
-                }
-                Entry::Vacant(v) => {
-                    v.insert(affinity);
-                }
-            }
-        }
+        self.affine
+            .color_map(&mut color_map, &mut parametric_map, depth)?;
         let mut relevant: FxHashMap<Color, Relevant> = FxHashMap::default();
         self.relevant.data.retain(|key, _value| {
             use std::collections::hash_map::Entry;
