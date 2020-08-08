@@ -26,6 +26,7 @@ thin-dst = "^1.1.0"
 dashcache = "^0.2.0"
 im = "^15"
 hayami = "^0.3"
+im-rc = "^15"
 rand = { version = "^0.7", optional = true }
 
 [dev-dependencies]
@@ -38,9 +39,11 @@ criterion = "^0.3"
 [features]
 default = [
     "prettyprinter",
-    "rand"
+    "rand",
+    "pool"
     ]
 prettyprinter = []
+pool = ["im-rc/pool"]
 
 [[bench]]
 name = "basic"

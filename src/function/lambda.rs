@@ -69,6 +69,13 @@ impl Lambda {
     pub fn def_region(&self) -> RegionBorrow {
         self.ty.def_region()
     }
+    /// Get the depth of the defining region of this lambda function
+    #[inline]
+    pub fn def_depth(&self) -> usize {
+        let depth = self.depth() + 1;
+        debug_assert_eq!(depth, self.def_region().depth());
+        depth
+    }
     /// Get the result of this lambda function
     #[inline]
     pub fn result(&self) -> &ValId {
@@ -126,18 +133,12 @@ impl Apply for Lambda {
             ));
         }
 
-        let ctx = ctx.get_or_insert_with(|| {
-            let eval_capacity = 0; //TODO
-            let lt_capacity = 0; //TODO
-            let color_capacity = 0; //TODO
-            EvalCtx::with_capacity(eval_capacity, lt_capacity, color_capacity)
-        });
+        let ctx = ctx.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
         // Substitute
-        let region = ctx.push_region(
+        let region = ctx.substitute_region(
             self.def_region().as_region(),
             args.iter().cloned(),
-            !ctx.is_checked(),
             false,
         )?;
 
