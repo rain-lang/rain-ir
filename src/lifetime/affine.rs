@@ -153,7 +153,7 @@ impl AffineData {
             if key.depth() < depth || error.is_some() {
                 return true;
             }
-            if let Some(lifetime) = color_map(key) {
+            if let Some(lifetime) = color_map(key).map(Lifetime::data).flatten() {
                 for (color, relative_affinity) in lifetime.affine().data.iter() {
                     match value.map_borrow(&mut parametric_map, relative_affinity) {
                         Ok(affinity) => match updates.entry(color.clone()) {

@@ -91,7 +91,7 @@ impl RelevantData {
             if key.depth() < depth {
                 return true;
             }
-            if let Some(lifetime) = color_map(key) {
+            if let Some(lifetime) = color_map(key).map(Lifetime::data).flatten() {
                 for (color, relevance) in lifetime.relevant().data.iter() {
                     //TODO: relative relevance!
                     match relevant.entry(color.clone()) {

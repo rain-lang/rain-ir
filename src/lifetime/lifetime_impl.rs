@@ -187,7 +187,7 @@ impl Mul<LifetimeBorrow<'_>> for LifetimeBorrow<'_> {
 impl Regional for Lifetime {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        self.deref().region()
+        self.data().map(Regional::region).flatten()
     }
 }
 

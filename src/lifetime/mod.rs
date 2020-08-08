@@ -17,8 +17,6 @@ use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::ops::{Add, Mul};
 
-mod arr;
-pub use arr::*;
 mod color;
 pub use color::*;
 mod data;
@@ -42,17 +40,6 @@ pub struct Lifetime(Option<Arc<LifetimeData>>);
 /// A borrow of a `rain` lifetime
 #[derive(Debug, Copy, Clone, Eq, Default)]
 pub struct LifetimeBorrow<'a>(Option<ArcBorrow<'a, LifetimeData>>);
-
-impl Deref for Lifetime {
-    type Target = LifetimeData;
-    fn deref(&self) -> &LifetimeData {
-        if let Some(ptr) = &self.0 {
-            &ptr
-        } else {
-            &STATIC_LIFETIME_DATA
-        }
-    }
-}
 
 impl Lifetime {
     /// The static `rain` lifetime
