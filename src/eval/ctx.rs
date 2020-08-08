@@ -166,23 +166,28 @@ impl EvalCtx {
             color_map: HashMap<Color, Lifetime, FxBuildHasher>,
         };
         let mut old_caches: Option<OldCaches> = None;
+        let old_is_empty = self.is_empty();
         for param in region.borrow_params().map(Value::into_val) {
             if let Some(value) = values.next() {
                 // Save old caches, if necessary
-                if old_caches.is_none() {
+                if !old_is_empty && old_caches.is_none() {
                     old_caches = Some(OldCaches {
                         eval_cache: self.eval_cache.clone(),
                         lt_cache: self.lt_cache.clone(),
                         color_map: self.color_map.clone(),
                     });
                 }
-                // In case of error, restore old caches
+                // In case of error, restore old caches or clear caches if none
                 if let Err(err) = self.substitute_impl(param.clone(), value, true, false) {
-                    //TODO: cleaner?
-                    let old_caches = old_caches.unwrap();
-                    self.eval_cache = old_caches.eval_cache;
-                    self.lt_cache = old_caches.lt_cache;
-                    self.color_map = old_caches.color_map;
+                    if let Some(old_caches) = old_caches {
+                        self.eval_cache = old_caches.eval_cache;
+                        self.lt_cache = old_caches.lt_cache;
+                        self.color_map = old_caches.color_map;
+                    } else {
+                        self.eval_cache.clear();
+                        self.lt_cache.clear();
+                        self.color_map.clear();
+                    }
                     return Err(err);
                 }
             } else if inline {
