@@ -109,7 +109,7 @@ impl ValId {
             return Ok(value);
         }
         let result: ValId = self.deref().substitute(ctx)?;
-        ctx.substitute(self.clone(), result.clone(), false)?;
+        ctx.substitute_impl(self.clone(), result.clone(), false, false)?;
         Ok(result)
     }
 }

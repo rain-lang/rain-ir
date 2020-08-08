@@ -71,6 +71,13 @@ impl Pi {
             .region()
             .expect("Pi type cannot have a null region!")
     }
+    /// Get the depth of the defining region of this pi type
+    #[inline]
+    pub fn def_depth(&self) -> usize {
+        let depth = self.depth() + 1;
+        debug_assert_eq!(depth, self.def_region().depth());
+        depth
+    }
     /// Get the parameter types of this pi type
     #[inline]
     pub fn param_tys(&self) -> &TyArr {
@@ -163,18 +170,12 @@ impl Type for Pi {
         let ctx_handle = ctx;
 
         // Initialize context
-        let ctx = ctx_handle.get_or_insert_with(|| {
-            let eval_capacity = 0; //TODO
-            let lt_capacity = 0; //TODO
-            let color_capacity = 0; //TODO
-            EvalCtx::with_capacity(eval_capacity, lt_capacity, color_capacity)
-        });
+        let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
         // Substitute
-        let region = ctx.push_region(
+        let region = ctx.substitute_region(
             self.def_region().as_region(),
             args.iter().cloned(),
-            !ctx.is_checked(),
             false,
         )?;
 
