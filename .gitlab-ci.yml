@@ -296,11 +296,11 @@ pages:
     script:
         - cargo doc --no-deps
         - mv target/doc public
-        - - echo '<meta http-equiv="refresh" content="0; url=rain_llvm/index.html">' > public/index.html
+        - - echo '<meta http-equiv="refresh" content="0; url=rain_ir/index.html">' > public/index.html
     dependencies:
         - build:cargo-stable
     artifacts:
         paths:
             - public
     only: 
-        - master@rain-lang/rain-llvm
+        - master@rain-lang/rain-ir
