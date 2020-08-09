@@ -105,7 +105,7 @@ impl LifetimeData {
     /// Get the separating conjunction of two lifetimes
     #[inline]
     pub fn sep_conj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        let region = self.lcr(other)?.cloned_region();
+        let region = self.gcr(other)?.cloned_region();
         let affine = (&self.affine * &other.affine)?;
         let relevant = &self.relevant * &other.relevant;
         Ok(LifetimeData {
@@ -117,7 +117,7 @@ impl LifetimeData {
     /// Get the disjunction of two lifetimes
     #[inline]
     pub fn disj(&self, other: &LifetimeData) -> Result<LifetimeData, Error> {
-        let region = self.lcr(other)?.cloned_region();
+        let region = self.gcr(other)?.cloned_region();
         let affine = (&self.affine + &other.affine)?;
         let relevant = &self.relevant + &other.relevant;
         Ok(LifetimeData {

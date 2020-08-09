@@ -100,14 +100,37 @@ impl EvalCtx {
         }
         self.parents.get(ix)
     }
+    /// Send this evaluation context to a given depth
+    #[inline]
+    pub fn to_depth(&mut self, depth: usize) {
+        // No-op on equality
+        if depth == self.depth() {
+            return;
+        }
+        if let Some(ctx) = self.at_depth(depth).cloned() {
+            // Restore previous state
+            *self = ctx
+        } else if depth > self.depth() {
+            // Push on new state
+            while depth > self.depth() {
+                self.push()
+            }
+        } else {
+            // Clear caches, send root pointer backwards
+            self.clear();
+            self.root_depth = depth;
+        }
+    }
     /// Pop a level off this evaluation context
     #[inline]
     pub fn pop(&mut self) {
         if let Some(last) = self.parents.last().cloned() {
+            // Restore previous state
             *self = last
         } else {
-            //TODO: think about this...
-            self.clear()
+            // Clear caches, send root pointer backwards
+            self.clear();
+            self.root_depth = self.root_depth.saturating_sub(1);
         }
     }
     /// Check whether this is a pre-checked context
@@ -159,7 +182,25 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
-        //TODO: check region validity
+        //TODO: fix stuff
+        /*
+        // Get the LCR, returning an error on incompatible regions
+        let lcr = region.lcr(&self.curr_region)?;
+        let lcr_depth = lcr.depth();
+        // Check if the current region is not the LCR
+        if lcr != self.curr_region.region() {
+            // Get the evaluation context at the LCR, if any, and substitute within it
+            let mut at_lcr = self
+                .at_depth(lcr_depth - 1)
+                .cloned()
+                .unwrap_or_else(|| EvalCtx::new(lcr_depth - 1));
+            debug_assert_eq!(at_lcr.curr_region.region(), lcr.ancestor(lcr_depth - 1));
+            let result = at_lcr.substitute_region(region, values, inline)?;
+            *self = at_lcr;
+            return Ok(result);
+        }
+        */
+        let region_depth = region.depth();
         struct OldCaches {
             eval_cache: HashMap<ValId, ValId, FxBuildHasher>,
             lt_cache: HashMap<Lifetime, Lifetime, FxBuildHasher>,
@@ -197,17 +238,32 @@ impl EvalCtx {
             }
         }
         if let Some(old_caches) = old_caches {
+            // Build up parent regions
+            while self.root_depth < region_depth - 1 {
+                self.parents.push_back(EvalCtx {
+                    eval_cache: old_caches.eval_cache.clone(),
+                    lt_cache: old_caches.lt_cache.clone(),
+                    color_map: old_caches.color_map.clone(),
+                    parents: self.parents.clone(),
+                    curr_region: region.ancestor(self.root_depth).cloned_region(),
+                    root_depth: self.root_depth,
+                });
+                self.root_depth += 1;
+            }
             self.parents.push_back(EvalCtx {
                 eval_cache: old_caches.eval_cache,
                 lt_cache: old_caches.lt_cache,
                 color_map: old_caches.color_map,
                 parents: self.parents.clone(),
-                curr_region: self.curr_region.clone(),
+                curr_region: region.ancestor(self.root_depth).cloned_region(),
                 root_depth: self.root_depth,
-            })
+            });
+            self.root_depth += 1;
         } else {
-            self.push()
+            // Just set the root depth directly
+            self.root_depth = region_depth
         }
+        // Set the current region
         self.curr_region = Some(region.clone());
         Ok(None)
     }

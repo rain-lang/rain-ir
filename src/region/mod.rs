@@ -135,9 +135,9 @@ pub trait Regional {
     fn cloned_region(&self) -> Option<Region> {
         self.region().map(|region| region.clone_region())
     }
-    /// Get the largest region containing this object and another, if any
+    /// Get the greatest region containing this object and another, if any
     #[inline]
-    fn lcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<Option<RegionBorrow<'a>>, Error> {
+    fn gcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<Option<RegionBorrow<'a>>, Error> {
         let this_region = self.region();
         let other_region = other.region();
         match this_region.partial_cmp(&other_region) {
