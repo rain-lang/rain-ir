@@ -125,6 +125,36 @@ impl RelevantData {
     }
 }
 
+impl PartialOrd for RelevantData {
+    fn partial_cmp(&self, other: &RelevantData) -> Option<Ordering> {
+        fn subset_cmp(left: &RelevantData, right: &RelevantData) -> Option<Ordering> {
+            use Ordering::*;
+            let mut strict_sub = false;
+            for (color, affinity) in left.data.iter() {
+                if let Some(other_affinity) = right.data.get(color) {
+                    match affinity.partial_cmp(other_affinity)? {
+                        Greater => strict_sub = true,
+                        Equal => {}
+                        Less => return None,
+                    }
+                } else {
+                    return None;
+                }
+            }
+            if strict_sub || left.len() < right.len() {
+                Some(Greater)
+            } else {
+                Some(Equal)
+            }
+        }
+        if self.len() <= other.len() {
+            subset_cmp(self, other)
+        } else {
+            subset_cmp(other, self).map(Ordering::reverse)
+        }
+    }
+}
+
 impl Mul for RelevantData {
     type Output = RelevantData;
     #[inline]
@@ -197,6 +227,13 @@ pub enum Relevant {
     /// A completely used relevant object
     Used,
     //TODO: elemental relevance
+}
+
+impl PartialOrd for Relevant {
+    #[inline]
+    fn partial_cmp(&self, _other: &Relevant) -> Option<Ordering> {
+        Some(Ordering::Equal)
+    }
 }
 
 impl Relevant {
