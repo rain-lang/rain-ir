@@ -194,7 +194,13 @@ impl LifetimeData {
 
 impl PartialOrd for LifetimeData {
     fn partial_cmp(&self, other: &LifetimeData) -> Option<Ordering> {
-        unimplemented!("Lifetime data ordering: {:#?}, {:#?}", self, other)
+        use Ordering::*;
+        match self.affine.partial_cmp(&other.affine)? {
+            Less if self.relevant <= other.relevant => Some(Less),
+            Equal => self.relevant.partial_cmp(&other.relevant),
+            Greater if self.relevant >= other.relevant => Some(Greater),
+            _ => None,
+        }
     }
 }
 
