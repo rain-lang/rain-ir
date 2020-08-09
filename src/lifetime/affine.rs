@@ -226,7 +226,7 @@ impl PartialOrd for AffineData {
                 }
             }
             if strict_sub || left.len() < right.len() {
-                Some(Less)
+                Some(Greater)
             } else {
                 Some(Equal)
             }

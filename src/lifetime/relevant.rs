@@ -142,7 +142,7 @@ impl PartialOrd for RelevantData {
                 }
             }
             if strict_sub || left.len() < right.len() {
-                Some(Greater)
+                Some(Less)
             } else {
                 Some(Equal)
             }

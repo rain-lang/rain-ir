@@ -302,6 +302,7 @@ macro_rules! trivial_lifetime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Ordering::*;
 
     #[test]
     fn basic_affine_lifetime_operations() {
@@ -311,6 +312,9 @@ mod tests {
         let beta = Lifetime::owns(black.clone());
         assert_ne!(red, black);
         assert_ne!(alpha, beta);
+        assert_eq!(alpha.partial_cmp(&alpha), Some(Equal));
+        assert_eq!(beta.partial_cmp(&beta), Some(Equal));
+        assert_eq!(alpha.partial_cmp(&beta), None);
         assert_eq!(alpha, (&alpha + &alpha).unwrap());
         assert_eq!(&alpha * &alpha, Err(Error::AffineUsed));
         let gamma = (&alpha * &beta).unwrap();
@@ -321,5 +325,8 @@ mod tests {
         assert_eq!(gamma, (&gamma + &beta).unwrap());
         assert_eq!(&gamma * &alpha, Err(Error::AffineUsed));
         assert_eq!(&gamma * &beta, Err(Error::AffineUsed));
+        assert_eq!(gamma.partial_cmp(&alpha), Some(Less));
+        assert_eq!(gamma.partial_cmp(&beta), Some(Less));
+        assert_eq!(gamma.partial_cmp(&gamma), Some(Equal));
     }
 }
