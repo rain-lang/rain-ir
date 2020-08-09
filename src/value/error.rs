@@ -23,6 +23,10 @@ pub enum Error {
     LifetimeError,
     /// Incomparable regions
     IncomparableRegions,
+    /// Incomparable lifetimes
+    IncomparableLifetimes,
+    /// Invalid casting into a lifetime
+    InvalidCastIntoLifetime,
     /// Evaluation error
     EvalError,
     /// Tuple length mismatch

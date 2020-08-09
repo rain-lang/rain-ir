@@ -8,6 +8,7 @@ use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
 use crate::typing::{Type, Typed};
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
+use either::Either;
 use std::ops::Deref;
 
 /// An S-expression
@@ -173,29 +174,34 @@ impl Value for Sexpr {
         self.into()
     }
     #[inline]
-    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
-        if ty.is_none() && lt.is_none() {
-            return Ok(self.into_val());
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(Either::Right(None)),
+            Some(Greater) => {
+                let result = Sexpr {
+                    lifetime: target,
+                    ty: self.ty.clone(),
+                    args: self.args.clone(),
+                };
+                Ok(Either::Left(result.into_val()))
+            }
         }
-        let lt = if let Some(lt) = lt {
-            self.cast_target_lt(lt)?
-        } else {
-            self.lifetime().clone_lifetime()
-        };
-        let ty = if let Some(ty) = ty {
-            self.cast_target_ty(ty)?
-        } else {
-            self.ty().clone_ty()
-        };
-        if lt == self.lifetime() && ty == self.ty() {
-            return Ok(self.into_val());
+    }
+    #[inline]
+    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(self.into_val()),
+            Some(Greater) => {
+                self.lifetime = target;
+                Ok(self.into_val())
+            }
         }
-        Ok(NormalValue(ValueEnum::Sexpr(Sexpr {
-            args: self.args,
-            ty,
-            lifetime: lt,
-        }))
-        .into())
     }
 }
 

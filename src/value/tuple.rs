@@ -14,6 +14,7 @@ use crate::typing::{Type, Typed};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
+use either::Either;
 use std::convert::TryInto;
 use std::ops::Deref;
 
@@ -113,29 +114,37 @@ impl Value for Tuple {
         self.into()
     }
     #[inline]
-    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
-        if ty.is_none() && lt.is_none() {
-            return Ok(self.into_val());
+    fn try_cast_into_lt(
+        &self,
+        target: Lifetime,
+    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(Either::Right(None)),
+            Some(Less) => {
+                let result = Tuple {
+                    lifetime: target,
+                    ty: self.ty.clone(),
+                    elems: self.elems.clone(),
+                };
+                Ok(Either::Left(result.into_val()))
+            }
         }
-        let lt = if let Some(lt) = lt {
-            self.cast_target_lt(lt)?
-        } else {
-            self.lifetime().clone_lifetime()
-        };
-        let ty = if let Some(ty) = ty {
-            self.cast_target_ty(ty)?
-        } else {
-            self.ty().clone_ty()
-        };
-        if lt == self.lifetime() && ty == self.ty() {
-            return Ok(self.into_val());
+    }
+    #[inline]
+    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(self.into_val()),
+            Some(Less) => {
+                self.lifetime = target;
+                Ok(self.into_val())
+            }
         }
-        Ok(NormalValue(ValueEnum::Tuple(Tuple {
-            elems: self.elems,
-            ty,
-            lifetime: lt,
-        }))
-        .into())
     }
 }
 
@@ -145,7 +154,11 @@ impl Apply for Tuple {
     /**
     Tuples accept finite indices as arguments, which is the `rain` syntax for a member access.
     */
-    fn apply_in<'a>(&self, args: &'a [ValId], _ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        _ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         // Check for a null application
         if args.is_empty() {
             return Ok(Application::Complete(
@@ -432,31 +445,38 @@ impl Value for Product {
         self.into()
     }
     #[inline]
-    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
-        if ty.is_none() && lt.is_none() {
-            return Ok(self.into_val());
-        }
-        let lt = if let Some(lt) = lt {
-            self.cast_target_lt(lt)?
-        } else {
-            self.lifetime().clone_lifetime()
-        };
-        //TODO: proper universe casting...
-        if let Some(ty) = ty {
-            if ty != self.ty() {
-                return Err(Error::TypeMismatch);
+    fn try_cast_into_lt(
+        &self,
+        target: Lifetime,
+    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(Either::Right(None)),
+            Some(Greater) => {
+                let result = Product {
+                    lifetime: target.clone(),
+                    ty: self.ty.clone(),
+                    elems: self.elems.clone(),
+                    flags: self.flags,
+                };
+                Ok(Either::Left(result.into_val()))
             }
         }
-        if lt == self.lifetime() {
-            return Ok(self.into_val());
+    }
+    #[inline]
+    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime.partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(self.into_val()),
+            Some(Greater) => {
+                self.lifetime = target;
+                Ok(self.into_val())
+            }
         }
-        Ok(NormalValue(ValueEnum::Product(Product {
-            elems: self.elems,
-            ty: self.ty,
-            lifetime: lt,
-            flags: self.flags,
-        }))
-        .into())
     }
 }
 

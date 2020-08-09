@@ -307,6 +307,8 @@ macro_rules! trivial_lifetime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::value::Value;
+    use either::Either;
     use Ordering::*;
 
     #[test]
@@ -364,7 +366,6 @@ mod tests {
         assert_eq!(alpha_rel, (&alpha_rel * NULL).unwrap());
         assert_eq!(NULL, (&alpha_rel + &delta_rel).unwrap());
         assert_eq!(NULL, (&alpha_rel + NULL).unwrap());
-        
         // Yes, I know this is not a real Greek letter, but it has the right color, and nu just doesn't...
         let vega_rel = (&alpha_rel * &delta_rel).unwrap();
         assert_ne!(NULL, vega_rel);
@@ -392,12 +393,50 @@ mod tests {
         assert_eq!(alpha_rel.partial_cmp(&alpha_lin), Some(Greater));
         assert_eq!(alpha_lin.partial_cmp(&alpha_lin), Some(Equal));
 
-        assert_eq!((&alpha_lin * &vega_rel).unwrap(), (&alpha_lin * &delta_rel).unwrap());
+        assert_eq!(
+            (&alpha_lin * &vega_rel).unwrap(),
+            (&alpha_lin * &delta_rel).unwrap()
+        );
         assert_eq!((&alpha_lin + &vega_rel).unwrap(), alpha_lin);
         assert_eq!((&alpha_lin + &delta_rel).unwrap(), alpha);
 
         // Relevant caching
         assert_eq!(Lifetime::uses(red), alpha_rel);
         assert_eq!(Lifetime::uses(blue), delta_rel);
+    }
+
+    #[test]
+    fn basic_lifetime_casting() {
+        let red = Color::new();
+        let black = Color::new();
+        let alpha = Lifetime::owns(red);
+        let beta = Lifetime::owns(black);
+        let gamma = (&alpha * &beta).unwrap();
+        assert_eq!(
+            ().try_cast_into_lt(alpha.clone()).unwrap(),
+            Either::Right(Some(alpha.clone()))
+        );
+        assert_eq!(
+            ().try_cast_into_lt(gamma.clone()).unwrap(),
+            Either::Right(Some(gamma.clone()))
+        );
+        let unit = ().into_val();
+        let alpha_anchor = ().cast_into_lt(alpha.clone()).unwrap();
+        let gamma_anchor = ().cast_into_lt(gamma.clone()).unwrap();
+        assert_ne!(unit, alpha_anchor);
+        assert_ne!(unit, gamma_anchor);
+        assert_ne!(alpha_anchor, gamma_anchor);
+        assert_eq!(
+            alpha_anchor.clone().cast_into_lt(gamma).unwrap(),
+            gamma_anchor
+        );
+        assert_eq!(
+            alpha_anchor.cast_into_lt(beta.clone()).unwrap_err(),
+            Error::IncomparableLifetimes
+        );
+        assert_eq!(
+            gamma_anchor.cast_into_lt(beta).unwrap_err(),
+            Error::InvalidCastIntoLifetime
+        )
     }
 }

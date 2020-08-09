@@ -15,7 +15,6 @@ impl<P> Drop for ValId<P> {
     }
 }
 
-
 // Equality
 
 impl<P> Eq for ValId<P> {}
@@ -270,6 +269,13 @@ impl<P> Value for ValId<P> {
     fn into_val(self) -> ValId {
         self.coerce()
     }
+    #[inline]
+    fn try_cast_into_lt(
+        &self,
+        target: Lifetime,
+    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        self.as_norm().try_cast_into_lt(target)
+    }
 }
 
 impl<P> Value for ValRef<'_, P> {
@@ -321,14 +327,22 @@ impl<P> Typed for ValRef<'_, P> {
 
 impl<P> Apply for ValId<P> {
     #[inline]
-    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         self.as_norm().apply_in(args, ctx)
     }
 }
 
 impl<P> Apply for ValRef<'_, P> {
     #[inline]
-    fn apply_in<'a>(&self, args: &'a [ValId], ctx: &mut Option<EvalCtx>) -> Result<Application<'a>, Error> {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
         self.as_norm().apply_in(args, ctx)
     }
 }
