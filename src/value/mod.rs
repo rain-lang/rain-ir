@@ -189,9 +189,9 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
         use std::cmp::Ordering::*;
         match self.lifetime().partial_cmp(&target) {
             None => Err(Error::IncomparableLifetimes),
-            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
             Some(Equal) => Ok(Either::Right(None)),
-            Some(Less) => Ok(Either::Right(Some(target))),
+            Some(Greater) => Ok(Either::Right(Some(target))),
         }
     }
     /// Cast into a lifetime, which is implied to strictly weaken the lifetime

@@ -452,9 +452,9 @@ impl Value for Product {
         use std::cmp::Ordering::*;
         match self.lifetime.partial_cmp(&target) {
             None => Err(Error::IncomparableLifetimes),
-            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
             Some(Equal) => Ok(Either::Right(None)),
-            Some(Less) => {
+            Some(Greater) => {
                 let result = Product {
                     lifetime: target.clone(),
                     ty: self.ty.clone(),
@@ -470,9 +470,9 @@ impl Value for Product {
         use std::cmp::Ordering::*;
         match self.lifetime.partial_cmp(&target) {
             None => Err(Error::IncomparableLifetimes),
-            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Less) => Err(Error::InvalidCastIntoLifetime),
             Some(Equal) => Ok(self.into_val()),
-            Some(Less) => {
+            Some(Greater) => {
                 self.lifetime = target;
                 Ok(self.into_val())
             }
