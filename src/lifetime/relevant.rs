@@ -13,6 +13,16 @@ pub struct RelevantData {
 }
 
 impl RelevantData {
+    /// Create a relevant lifetime from a single obligation
+    pub fn unit(color: Color, relevance: Relevant) -> RelevantData {
+        let mut data = HashMap::default();
+        data.insert(color, relevance);
+        RelevantData { data }
+    }
+    /// Create a relevant lifetime only using a given color
+    pub fn uses(color: Color) -> RelevantData {
+        Self::unit(color, Relevant::Used)
+    }
     /// Take the separating conjunction of this lifetime with another
     pub fn sep_conj(&mut self, other: &RelevantData) {
         for (color, relevance) in other.data.iter() {
@@ -31,8 +41,15 @@ impl RelevantData {
         }
     }
     /// Take the disjunction of this lifetime with another
-    pub fn disj(self, other: RelevantData) -> RelevantData {
-        let data = self.data.symmetric_difference_with(other.data, Add::add);
+    pub fn disj(&self, other: &RelevantData) -> RelevantData {
+        let mut data = HashMap::new_from(&self.data);
+        for (color, relevance) in self.data.iter() {
+            if let Some(other_relevance) = other.data.get(color) {
+                if let Some(new_relevance) = relevance + other_relevance {
+                    data.insert(color.clone(), new_relevance);
+                }
+            }
+        }
         RelevantData { data }
     }
     /// Whether this lifetime is the static lifetime
@@ -193,7 +210,7 @@ impl Add for RelevantData {
     type Output = RelevantData;
     #[inline]
     fn add(self, other: RelevantData) -> RelevantData {
-        self.disj(other)
+        self.disj(&other)
     }
 }
 
@@ -201,7 +218,7 @@ impl Add<&'_ RelevantData> for RelevantData {
     type Output = RelevantData;
     #[inline]
     fn add(self, other: &RelevantData) -> RelevantData {
-        self.disj(other.clone())
+        self.disj(other)
     }
 }
 
@@ -209,7 +226,7 @@ impl Add for &'_ RelevantData {
     type Output = RelevantData;
     #[inline]
     fn add(self, other: &RelevantData) -> RelevantData {
-        self.clone().disj(other.clone())
+        self.disj(other)
     }
 }
 
@@ -217,7 +234,7 @@ impl Add<RelevantData> for &'_ RelevantData {
     type Output = RelevantData;
     #[inline]
     fn add(self, other: RelevantData) -> RelevantData {
-        self.clone().disj(other)
+        self.disj(&other)
     }
 }
 

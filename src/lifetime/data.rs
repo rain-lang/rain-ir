@@ -48,11 +48,29 @@ impl LifetimeData {
             relevant: RelevantData::default(),
         })
     }
+    /// Try to create a purely relevant lifetime
+    ///
+    /// Fails if the region is inconsistent
+    #[inline]
+    pub fn try_from_relevant(relevant: RelevantData) -> Result<LifetimeData, Error> {
+        let region = relevant.region()?.cloned_region();
+        Ok(LifetimeData {
+            relevant,
+            region,
+            affine: AffineData::default(),
+        })
+    }
     /// Create a lifetime which only owns a particular color
     #[inline]
     pub fn owns(color: Color) -> LifetimeData {
         let affine = AffineData::owns(color);
         Self::try_from_affine(affine).expect("Single color lifetimes always have valid regions")
+    }
+    /// Create a lifetime which only uses a particular color
+    #[inline]
+    pub fn uses(color: Color) -> LifetimeData {
+        let relevant = RelevantData::uses(color);
+        Self::try_from_relevant(relevant).expect("Single color lifetimes always have valid regions")
     }
     /// Gets the lifetime for the nth parameter of a `Region`.
     ///
