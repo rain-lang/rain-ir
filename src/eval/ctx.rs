@@ -133,12 +133,6 @@ impl EvalCtx {
             self.root_depth = self.root_depth.saturating_sub(1);
         }
     }
-    /// Check whether this is a pre-checked context
-    #[inline]
-    pub fn is_checked(&self) -> bool {
-        //TODO
-        false
-    }
     /// Register a substitution in the given scope.
     ///
     /// If `check_ty` is true, perform a type check and return an error on failure
@@ -309,5 +303,34 @@ impl EvalCtx {
         )?;
         self.lt_cache.insert(lifetime.clone(), result.clone());
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ctx_scopes_work() {
+        let mut new_empty = EvalCtx::new(30);
+        assert_eq!(new_empty.depth(), 30);
+        assert_eq!(new_empty.root_depth(), 30);
+        assert_eq!(new_empty.at_depth(30), Some(&new_empty));
+        assert!(new_empty.is_empty());
+        new_empty.push();
+        assert_eq!(new_empty.depth(), 31);
+        assert_eq!(new_empty.root_depth(), 31);
+        assert_eq!(new_empty.at_depth(31), Some(&new_empty));
+        assert_eq!(new_empty.at_depth(25), None);
+        assert_eq!(new_empty.at_depth(30), None);
+        assert_eq!(new_empty.at_depth(32), None);
+        assert_eq!(new_empty.parent(), None);
+        assert!(new_empty.is_empty());
+        new_empty.send_to_depth(5);
+        assert_eq!(new_empty.depth(), 5);
+        assert_eq!(new_empty.root_depth(), 5);
+        assert_eq!(new_empty.parent(), None);
+        assert_eq!(new_empty.at_depth(5), Some(&new_empty));
+        assert!(new_empty.is_empty());
     }
 }
