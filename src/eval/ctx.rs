@@ -182,8 +182,6 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
-        //TODO: fix stuff
-        /*
         // Get the LCR, returning an error on incompatible regions
         let lcr = region.lcr(&self.curr_region)?;
         let lcr_depth = lcr.depth();
@@ -199,7 +197,6 @@ impl EvalCtx {
             *self = at_lcr;
             return Ok(result);
         }
-        */
         let region_depth = region.depth();
         struct OldCaches {
             eval_cache: HashMap<ValId, ValId, FxBuildHasher>,

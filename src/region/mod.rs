@@ -146,6 +146,17 @@ pub trait Regional {
             _ => Err(Error::IncomparableRegions),
         }
     }
+    /// Get the least common region containing this object and another, if any
+    #[inline]
+    fn lcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<Option<RegionBorrow<'a>>, Error> {
+        let this_region = self.region();
+        let other_region = other.region();
+        match this_region.partial_cmp(&other_region) {
+            Some(Ordering::Greater) => Ok(other_region),
+            Some(_) => Ok(this_region),
+            _ => Err(Error::IncomparableRegions),
+        }
+    }
     /// Get the depth of the region associated with this object
     ///
     /// The depth of a region is defined inductively as follows
