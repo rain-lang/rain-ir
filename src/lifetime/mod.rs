@@ -372,8 +372,29 @@ mod tests {
         assert_ne!(delta_rel, vega_rel);
         assert_eq!(vega_rel.partial_cmp(&alpha_rel), Some(Greater));
         assert_eq!(vega_rel.partial_cmp(&delta_rel), Some(Greater));
+        assert_eq!(vega_rel.partial_cmp(&vega_rel), Some(Equal));
         assert_eq!(alpha_rel.partial_cmp(&vega_rel), Some(Less));
         assert_eq!(delta_rel.partial_cmp(&vega_rel), Some(Less));
+
+        // Compound lifetime operations
+        assert_eq!(alpha_rel.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha.partial_cmp(&alpha_rel), Some(Less));
+        assert_eq!(delta_rel.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha.partial_cmp(&delta_rel), Some(Less));
+
+        let alpha_lin = (&alpha_rel * &alpha).unwrap();
+        assert_ne!(alpha_lin, NULL);
+        assert_ne!(alpha_lin, alpha);
+        assert_ne!(alpha_lin, alpha_rel);
+        assert_eq!(alpha_lin.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha_lin.partial_cmp(&alpha_rel), Some(Less));
+        assert_eq!(alpha.partial_cmp(&alpha_lin), Some(Less));
+        assert_eq!(alpha_rel.partial_cmp(&alpha_lin), Some(Greater));
+        assert_eq!(alpha_lin.partial_cmp(&alpha_lin), Some(Equal));
+
+        assert_eq!((&alpha_lin * &vega_rel).unwrap(), (&alpha_lin * &delta_rel).unwrap());
+        assert_eq!((&alpha_lin + &vega_rel).unwrap(), alpha_lin);
+        assert_eq!((&alpha_lin + &delta_rel).unwrap(), alpha);
 
         // Relevant caching
         assert_eq!(Lifetime::uses(red), alpha_rel);
