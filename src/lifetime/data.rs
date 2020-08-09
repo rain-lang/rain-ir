@@ -167,6 +167,17 @@ impl LifetimeData {
             Err(Error::IncomparableRegions)
         }
     }
+    /// Compare this lifetime with the static lifetime
+    #[inline]
+    pub fn static_cmp(&self) -> Option<Ordering> {
+        use Ordering::*;
+        match (self.affine.len(), self.relevant.len()) {
+            (0, 0) => Some(Equal),
+            (_, 0) => Some(Less),
+            (0, _) => Some(Greater),
+            (_, _) => None,
+        }
+    }
     /// Attempt to color map a lifetime while truncating it's region to a given level
     ///
     /// Leaves the lifetime in an undetermined but valid state on failure
