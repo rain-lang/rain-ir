@@ -13,6 +13,7 @@ use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::{Type, TypeValue, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
+use either::Either;
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
@@ -56,7 +57,7 @@ pub struct ValRef<'a, P = ()> {
 }
 
 /// An enumeration of possible `rain` values
-/// 
+///
 /// The `ValueEnum` is the central data-structure defining the `rain` intermediate representation:
 /// it lays out all the possible kinds of nodes which can make up part of the `rain`-graph.
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -116,12 +117,12 @@ pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
 /// A trait implemented by all `rain` values
 pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Get the number of dependencies of this value
-    /// 
+    ///
     /// Note that this does *not* include the type: as all `rain` values have exactly one type, this is counted
     /// separately from normal dependencies (but is important in, e.g., lifetime considerations!)
     fn no_deps(&self) -> usize;
     /// Get a given dependency of this value
-    /// 
+    ///
     /// The result of this function is unspecified if the `dep` index is out of bounds, though it will always either
     /// return a valid [`&ValId`](ValId) or panic. This function must never panic if the `dep` index is in bounds.
     fn get_dep(&self, dep: usize) -> &ValId;
@@ -131,7 +132,7 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
         RefCast::ref_cast(self)
     }
     /// Clone the dependency-set of this value
-    /// 
+    ///
     /// This returns an owned `ValSet` of the dependencies of this value, i.e. a sorted, de-duplicated dependency array.
     #[inline]
     fn clone_depset(&self) -> ValSet {
@@ -140,7 +141,7 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     /// Convert a value into a `NormalValue`
     fn into_norm(self) -> NormalValue;
     /// Convert a value into a `ValueEnum`
-    /// 
+    ///
     /// Note that the return value of this function is *not necessarily normalized*! For that, use [`self.into_norm()`](Value::into_norm)
     #[inline]
     fn into_enum(self) -> ValueEnum {
@@ -178,49 +179,32 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             Err(self)
         }
     }
-    /// Get the cast target lifetime for a given lifetime
-    fn cast_target_lt(&self, lt: Lifetime) -> Result<Lifetime, Error> {
-        self.lifetime().as_lifetime() * lt
-    }
-    /// Get the cast target type for a given type
-    fn cast_target_ty(&self, ty: TypeId) -> Result<TypeId, Error> {
-        if ty != self.ty() {
-            //TODO: this...
-            return Err(Error::TypeMismatch);
-        }
-        Ok(ty)
-    }
-    /// Cast a value to a given type and lifetime
+    /// Try to cast this into a lifetime
+    ///
+    /// On failure, return an error. On success, return either
+    /// - The successfully cast value, on cast
+    /// - The lifetime to cast to if a cast is necessary, or `None` if it is not
     #[inline]
-    fn cast(self, ty: Option<TypeId>, lt: Option<Lifetime>) -> Result<ValId, Error> {
-        if ty.is_none() && lt.is_none() {
-            return Ok(self.into_val());
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        use std::cmp::Ordering::*;
+        match self.lifetime().partial_cmp(&target) {
+            None => Err(Error::IncomparableLifetimes),
+            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
+            Some(Equal) => Ok(Either::Right(None)),
+            Some(Less) => Ok(Either::Right(Some(target))),
         }
-        let lt = if let Some(lt) = lt {
-            self.cast_target_lt(lt)?
-        } else {
-            self.lifetime().clone_lifetime()
-        };
-        let ty = if let Some(ty) = ty {
-            self.cast_target_ty(ty)?
-        } else {
-            self.ty().clone_ty()
-        };
-        if lt == self.lifetime() && ty == self.ty() {
-            return Ok(self.into_val());
+    }
+    /// Cast into a lifetime, which is implied to strictly weaken the lifetime
+    #[inline]
+    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
+        match self.try_cast_into_lt(target)? {
+            Either::Left(value) => Ok(value),
+            Either::Right(None) => Ok(self.into_val()),
+            Either::Right(Some(target)) => {
+                let ty = self.ty().clone_ty();
+                Ok(Sexpr::cast_singleton(self.into_val(), target, ty).into_val())
+            }
         }
-        let val = self.into_val();
-        Ok(NormalValue(Sexpr::cast_singleton(val, lt, ty).into_enum()).into())
-    }
-    /// Cast a value to a given lifetime
-    #[inline]
-    fn cast_lt(self, lt: Lifetime) -> Result<ValId, Error> {
-        self.cast(None, Some(lt))
-    }
-    /// Cast a value to a given type
-    #[inline]
-    fn cast_ty(self, ty: TypeId) -> Result<ValId, Error> {
-        self.cast(Some(ty), None)
     }
 }
 
@@ -372,6 +356,14 @@ impl Value for NormalValue {
     fn into_norm(self) -> NormalValue {
         self
     }
+    #[inline]
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        self.deref().try_cast_into_lt(target)
+    }
+    #[inline]
+    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
+        self.0.cast_into_lt(target)
+    }
 }
 
 impl Live for NormalValue {
@@ -435,6 +427,22 @@ impl Value for ValueEnum {
     }
     fn into_norm(self) -> NormalValue {
         self.into()
+    }
+    #[inline]
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+        forv! {
+            match(self) {
+                v => v.try_cast_into_lt(target),
+            }
+        }
+    }
+    #[inline]
+    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
+        forv! {
+            match(self) {
+                v => v.cast_into_lt(target),
+            }
+        }
     }
 }
 
