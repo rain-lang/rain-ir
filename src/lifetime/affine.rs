@@ -200,9 +200,9 @@ impl AffineData {
         Ok(())
     }
     /// Iterate over the color-affinity pairs of this affine lifetime
-    pub fn iter<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (&'a Color, &'a Affine)> + ExactSizeIterator + FusedIterator + Send + Sync
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = (&Color, &Affine)> + ExactSizeIterator + FusedIterator + Send + Sync
     {
         self.data.iter()
     }

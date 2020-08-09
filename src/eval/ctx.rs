@@ -39,7 +39,7 @@ impl EvalCtx {
             color_map: HashMap::default(),
             lt_cache: HashMap::default(),
             parents: Vector::new(),
-            root_depth: root_depth,
+            root_depth,
             curr_region: None,
         }
     }
@@ -102,7 +102,7 @@ impl EvalCtx {
     }
     /// Send this evaluation context to a given depth
     #[inline]
-    pub fn to_depth(&mut self, depth: usize) {
+    pub fn send_to_depth(&mut self, depth: usize) {
         // No-op on equality
         if depth == self.depth() {
             return;

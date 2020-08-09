@@ -350,7 +350,7 @@ mod tests {
 
         // Affine caching
         assert_eq!(Lifetime::owns(red.clone()), alpha);
-        assert_eq!(Lifetime::owns(black.clone()), beta);
+        assert_eq!(Lifetime::owns(black), beta);
 
         // Purely relevant operations
         let alpha_rel = Lifetime::uses(red.clone());
