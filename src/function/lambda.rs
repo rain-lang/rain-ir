@@ -149,11 +149,21 @@ impl Apply for Lambda {
         let region =
             ctx.substitute_region(self.def_region().as_region(), args.iter().cloned(), false)?;
 
-        // Evaluate the result
-        let result = ctx.evaluate(self.result());
-        // Pop the evaluation context
+        // Evaluate the result's lifetime
+        let result_lt = ctx.evaluate_lt(self.result_lt());
+        // Evaluate the result if it has a valid lifetime
+        let result = if result_lt.is_ok() {
+            ctx.evaluate(self.result())
+        } else {
+            Err(Error::LifetimeError)
+        };
+        // Pop the evaluation context, and bubble up errors
         ctx.pop();
+        let _result_lt = result_lt?;
         let result = result?;
+
+        // Cast the result into it's lifetime
+        //TODO: casting
 
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
