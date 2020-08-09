@@ -6,6 +6,8 @@ use crate::region::Regional;
 use crate::value::ValId;
 use fxhash::{FxBuildHasher, FxHashMap};
 use im::{hashmap::Entry, HashMap};
+use std::cmp::Ordering;
+use std::iter::FusedIterator;
 
 /// The data describing a purely affine lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -197,6 +199,44 @@ impl AffineData {
         }
         Ok(())
     }
+    /// Iterate over the color-affinity pairs of this affine lifetime
+    pub fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = (&'a Color, &'a Affine)> + ExactSizeIterator + FusedIterator + Send + Sync
+    {
+        self.data.iter()
+    }
+}
+
+impl PartialOrd for AffineData {
+    #[inline]
+    fn partial_cmp(&self, other: &AffineData) -> Option<Ordering> {
+        fn subset_cmp(left: &AffineData, right: &AffineData) -> Option<Ordering> {
+            use Ordering::*;
+            let mut strict_sub = false;
+            for (color, affinity) in left.data.iter() {
+                if let Some(other_affinity) = right.data.get(color) {
+                    match affinity.partial_cmp(other_affinity)? {
+                        Less => strict_sub = true,
+                        Equal => {}
+                        Greater => return None,
+                    }
+                } else {
+                    return None;
+                }
+            }
+            if strict_sub || left.len() < right.len() {
+                Some(Greater)
+            } else {
+                Some(Equal)
+            }
+        }
+        if self.len() <= other.len() {
+            subset_cmp(self, other)
+        } else {
+            subset_cmp(other, self).map(Ordering::reverse)
+        }
+    }
 }
 
 /// The data describing an affine lifetime
@@ -207,6 +247,19 @@ pub enum Affine {
     /// Borrows an affine type from a source
     Borrowed(ValId),
     //TODO: elemental ownership
+}
+
+impl PartialOrd for Affine {
+    #[inline]
+    fn partial_cmp(&self, other: &Affine) -> Option<Ordering> {
+        use Affine::*;
+        use Ordering::*;
+        match (self, other) {
+            (Owned, Owned) => Some(Equal),
+            (Borrowed(a), Borrowed(b)) if a == b => Some(Equal),
+            _ => None,
+        }
+    }
 }
 
 impl Affine {

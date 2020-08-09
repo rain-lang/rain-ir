@@ -72,6 +72,11 @@ impl Lifetime {
     pub fn owns(color: Color) -> Lifetime {
         LifetimeData::owns(color).into()
     }
+    /// Get a lifetime which uses a single color
+    #[inline]
+    pub fn uses(color: Color) -> Lifetime {
+        LifetimeData::uses(color).into()
+    }
     /// Borrow a lifetime
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
@@ -302,16 +307,32 @@ macro_rules! trivial_lifetime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Ordering::*;
 
     #[test]
-    fn basic_affine_lifetime_operations() {
+    fn basic_lifetime_operations() {
         let red = Color::new();
         let black = Color::new();
+        let blue = Color::new();
+        assert_ne!(red, black);
+        assert_ne!(red, blue);
+        assert_ne!(blue, black);
+
+        // Basic lifetimes
+        const NULL: Lifetime = Lifetime::STATIC;
+        assert_eq!(NULL + NULL, Ok(NULL));
+        assert_eq!(NULL * NULL, Ok(NULL));
+
+        // Purely affine operations
         let alpha = Lifetime::owns(red.clone());
         let beta = Lifetime::owns(black.clone());
-        assert_ne!(red, black);
         assert_ne!(alpha, beta);
+        assert_eq!(alpha.partial_cmp(&alpha), Some(Equal));
+        assert_eq!(beta.partial_cmp(&beta), Some(Equal));
+        assert_eq!(alpha.partial_cmp(&beta), None);
         assert_eq!(alpha, (&alpha + &alpha).unwrap());
+        assert_eq!(alpha, (&alpha + NULL).unwrap());
+        assert_eq!(alpha, (&alpha * NULL).unwrap());
         assert_eq!(&alpha * &alpha, Err(Error::AffineUsed));
         let gamma = (&alpha * &beta).unwrap();
         assert_eq!(gamma, (&alpha + &beta).unwrap());
@@ -321,5 +342,62 @@ mod tests {
         assert_eq!(gamma, (&gamma + &beta).unwrap());
         assert_eq!(&gamma * &alpha, Err(Error::AffineUsed));
         assert_eq!(&gamma * &beta, Err(Error::AffineUsed));
+        assert_eq!(gamma.partial_cmp(&alpha), Some(Less));
+        assert_eq!(gamma.partial_cmp(&beta), Some(Less));
+        assert_eq!(alpha.partial_cmp(&gamma), Some(Greater));
+        assert_eq!(beta.partial_cmp(&gamma), Some(Greater));
+        assert_eq!(gamma.partial_cmp(&gamma), Some(Equal));
+
+        // Affine caching
+        assert_eq!(Lifetime::owns(red.clone()), alpha);
+        assert_eq!(Lifetime::owns(black.clone()), beta);
+
+        // Purely relevant operations
+        let alpha_rel = Lifetime::uses(red.clone());
+        let delta_rel = Lifetime::uses(blue.clone());
+        assert_ne!(alpha_rel, delta_rel);
+        assert_eq!(alpha_rel.partial_cmp(&alpha_rel), Some(Equal));
+        assert_eq!(delta_rel.partial_cmp(&delta_rel), Some(Equal));
+        assert_eq!(alpha_rel.partial_cmp(&delta_rel), None);
+        assert_eq!(alpha_rel, (&alpha_rel + &alpha_rel).unwrap());
+        assert_eq!(alpha_rel, (&alpha_rel * &alpha_rel).unwrap());
+        assert_eq!(alpha_rel, (&alpha_rel * NULL).unwrap());
+        assert_eq!(NULL, (&alpha_rel + &delta_rel).unwrap());
+        assert_eq!(NULL, (&alpha_rel + NULL).unwrap());
+        
+        // Yes, I know this is not a real Greek letter, but it has the right color, and nu just doesn't...
+        let vega_rel = (&alpha_rel * &delta_rel).unwrap();
+        assert_ne!(NULL, vega_rel);
+        assert_ne!(alpha_rel, vega_rel);
+        assert_ne!(delta_rel, vega_rel);
+        assert_eq!(vega_rel.partial_cmp(&alpha_rel), Some(Greater));
+        assert_eq!(vega_rel.partial_cmp(&delta_rel), Some(Greater));
+        assert_eq!(vega_rel.partial_cmp(&vega_rel), Some(Equal));
+        assert_eq!(alpha_rel.partial_cmp(&vega_rel), Some(Less));
+        assert_eq!(delta_rel.partial_cmp(&vega_rel), Some(Less));
+
+        // Compound lifetime operations
+        assert_eq!(alpha_rel.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha.partial_cmp(&alpha_rel), Some(Less));
+        assert_eq!(delta_rel.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha.partial_cmp(&delta_rel), Some(Less));
+
+        let alpha_lin = (&alpha_rel * &alpha).unwrap();
+        assert_ne!(alpha_lin, NULL);
+        assert_ne!(alpha_lin, alpha);
+        assert_ne!(alpha_lin, alpha_rel);
+        assert_eq!(alpha_lin.partial_cmp(&alpha), Some(Greater));
+        assert_eq!(alpha_lin.partial_cmp(&alpha_rel), Some(Less));
+        assert_eq!(alpha.partial_cmp(&alpha_lin), Some(Less));
+        assert_eq!(alpha_rel.partial_cmp(&alpha_lin), Some(Greater));
+        assert_eq!(alpha_lin.partial_cmp(&alpha_lin), Some(Equal));
+
+        assert_eq!((&alpha_lin * &vega_rel).unwrap(), (&alpha_lin * &delta_rel).unwrap());
+        assert_eq!((&alpha_lin + &vega_rel).unwrap(), alpha_lin);
+        assert_eq!((&alpha_lin + &delta_rel).unwrap(), alpha);
+
+        // Relevant caching
+        assert_eq!(Lifetime::uses(red), alpha_rel);
+        assert_eq!(Lifetime::uses(blue), delta_rel);
     }
 }

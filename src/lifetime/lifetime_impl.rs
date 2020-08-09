@@ -218,7 +218,13 @@ impl PartialOrd for Lifetime {
     This naturally induces a partial ordering on the set of lifetimes.
     */
     fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        use Ordering::*;
+        match (&self.0, &other.0) {
+            (None, None) => Some(Equal),
+            (Some(s), None) => s.static_cmp(),
+            (None, Some(s)) => s.static_cmp().map(Ordering::reverse),
+            (Some(l), Some(r)) => l.partial_cmp(r),
+        }
     }
 }
 

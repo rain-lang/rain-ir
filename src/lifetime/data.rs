@@ -48,11 +48,29 @@ impl LifetimeData {
             relevant: RelevantData::default(),
         })
     }
+    /// Try to create a purely relevant lifetime
+    ///
+    /// Fails if the region is inconsistent
+    #[inline]
+    pub fn try_from_relevant(relevant: RelevantData) -> Result<LifetimeData, Error> {
+        let region = relevant.region()?.cloned_region();
+        Ok(LifetimeData {
+            relevant,
+            region,
+            affine: AffineData::default(),
+        })
+    }
     /// Create a lifetime which only owns a particular color
     #[inline]
     pub fn owns(color: Color) -> LifetimeData {
         let affine = AffineData::owns(color);
         Self::try_from_affine(affine).expect("Single color lifetimes always have valid regions")
+    }
+    /// Create a lifetime which only uses a particular color
+    #[inline]
+    pub fn uses(color: Color) -> LifetimeData {
+        let relevant = RelevantData::uses(color);
+        Self::try_from_relevant(relevant).expect("Single color lifetimes always have valid regions")
     }
     /// Gets the lifetime for the nth parameter of a `Region`.
     ///
@@ -167,6 +185,17 @@ impl LifetimeData {
             Err(Error::IncomparableRegions)
         }
     }
+    /// Compare this lifetime with the static lifetime
+    #[inline]
+    pub fn static_cmp(&self) -> Option<Ordering> {
+        use Ordering::*;
+        match (self.affine.len(), self.relevant.len()) {
+            (0, 0) => Some(Equal),
+            (_, 0) => Some(Less),
+            (0, _) => Some(Greater),
+            (_, _) => None,
+        }
+    }
     /// Attempt to color map a lifetime while truncating it's region to a given level
     ///
     /// Leaves the lifetime in an undetermined but valid state on failure
@@ -194,7 +223,13 @@ impl LifetimeData {
 
 impl PartialOrd for LifetimeData {
     fn partial_cmp(&self, other: &LifetimeData) -> Option<Ordering> {
-        unimplemented!("Lifetime data ordering: {:#?}, {:#?}", self, other)
+        use Ordering::*;
+        match self.affine.partial_cmp(&other.affine)? {
+            Less if self.relevant <= other.relevant => Some(Less),
+            Equal => self.relevant.partial_cmp(&other.relevant),
+            Greater if self.relevant >= other.relevant => Some(Greater),
+            _ => None,
+        }
     }
 }
 
