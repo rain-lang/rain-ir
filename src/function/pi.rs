@@ -64,6 +64,11 @@ impl Pi {
     pub fn result(&self) -> &TypeId {
         &self.result
     }
+    /// Get the result lifetime of this pi type
+    #[inline]
+    pub fn result_lt(&self) -> &Lifetime {
+        &self.result_lt
+    }
     /// Get the defining region of this pi type
     #[inline]
     pub fn def_region(&self) -> RegionBorrow {
@@ -173,11 +178,8 @@ impl Type for Pi {
         let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
         // Substitute
-        let region = ctx.substitute_region(
-            self.def_region().as_region(),
-            args.iter().cloned(),
-            false,
-        )?;
+        let region =
+            ctx.substitute_region(self.def_region().as_region(), args.iter().cloned(), false)?;
 
         // Evaluate the result type and lifetime
         let result = ctx.evaluate(self.result().as_val());
@@ -191,12 +193,12 @@ impl Type for Pi {
 
         if let Some(_region) = region {
             unimplemented!("Partial pi substitution")
-            // let new_pi = Pi::try_new(
-            //     result.try_into().expect("Partial pi result must be a type"),
-            //     region,
-            //     result_lt,
-            // )?;
-            //Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
+        // let new_pi = Pi::try_new(
+        //     result.try_into().expect("Partial pi result must be a type"),
+        //     region,
+        //     result_lt,
+        // )?;
+        //Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
         } else if rest_args.is_empty() {
             Ok((
                 result_lt,
