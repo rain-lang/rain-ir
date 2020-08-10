@@ -95,6 +95,18 @@ impl Color {
         }
         Some(Color::param_unchecked(region, ix))
     }
+    /// Get the parameter index of this color, if any
+    pub fn param_ix(&self) -> Option<usize> {
+        if self.ix >= 0 {
+            Some(self.ix as usize)
+        } else {
+            None
+        }
+    }
+    /// Check whether this color is a parameter
+    pub fn is_param(&self) -> bool {
+        self.ix >= 0
+    }
 }
 
 impl Default for Color {

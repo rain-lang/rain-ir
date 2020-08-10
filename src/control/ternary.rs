@@ -44,7 +44,7 @@ impl Ternary {
             lt.region().map(|region| region.clone_region()),
         );
         let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), unary_region, lt.clone())?.into()
+            Pi::try_new(high_ty.clone_ty(), unary_region, &lt)?.into()
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
@@ -70,7 +70,7 @@ impl Ternary {
             lt.region().map(|region| region.clone_region()),
         );
         let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), switch_region, lt.clone())?.into()
+            Pi::try_new(high_ty.clone_ty(), switch_region, &lt)?.into()
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
