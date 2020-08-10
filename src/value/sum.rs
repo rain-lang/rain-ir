@@ -3,7 +3,10 @@ Sum types and injections
 */
 use crate::function::pi::Pi;
 use crate::lifetime::Lifetime;
-use crate::value::{arr::ValArr, UniverseId, VarId};
+use crate::value::{
+    arr::{ValArr, ValSet},
+    UniverseId, VarId,
+};
 
 /// A sum type
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -13,7 +16,20 @@ pub struct Sum {
     /// The lifetime of this sum type
     lifetime: Lifetime,
     /// The type of this sum type
-    ty: UniverseId,
+    ty: UniverseId, //TODO: kind
+}
+
+/// A union type
+/// 
+/// TODO: think about this...
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Union {
+    /// The members of this union
+    members: ValSet,
+    /// The lifetime of this union
+    lifetime: Lifetime,
+    /// The type of this union
+    ty: UniverseId, //TODO: kind
 }
 
 /// An injection into a sum type
@@ -30,3 +46,5 @@ pub struct Injection {
     /// The lifetime of this injection
     lifetime: Lifetime,
 }
+
+//TODO: represent applications of injections as Sexprs or evaluate them somehow?

@@ -12,6 +12,8 @@ use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
+pub mod kind;
+
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
     /// Compute the type of this `rain` value
