@@ -3,14 +3,13 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
     arr::{TyArr, ValArr},
-    universe::FINITE_TY,
     Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
     ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{Unit, UNIT_TY};
-use crate::typing::{Type, Typed};
+use crate::typing::{kind::universe::FINITE_TY, Type, Typed};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };

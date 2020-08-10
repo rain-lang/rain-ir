@@ -6,10 +6,9 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::Region;
 use crate::tokens::*;
-use crate::typing::{Type, Typed};
+use crate::typing::{kind::universe::FINITE_TY, Type, Typed};
 use crate::value::{
-    universe::FINITE_TY, Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData,
-    ValueEnum, VarId,
+    Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
 use crate::{
     debug_from_display, display_pretty, enum_convert, normal_valid, quick_pretty, trivial_lifetime,

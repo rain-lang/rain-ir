@@ -3,10 +3,9 @@ Finite-valued types
 */
 use crate::eval::Apply;
 use crate::tokens::*;
-use crate::typing::{Type, Typed};
+use crate::typing::{kind::universe::FINITE_TY, Type, Typed};
 use crate::value::{
-    universe::FINITE_TY, NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum,
-    VarId, VarRef,
+    NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
