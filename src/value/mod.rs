@@ -29,7 +29,6 @@ pub mod expr;
 pub mod predicate;
 pub mod sum;
 pub mod tuple;
-pub mod universe;
 
 use arr::ValSet;
 use expr::Sexpr;
