@@ -25,7 +25,11 @@ pub enum Application<'a, V = ValId> {
 
 impl<'a> Application<'a> {
     /// Convert any application into a successful application
-    pub(crate) fn valid_to_success<V: Value>(self, value: V, args: &[ValId]) -> (&'a [ValId], ValId) {
+    pub(crate) fn valid_to_success<V: Value>(
+        self,
+        value: V,
+        args: &[ValId],
+    ) -> (&'a [ValId], ValId) {
         let (lt, ty) = match self {
             Application::Stop(lt, ty) => (lt, ty),
             Application::Complete(lt, ty) => (lt, ty),

@@ -114,10 +114,7 @@ impl Value for Tuple {
         self.into()
     }
     #[inline]
-    fn try_cast_into_lt(
-        &self,
-        target: Lifetime,
-    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
         use std::cmp::Ordering::*;
         match self.lifetime.partial_cmp(&target) {
             None => Err(Error::IncomparableLifetimes),
@@ -445,10 +442,7 @@ impl Value for Product {
         self.into()
     }
     #[inline]
-    fn try_cast_into_lt(
-        &self,
-        target: Lifetime,
-    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
         use std::cmp::Ordering::*;
         match self.lifetime.partial_cmp(&target) {
             None => Err(Error::IncomparableLifetimes),

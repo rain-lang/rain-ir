@@ -17,7 +17,7 @@ use crate::{
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Phi {
     /// The tuple of recursively defined objects in this node
-    /// 
+    ///
     /// This should be nonempty, and all objects should reside in the same region
     values: ValArr,
     /// The dependencies of this node

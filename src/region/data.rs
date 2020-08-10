@@ -25,10 +25,7 @@ impl RegionData {
         } else {
             Vector::new()
         };
-        RegionData {
-            param_tys,
-            parents,
-        }
+        RegionData { param_tys, parents }
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]

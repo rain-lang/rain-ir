@@ -26,6 +26,7 @@ use std::ops::Deref;
 pub mod arr;
 pub mod expr;
 pub mod predicate;
+pub mod sum;
 pub mod tuple;
 pub mod universe;
 

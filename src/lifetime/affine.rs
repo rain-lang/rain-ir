@@ -182,7 +182,11 @@ impl AffineData {
                 if key.is_param() {
                     false
                 } else {
-                    unimplemented!("Single-color escape (color = {:?}, affinity = {:?})", key, value)
+                    unimplemented!(
+                        "Single-color escape (color = {:?}, affinity = {:?})",
+                        key,
+                        value
+                    )
                 }
             }
         });

@@ -46,8 +46,7 @@ impl Pi {
     }
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
-        Self::new(param.ty(), &*param.value().lifetime())
-            .expect("Region conjunction should work!")
+        Self::new(param.ty(), &*param.value().lifetime()).expect("Region conjunction should work!")
     }
     /// Get the universe associated with a parametrized `TypeId`
     pub fn universe(param: &Parametrized<TypeId>) -> UniverseId {

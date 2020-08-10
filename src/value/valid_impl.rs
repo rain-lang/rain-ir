@@ -270,10 +270,7 @@ impl<P> Value for ValId<P> {
         self.coerce()
     }
     #[inline]
-    fn try_cast_into_lt(
-        &self,
-        target: Lifetime,
-    ) -> Result<Either<ValId, Option<Lifetime>>, Error> {
+    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
         self.as_norm().try_cast_into_lt(target)
     }
 }

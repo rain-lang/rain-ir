@@ -2,5 +2,5 @@
 Control flow primitives
 */
 
-pub mod ternary;
 pub mod switch;
+pub mod ternary;

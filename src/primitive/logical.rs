@@ -718,7 +718,7 @@ macro_rules! make_logical {
             fn apply_in<'a>(
                 &self,
                 args: &'a [ValId],
-                ctx: &mut Option<EvalCtx>
+                ctx: &mut Option<EvalCtx>,
             ) -> Result<Application<'a>, Error> {
                 Logical::from(*self).apply_in(args, ctx)
             }
