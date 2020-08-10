@@ -30,11 +30,12 @@ pub struct Pi {
 }
 
 impl Pi {
-    /// Create a new pi type from a parametrized `TypeId`
-    pub fn new(result: Parametrized<TypeId>, base_lt: Lifetime) -> Result<Pi, Error> {
+    /// Create a new pi type from a parametrized `TypeId` with a given result lifetime
+    pub fn new(result: Parametrized<TypeId>, result_lt: &Lifetime) -> Result<Pi, Error> {
+        //TODO: check result lifetime is compatible with type lifetime?
         let ty = Self::universe(&result);
         let (region, result, deps, lt) = result.destruct();
-        let result_lt = (result.lifetime().clone_lifetime().in_region(Some(region))? + base_lt)?;
+        let result_lt = result_lt.in_region(Some(region))?;
         Ok(Pi {
             result,
             ty,
@@ -45,7 +46,7 @@ impl Pi {
     }
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
-        Self::new(param.ty(), param.def_region().clone().into())
+        Self::new(param.ty(), &*param.value().lifetime())
             .expect("Region conjunction should work!")
     }
     /// Get the universe associated with a parametrized `TypeId`
@@ -56,8 +57,8 @@ impl Pi {
             .union_all(param.def_region().data().iter().map(|ty| ty.universe()))
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
-    pub fn try_new(value: TypeId, region: Region, base_lt: Lifetime) -> Result<Pi, Error> {
-        Self::new(Parametrized::try_new(value, region)?, base_lt)
+    pub fn try_new(value: TypeId, region: Region, result_lt: &Lifetime) -> Result<Pi, Error> {
+        Self::new(Parametrized::try_new(value, region)?, result_lt)
     }
     /// Get the result of this pi type
     #[inline]

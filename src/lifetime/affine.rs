@@ -178,7 +178,12 @@ impl AffineData {
                 }
                 false
             } else {
-                unimplemented!("Single-color escape")
+                // Escape unbound parameters
+                if key.is_param() {
+                    false
+                } else {
+                    unimplemented!("Single-color escape (color = {:?}, affinity = {:?})", key, value)
+                }
             }
         });
         if let Some(err) = error {

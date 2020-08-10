@@ -48,9 +48,13 @@ impl Lambda {
         let result = Parameter::try_new(region.clone(), 0)
             .expect("Region has one parameter")
             .into();
-        let ty: VarId<Pi> = Pi::try_new(ty, region, Lifetime::STATIC)
-            .expect("Identity pi type is valid")
-            .into();
+        let ty: VarId<Pi> = Pi::try_new(
+            ty,
+            region.clone(),
+            &Lifetime::param(region, 0).expect("Identity region has first parameter"),
+        )
+        .expect("Identity pi type is valid")
+        .into();
         let lt = ty.lifetime().clone_lifetime(); //TODO: someday...
         let deps = tyset.into_vals();
         Lambda {
@@ -159,12 +163,8 @@ impl Apply for Lambda {
         };
         // Pop the evaluation context, and bubble up errors
         ctx.pop();
-        let _result_lt = result_lt?;
-        let result = result?;
-
-        // Cast the result into it's lifetime
-        //TODO: casting
-
+        let result_lt = result_lt?;
+        let result = result?.cast_into_lt(result_lt)?;
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
         if let Some(region) = region {
