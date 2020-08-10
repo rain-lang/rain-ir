@@ -3,26 +3,25 @@ Phi nodes, representing mutual recursion
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::Region;
 use crate::typing::Typed;
-use crate::value::{tuple::Product, Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{
+    arr::{ValArr, ValSet},
+    tuple::Product,
+    Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId,
+};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
-use smallvec::SmallVec;
-
-/// The size of a small set of mutually recursive values
-pub const SMALL_PHI_SIZE: usize = 2;
 
 /// A phi node, representing mutual recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Phi {
-    /// The region corresponding to the recursively defined objects in this node
-    region: Region,
     /// The tuple of recursively defined objects in this node
-    values: SmallVec<[ValId; SMALL_PHI_SIZE]>,
+    /// 
+    /// This should be nonempty, and all objects should reside in the same region
+    values: ValArr,
     /// The dependencies of this node
-    deps: Box<[ValId]>,
+    deps: ValSet,
     /// The lifetime of this phi node as a value
     lifetime: Lifetime,
     /// The type of this phi node as a value
