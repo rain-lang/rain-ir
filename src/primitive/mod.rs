@@ -4,7 +4,7 @@ Primitive `rain` values and associated value descriptors
 use super::{
     eval::Apply,
     lifetime::{LifetimeBorrow, Live},
-    typing::{kind::universe::FINITE_TY, Type, Typed},
+    typing::{universe::FINITE_TY, Type, Typed},
 };
 use crate::value::{
     expr::Sexpr,

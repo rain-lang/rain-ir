@@ -10,7 +10,7 @@ use crate::primitive::{
     logical::{Bool, Logical},
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
-use crate::typing::kind::universe::Universe;
+use crate::typing::universe::Universe;
 use crate::typing::{Type, TypeValue, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};

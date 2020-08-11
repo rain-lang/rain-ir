@@ -3,7 +3,7 @@ Finite-valued types
 */
 use crate::eval::Apply;
 use crate::tokens::*;
-use crate::typing::{kind::universe::FINITE_TY, Type, Typed};
+use crate::typing::{universe::FINITE_TY, Type, Typed};
 use crate::value::{
     NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef,
 };
