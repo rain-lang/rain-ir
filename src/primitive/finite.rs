@@ -74,6 +74,10 @@ impl Typed for Finite {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Apply for Finite {}
@@ -184,6 +188,10 @@ impl Typed for Index {
     }
     #[inline]
     fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
         false
     }
 }

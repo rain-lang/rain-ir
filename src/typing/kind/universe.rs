@@ -207,6 +207,10 @@ impl Typed for Universe {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        true
+    }
 }
 
 impl Type for Universe {

@@ -6,7 +6,7 @@ use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
-use crate::typing::{Type, Typed};
+use crate::typing::Typed;
 use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
 use either::Either;
 use std::ops::Deref;
@@ -151,7 +151,17 @@ impl Typed for Sexpr {
         match self.len() {
             0 => false,
             1 => self[0].is_ty(),
-            _ => self.ty().is_universe(),
+            //TODO: this
+            _ => self.ty().is_kind(),
+        }
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        match self.len() {
+            0 => false,
+            1 => self[0].is_kind(),
+            //TODO: this
+            _ => self.ty().ty().is_kind(),
         }
     }
 }

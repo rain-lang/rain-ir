@@ -137,6 +137,10 @@ impl Typed for Ternary {
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Live for Ternary {

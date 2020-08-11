@@ -159,6 +159,10 @@ impl Typed for () {
     fn is_ty(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Apply for () {}
@@ -202,6 +206,10 @@ impl Typed for Unit {
     #[inline]
     fn is_ty(&self) -> bool {
         true
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
     }
 }
 

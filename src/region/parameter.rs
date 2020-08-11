@@ -5,7 +5,7 @@ use super::{Region, RegionBorrow, Regional};
 use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::typing::{Type, Typed};
+use crate::typing::Typed;
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 
@@ -95,7 +95,11 @@ impl Typed for Parameter {
     }
     #[inline]
     fn is_ty(&self) -> bool {
-        self.ty().is_universe()
+        self.ty().is_kind()
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        self.ty().ty().is_kind()
     }
 }
 

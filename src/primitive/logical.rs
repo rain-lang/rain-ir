@@ -46,6 +46,10 @@ impl Typed for Bool {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Apply for Bool {}
@@ -103,6 +107,10 @@ impl Typed for bool {
     }
     #[inline]
     fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
         false
     }
 }
@@ -576,6 +584,10 @@ impl Typed for Logical {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Apply for Logical {
@@ -707,6 +719,10 @@ macro_rules! make_logical {
             }
             #[inline]
             fn is_ty(&self) -> bool {
+                false
+            }
+            #[inline]
+            fn is_kind(&self) -> bool {
                 false
             }
         }

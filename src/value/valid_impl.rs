@@ -329,6 +329,10 @@ impl<P> Typed for ValId<P> {
     fn is_ty(&self) -> bool {
         self.as_norm().is_ty()
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        self.as_norm().is_kind()
+    }
 }
 
 impl<P> Typed for ValRef<'_, P> {
@@ -339,6 +343,10 @@ impl<P> Typed for ValRef<'_, P> {
     #[inline]
     fn is_ty(&self) -> bool {
         self.as_norm().is_ty()
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        self.as_norm().is_kind()
     }
 }
 

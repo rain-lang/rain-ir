@@ -116,6 +116,10 @@ impl Typed for Lambda {
     fn is_ty(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Live for Lambda {

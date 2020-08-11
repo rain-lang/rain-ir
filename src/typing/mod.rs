@@ -19,6 +19,8 @@ pub trait Typed {
     fn ty(&self) -> TypeRef;
     /// Check whether this `rain` value is a type
     fn is_ty(&self) -> bool;
+    /// Check whether this `rain` value is a kind
+    fn is_kind(&self) -> bool;
 }
 
 /// A trait implemented by `rain` values which are a type

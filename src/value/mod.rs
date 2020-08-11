@@ -101,9 +101,9 @@ pub type TypeId = ValId<IsType>;
 pub type TypeRef<'a> = ValRef<'a, IsType>;
 
 /// A `rain` kind
-pub type KindId = ValId<IsKind>; 
+pub type KindId = ValId<IsKind>;
 
-/// A `rain` kind reference 
+/// A `rain` kind reference
 pub type KindRef<'a> = ValRef<'a, IsKind>;
 
 /// A `rain` representation
@@ -342,6 +342,10 @@ impl Typed for NormalValue {
     fn is_ty(&self) -> bool {
         self.deref().is_ty()
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        self.deref().is_kind()
+    }
 }
 
 impl Apply for NormalValue {
@@ -534,6 +538,12 @@ impl Typed for ValueEnum {
     fn is_ty(&self) -> bool {
         forv!(match (self) {
             s => s.is_ty(),
+        })
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        forv!(match (self) {
+            s => s.is_kind(),
         })
     }
 }

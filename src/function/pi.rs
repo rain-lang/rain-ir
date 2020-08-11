@@ -105,6 +105,10 @@ impl Typed for Pi {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Live for Pi {

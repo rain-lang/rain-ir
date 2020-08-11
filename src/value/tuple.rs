@@ -93,6 +93,10 @@ impl Typed for Tuple {
     fn is_ty(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Value for Tuple {
@@ -392,6 +396,10 @@ impl Typed for Product {
     #[inline]
     fn is_ty(&self) -> bool {
         true
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
     }
 }
 

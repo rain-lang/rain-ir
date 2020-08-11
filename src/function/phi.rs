@@ -45,6 +45,10 @@ impl Typed for Phi {
     fn is_ty(&self) -> bool {
         false
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
 }
 
 impl Substitute for Phi {
