@@ -1,4 +1,5 @@
 use super::*;
+use crate::typing::TypePredicate;
 use std::hash::Hasher;
 
 // Statics
@@ -160,6 +161,30 @@ impl<P> ValId<P> {
     pub fn clone_val(&self) -> ValId {
         self.clone().coerce()
     }
+    /// Get this `VarId` as a `TypeId`
+    pub fn as_ty(&self) -> &TypeId
+    where
+        P: TypePredicate,
+    {
+        self.coerce_ref()
+    }
+    /// Clone this `VarId` as a `TypeId`
+    pub fn clone_ty(&self) -> TypeId
+    where
+        P: TypePredicate,
+    {
+        self.as_ty().clone()
+    }
+    /// Borrow this `VarId` as a `TypeRef`
+    pub fn borrow_ty(&self) -> TypeRef
+    where
+        P: TypePredicate,
+    {
+        ValRef {
+            ptr: self.ptr.borrow_arc(),
+            variant: std::marker::PhantomData,
+        }
+    }
     /// Coerce this `ValId` into another predicated value
     #[inline]
     pub(crate) fn coerce<Q>(self) -> ValId<Q> {
@@ -210,36 +235,31 @@ impl<'a, P> ValRef<'a, P> {
             variant: std::marker::PhantomData,
         }
     }
-}
-
-// Borrowed variant methods
-
-impl<'a, V> VarRef<'a, V> {
-    /// Get this `VarRef` as a `TypeRef`
+    /// Get this `ValRef` as a `TypeRef`
     pub fn as_ty(&self) -> TypeRef<'a>
     where
-        V: Type,
+        P: TypePredicate,
     {
-        VarRef {
+        ValRef {
             ptr: self.ptr,
             variant: std::marker::PhantomData,
         }
     }
-    /// Clone this `VarRef` as a `TypeId`
+    /// Clone this `ValRef` as a `TypeId`
     pub fn clone_ty(&self) -> TypeId
     where
-        V: Type,
+        P: TypePredicate,
     {
-        self.as_ty().clone_var()
+        self.as_ty().clone_ty()
     }
-    /// Clone this `VarRef` as a `VarId`
-    pub fn clone_var(&self) -> VarId<V> {
-        VarId {
+    /// Clone this `ValRef` as a `ValId`
+    pub fn clone_var(&self) -> ValId<P> {
+        ValId {
             ptr: self.ptr.clone_arc(),
             variant: self.variant,
         }
     }
-    /// Get the pointer behind this `VarRef`
+    /// Get the pointer behind this `ValRef`
     #[inline]
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
@@ -410,30 +430,6 @@ impl<'a, V> VarId<V> {
             variant: std::marker::PhantomData,
         }
     }
-    /// Get this `VarId` as a `TypeId`
-    pub fn as_ty(&self) -> &TypeId
-    where
-        V: Type,
-    {
-        self.coerce_ref()
-    }
-    /// Clone this `VarId` as a `TypeId`
-    pub fn clone_ty(&self) -> TypeId
-    where
-        V: Type,
-    {
-        self.as_ty().clone()
-    }
-    /// Borrow this `VarId` as a `TypeRef`
-    pub fn borrow_ty(&self) -> TypeRef
-    where
-        V: Type,
-    {
-        VarRef {
-            ptr: self.ptr.borrow_arc(),
-            variant: std::marker::PhantomData,
-        }
-    }
 }
 
 // Borrowing and dereferencing
@@ -544,15 +540,9 @@ impl From<Arc<NormalValue>> for ValId {
     }
 }
 
-impl From<ValId> for ValueEnum {
-    fn from(val: ValId) -> ValueEnum {
-        val.as_enum().clone()
-    }
-}
-
-impl From<ValId> for NormalValue {
-    fn from(val: ValId) -> NormalValue {
-        val.as_norm().clone()
+impl From<TypeId> for ValId {
+    fn from(ty: TypeId) -> ValId {
+        ty.coerce()
     }
 }
 
@@ -569,6 +559,17 @@ where
     type Error = ValId;
     fn try_from(v: ValId) -> Result<VarId<V>, ValId> {
         if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
+            Ok(v.coerce())
+        } else {
+            Err(v)
+        }
+    }
+}
+
+impl TryFrom<ValId> for TypeId {
+    type Error = ValId;
+    fn try_from(v: ValId) -> Result<TypeId, ValId> {
+        if v.is_ty() {
             Ok(v.coerce())
         } else {
             Err(v)
@@ -599,100 +600,59 @@ where
     }
 }
 
+impl<'a> From<&'a TypeId> for &'a ValId {
+    fn from(ty: &'a TypeId) -> &'a ValId {
+        ty.coerce_ref()
+    }
+}
+
 impl<'a, V: Value> From<&'a VarId<V>> for &'a ValId {
     fn from(var: &'a VarId<V>) -> &'a ValId {
         var.coerce_ref()
     }
 }
 
-impl<V: Value> From<VarRef<'_, V>> for ValId {
-    fn from(val: VarRef<V>) -> ValId {
-        val.clone_val()
-    }
-}
-
-impl From<ValRef<'_>> for ValId {
-    fn from(val: ValRef) -> ValId {
+impl<P> From<ValRef<'_, P>> for ValId {
+    fn from(val: ValRef<P>) -> ValId {
         val.clone_val()
     }
 }
 
 // Construction from ValIds
 
-impl<V: Value> From<VarId<V>> for ValueEnum {
-    fn from(val: VarId<V>) -> ValueEnum {
-        val.as_enum().clone()
+impl<P> From<ValId<P>> for ValueEnum {
+    fn from(value: ValId<P>) -> ValueEnum {
+        value.into_enum()
     }
 }
 
-impl<V: Value> From<VarId<V>> for NormalValue {
-    fn from(val: VarId<V>) -> NormalValue {
-        val.as_norm().clone()
-    }
-}
-
-impl<V: Value> From<VarRef<'_, V>> for ValueEnum {
-    fn from(val: VarRef<V>) -> ValueEnum {
-        val.as_enum().clone()
-    }
-}
-
-impl<V: Value> From<VarRef<'_, V>> for NormalValue {
-    fn from(val: VarRef<V>) -> NormalValue {
-        val.as_norm().clone()
-    }
-}
-
-impl From<ValRef<'_>> for ValueEnum {
-    fn from(val: ValRef) -> ValueEnum {
-        val.as_enum().clone()
-    }
-}
-
-impl From<ValRef<'_>> for NormalValue {
-    fn from(val: ValRef) -> NormalValue {
-        val.as_norm().clone()
+impl<P> From<ValId<P>> for NormalValue {
+    fn from(value: ValId<P>) -> NormalValue {
+        value.into_norm()
     }
 }
 
 // Debug, display and prettyprinting
 
-debug_from_display!(ValId);
-pretty_display!(ValId, s, fmt  => write!(fmt, "{}", s.deref()));
-debug_from_display!(ValRef<'_>);
-pretty_display!(ValRef<'_>, s, fmt  => write!(fmt, "{}", s.deref()));
-
-impl<V> Debug for VarId<V>
-where
-    V: Value,
-{
+impl<P> Debug for ValId<P> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Debug for VarRef<'_, V>
-where
-    V: Value,
-{
+impl<P> Debug for ValRef<'_, P> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Debug::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarId<V>
-where
-    V: Value,
-{
+impl<P> Display for ValId<P> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self.as_norm(), fmt)
     }
 }
 
-impl<V> Display for VarRef<'_, V>
-where
-    V: Value,
-{
+impl<P> Display for ValRef<'_, P> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self.as_norm(), fmt)
     }

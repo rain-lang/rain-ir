@@ -4,7 +4,7 @@ Reference-counted, hash-consed, typed arrays of values
 
 use super::predicate::Is;
 use super::{NormalValue, ValId, Value, VarId};
-use crate::typing::TypeValue;
+use crate::typing::IsType;
 use dashcache::{
     arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},
     DashCache, GlobalCache,
@@ -33,6 +33,20 @@ macro_rules! vararr {
         let v: Vec<VarId<_>> = vec![$($x,)+];
         v.into_iter().collect()
     }};
+}
+
+#[macro_export]
+/// A macro to create a type array
+macro_rules! tyarr {
+() => { $crate::value::arr::VarArr::EMPTY_SELF };
+($elem:expr; $n:expr) => {{
+    let v: Vec<TypeId> = vec![$elem; $n];
+    v.into_iter().collect()
+}};
+($($x:expr),+ $(,)?) => {{
+    let v: Vec<TypeId> = vec![$($x,)+];
+    v.into_iter().collect()
+}};
 }
 
 #[macro_export]
@@ -252,7 +266,7 @@ impl<A> ValArr<A> {
 }
 
 /// An array of types
-pub type TyArr = VarArr<TypeValue>;
+pub type TyArr = ValArr<(), IsType>;
 
 /// A bag (implemented as a sorted array) of `rain` values
 pub type VarBag<V> = ValArr<Sorted, Is<V>>;
@@ -300,13 +314,13 @@ impl<A: SetMarker, P> ValArr<A, P> {
 pub type ValBag<P = ()> = ValArr<Sorted, P>;
 
 /// A bag, that is, a multiset (implemented as a sorted array) of types
-pub type TyBag = VarBag<TypeValue>;
+pub type TyBag = ValBag<IsType>;
 
 /// A set (implemented as a sorted, unique array) of ValIds
 pub type ValSet<P = ()> = ValArr<Uniq, P>;
 
 /// A set (implemented as a sorted, unique array) of types
-pub type TySet = VarSet<TypeValue>;
+pub type TySet = ValSet<IsType>;
 
 impl ValArr {
     /// Create a `ValArr` from an exact size iterator over `ValId`s
@@ -329,11 +343,10 @@ impl ValArr {
     }
 }
 
-impl FromIterator<ValId> for ValArr {
-    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValArr {
+impl<P> FromIterator<ValId<P>> for ValArr<(), P> {
+    fn from_iter<I: IntoIterator<Item = ValId<P>>>(iter: I) -> ValArr<(), P> {
         let v: Vec<_> = iter.into_iter().collect();
-        //TODO: optimize the case where size is known?
-        Self::new(v.into_iter())
+        Self::from(v)
     }
 }
 
@@ -346,17 +359,17 @@ where
     }
 }
 
-impl FromIterator<ValId> for ValBag {
+impl<P> FromIterator<ValId<P>> for ValBag<P> {
     #[inline]
-    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValBag {
-        ValBag::dedup(CachedBag::from_iter(iter))
+    fn from_iter<I: IntoIterator<Item = ValId<P>>>(iter: I) -> ValBag<P> {
+        ValBag::dedup(CachedBag::from_iter(iter.into_iter().map(|v| v.into_val()))).coerce()
     }
 }
 
-impl FromIterator<ValId> for ValSet {
+impl<P> FromIterator<ValId<P>> for ValSet<P> {
     #[inline]
-    fn from_iter<I: IntoIterator<Item = ValId>>(iter: I) -> ValSet {
-        ValSet::dedup(CachedSet::from_iter(iter))
+    fn from_iter<I: IntoIterator<Item = ValId<P>>>(iter: I) -> ValSet<P> {
+        ValSet::dedup(CachedSet::from_iter(iter.into_iter().map(|v| v.into_val()))).coerce()
     }
 }
 
@@ -378,27 +391,6 @@ impl<V: Value> FromIterator<V> for VarBag<V> {
 impl<V: Value> FromIterator<V> for VarSet<V> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> VarSet<V> {
         let v = iter.into_iter().map(Value::into_val).collect_vec();
-        ValSet::dedup(v.into()).coerce()
-    }
-}
-
-impl<V: Value> FromIterator<VarId<V>> for VarArr<V> {
-    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarArr<V> {
-        let v = iter.into_iter().map(Into::into).collect_vec();
-        ValArr::<()>::dedup(v.into()).coerce()
-    }
-}
-
-impl<V: Value> FromIterator<VarId<V>> for VarBag<V> {
-    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarBag<V> {
-        let v = iter.into_iter().map(Into::into).collect_vec();
-        ValBag::dedup(v.into()).coerce()
-    }
-}
-
-impl<V: Value> FromIterator<VarId<V>> for VarSet<V> {
-    fn from_iter<I: IntoIterator<Item = VarId<V>>>(iter: I) -> VarSet<V> {
-        let v = iter.into_iter().map(Into::into).collect_vec();
         ValSet::dedup(v.into()).coerce()
     }
 }

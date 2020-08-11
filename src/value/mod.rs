@@ -11,7 +11,7 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::universe::Universe;
-use crate::typing::{Type, TypeValue, Typed};
+use crate::typing::{IsType, Type, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use either::Either;
@@ -95,10 +95,10 @@ pub enum ValueEnum {
 // Common value type aliases:
 
 /// A `rain` type
-pub type TypeId = VarId<TypeValue>;
+pub type TypeId = ValId<IsType>;
 
 /// A `rain` type reference
-pub type TypeRef<'a> = VarRef<'a, TypeValue>;
+pub type TypeRef<'a> = ValRef<'a, IsType>;
 
 /// A reference-counted pointer to a value guaranteed to be a typing universe
 pub type UniverseId = VarId<Universe>;
@@ -560,12 +560,6 @@ normal_valid!(Ternary);
 #[macro_use]
 macro_rules! impl_to_type {
     ($T:ty) => {
-        impl From<$T> for crate::value::TypeValue {
-            fn from(v: $T) -> crate::typing::TypeValue {
-                crate::typing::TypeValue::try_from(crate::value::NormalValue::from(v))
-                    .expect("Impossible")
-            }
-        }
         impl From<$T> for crate::value::TypeId {
             fn from(v: $T) -> crate::value::TypeId {
                 v.try_into_ty().expect("Infallible!")

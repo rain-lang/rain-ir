@@ -194,7 +194,7 @@ impl Substitute for Tuple {
         Ok(Tuple {
             elems,
             lifetime,
-            ty: self.ty.substitute(ctx)?,
+            ty: self.ty.substitute_ty(ctx)?,
         })
     }
 }
@@ -352,7 +352,7 @@ impl Substitute for Product {
             .elems
             .iter()
             .cloned()
-            .map(|val| -> Result<TypeId, _> { val.substitute(ctx) })
+            .map(|val| -> Result<TypeId, _> { val.substitute_ty(ctx) })
             .collect::<Result<_, _>>()?;
         let affine = self.is_anchor() || elems.iter().any(|t| t.is_affine());
         let relevant = self.is_flare() || elems.iter().any(|t| t.is_affine());

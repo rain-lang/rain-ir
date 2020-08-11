@@ -5,7 +5,7 @@ use super::{
     eval::{Apply, EvalCtx, Substitute},
     lifetime::{Lifetime, LifetimeBorrow, Live},
     region::{RegionBorrow, Regional},
-    value::{Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum},
+    value::{Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum},
 };
 use crate::{debug_from_display, pretty_display};
 use std::borrow::Borrow;
@@ -14,6 +14,8 @@ use std::ops::Deref;
 
 mod kind;
 pub use kind::*;
+mod predicate;
+pub use predicate::*;
 
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
@@ -69,305 +71,329 @@ pub trait Type: Value {
             Err(Error::NotAFunction)
         }
     }
-}
-
-/// A value guaranteed to be a type
-#[derive(Clone, Eq, PartialEq, Hash)]
-#[repr(transparent)]
-pub struct TypeValue(NormalValue);
-
-debug_from_display!(TypeValue);
-pretty_display!(TypeValue, s, fmt => write!(fmt, "{}", s.deref()));
-
-impl Typed for TypeValue {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.deref().ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        self.deref().is_ty()
+    /// Substitute this value while preserving the fact that it is a type
+    fn substitute_ty(&self, ctx: &mut EvalCtx) -> Result<TypeId, Error> {
+        self.substitute(ctx).map(ValId::coerce)
     }
 }
 
-impl Live for TypeValue {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
+impl<P: TypePredicate> Type for ValId<P> {
+    fn into_ty(self) -> TypeId {
+        self.coerce()
     }
-}
-
-impl Regional for TypeValue {
-    #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        self.deref().region()
-    }
-}
-
-impl Substitute for TypeId {
-    #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<TypeId, Error> {
-        let v: ValId = self.as_val().substitute(ctx)?;
-        v.try_into().map_err(|_| Error::NotATypeError)
-    }
-}
-
-impl Substitute<ValId> for TypeValue {
-    #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        self.deref().substitute(ctx)
-    }
-}
-
-impl Apply for TypeValue {}
-
-impl Value for TypeValue {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        self.deref().no_deps()
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        self.into()
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        self.into()
-    }
-}
-
-impl ValueData for TypeValue {}
-
-impl Type for TypeValue {
-    #[inline]
     fn universe(&self) -> UniverseRef {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.universe(),
+            ValueEnum::Finite(f) => f.universe(),
+            ValueEnum::Pi(p) => p.universe(),
             ValueEnum::Universe(u) => u.universe(),
             ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(_p) => unimplemented!("Parameter universe getter"),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.universe(),
-            ValueEnum::Pi(p) => p.universe(),
-            ValueEnum::Finite(f) => f.universe(),
-            u => panic!(
-                "Impossible (TypeValue::universe): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => unimplemented!("Parameter universes for parameter {}", p),
+            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation universes for sexpr {}", s),
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-    #[inline]
     fn is_universe(&self) -> bool {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_universe(),
+            ValueEnum::Finite(f) => f.is_universe(),
+            ValueEnum::Pi(p) => p.is_universe(),
             ValueEnum::Universe(u) => u.is_universe(),
             ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(_p) => unimplemented!("Parameter universe check"),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.is_universe(),
-            ValueEnum::Pi(p) => p.is_universe(),
-            ValueEnum::Finite(f) => f.is_universe(),
-            u => panic!(
-                "Impossible (TypeValue::is_universe): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter universe check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation universe check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-    #[inline]
     fn is_affine(&self) -> bool {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_affine(),
+            ValueEnum::Finite(f) => f.is_affine(),
+            ValueEnum::Pi(p) => p.is_affine(),
             ValueEnum::Universe(u) => u.is_affine(),
             ValueEnum::Product(p) => p.is_affine(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.is_affine(),
-            ValueEnum::Pi(p) => p.is_affine(),
-            ValueEnum::Finite(f) => f.is_affine(),
-            u => panic!(
-                "Impossible (TypeValue::is_affine): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter affinity check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation affinity check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-
-    #[inline]
     fn is_relevant(&self) -> bool {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_relevant(),
+            ValueEnum::Finite(f) => f.is_relevant(),
+            ValueEnum::Pi(p) => p.is_relevant(),
             ValueEnum::Universe(u) => u.is_relevant(),
             ValueEnum::Product(p) => p.is_relevant(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.is_relevant(),
-            ValueEnum::Pi(p) => p.is_relevant(),
-            ValueEnum::Finite(f) => f.is_relevant(),
-            u => panic!(
-                "Impossible (TypeValue::is_relevant): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter relevance check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation relevance check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-
     #[inline]
     fn is_linear(&self) -> bool {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_linear(),
+            ValueEnum::Finite(f) => f.is_linear(),
+            ValueEnum::Pi(p) => p.is_linear(),
             ValueEnum::Universe(u) => u.is_linear(),
             ValueEnum::Product(p) => p.is_linear(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.is_linear(),
-            ValueEnum::Pi(p) => p.is_linear(),
-            ValueEnum::Finite(f) => f.is_linear(),
-            u => panic!(
-                "Impossible (TypeValue::is_linear): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter linearity check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation linearity check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-
     #[inline]
     fn is_substruct(&self) -> bool {
-        match self.borrow() {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_substruct(),
+            ValueEnum::Finite(f) => f.is_substruct(),
+            ValueEnum::Pi(p) => p.is_substruct(),
             ValueEnum::Universe(u) => u.is_substruct(),
             ValueEnum::Product(p) => p.is_substruct(),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.is_substruct(),
-            ValueEnum::Pi(p) => p.is_substruct(),
-            ValueEnum::Finite(f) => f.is_substruct(),
-            u => panic!(
-                "Impossible (TypeValue::is_substruct): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter substructurality check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation substructurality check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
-    #[inline]
+    fn apply_ty(&self, args: &[ValId]) -> Result<(Lifetime, TypeId), Error>
+    where
+        Self: Clone,
+    {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.apply_ty(args),
+            ValueEnum::Finite(f) => f.apply_ty(args),
+            ValueEnum::Pi(p) => p.apply_ty(args),
+            ValueEnum::Universe(u) => u.apply_ty(args),
+            ValueEnum::Product(p) => p.apply_ty(args),
+            ValueEnum::Parameter(p) => unimplemented!("Parameter application for parameter {}", p),
+            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation application for sexpr {}", s),
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
     fn apply_ty_in(
         &self,
         args: &[ValId],
         ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        match self.borrow() {
+    ) -> Result<(Lifetime, TypeId), Error>
+    where
+        Self: Clone,
+    {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
+            ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
+            ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
             ValueEnum::Universe(u) => u.apply_ty_in(args, ctx),
             ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
-            ValueEnum::Parameter(_p) => unimplemented!(),
-            ValueEnum::Sexpr(_s) => unimplemented!(),
-            ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
-            ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
-            ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
-            u => panic!(
-                "Impossible (TypeValue::apply_ty): TypeValue({}) is not a type",
-                u
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter contextual application for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation contextual application for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
             ),
         }
     }
 }
 
-impl From<TypeValue> for ValId {
-    fn from(ty: TypeValue) -> ValId {
-        ValId::<()>::direct_new(ty)
-    }
-}
-
-impl Deref for TypeValue {
-    type Target = NormalValue;
-    fn deref(&self) -> &NormalValue {
-        &self.0
-    }
-}
-
-impl From<TypeValue> for NormalValue {
-    fn from(ty: TypeValue) -> NormalValue {
-        ty.0
-    }
-}
-
-impl From<TypeValue> for ValueEnum {
-    fn from(ty: TypeValue) -> ValueEnum {
-        (ty.0).0
-    }
-}
-
-impl TryFrom<NormalValue> for TypeValue {
-    type Error = NormalValue;
-    #[inline]
-    fn try_from(value: NormalValue) -> Result<TypeValue, NormalValue> {
-        if value.is_ty() {
-            Ok(TypeValue(value))
-        } else {
-            Err(value)
+impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
+    fn universe(&self) -> UniverseRef {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.universe(),
+            ValueEnum::Finite(f) => f.universe(),
+            ValueEnum::Pi(p) => p.universe(),
+            ValueEnum::Universe(u) => u.universe(),
+            ValueEnum::Product(p) => p.universe(),
+            ValueEnum::Parameter(p) => unimplemented!("Parameter universes for parameter {}", p),
+            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation universes for sexpr {}", s),
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
         }
     }
-}
-
-impl<'a> TryFrom<&'a NormalValue> for &'a TypeValue {
-    type Error = &'a NormalValue;
-    #[inline]
-    fn try_from(value: &'a NormalValue) -> Result<&'a TypeValue, &'a NormalValue> {
-        if value.is_ty() {
-            let cast = unsafe { &*(value as *const NormalValue as *const TypeValue) };
-            Ok(cast)
-        } else {
-            Err(value)
-        }
-    }
-}
-
-impl<'a> From<&'a TypeValue> for &'a NormalValue {
-    fn from(value: &'a TypeValue) -> &'a NormalValue {
-        &value.0
-    }
-}
-
-impl Borrow<NormalValue> for TypeValue {
-    fn borrow(&self) -> &NormalValue {
-        self.into()
-    }
-}
-
-impl<'a> From<&'a TypeValue> for &'a ValueEnum {
-    fn from(value: &'a TypeValue) -> &'a ValueEnum {
-        &(value.0).0
-    }
-}
-
-impl Borrow<ValueEnum> for TypeValue {
-    fn borrow(&self) -> &ValueEnum {
-        self.into()
-    }
-}
-
-impl TryFrom<ValueEnum> for TypeValue {
-    type Error = ValueEnum;
-    #[inline]
-    fn try_from(value: ValueEnum) -> Result<TypeValue, ValueEnum> {
-        if value.is_ty() {
-            Ok(TypeValue(NormalValue::from(value)))
-        } else {
-            Err(value)
-        }
-    }
-}
-
-#[cfg(feature = "prettyprinter")]
-mod prettyprint_impl {
-    use super::*;
-    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
-    use std::fmt::{self, Display, Formatter};
-
-    impl PrettyPrint for TypeValue {
-        #[inline]
-        fn prettyprint<I: From<usize> + Display>(
-            &self,
-            printer: &mut PrettyPrinter<I>,
-            fmt: &mut Formatter,
-        ) -> Result<(), fmt::Error> {
-            if let Some(name) = printer.lookup(self) {
-                write!(fmt, "{}", name)
-            } else {
-                self.deref().prettyprint(printer, fmt)
+    fn is_universe(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_universe(),
+            ValueEnum::Finite(f) => f.is_universe(),
+            ValueEnum::Pi(p) => p.is_universe(),
+            ValueEnum::Universe(u) => u.is_universe(),
+            ValueEnum::Product(p) => p.is_universe(),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter universe check for parameter {}", p)
             }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation universe check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    fn is_affine(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_affine(),
+            ValueEnum::Finite(f) => f.is_affine(),
+            ValueEnum::Pi(p) => p.is_affine(),
+            ValueEnum::Universe(u) => u.is_affine(),
+            ValueEnum::Product(p) => p.is_affine(),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter affinity check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation affinity check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    fn is_relevant(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_relevant(),
+            ValueEnum::Finite(f) => f.is_relevant(),
+            ValueEnum::Pi(p) => p.is_relevant(),
+            ValueEnum::Universe(u) => u.is_relevant(),
+            ValueEnum::Product(p) => p.is_relevant(),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter relevance check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation relevance check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    #[inline]
+    fn is_linear(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_linear(),
+            ValueEnum::Finite(f) => f.is_linear(),
+            ValueEnum::Pi(p) => p.is_linear(),
+            ValueEnum::Universe(u) => u.is_linear(),
+            ValueEnum::Product(p) => p.is_linear(),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter linearity check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation linearity check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    #[inline]
+    fn is_substruct(&self) -> bool {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.is_substruct(),
+            ValueEnum::Finite(f) => f.is_substruct(),
+            ValueEnum::Pi(p) => p.is_substruct(),
+            ValueEnum::Universe(u) => u.is_substruct(),
+            ValueEnum::Product(p) => p.is_substruct(),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter substructurality check for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation substructurality check for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    fn apply_ty(&self, args: &[ValId]) -> Result<(Lifetime, TypeId), Error>
+    where
+        Self: Clone,
+    {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.apply_ty(args),
+            ValueEnum::Finite(f) => f.apply_ty(args),
+            ValueEnum::Pi(p) => p.apply_ty(args),
+            ValueEnum::Universe(u) => u.apply_ty(args),
+            ValueEnum::Product(p) => p.apply_ty(args),
+            ValueEnum::Parameter(p) => unimplemented!("Parameter application for parameter {}", p),
+            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation application for sexpr {}", s),
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
+        }
+    }
+    fn apply_ty_in(
+        &self,
+        args: &[ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<(Lifetime, TypeId), Error>
+    where
+        Self: Clone,
+    {
+        match self.as_enum() {
+            ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
+            ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
+            ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
+            ValueEnum::Universe(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
+            ValueEnum::Parameter(p) => {
+                unimplemented!("Parameter contextual application for parameter {}", p)
+            }
+            ValueEnum::Sexpr(s) => {
+                unimplemented!("Partial evaluation contextual application for sexpr {}", s)
+            }
+            v => panic!(
+                "Logic error: value {} is not a type, but was asserted as such!",
+                v
+            ),
         }
     }
 }
