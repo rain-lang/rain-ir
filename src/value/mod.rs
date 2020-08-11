@@ -106,6 +106,12 @@ pub type KindId = ValId<IsKind>;
 /// A `rain` kind reference 
 pub type KindRef<'a> = ValRef<'a, IsKind>;
 
+/// A `rain` representation
+pub type ReprId = ValId<IsRepr>;
+
+/// A `rain` representation reference
+pub type ReprRef<'a> = ValRef<'a, IsRepr>;
+
 /// A reference-counted pointer to a value guaranteed to be a typing universe
 pub type UniverseId = VarId<Universe>;
 
