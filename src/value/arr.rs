@@ -3,7 +3,7 @@ Reference-counted, hash-consed, typed arrays of values
 */
 
 use super::predicate::Is;
-use super::{NormalValue, ValId, Value, VarId};
+use super::{NormalValue, ValId, Value};
 use crate::typing::IsType;
 use dashcache::{
     arr::{BagMarker, CachedArr, CachedBag, CachedSet, EmptyPredicate, SetMarker, Sorted, Uniq},

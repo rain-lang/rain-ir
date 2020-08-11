@@ -11,7 +11,7 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::universe::Universe;
-use crate::typing::{IsType, Type, Typed};
+use crate::typing::{IsType, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use either::Either;

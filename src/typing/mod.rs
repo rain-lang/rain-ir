@@ -2,15 +2,11 @@
 The `rain` type system
 */
 use super::{
-    eval::{Apply, EvalCtx, Substitute},
-    lifetime::{Lifetime, LifetimeBorrow, Live},
-    region::{RegionBorrow, Regional},
-    value::{Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum},
+    eval::EvalCtx,
+    lifetime::Lifetime,
+    value::{Error, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum},
 };
-use crate::{debug_from_display, pretty_display};
-use std::borrow::Borrow;
-use std::convert::{TryFrom, TryInto};
-use std::ops::Deref;
+use std::convert::TryInto;
 
 mod kind;
 pub use kind::*;
