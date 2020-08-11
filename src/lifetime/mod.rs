@@ -421,7 +421,7 @@ mod tests {
             Either::Right(Some(gamma.clone()))
         );
         let unit = ().into_val();
-        let alpha_anchor = ().cast_into_lt(alpha.clone()).unwrap();
+        let alpha_anchor = ().cast_into_lt(alpha).unwrap();
         let gamma_anchor = ().cast_into_lt(gamma.clone()).unwrap();
         assert_ne!(unit, alpha_anchor);
         assert_ne!(unit, gamma_anchor);
