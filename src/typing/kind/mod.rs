@@ -3,8 +3,8 @@ Meta-types and layouts
 */
 use super::*;
 
-pub mod universe;
 pub mod layout;
+pub mod universe;
 
 /// A trait implemented by `rain` values which are a kind, i.e. a type of types
 pub trait Kind: Type {}

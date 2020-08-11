@@ -11,7 +11,7 @@ use crate::primitive::{
 };
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::universe::Universe;
-use crate::typing::{IsType, Typed};
+use crate::typing::{IsKind, IsRepr, IsType, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use either::Either;
@@ -99,6 +99,12 @@ pub type TypeId = ValId<IsType>;
 
 /// A `rain` type reference
 pub type TypeRef<'a> = ValRef<'a, IsType>;
+
+/// A `rain` kind
+pub type KindId = ValId<IsKind>; 
+
+/// A `rain` kind reference 
+pub type KindRef<'a> = ValRef<'a, IsKind>;
 
 /// A reference-counted pointer to a value guaranteed to be a typing universe
 pub type UniverseId = VarId<Universe>;
