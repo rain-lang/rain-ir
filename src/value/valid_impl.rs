@@ -250,7 +250,7 @@ impl<'a, P> ValRef<'a, P> {
     where
         P: TypePredicate,
     {
-        self.as_ty().clone_ty()
+        self.as_arc().clone_ty()
     }
     /// Clone this `ValRef` as a `ValId`
     pub fn clone_var(&self) -> ValId<P> {
