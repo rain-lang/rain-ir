@@ -73,7 +73,8 @@ pub trait Type: Value {
     }
     /// Substitute this value while preserving the fact that it is a type
     fn substitute_ty(&self, ctx: &mut EvalCtx) -> Result<TypeId, Error> {
-        self.substitute(ctx).map(ValId::coerce)
+        let value = self.substitute(ctx)?;
+        value.try_into().map_err(|_| Error::NotATypeError)
     }
 }
 
