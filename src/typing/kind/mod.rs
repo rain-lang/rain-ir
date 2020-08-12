@@ -10,6 +10,9 @@ pub mod universe;
 /// A trait implemented by `rain` values which are a kind, i.e. a type of types
 pub trait Kind: Type {
     /// Convert this kind into a `KindId`
+    /// 
+    /// # Correctness
+    /// The result of this method should always be pointer equivalent to `self.into_val()`
     #[inline]
     fn into_kind(self) -> KindId {
         self.into_val().coerce()
