@@ -34,6 +34,16 @@ impl Ternary {
     /// This constructs a conditional node, which is a function taking a single boolean parameter and returning
     /// `high` when the parameter is `true` and `low` when the parameter is `false`, assigned the smallest
     /// possible pi-type which can contain both `high` and `low`.
+    /// 
+    /// # Example
+    /// ```rust
+    /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::finite::Finite};
+    /// let high = Finite(8).ix(3).unwrap().into_val();
+    /// let low = Finite(8).ix(2).unwrap().into_val();
+    /// let conditional = Ternary::conditional(high.clone(), low.clone()).unwrap();
+    /// assert_eq!(conditional.clone().applied(&[true.into_val()]), Ok(high));
+    /// assert_eq!(conditional.applied(&[false.into_val()]), Ok(low));
+    /// ```
     #[inline]
     pub fn conditional(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
