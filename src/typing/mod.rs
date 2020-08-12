@@ -21,6 +21,29 @@ pub trait Typed {
     fn is_ty(&self) -> bool;
     /// Check whether this `rain` value is a kind
     fn is_kind(&self) -> bool;
+    /// Get the kind-level of this value
+    ///
+    /// A level-0 value is just a value
+    /// A level-1 value is a type
+    /// A level-2 value is a type whose members are types, etc.
+    ///
+    /// This method may return an under-estimate, but may *not* return an over-estimate
+    #[inline]
+    fn kind_level(&self) -> usize {
+        if self.is_ty() {
+            if self.is_kind() {
+                2
+            } else {
+                0
+            }
+        } else {
+            debug_assert!(
+                !self.is_kind(),
+                "A value cannot be a kind if it is not a type!"
+            );
+            1
+        }
+    }
 }
 
 /// A trait implemented by `rain` values which are a type
