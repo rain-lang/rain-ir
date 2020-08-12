@@ -156,6 +156,10 @@ pub trait Type: Value {
         self.apply_ty_in(args, &mut None)
     }
     /// Apply this type to a set of arguments, yielding a result type and lifetime
+    /// 
+    /// # Notes
+    /// The default implementation for this method returns this value and it's lifetime
+    /// for an empty argument vector, and an error otherwise.
     fn apply_ty_in(
         &self,
         args: &[ValId],
