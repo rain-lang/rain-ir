@@ -5,7 +5,7 @@ use super::{
     eval::EvalCtx,
     lifetime::Lifetime,
     value::{
-        Error, KindRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum,
+        Error, KindRef, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum,
     },
 };
 use std::convert::TryInto;
@@ -19,10 +19,30 @@ pub use predicate::*;
 pub trait Typed {
     /// Compute the type of this `rain` value
     fn ty(&self) -> TypeRef;
+    /// Compute the kind of this `rain` value
+    fn kind(&self) -> KindRef {
+        let tyty = self.ty().as_enum().ty();
+        debug_assert!(tyty.is_kind(), "The type of a type must be a kind!");
+        tyty.coerce()
+    }
+    /// Compute the representation of this `rain` value, if any
+    fn repr(&self) -> Option<ReprRef> {
+        let tyty = self.ty().as_enum().ty();
+        if tyty.is_repr() {
+            Some(tyty.coerce())
+        } else {
+            None
+        }
+    }
     /// Check whether this `rain` value is a type
     fn is_ty(&self) -> bool;
     /// Check whether this `rain` value is a kind
     fn is_kind(&self) -> bool;
+    /// Check whether this `rain` value is a representation
+    #[inline]
+    fn is_repr(&self) -> bool {
+        false
+    }
     /// Get the kind-level of this value
     ///
     /// A level-0 value is just a value
@@ -55,13 +75,24 @@ pub trait Type: Value {
         self.into_val().coerce()
     }
     /// Get the kind of this type
-    /// 
+    ///
     /// The result of this method *must* be pointer-equivalent to the result of calling `.ty()` on this type
-    fn kind(&self) -> KindRef {
-        self.ty().coerce()
+    fn ty_kind(&self) -> KindRef {
+        let ty = self.ty();
+        debug_assert!(ty.is_kind(), "The type of a type must be a kind!");
+        ty.coerce()
+    }
+    /// Get the representation of this type, if any
+    fn ty_repr(&self) -> Option<ReprRef> {
+        let ty = self.ty();
+        if ty.is_repr() {
+            Some(ty.coerce())
+        } else {
+            None
+        }
     }
     /// Get the universe of this type
-    /// 
+    ///
     /// The result of this method *may not be equal* to the result of calling `.ty()` on this type
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe
@@ -71,14 +102,14 @@ pub trait Type: Value {
     /// Get whether this type is relevant
     fn is_relevant(&self) -> bool;
     /// Get whether this type is linear
-    /// 
+    ///
     /// A type is linear if it is both affine and relevant
     #[inline]
     fn is_linear(&self) -> bool {
         self.is_affine() && self.is_relevant()
     }
     /// Get whether this type is substructural
-    /// 
+    ///
     /// A type is substructural if it is either affine or relevant
     #[inline]
     fn is_substruct(&self) -> bool {

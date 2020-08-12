@@ -191,6 +191,24 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             Err(self)
         }
     }
+    /// Convert a value into a `KindId` if it is a kind, otherwise return it
+    #[inline]
+    fn try_into_kind(self) -> Result<KindId, Self> {
+        if self.is_kind() {
+            Ok(self.into_val().coerce())
+        } else {
+            Err(self)
+        }
+    }
+    /// Convert a value into a `ReprId` if it is a representation, otherwise return it
+    #[inline]
+    fn try_into_repr(self) -> Result<ReprId, Self> {
+        if self.is_repr() {
+            Ok(self.into_val().coerce())
+        } else {
+            Err(self)
+        }
+    }
     /// Try to cast this into a lifetime
     ///
     /// On failure, return an error. On success, return either
