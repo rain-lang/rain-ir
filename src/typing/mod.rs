@@ -18,6 +18,14 @@ pub use predicate::*;
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
     /// Compute the type of this `rain` value
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use rain_ir::{typing::Typed, primitive::logical::Bool, value::Value};
+    /// let bool_ty = Bool.into_val();
+    /// assert_eq!(true.ty(), bool_ty);
+    /// assert_eq!(false.ty(), bool_ty);
+    /// ```
     fn ty(&self) -> TypeRef;
     /// Compute the kind of this `rain` value
     fn kind(&self) -> KindRef {
