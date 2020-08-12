@@ -130,14 +130,20 @@ pub trait Type: Value {
     fn is_relevant(&self) -> bool;
     /// Get whether this type is linear
     ///
-    /// A type is linear if it is both affine and relevant
+    /// # Correctness
+    /// A type is linear if and only if it is both affine and relevant.
+    /// It is recommended to use the default implementation for this method unless there
+    /// is a more efficient one available.
     #[inline]
     fn is_linear(&self) -> bool {
         self.is_affine() && self.is_relevant()
     }
     /// Get whether this type is substructural
     ///
-    /// A type is substructural if it is either affine or relevant
+    /// # Correctness
+    /// A type is substructural if and only if it is either affine or relevant
+    /// It is recommended to use the default implementation for this method unless there
+    /// is a more efficient one available.
     #[inline]
     fn is_substruct(&self) -> bool {
         self.is_affine() || self.is_relevant()
