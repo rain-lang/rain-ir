@@ -171,7 +171,10 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     }
     /// Apply this value to a set of arguments, if possible
     #[inline]
-    fn applied(self, args: &[ValId]) -> Result<ValId, Error> {
+    fn applied(&self, args: &[ValId]) -> Result<ValId, Error>
+    where
+        Self: Clone,
+    {
         let application = self.curried(args)?;
         let (rest, success) = application.valid_to_success(self, args);
         debug_assert!(

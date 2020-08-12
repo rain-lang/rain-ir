@@ -41,7 +41,7 @@ impl Ternary {
     /// let high = Finite(8).ix(3).unwrap().into_val();
     /// let low = Finite(8).ix(2).unwrap().into_val();
     /// let conditional = Ternary::conditional(high.clone(), low.clone()).unwrap();
-    /// assert_eq!(conditional.clone().applied(&[true.into_val()]), Ok(high));
+    /// assert_eq!(conditional.applied(&[true.into_val()]), Ok(high));
     /// assert_eq!(conditional.applied(&[false.into_val()]), Ok(low));
     /// ```
     #[inline]
@@ -79,7 +79,7 @@ impl Ternary {
     /// let switch = Ternary::switch(high.clone(), low.clone()).unwrap();
     /// let one = Finite(2).ix(1).unwrap().into_val();
     /// let zero = Finite(2).ix(0).unwrap().into_val();
-    /// assert_eq!(switch.clone().applied(&[one]), Ok(high));
+    /// assert_eq!(switch.applied(&[one]), Ok(high));
     /// assert_eq!(switch.applied(&[zero]), Ok(low));
     /// ```
     #[inline]

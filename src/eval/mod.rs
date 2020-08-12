@@ -25,9 +25,9 @@ pub enum Application<'a, V = ValId> {
 
 impl<'a> Application<'a> {
     /// Convert any application into a successful application
-    pub(crate) fn valid_to_success<V: Value>(
+    pub(crate) fn valid_to_success<V: Value + Clone>(
         self,
-        value: V,
+        value: &V,
         args: &[ValId],
     ) -> (&'a [ValId], ValId) {
         let (lt, ty) = match self {
@@ -37,7 +37,7 @@ impl<'a> Application<'a> {
             Application::Success(rest, val) => return (rest, val),
         };
         let mut new_args = Vec::with_capacity(1 + args.len());
-        new_args.push(value.into_val());
+        new_args.push(value.clone().into_val());
         new_args.extend_from_slice(args);
         (
             &[],
