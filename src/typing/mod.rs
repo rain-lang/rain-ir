@@ -60,9 +60,9 @@ pub trait Typed {
     }
     /// Get the kind-level of this value
     ///
-    /// A level-0 value is just a value
-    /// A level-1 value is a type
-    /// A level-2 value is a type whose members are types, etc.
+    /// We define kind-level inductively as follows:
+    /// - A level-0 value is just a value
+    /// - A level-(n + 1) value is a type whose elements are all of level-n
     ///
     /// This method may return an under-estimate, but may *not* return an over-estimate
     #[inline]
