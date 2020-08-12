@@ -99,6 +99,7 @@ pub trait Type: Value {
     }
     /// Get the kind of this type
     ///
+    /// # Correctness
     /// The result of this method *must* be pointer-equivalent to the result of calling `.ty()` on this type
     fn ty_kind(&self) -> KindRef {
         let ty = self.ty();
