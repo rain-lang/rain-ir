@@ -102,6 +102,15 @@ impl Ternary {
     ///
     /// Ternary operations always consume a single parameter, which currently can either be of type `#bool` or `#finite(2)`.
     /// This returns the type of that parameter.
+    /// 
+    /// # Example
+    /// ```rust
+    /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::{finite::Finite, logical::Bool}};
+    /// let conditional = Ternary::conditional(true.into_val(), false.into_val()).unwrap();
+    /// let switch = Ternary::switch(true.into_val(), false.into_val()).unwrap();
+    /// assert_eq!(*conditional.param_ty(), Bool.into_val());
+    /// assert_eq!(*switch.param_ty(), Finite(2).into_val());
+    /// ```
     #[inline]
     pub fn param_ty(&self) -> &TypeId {
         &self.ty.param_tys()[0]
