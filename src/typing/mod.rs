@@ -149,6 +149,10 @@ pub trait Type: Value {
         self.is_affine() || self.is_relevant()
     }
     /// Apply this type to a set of arguments, yielding a result type and lifetime
+    /// 
+    /// # Correctness
+    /// This method must always return the same value as calling `self.apply_ty_in(args, &mut None)`.
+    /// The default implementation does exactly this, and in general should be used as is.
     fn apply_ty(&self, args: &[ValId]) -> Result<(Lifetime, TypeId), Error>
     where
         Self: Clone,
