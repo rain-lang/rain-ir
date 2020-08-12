@@ -63,8 +63,13 @@ pub trait Typed {
     /// We define kind-level inductively as follows:
     /// - A level-0 value is just a value
     /// - A level-(n + 1) value is a type whose elements are all of level-n
+    /// 
+    /// A level-1 value is called a *type*, while a level-2 value is called a *kind*.
+    /// A level-3 value is sometimes called a *sort*.
     ///
-    /// This method may return an under-estimate, but may *not* return an over-estimate
+    /// This method may return an under-estimate, but may *not* return an over-estimate, e.g.,
+    /// there may be a level-3 value which is marked as level-2, but a level-2 value must *always* have
+    /// *every* member be a type.
     #[inline]
     fn kind_level(&self) -> usize {
         if self.is_ty() {
