@@ -117,7 +117,10 @@ pub trait Type: Value {
     }
     /// Get the universe of this type
     ///
-    /// The result of this method *may not be equal* to the result of calling `.ty()` on this type
+    /// # Notes
+    /// The result of this method *might* not be equal to the result of calling `.ty()` on this type.
+    /// Specifically, the universe of a type must be a supertype of it's type, but does not have to *be*
+    /// it's type.
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe
     fn is_universe(&self) -> bool;
