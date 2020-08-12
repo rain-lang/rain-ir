@@ -3,6 +3,8 @@
 pub enum Error {
     /// Attempting to apply a non-function
     NotAFunction,
+    /// Attempting to apply a non-function type
+    NotAFunctionType,
     /// Type mismatch
     TypeMismatch,
     /// Mismatched borrow merger
