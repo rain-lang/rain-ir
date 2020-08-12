@@ -19,7 +19,7 @@ pub use predicate::*;
 pub trait Typed {
     /// Compute the type of this `rain` value
     /// 
-    /// # Examples
+    /// # Example
     /// ```rust
     /// # use rain_ir::{typing::Typed, primitive::logical::Bool, value::Value};
     /// let bool_ty = Bool.into_val();
@@ -43,6 +43,13 @@ pub trait Typed {
         }
     }
     /// Check whether this `rain` value is a type
+    /// 
+    /// # Example
+    /// ```rust
+    /// # use rain_ir::{typing::Typed, primitive::logical::Bool, value::Value};
+    /// assert!(!true.is_ty());
+    /// assert!(Bool.is_ty());
+    /// ```
     fn is_ty(&self) -> bool;
     /// Check whether this `rain` value is a kind
     fn is_kind(&self) -> bool;
