@@ -70,6 +70,18 @@ impl Ternary {
     /// (when non-constant, as constant ternary nodes and switch nodes both normalize to a lambda)
     ///
     /// [^1]: `switch` nodes are not actually implemented yet, but their design is mostly completed
+    /// 
+    /// # Example
+    /// ```rust
+    /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::finite::Finite};
+    /// let high = Finite(8).ix(3).unwrap().into_val();
+    /// let low = Finite(8).ix(2).unwrap().into_val();
+    /// let switch = Ternary::switch(high.clone(), low.clone()).unwrap();
+    /// let one = Finite(2).ix(1).unwrap().into_val();
+    /// let zero = Finite(2).ix(0).unwrap().into_val();
+    /// assert_eq!(switch.clone().applied(&[one]), Ok(high));
+    /// assert_eq!(switch.applied(&[zero]), Ok(low));
+    /// ```
     #[inline]
     pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
