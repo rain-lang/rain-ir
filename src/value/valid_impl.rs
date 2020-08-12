@@ -264,6 +264,14 @@ impl<'a, P> ValRef<'a, P> {
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
     }
+    /// Coerce this reference
+    #[inline]
+    pub(crate) fn coerce<Q>(self) -> ValRef<'a, Q> {
+        ValRef {
+            ptr: self.ptr,
+            variant: std::marker::PhantomData,
+        }
+    }
 }
 
 // Value implementation

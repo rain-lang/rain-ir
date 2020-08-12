@@ -4,7 +4,9 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     lifetime::Lifetime,
-    value::{Error, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum},
+    value::{
+        Error, KindRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum,
+    },
 };
 use std::convert::TryInto;
 
@@ -52,7 +54,15 @@ pub trait Type: Value {
     fn into_ty(self) -> TypeId {
         self.into_val().coerce()
     }
+    /// Get the kind of this type
+    /// 
+    /// The result of this method *must* be pointer-equivalent to the result of calling `.ty()` on this type
+    fn kind(&self) -> KindRef {
+        self.ty().coerce()
+    }
     /// Get the universe of this type
+    /// 
+    /// The result of this method *may not be equal* to the result of calling `.ty()` on this type
     fn universe(&self) -> UniverseRef;
     /// Get whether this type is a universe
     fn is_universe(&self) -> bool;
@@ -61,11 +71,15 @@ pub trait Type: Value {
     /// Get whether this type is relevant
     fn is_relevant(&self) -> bool;
     /// Get whether this type is linear
+    /// 
+    /// A type is linear if it is both affine and relevant
     #[inline]
     fn is_linear(&self) -> bool {
         self.is_affine() && self.is_relevant()
     }
     /// Get whether this type is substructural
+    /// 
+    /// A type is substructural if it is either affine or relevant
     #[inline]
     fn is_substruct(&self) -> bool {
         self.is_affine() || self.is_relevant()
