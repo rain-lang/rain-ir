@@ -172,7 +172,7 @@ pub trait Type: Value {
         if args.is_empty() {
             Ok((self.lifetime().clone_lifetime(), self.clone().into_ty()))
         } else {
-            Err(Error::NotAFunction)
+            Err(Error::NotAFunctionType)
         }
     }
     /// Substitute this value while preserving the fact that it is a type
