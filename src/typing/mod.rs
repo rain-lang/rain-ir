@@ -159,7 +159,8 @@ pub trait Type: Value {
     /// 
     /// # Notes
     /// The default implementation for this method returns this value and it's lifetime
-    /// for an empty argument vector, and an error otherwise.
+    /// for an empty argument vector, and a `NotAFunctionType` error otherwise. It is appropriate
+    /// for types which are, as the error indicates, not function types.
     fn apply_ty_in(
         &self,
         args: &[ValId],
