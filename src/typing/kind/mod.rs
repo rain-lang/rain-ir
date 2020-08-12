@@ -22,6 +22,9 @@ pub trait Kind: Type {
 /// A trait implemented by `rain` values which can all be represented within a given memory layout
 pub trait Repr: Kind {
     /// Convert this representation into a `ReprId`
+    ///
+    /// # Correctness
+    /// The result of this method should always be pointer equivalent to `self.into_val()`
     #[inline]
     fn into_repr(self) -> ReprId {
         self.into_val().coerce()
