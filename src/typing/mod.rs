@@ -90,6 +90,10 @@ pub trait Typed {
 /// A trait implemented by `rain` values which are a type
 pub trait Type: Value {
     /// Convert this type into a `TypeId`
+    /// 
+    /// # Correctness
+    /// The result of this method must *always* be pointer-equivalent to the result of the `.into_val()` method of
+    /// the `Value` trait.
     fn into_ty(self) -> TypeId {
         self.into_val().coerce()
     }
