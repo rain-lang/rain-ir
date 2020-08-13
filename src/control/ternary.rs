@@ -291,6 +291,16 @@ impl From<Ternary> for NormalValue {
     }
 }
 
+impl PartialEq<ValueEnum> for Ternary {
+    #[inline]
+    fn eq(&self, other: &ValueEnum) -> bool {
+        match other {
+            ValueEnum::Ternary(t) => self.eq(t),
+            _ => false,
+        }
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;

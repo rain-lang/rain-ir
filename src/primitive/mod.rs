@@ -14,7 +14,6 @@ use crate::value::{
 use crate::{debug_from_display, lifetime_region, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
-use std::ops::Deref;
 
 pub mod finite;
 pub mod logical;
@@ -70,13 +69,6 @@ impl PartialEq<ValueEnum> for () {
     #[inline]
     fn eq(&self, value: &ValueEnum) -> bool {
         value.eq(self)
-    }
-}
-
-impl PartialEq<()> for NormalValue {
-    #[inline]
-    fn eq(&self, u: &()) -> bool {
-        self.deref().eq(u)
     }
 }
 
@@ -270,13 +262,6 @@ impl PartialEq<Unit> for ValueEnum {
 impl PartialEq<ValueEnum> for Unit {
     fn eq(&self, value: &ValueEnum) -> bool {
         value.eq(self)
-    }
-}
-
-impl PartialEq<Unit> for NormalValue {
-    #[inline]
-    fn eq(&self, u: &Unit) -> bool {
-        self.deref().eq(u)
     }
 }
 

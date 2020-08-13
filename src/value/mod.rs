@@ -309,7 +309,7 @@ impl Substitute<ValId> for ValueEnum {
 }
 
 /// A normalized `rain` value
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, Hash)]
 #[repr(transparent)]
 pub struct NormalValue(pub(crate) ValueEnum);
 
@@ -320,6 +320,23 @@ impl NormalValue {
         unsafe { &*(value as *const ValueEnum as *const NormalValue) }
     }
     */
+}
+
+impl<V> PartialEq<V> for NormalValue
+where
+    ValueEnum: PartialEq<V>,
+{
+    #[inline]
+    fn eq(&self, other: &V) -> bool {
+        self.0.eq(other)
+    }
+}
+
+impl PartialEq<NormalValue> for ValueEnum {
+    #[inline]
+    fn eq(&self, other: &NormalValue) -> bool {
+        self.eq(&other.0)
+    }
 }
 
 impl Deref for NormalValue {
