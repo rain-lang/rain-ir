@@ -1,9 +1,9 @@
 /*!
 `rain` values
 */
-use crate::control::ternary::Ternary;
+use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::function::{lambda::Lambda, phi::Phi, pi::Pi};
+use crate::function::{lambda::Lambda, pi::Pi};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
