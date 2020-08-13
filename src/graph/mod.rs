@@ -10,6 +10,15 @@ pub mod dfs;
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct VisitedFilter(pub FxHashSet<usize>);
 
+/// A search result
+#[derive(Debug, Clone)]
+pub struct SearchResult<F, R> {
+    /// What to add to the search frontier, if anything
+    pub frontier: Option<F>,
+    /// What to yield from the iterator, if anything
+    pub result: Option<R>
+}
+
 /// A filter for `ValId`s
 pub trait ValIdFilter<'a, V> {
     /// Filter a `ValId`, determining whether it is included
