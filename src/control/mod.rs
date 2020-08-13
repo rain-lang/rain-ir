@@ -1,6 +1,7 @@
 /*!
 Control flow primitives
 
+# Overview
 This module contains the following primitive elements for describing control flow in `rain` programs
 - `ternary` nodes for control flow on binary sum types such as booleans, bits, and binary sums of the form `A + B`
 - `switch` nodes for control flow on finite types
