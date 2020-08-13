@@ -37,7 +37,7 @@ impl Ternary {
     /// This constructs a conditional node, which is a function taking a single boolean parameter and returning
     /// `high` when the parameter is `true` and `low` when the parameter is `false`, assigned the smallest
     /// possible pi-type which can contain both `high` and `low`.
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::finite::Finite};
@@ -73,7 +73,7 @@ impl Ternary {
     /// (when non-constant, as constant ternary nodes and switch nodes both normalize to a lambda)
     ///
     /// [^1]: `switch` nodes are not actually implemented yet, but their design is mostly completed
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::finite::Finite};
@@ -105,7 +105,7 @@ impl Ternary {
     ///
     /// Ternary operations always consume a single parameter, which currently can either be of type `#bool` or `#finite(2)`.
     /// This returns the type of that parameter.
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// # use rain_ir::{control::ternary::Ternary, value::Value, primitive::{finite::Finite, logical::Bool}};

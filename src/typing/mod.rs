@@ -18,7 +18,7 @@ pub use predicate::*;
 /// A trait implemented by `rain` values with a type
 pub trait Typed {
     /// Compute the type of this `rain` value
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// # use rain_ir::{typing::Typed, primitive::logical::Bool, value::Value};
@@ -43,7 +43,7 @@ pub trait Typed {
         }
     }
     /// Check whether this `rain` value is a type
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// # use rain_ir::{typing::Typed, primitive::logical::Bool, value::Value};
@@ -63,7 +63,7 @@ pub trait Typed {
     /// We define kind-level inductively as follows:
     /// - A level-0 value is just a value
     /// - A level-(n + 1) value is a type whose elements are all of level-n
-    /// 
+    ///
     /// A level-1 value is called a *type*, while a level-2 value is called a *kind*.
     /// A level-3 value is sometimes called a *sort*.
     ///
@@ -90,7 +90,7 @@ pub trait Typed {
 /// A trait implemented by `rain` values which are a type
 pub trait Type: Value {
     /// Convert this type into a `TypeId`
-    /// 
+    ///
     /// # Correctness
     /// The result of this method must *always* be pointer-equivalent to the result of the `.into_val()` method of
     /// the `Value` trait.
@@ -149,7 +149,7 @@ pub trait Type: Value {
         self.is_affine() || self.is_relevant()
     }
     /// Apply this type to a set of arguments, yielding a result type and lifetime
-    /// 
+    ///
     /// # Correctness
     /// This method must always return the same value as calling `self.apply_ty_in(args, &mut None)`.
     /// The default implementation does exactly this, and in general should be used as is.
@@ -160,7 +160,7 @@ pub trait Type: Value {
         self.apply_ty_in(args, &mut None)
     }
     /// Apply this type to a set of arguments, yielding a result type and lifetime
-    /// 
+    ///
     /// # Notes
     /// The default implementation for this method returns this value and it's lifetime
     /// for an empty argument vector, and a `NotAFunctionType` error otherwise. It is appropriate

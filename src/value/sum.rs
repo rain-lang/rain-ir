@@ -20,7 +20,7 @@ pub struct Sum {
 }
 
 /// A union type
-/// 
+///
 /// TODO: think about this...
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Union {
