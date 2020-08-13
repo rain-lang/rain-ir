@@ -1,5 +1,8 @@
 /*!
-A ternary operation
+Ternary operations and associated utilities
+
+This module contains the [`Ternary`](Ternary) struct, `rain`'s answer to `if-then-else` expressions, and associated
+utilities for working with ternary operations.
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
