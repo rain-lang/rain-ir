@@ -77,6 +77,32 @@ impl Lifetime {
     pub fn uses(color: Color) -> Lifetime {
         LifetimeData::uses(color).into()
     }
+    /// Get whether this lifetime is known to terminate
+    #[inline]
+    pub fn is_terminating(&self) -> bool {
+        self.data()
+            .map(LifetimeData::is_terminating)
+            .unwrap_or(true)
+    }
+    /// Get whether this lifetime is potentially nonterminating
+    #[inline]
+    pub fn is_recursive(&self) -> bool {
+        self.data().map(LifetimeData::is_recursive).unwrap_or(false)
+    }
+    /// Get this lifetime, but potentially nonterminating
+    #[inline]
+    pub fn recursive(&self) -> Lifetime {
+        let mut result = if let Some(data) = self.data() {
+            if data.is_recursive() {
+                return self.clone();
+            }
+            data.clone()
+        } else {
+            LifetimeData::default()
+        };
+        result.set_terminating(false);
+        result.into()
+    }
     /// Borrow a lifetime
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
