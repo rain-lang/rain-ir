@@ -288,9 +288,7 @@ impl<'a> LifetimeBorrow<'a> {
     /// Check whether this lifetime is substructural
     #[inline]
     pub fn is_substruct(&self) -> bool {
-        self.data()
-            .map(LifetimeData::is_substruct)
-            .unwrap_or(false)
+        self.data().map(LifetimeData::is_substruct).unwrap_or(false)
     }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
@@ -481,5 +479,29 @@ mod tests {
             gamma_anchor.cast_into_lt(beta).unwrap_err(),
             Error::InvalidCastIntoLifetime
         )
+    }
+
+    #[test]
+    fn nontermination_axioms() {
+        let red = Color::new();
+        let black = Color::new();
+        let alpha = Lifetime::owns(red);
+        let beta = Lifetime::owns(black);
+        let alpha_t = alpha.recursive();
+        assert_ne!(alpha, alpha_t);
+        assert!(alpha.is_terminating());
+        assert!(!alpha.is_recursive());
+        assert!(!alpha_t.is_terminating());
+        assert!(alpha_t.is_recursive());
+        let beta_t = beta.recursive();
+        assert_eq!(
+            (&alpha_t + &beta_t).unwrap(),
+            (&alpha + &beta).unwrap().recursive()
+        );
+        assert_eq!(
+            (&alpha_t * &beta_t).unwrap(),
+            (&alpha * &beta).unwrap().recursive()
+        );
+        assert_eq!(alpha_t.recursive(), alpha_t);
     }
 }

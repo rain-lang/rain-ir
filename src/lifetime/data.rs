@@ -150,7 +150,7 @@ impl LifetimeData {
             affine,
             relevant,
             region,
-            terminating: true,
+            terminating: self.terminating && other.terminating,
         })
     }
     /// Get the disjunction of two lifetimes
@@ -163,7 +163,7 @@ impl LifetimeData {
             affine,
             relevant,
             region,
-            terminating: true,
+            terminating: self.terminating && other.terminating,
         })
     }
     /// Get a reference to the affine component of this lifetime
