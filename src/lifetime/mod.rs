@@ -231,6 +231,26 @@ impl Lifetime {
             Ok(Lifetime::STATIC)
         }
     }
+    /// Check whether this lifetime is affine
+    #[inline]
+    pub fn is_affine(&self) -> bool {
+        self.data().map(LifetimeData::is_affine).unwrap_or(false)
+    }
+    /// Check whether this lifetime is relevant
+    #[inline]
+    pub fn is_relevant(&self) -> bool {
+        self.data().map(LifetimeData::is_relevant).unwrap_or(false)
+    }
+    /// Check whether this lifetime is substructural
+    #[inline]
+    pub fn is_substruct(&self) -> bool {
+        self.data().map(LifetimeData::is_substruct).unwrap_or(false)
+    }
+    /// Check whether this lifetime is the static (null) lifetime
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 impl Deref for LifetimeBorrow<'_> {
@@ -274,26 +294,6 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn get_region(&self) -> Option<RegionBorrow<'a>> {
         self.0.map(|r| r.get().region()).flatten()
-    }
-    /// Check whether this lifetime is affine
-    #[inline]
-    pub fn is_affine(&self) -> bool {
-        self.data().map(LifetimeData::is_affine).unwrap_or(false)
-    }
-    /// Check whether this lifetime is relevant
-    #[inline]
-    pub fn is_relevant(&self) -> bool {
-        self.data().map(LifetimeData::is_relevant).unwrap_or(false)
-    }
-    /// Check whether this lifetime is substructural
-    #[inline]
-    pub fn is_substruct(&self) -> bool {
-        self.data().map(LifetimeData::is_substruct).unwrap_or(false)
-    }
-    /// Check whether this lifetime is the static (null) lifetime
-    #[inline]
-    pub fn is_static(&self) -> bool {
-        self.0.is_none()
     }
 }
 
@@ -503,5 +503,15 @@ mod tests {
             (&alpha * &beta).unwrap().recursive()
         );
         assert_eq!(alpha_t.recursive(), alpha_t);
+
+        let static_t = Lifetime::STATIC.recursive();
+        assert_ne!(static_t, Lifetime::STATIC);
+        assert!(Lifetime::STATIC.is_terminating());
+        assert!(!Lifetime::STATIC.is_recursive());
+        assert!(!static_t.is_terminating());
+        assert!(static_t.is_recursive());
+        assert!(!static_t.is_static());
+        assert_eq!((alpha + &static_t).unwrap(), alpha_t);
+        assert_eq!((beta * static_t).unwrap(), beta_t);
     }
 }

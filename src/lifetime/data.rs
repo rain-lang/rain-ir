@@ -118,7 +118,7 @@ impl LifetimeData {
     /// Whether this lifetime is static
     #[inline]
     pub fn is_static(&self) -> bool {
-        self.region.is_none() && self.affine.is_static() && self.relevant.is_static()
+        self.terminating && self.region.is_none() && self.affine.is_static() && self.relevant.is_static()
     }
     /// Whether this lifetime is affine
     #[inline]
@@ -138,6 +138,7 @@ impl LifetimeData {
     /// Whether this lifetime is substructural
     #[inline]
     pub fn is_substruct(&self) -> bool {
+        //TODO: are borrows substructural?
         self.is_affine() || self.is_relevant()
     }
     /// Get the separating conjunction of two lifetimes
