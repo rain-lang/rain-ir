@@ -104,7 +104,7 @@ impl PartialOrd for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
-        self.data().partial_cmp(&other.data())
+        self.data().partial_cmp(other.data())
     }
 }
 
@@ -116,7 +116,7 @@ impl PartialOrd<RegionData> for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        self.deref().partial_cmp(other)
+        self.data().partial_cmp(other)
     }
 }
 
@@ -128,7 +128,7 @@ impl PartialOrd<RegionBorrow<'_>> for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionBorrow) -> Option<Ordering> {
-        self.deref().partial_cmp(other)
+        self.data().partial_cmp(other.data())
     }
 }
 
@@ -140,7 +140,7 @@ impl PartialOrd for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionBorrow<'_>) -> Option<Ordering> {
-        self.data().partial_cmp(&other.data())
+        self.data().partial_cmp(other.data())
     }
 }
 
@@ -167,5 +167,3 @@ impl PartialOrd<Region> for RegionBorrow<'_> {
         self.data().partial_cmp(&other.data())
     }
 }
-
-// == Hashing ==
