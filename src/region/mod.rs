@@ -402,35 +402,23 @@ impl<'a> RegionBorrow<'a> {
     pub fn data(&self) -> &'a RegionData {
         self.0.get()
     }
-    /// Get a pointer to the data behind this `Region`, or null if there is none
-    #[inline]
-    pub fn data_ptr(&self) -> *const RegionData {
-        self.data() as *const _
-    }
-    /// Check whether this `Region` has any parameters
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.data().is_empty()
-    }
-    /// Get the number of parameters of this `Region`
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.data().len()
-    }
     /// Get the parent of this region if any
     #[inline]
     pub fn parent(&self) -> Option<&'a Region> {
         self.data().parent()
     }
-    /// Get the `ix`th parameter of this `Region`. Return an error on index out of bounds.
-    #[inline]
-    pub fn param(self, ix: usize) -> Result<Parameter, Error> {
-        self.clone_region().param(ix)
-    }
     /// Get this region borrow as a region
     #[inline]
     pub fn as_region(&self) -> &Region {
         unsafe { &*(self as *const _ as *const Region) }
+    }
+}
+
+impl Deref for RegionBorrow<'_> {
+    type Target = Region;
+    #[inline]
+    fn deref(&self) -> &Region {
+        self.as_region()
     }
 }
 
