@@ -275,6 +275,23 @@ impl<'a> LifetimeBorrow<'a> {
     pub fn get_region(&self) -> Option<RegionBorrow<'a>> {
         self.0.map(|r| r.get().region()).flatten()
     }
+    /// Check whether this lifetime is affine
+    #[inline]
+    pub fn is_affine(&self) -> bool {
+        self.data().map(LifetimeData::is_affine).unwrap_or(false)
+    }
+    /// Check whether this lifetime is relevant
+    #[inline]
+    pub fn is_relevant(&self) -> bool {
+        self.data().map(LifetimeData::is_relevant).unwrap_or(false)
+    }
+    /// Check whether this lifetime is substructural
+    #[inline]
+    pub fn is_substruct(&self) -> bool {
+        self.data()
+            .map(LifetimeData::is_substruct)
+            .unwrap_or(false)
+    }
     /// Check whether this lifetime is the static (null) lifetime
     #[inline]
     pub fn is_static(&self) -> bool {
