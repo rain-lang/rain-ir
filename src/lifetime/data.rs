@@ -71,12 +71,12 @@ impl LifetimeData {
     }
     /// Get whether this lifetime is terminating
     #[inline]
-    pub fn terminating(&self) -> bool {
+    pub fn is_terminating(&self) -> bool {
         self.terminating
     }
     /// Get whether this lifetime is potentially nonterminating
     #[inline]
-    pub fn recursive(&self) -> bool {
+    pub fn is_recursive(&self) -> bool {
         !self.terminating
     }
     /// Create a lifetime which only owns a particular color
@@ -250,7 +250,7 @@ impl PartialOrd for LifetimeData {
     fn partial_cmp(&self, other: &LifetimeData) -> Option<Ordering> {
         use Ordering::*;
         let affine_cmp = self.affine.partial_cmp(&other.affine)?;
-        let recursive_cmp = self.recursive().cmp(&other.recursive());
+        let recursive_cmp = self.is_recursive().cmp(&other.is_recursive());
         let affine_recursive_cmp = match affine_cmp {
             Less if recursive_cmp == Greater => return None,
             Less => Less,
