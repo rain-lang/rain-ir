@@ -35,6 +35,20 @@ enum_convert! {
 
 impl Parameter {
     /**
+    Create a parameter from a given region and index, when you know the region is in bounds.
+
+    Note that this will *still* return an error if the parameter is out of bounds, *but* suffers from degraded performance in this case.
+    */
+    #[inline]
+    pub fn try_new_inbounds(region: Region, ix: usize) -> Result<Parameter, Error> {
+        let lifetime = Lifetime::param(region.clone(), ix)?;
+        Ok(Parameter {
+            region,
+            lifetime,
+            ix,
+        })
+    }
+    /**
      Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
 
     # Examples
@@ -51,12 +65,27 @@ impl Parameter {
         if ix >= region.len() {
             Err(Error::InvalidParam)
         } else {
-            let lifetime = Lifetime::param(region.clone(), ix)?;
-            Ok(Parameter {
-                region,
-                lifetime,
-                ix,
-            })
+            Self::try_new_inbounds(region, ix)
+        }
+    }
+    /**
+     Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
+
+    # Examples
+    Trying to make a parameter out of bounds returns `Err`:
+    ```rust
+    use rain_ir::region::{Region, Parameter};
+    use rain_ir::value::Error;
+    let empty_region = Region::with_parent(None);
+    assert_eq!(Parameter::try_clone_new(&empty_region, 1), Err(Error::InvalidParam));
+    ```
+    */
+    #[inline]
+    pub fn try_clone_new(region: &Region, ix: usize) -> Result<Parameter, Error> {
+        if ix >= region.len() {
+            Err(Error::InvalidParam)
+        } else {
+            Self::try_new_inbounds(region.clone(), ix)
         }
     }
     /// Get the index of this parameter

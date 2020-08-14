@@ -176,7 +176,7 @@ pub mod prettyprint {
         //TODO: print _ for parameters if all unused?
         write!(fmt, "{}", PARAM_OPEN)?;
         let mut first = true;
-        for param in region.borrow_params() {
+        for param in region.params() {
             if !first {
                 write!(fmt, " ")?;
             }

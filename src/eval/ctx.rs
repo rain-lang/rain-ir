@@ -199,7 +199,7 @@ impl EvalCtx {
         };
         let mut old_caches: Option<OldCaches> = None;
         let old_is_empty = self.is_empty();
-        for param in region.borrow_params().map(Value::into_val) {
+        for param in region.params().map(Value::into_val) {
             if let Some(value) = values.next() {
                 // Save old caches, if necessary
                 if !old_is_empty && old_caches.is_none() {

@@ -217,23 +217,6 @@ pub trait Regional {
     }
 }
 
-/// Get the smallest region containing two objects or regions
-///
-/// Returns the smallest region containing two objects or regions if such a region exists. If the regions of the
-/// objects are incomparable, return `None`.
-///
-/// TODO: think about this behaviour: would returning `Err` be more appropriate?
-pub fn lcr<'a, L: Regional, R: Regional>(left: &'a L, right: &'a R) -> Option<RegionBorrow<'a>> {
-    use Ordering::*;
-    let lr = left.region();
-    let rr = right.region();
-    match lr.partial_cmp(&rr) {
-        Some(Less) | Some(Equal) => lr,
-        Some(Greater) => rr,
-        None => None,
-    }
-}
-
 lazy_static! {
     /// The global cache of constructed regions.
     pub static ref REGION_CACHE: DashCache<Arc<RegionData>> = DashCache::new();
@@ -271,8 +254,12 @@ impl Region {
     }
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
-    pub fn param(self, ix: usize) -> Result<Parameter, Error> {
-        //TODO: `into_param` pattern
+    pub fn param(&self, ix: usize) -> Result<Parameter, Error> {
+        Parameter::try_clone_new(self, ix)
+    }
+    /// Get the `ix`th parameter of this [`Region`](Region), consuming it. Return an error on index out of bounds.
+    #[inline]
+    pub fn into_param(self, ix: usize) -> Result<Parameter, Error> {
         Parameter::try_new(self, ix)
     }
     /// Get the data behind this [`Region`](Region)
@@ -347,9 +334,18 @@ impl Region {
     pub fn parent(&self) -> Option<&Region> {
         self.data().parent()
     }
-    /// Iterate over the parameters of this [`Region`](Region).
+    /// Iterate over the parameters of this [`Region`](Region)
     #[inline]
-    pub fn params(self) -> impl Iterator<Item = Parameter> + ExactSizeIterator {
+    pub fn params(
+        &self,
+    ) -> impl Iterator<Item = Parameter> + ExactSizeIterator + DoubleEndedIterator {
+        self.clone().into_params()
+    }
+    /// Iterate over the parameters of this [`Region`](Region), consuming it
+    #[inline]
+    pub fn into_params(
+        self,
+    ) -> impl Iterator<Item = Parameter> + ExactSizeIterator + DoubleEndedIterator {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
@@ -357,12 +353,6 @@ impl Region {
     #[inline]
     pub fn param_tys(&self) -> &[TypeId] {
         self.data().param_tys()
-    }
-    /// Iterate over the parameters of this `Region`, borrowing a reference
-    #[inline]
-    pub fn borrow_params(&self) -> impl '_ + Iterator<Item = Parameter> {
-        let l = self.len();
-        (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
     /// Get the conjunction of two regions, if any
     ///
