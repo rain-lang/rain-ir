@@ -32,7 +32,9 @@ pub struct LifetimeData {
     /// The relevant component of this lifetime
     relevant: RelevantData,
     /// The region of this lifetime
-    pub(super) region: Option<Region>,
+    region: Option<Region>,
+    /// Whether the object with this lifetime is known to be terminating
+    terminating: bool,
 }
 
 impl LifetimeData {
@@ -46,6 +48,7 @@ impl LifetimeData {
             affine,
             region,
             relevant: RelevantData::default(),
+            terminating: true,
         })
     }
     /// Try to create a purely relevant lifetime
@@ -58,7 +61,23 @@ impl LifetimeData {
             relevant,
             region,
             affine: AffineData::default(),
+            terminating: true,
         })
+    }
+    /// Set the termination status of this lifetime
+    #[inline]
+    pub fn set_terminating(&mut self, terminating: bool) {
+        self.terminating = terminating
+    }
+    /// Get whether this lifetime is terminating
+    #[inline]
+    pub fn is_terminating(&self) -> bool {
+        self.terminating
+    }
+    /// Get whether this lifetime is potentially nonterminating
+    #[inline]
+    pub fn is_recursive(&self) -> bool {
+        !self.terminating
     }
     /// Create a lifetime which only owns a particular color
     #[inline]
@@ -93,12 +112,13 @@ impl LifetimeData {
             affine,
             relevant,
             region: Some(region),
+            terminating: true,
         })
     }
     /// Whether this lifetime is static
     #[inline]
     pub fn is_static(&self) -> bool {
-        self.region.is_none() && self.affine.is_static() && self.relevant.is_static()
+        self.terminating && self.region.is_none() && self.affine.is_static() && self.relevant.is_static()
     }
     /// Whether this lifetime is affine
     #[inline]
@@ -118,6 +138,7 @@ impl LifetimeData {
     /// Whether this lifetime is substructural
     #[inline]
     pub fn is_substruct(&self) -> bool {
+        //TODO: are borrows substructural?
         self.is_affine() || self.is_relevant()
     }
     /// Get the separating conjunction of two lifetimes
@@ -130,6 +151,7 @@ impl LifetimeData {
             affine,
             relevant,
             region,
+            terminating: self.terminating && other.terminating,
         })
     }
     /// Get the disjunction of two lifetimes
@@ -142,6 +164,7 @@ impl LifetimeData {
             affine,
             relevant,
             region,
+            terminating: self.terminating && other.terminating,
         })
     }
     /// Get a reference to the affine component of this lifetime
@@ -161,6 +184,7 @@ impl LifetimeData {
             affine: self.affine.clone(),
             relevant: RelevantData::default(),
             region: self.region.clone(),
+            terminating: true,
         }
     }
     /// Get the relevant component of this lifetime
@@ -170,6 +194,7 @@ impl LifetimeData {
             affine: AffineData::default(),
             relevant: self.relevant.clone(),
             region: self.region.clone(),
+            terminating: true,
         }
     }
     /// Get this lifetime data, but within a given region
@@ -180,6 +205,7 @@ impl LifetimeData {
                 affine: self.affine.clone(),
                 relevant: self.relevant.clone(),
                 region,
+                terminating: true,
             })
         } else {
             Err(Error::IncomparableRegions)
@@ -224,11 +250,22 @@ impl LifetimeData {
 impl PartialOrd for LifetimeData {
     fn partial_cmp(&self, other: &LifetimeData) -> Option<Ordering> {
         use Ordering::*;
-        match self.affine.partial_cmp(&other.affine)? {
-            Less if self.relevant <= other.relevant => Some(Less),
-            Equal => self.relevant.partial_cmp(&other.relevant),
-            Greater if self.relevant >= other.relevant => Some(Greater),
-            _ => None,
+        let affine_cmp = self.affine.partial_cmp(&other.affine)?;
+        let recursive_cmp = self.is_recursive().cmp(&other.is_recursive());
+        let affine_recursive_cmp = match affine_cmp {
+            Less if recursive_cmp == Greater => return None,
+            Less => Less,
+            Greater if recursive_cmp == Less => return None,
+            Greater => Greater,
+            Equal => recursive_cmp,
+        };
+        let relevant_cmp = self.relevant.partial_cmp(&other.relevant)?;
+        match affine_recursive_cmp {
+            Less if relevant_cmp == Greater => None,
+            Less => Some(Less),
+            Greater if relevant_cmp == Less => None,
+            Greater => Some(Greater),
+            Equal => Some(relevant_cmp),
         }
     }
 }
@@ -240,6 +277,7 @@ impl From<Option<Region>> for LifetimeData {
             affine: AffineData::default(),
             relevant: RelevantData::default(),
             region,
+            terminating: true,
         }
     }
 }

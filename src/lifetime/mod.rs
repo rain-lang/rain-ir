@@ -77,6 +77,32 @@ impl Lifetime {
     pub fn uses(color: Color) -> Lifetime {
         LifetimeData::uses(color).into()
     }
+    /// Get whether this lifetime is known to terminate
+    #[inline]
+    pub fn is_terminating(&self) -> bool {
+        self.data()
+            .map(LifetimeData::is_terminating)
+            .unwrap_or(true)
+    }
+    /// Get whether this lifetime is potentially nonterminating
+    #[inline]
+    pub fn is_recursive(&self) -> bool {
+        self.data().map(LifetimeData::is_recursive).unwrap_or(false)
+    }
+    /// Get this lifetime, but potentially nonterminating
+    #[inline]
+    pub fn recursive(&self) -> Lifetime {
+        let mut result = if let Some(data) = self.data() {
+            if data.is_recursive() {
+                return self.clone();
+            }
+            data.clone()
+        } else {
+            LifetimeData::default()
+        };
+        result.set_terminating(false);
+        result.into()
+    }
     /// Borrow a lifetime
     #[inline]
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
@@ -205,6 +231,26 @@ impl Lifetime {
             Ok(Lifetime::STATIC)
         }
     }
+    /// Check whether this lifetime is affine
+    #[inline]
+    pub fn is_affine(&self) -> bool {
+        self.data().map(LifetimeData::is_affine).unwrap_or(false)
+    }
+    /// Check whether this lifetime is relevant
+    #[inline]
+    pub fn is_relevant(&self) -> bool {
+        self.data().map(LifetimeData::is_relevant).unwrap_or(false)
+    }
+    /// Check whether this lifetime is substructural
+    #[inline]
+    pub fn is_substruct(&self) -> bool {
+        self.data().map(LifetimeData::is_substruct).unwrap_or(false)
+    }
+    /// Check whether this lifetime is the static (null) lifetime
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 impl Deref for LifetimeBorrow<'_> {
@@ -248,11 +294,6 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn get_region(&self) -> Option<RegionBorrow<'a>> {
         self.0.map(|r| r.get().region()).flatten()
-    }
-    /// Check whether this lifetime is the static (null) lifetime
-    #[inline]
-    pub fn is_static(&self) -> bool {
-        self.0.is_none()
     }
 }
 
@@ -438,5 +479,39 @@ mod tests {
             gamma_anchor.cast_into_lt(beta).unwrap_err(),
             Error::InvalidCastIntoLifetime
         )
+    }
+
+    #[test]
+    fn nontermination_axioms() {
+        let red = Color::new();
+        let black = Color::new();
+        let alpha = Lifetime::owns(red);
+        let beta = Lifetime::owns(black);
+        let alpha_t = alpha.recursive();
+        assert_ne!(alpha, alpha_t);
+        assert!(alpha.is_terminating());
+        assert!(!alpha.is_recursive());
+        assert!(!alpha_t.is_terminating());
+        assert!(alpha_t.is_recursive());
+        let beta_t = beta.recursive();
+        assert_eq!(
+            (&alpha_t + &beta_t).unwrap(),
+            (&alpha + &beta).unwrap().recursive()
+        );
+        assert_eq!(
+            (&alpha_t * &beta_t).unwrap(),
+            (&alpha * &beta).unwrap().recursive()
+        );
+        assert_eq!(alpha_t.recursive(), alpha_t);
+
+        let static_t = Lifetime::STATIC.recursive();
+        assert_ne!(static_t, Lifetime::STATIC);
+        assert!(Lifetime::STATIC.is_terminating());
+        assert!(!Lifetime::STATIC.is_recursive());
+        assert!(!static_t.is_terminating());
+        assert!(static_t.is_recursive());
+        assert!(!static_t.is_static());
+        assert_eq!((alpha + &static_t).unwrap(), alpha_t);
+        assert_eq!((beta * static_t).unwrap(), beta_t);
     }
 }
