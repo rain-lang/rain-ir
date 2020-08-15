@@ -26,26 +26,50 @@ pub struct IdFamily {
 }
 
 impl IdFamily {
-    /// Get the constructor for all identity type families
-    pub fn constructor() -> IdFamily {
-        unimplemented!()
+    /// Get the constructor for all identity type families within a given universe
+    pub fn universal(universe: UniverseId) -> IdFamily {
+        let ty = Self::universal_pi(&universe).into_var();
+        let lt = universe.lifetime().clone_lifetime();
+        IdFamily {
+            ty,
+            lt,
+            base_ty: Some(universe.into_ty()),
+        }
     }
     /// Get a given identity type family
     pub fn family(base_ty: TypeId) -> IdFamily {
-        let region = Region::with(
-            [&base_ty, &base_ty].iter().copied().cloned().collect(),
-            base_ty.cloned_region(),
-        );
-        //TODO: proper target universe...
-        let ty = Pi::try_new(FINITE_TY.clone_ty(), region, &Lifetime::STATIC)
-            .expect("Valid pi-type")
-            .into_var();
+        let ty = Self::family_pi(&base_ty).into_var();
         let lt = base_ty.lifetime().clone_lifetime();
         IdFamily {
             ty,
             lt,
             base_ty: Some(base_ty),
         }
+    }
+    /// Get the pi type for a constructor family
+    pub fn universal_pi(universe: &UniverseId) -> Pi {
+        let universal_region = Region::with(
+            std::iter::once(universe.clone_ty()).collect(),
+            universe.cloned_region(),
+        );
+        let base_ty = universal_region
+            .param(0)
+            .expect("Single, type parameter")
+            .try_into_ty()
+            .expect("Is type");
+        let family_pi = Self::family_pi(&base_ty).into_ty();
+        let lt = family_pi.lifetime().clone_lifetime();
+        Pi::try_new(family_pi, universal_region, &lt).expect("Valid pi-type")
+    }
+    /// Get the pi type for an identity type family
+    pub fn family_pi(base_ty: &TypeId) -> Pi {
+        let region = Region::with(
+            [base_ty, base_ty].iter().copied().cloned().collect(),
+            base_ty.cloned_region(),
+        );
+        //TODO: proper target universe?
+        Pi::try_new(base_ty.universe().clone_ty(), region, &Lifetime::STATIC)
+            .expect("Valid pi-type")
     }
 }
 
@@ -135,6 +159,21 @@ impl Id {
             lt,
             ty: FINITE_TY.clone(), //TODO: this...
         })
+    }
+    /// Get the left of this identity type
+    #[inline]
+    pub fn left(&self) -> &ValId {
+        &self.left
+    }
+    /// Get the right of this identity type
+    #[inline]
+    pub fn right(&self) -> &ValId {
+        &self.right
+    }
+    /// Check whether this identity type is inhabited by `refl`, i.e. has judgementally equal left and right
+    #[inline]
+    pub fn has_refl(&self) -> bool {
+        self.left == self.right
     }
 }
 
@@ -276,5 +315,50 @@ mod prettyprint_impl {
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(identity prettyprinting unimplemented)")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primitive::logical::Bool;
+
+    #[test]
+    fn id_family_application() {
+        let t = true.into_val();
+        let f = false.into_val();
+        let truthy = Id::refl(t.clone());
+        assert!(truthy.has_refl());
+        assert_eq!(*truthy.left(), t);
+        assert_eq!(*truthy.right(), t);
+        let falsey = Id::try_new(true.into_val(), false.into_val()).expect("Valid identity type");
+        assert!(!falsey.has_refl());
+        assert_ne!(truthy, falsey);
+        assert_eq!(*falsey.left(), t);
+        assert_eq!(*falsey.right(), f);
+
+        let truthy = truthy.into_val();
+        let falsey = falsey.into_val();
+
+        let bool_family = IdFamily::family(Bool.into_ty());
+        assert_eq!(
+            bool_family.curried(&[t.clone(), t.clone()]).unwrap(),
+            Application::Success(&[], truthy.clone())
+        );
+        assert_eq!(
+            bool_family.curried(&[t.clone(), f.clone()]).unwrap(),
+            Application::Success(&[], falsey.clone())
+        );
+
+        //FIXME: universe-typed parameters are not yet implemented!
+        /*
+        let base_family = IdFamily::universal(FINITE_TY.clone());
+        assert_eq!(
+            base_family
+                .curried(&[Bool.into_val(), t.clone(), t.clone()])
+                .unwrap(),
+            Application::Success(&[], truthy)
+        );
+        */
     }
 }
