@@ -123,7 +123,7 @@ mod test {
 
     #[test]
     fn new_colors_are_not_equal() {
-        let unary_region = Region::with(vec![Bool.into()].into(), None);
+        let unary_region = Region::with(vec![Bool.into()].into(), None).unwrap();
         assert_ne!(Color::new(), Color::new());
         assert_ne!(
             Color::new_in(Some(unary_region.clone())),
@@ -132,7 +132,7 @@ mod test {
     }
     #[test]
     fn new_region_color_construction() {
-        let unary_region = Region::with(vec![Bool.into()].into(), None);
+        let unary_region = Region::with(vec![Bool.into()].into(), None).unwrap();
         // Bool is substructural so *does not get a color*
         assert_eq!(Color::param(&unary_region, 0), None);
         assert_eq!(Color::param(&unary_region, 1), None);

@@ -55,7 +55,7 @@ impl Ternary {
         let unary_region = Region::with(
             std::iter::once(BOOL_TY.clone_ty()).collect(),
             lt.region().map(|region| region.clone_region()),
-        );
+        )?;
         let ty = if high_ty == low_ty {
             Pi::try_new(high_ty.clone_ty(), unary_region, &lt)?.into()
         } else {
@@ -93,7 +93,7 @@ impl Ternary {
         let switch_region = Region::with(
             std::iter::once(Finite(2).into_ty()).collect(),
             lt.region().map(|region| region.clone_region()),
-        );
+        )?;
         let ty = if high_ty == low_ty {
             Pi::try_new(high_ty.clone_ty(), switch_region, &lt)?.into()
         } else {
@@ -457,7 +457,7 @@ mod tests {
         let ternary = Ternary::switch(ix.clone(), ix.clone()).unwrap();
         let ix1 = finite2.clone().ix(1).unwrap().into_val();
         let ix0 = finite2.clone().ix(0).unwrap().into_val();
-        let finite_region = Region::with(std::iter::once(finite2.into_ty()).collect(), None);
+        let finite_region = Region::with(std::iter::once(finite2.into_ty()).collect(), None).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), finite_region).unwrap();
         assert_eq!(
             ternary.apply(&[ix1.clone()]).unwrap(),

@@ -2,6 +2,7 @@
 The data composing a non-null `rain` region
 */
 use super::*;
+use crate::value::Error;
 use im::Vector;
 use std::hash::{Hash, Hasher};
 
@@ -16,8 +17,10 @@ pub struct RegionData {
 
 impl RegionData {
     /// Create data for a new region with a given parameter type vector and a parent region
+    ///
+    /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Option<Region>) -> RegionData {
+    pub fn with_unchecked(param_tys: TyArr, parent: Option<Region>) -> RegionData {
         let parents = if let Some(parent) = parent {
             let mut result = parent.data().parents.clone();
             result.push_back(parent);
@@ -27,10 +30,23 @@ impl RegionData {
         };
         RegionData { param_tys, parents }
     }
+    /// Create data for a new region with a given parameter type vector and a parent region
+    #[inline]
+    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Result<RegionData, Error> {
+        use Ordering::*;
+        for param_ty in param_tys.iter() {
+            match param_ty.region().partial_cmp(&parent.region()) {
+                None => return Err(Error::IncomparableRegions),
+                Some(Greater) => return Err(Error::InvalidCastIntoLifetime),
+                _ => {}
+            }
+        }
+        Ok(Self::with_unchecked(param_tys, parent))
+    }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
     pub fn with_parent(parent: Option<Region>) -> RegionData {
-        Self::with(TyArr::default(), parent)
+        Self::with_unchecked(TyArr::default(), parent)
     }
     /// Get the depth of this region
     #[inline]
