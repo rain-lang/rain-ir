@@ -1,10 +1,14 @@
 /*!
 Proofs of identity and equivalence.
 */
-use crate::lifetime::Lifetime;
+use crate::eval::Substitute;
+use crate::eval::{Apply, EvalCtx};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::Regional;
-use crate::typing::{universe::FINITE_TY, Typed};
+use crate::typing::{universe::FINITE_TY, Type, Typed};
 use crate::value::{Error, TypeId, TypeRef, UniverseId, ValId};
+use crate::{lifetime_region, substitute_to_valid};
+use std::convert::TryInto;
 //use either::Either;
 
 /// The identity type family
@@ -64,6 +68,35 @@ impl Typed for Id {
         false
     }
 }
+
+impl Live for Id {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
+    }
+}
+
+lifetime_region!(Id);
+
+impl Apply for Id {}
+
+impl Substitute for Id {
+    #[inline]
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Id, Error> {
+        Ok(Id {
+            left: self.left.substitute(ctx)?,
+            right: self.right.substitute(ctx)?,
+            lt: ctx.evaluate_lt(&self.lt)?,
+            ty: self
+                .ty
+                .substitute(ctx)?
+                .try_into()
+                .map_err(|_| Error::TypeMismatch)?,
+        })
+    }
+}
+
+//substitute_to_valid!(Id);
 
 /// The reflexivity axiom
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
