@@ -117,7 +117,21 @@ impl Apply for IdFamily {
                 Ok(Application::Success(&[], id.into_val()))
             }
             ([base, _], None) | ([base], None) => {
-                unimplemented!("IdFamily into val, base type {:?}", base)
+                let base_ty = Some(
+                    base.clone()
+                        .try_into_ty()
+                        .map_err(|_| Error::NotATypeError)?,
+                );
+                let (lt, ty) = self.ty.apply_ty_in(&args[..1], ctx)?;
+                Ok(Application::Success(
+                    &args[1..],
+                    IdFamily {
+                        base_ty,
+                        lt,
+                        ty: ty.into_val().try_into().map_err(|_| Error::InvalidSubKind)?,
+                    }
+                    .into_val(),
+                ))
             }
             _ => Err(Error::TooManyArgs),
         }
