@@ -284,12 +284,8 @@ pub struct Refl {
     /// The base value
     value: ValId,
     /// The type of this invocation
-    ///
-    /// Can be either `Id` or `IdSet`
     ty: TypeId,
     /// The lifetime of this invocation
-    ///
-    /// For now always static, but left in for future-compatibility
     lt: Lifetime,
 }
 
@@ -300,6 +296,21 @@ impl Refl {
         let ty = Id::refl(value.clone()).into_ty();
         let lt = value.cloned_region().into();
         Refl { value, ty, lt }
+    }
+}
+
+impl Typed for Refl {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
     }
 }
 
