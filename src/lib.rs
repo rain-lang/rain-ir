@@ -13,14 +13,16 @@ Contributions, ideas and collaboration proposals are welcome: please make an iss
 */
 #![forbid(missing_docs, missing_debug_implementations)]
 #![recursion_limit = "256"]
+#![warn(clippy::all)]
+
 pub mod control;
-#[warn(clippy::all)]
 pub mod data;
 pub mod eval;
 pub mod function;
 pub mod graph;
 pub mod lifetime;
 pub mod primitive;
+pub mod proof;
 pub mod region;
 pub mod typing;
 pub mod util;
