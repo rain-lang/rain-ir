@@ -9,7 +9,7 @@ use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
-use crate::proof::identity::{Id, Refl};
+use crate::proof::identity::{Id, Refl, IdFamily};
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::universe::Universe;
 use crate::typing::{IsKind, IsRepr, IsType, Typed};
@@ -95,6 +95,8 @@ pub enum ValueEnum {
     Id(Id),
     /// The `refl` constructor for identity types
     Refl(Refl),
+    /// A family of identity types
+    IdFamily(IdFamily)
 }
 
 // Common value type aliases:
@@ -516,6 +518,7 @@ macro_rules! forv {
             ValueEnum::Logical($i) => $e,
             ValueEnum::Id($i) => $e,
             ValueEnum::Refl($i) => $e,
+            ValueEnum::IdFamily($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -606,6 +609,7 @@ normal_valid!(Logical);
 normal_valid!(Ternary);
 normal_valid!(Id);
 normal_valid!(Refl);
+normal_valid!(IdFamily);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types

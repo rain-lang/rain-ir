@@ -73,13 +73,6 @@ impl IdFamily {
     }
 }
 
-impl Live for IdFamily {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
-    }
-}
-
 impl Typed for IdFamily {
     #[inline]
     fn ty(&self) -> TypeRef {
@@ -95,8 +88,16 @@ impl Typed for IdFamily {
     }
 }
 
-impl Apply for IdFamily {
+impl Live for IdFamily {
     #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
+    }
+}
+
+lifetime_region!(IdFamily);
+
+impl Apply for IdFamily {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
@@ -120,6 +121,69 @@ impl Apply for IdFamily {
             }
             _ => Err(Error::TooManyArgs),
         }
+    }
+}
+
+impl Substitute for IdFamily {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<IdFamily, Error> {
+        Ok(IdFamily {
+            base_ty: self
+                .base_ty
+                .as_ref()
+                .map(|ty| ty.substitute_ty(ctx))
+                .transpose()?,
+            ty: self
+                .ty
+                .substitute(ctx)?
+                .try_into()
+                .map_err(|_| Error::InvalidSubKind)?,
+            lt: ctx.evaluate_lt(&self.lt)?,
+        })
+    }
+}
+
+substitute_to_valid!(IdFamily);
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for IdFamily {}
+    impl TryFrom<NormalValue> for IdFamily { as ValueEnum, }
+    impl TryFromRef<NormalValue> for IdFamily { as ValueEnum, }
+}
+
+impl From<IdFamily> for NormalValue {
+    #[inline]
+    fn from(id: IdFamily) -> NormalValue {
+        NormalValue(ValueEnum::IdFamily(id))
+    }
+}
+
+impl Value for IdFamily {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        if self.base_ty.is_none() {
+            0
+        } else {
+            1
+        }
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        match ix {
+            0 => self
+                .base_ty
+                .as_ref()
+                .expect("Invalid zero-index into id family without base type")
+                .as_val(),
+            ix => panic!("Invalid index into id family's dependencies: {}", ix),
+        }
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        self.into()
     }
 }
 
@@ -377,6 +441,16 @@ mod prettyprint_impl {
     use super::*;
     use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
     use std::fmt::{self, Display, Formatter};
+
+    impl PrettyPrint for IdFamily {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "(identity family prettyprinting unimplemented)")
+        }
+    }
 
     impl PrettyPrint for Id {
         fn prettyprint<I: From<usize> + Display>(
