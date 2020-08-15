@@ -335,6 +335,43 @@ impl Substitute for Refl {
     }
 }
 
+substitute_to_valid!(Refl);
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Refl {}
+    impl TryFrom<NormalValue> for Refl { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Refl { as ValueEnum, }
+}
+
+impl From<Refl> for NormalValue {
+    #[inline]
+    fn from(refl: Refl) -> NormalValue {
+        NormalValue(ValueEnum::Refl(refl))
+    }
+}
+
+impl Value for Refl {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        1
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        match ix {
+            0 => &self.value,
+            ix => panic!("Invalid index into refl's dependencies: {}", ix),
+        }
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        self.into()
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
@@ -348,6 +385,16 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(identity prettyprinting unimplemented)")
+        }
+    }
+
+    impl PrettyPrint for Refl {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "(refl prettyprinting unimplemented)")
         }
     }
 }
