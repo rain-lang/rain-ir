@@ -329,9 +329,9 @@ mod tests {
             vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into(),
             None,
         );
-        let select = region.clone().param(0).unwrap().into_val();
-        let high = region.clone().param(1).unwrap().into_val();
-        let low = region.clone().param(2).unwrap().into_val();
+        let select = region.param(0).unwrap().into_val();
+        let high = region.param(1).unwrap().into_val();
+        let low = region.param(2).unwrap().into_val();
         let not_select = Sexpr::try_new(vec![Not.into(), select.clone()])
             .unwrap()
             .into_val();
