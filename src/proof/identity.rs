@@ -4,7 +4,7 @@ Proofs of identity and equivalence.
 use crate::lifetime::Lifetime;
 use crate::region::Regional;
 use crate::typing::{universe::FINITE_TY, Typed};
-use crate::value::{Error, TypeId, ValId};
+use crate::value::{Error, TypeId, TypeRef, UniverseId, ValId};
 //use either::Either;
 
 /// The identity type family
@@ -19,7 +19,7 @@ pub struct Id {
     /// The right value being compared
     right: ValId,
     /// The type of this identity type
-    ty: TypeId,
+    ty: UniverseId,
     /// The lifetime of this identity type
     lt: Lifetime,
 }
@@ -31,7 +31,7 @@ impl Id {
         Id {
             left: value.clone(),
             right: value,
-            ty: FINITE_TY.clone_ty(), // TODO: this...
+            ty: FINITE_TY.clone(), // TODO: this...
             lt,
         }
     }
@@ -45,8 +45,23 @@ impl Id {
             left,
             right,
             lt,
-            ty: FINITE_TY.clone_ty(), //TODO: this...
+            ty: FINITE_TY.clone(), //TODO: this...
         })
+    }
+}
+
+impl Typed for Id {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
     }
 }
 
