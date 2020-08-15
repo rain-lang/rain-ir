@@ -48,7 +48,7 @@ impl IdFamily {
     }
     /// Get the pi type for a constructor family
     pub fn universal_pi(universe: &UniverseId) -> Pi {
-        let universal_region = Region::with(
+        let universal_region = Region::with_unchecked(
             std::iter::once(universe.clone_ty()).collect(),
             universe.cloned_region(),
         );
@@ -63,7 +63,7 @@ impl IdFamily {
     }
     /// Get the pi type for an identity type family
     pub fn family_pi(base_ty: &TypeId) -> Pi {
-        let region = Region::with(
+        let region = Region::with_unchecked(
             [base_ty, base_ty].iter().copied().cloned().collect(),
             base_ty.cloned_region(),
         );

@@ -63,6 +63,7 @@ pub trait Regional {
     ///
     /// # Example
     /// ```rust
+    /// use std::iter::once;
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
@@ -75,7 +76,7 @@ pub trait Regional {
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
     ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
@@ -104,6 +105,7 @@ pub trait Regional {
     ///
     /// # Example
     /// ```rust
+    /// use std::iter::once;
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
@@ -116,7 +118,7 @@ pub trait Regional {
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
     ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
@@ -166,6 +168,7 @@ pub trait Regional {
     ///
     /// # Example
     /// ```rust
+    /// use std::iter::once;
     /// use rain_ir::region::{Region, Regional};
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
@@ -178,7 +181,7 @@ pub trait Regional {
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(std::iter::once(Bool.into_ty()).collect(), None);
+    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
     ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
@@ -228,10 +231,17 @@ impl Region {
     pub fn new(data: RegionData) -> Region {
         Region(REGION_CACHE.cache(data))
     }
+    /// Create data for a new region with a given parameter type vector and a parent region
+    ///
+    /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
+    #[inline]
+    pub fn with_unchecked(param_tys: TyArr, parent: Option<Region>) -> Region {
+        Region::new(RegionData::with_unchecked(param_tys, parent))
+    }
     /// Create a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Region {
-        Region::new(RegionData::with(param_tys, parent))
+    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Result<Region, Error> {
+        RegionData::with(param_tys, parent).map(Region::new)
     }
     /// Create a new region with a given parent region, having no parameters
     ///
@@ -282,6 +292,7 @@ impl Region {
     ///
     /// # Examples
     /// ```rust
+    /// use std::iter::once;
     /// use rain_ir::region::Region;
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
@@ -289,9 +300,9 @@ impl Region {
     /// let empty_region = Region::with_parent(None);
     /// let nested_empty = Region::with_parent(Some(empty_region.clone()));
     /// let nested_full = Region::with(
-    ///     std::iter::once(Bool.into_ty()).collect(),
+    ///     once(Bool.into_ty()).collect(),
     ///     Some(nested_empty.clone())
-    /// );
+    /// ).unwrap();
     ///
     /// assert!(empty_region.is_empty());
     /// assert!(nested_empty.is_empty());
@@ -314,11 +325,11 @@ impl Region {
     /// let nested_full = Region::with(
     ///     std::iter::once(Bool.into_ty()).collect(),
     ///     Some(nested_empty.clone())
-    /// );
+    /// ).unwrap();
     /// let nested_many = Region::with(
     ///     vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into_iter().collect(),
     ///     Some(empty_region.clone())
-    /// );
+    /// ).unwrap();
     ///
     /// assert_eq!(empty_region.len(), 0);
     /// assert_eq!(nested_empty.len(), 0);
