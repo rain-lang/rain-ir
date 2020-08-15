@@ -2,7 +2,7 @@
 Proofs of identity and equivalence.
 */
 use crate::eval::Substitute;
-use crate::eval::{Apply, EvalCtx};
+use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
@@ -27,12 +27,10 @@ pub struct IdFamily {
 
 impl IdFamily {
     /// Get the constructor for all identity type families
-    #[inline]
     pub fn constructor() -> IdFamily {
         unimplemented!()
     }
     /// Get a given identity type family
-    #[inline]
     pub fn family(base_ty: TypeId) -> IdFamily {
         let region = Region::with(
             [&base_ty, &base_ty].iter().copied().cloned().collect(),
@@ -47,6 +45,56 @@ impl IdFamily {
             ty,
             lt,
             base_ty: Some(base_ty),
+        }
+    }
+}
+
+impl Live for IdFamily {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
+    }
+}
+
+impl Typed for IdFamily {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
+}
+
+impl Apply for IdFamily {
+    #[inline]
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        let base_ty_val = self.base_ty.as_ref().map(|ty| ty.as_val());
+        match (args, base_ty_val) {
+            ([], _) | ([_], Some(_)) => {
+                let (lt, ty) = self.ty.apply_ty_in(args, ctx)?;
+                Ok(Application::Complete(lt, ty))
+            }
+            ([left, right], Some(base)) | ([base, left, right], None) => {
+                if left.ty() != *base {
+                    return Err(Error::TypeMismatch);
+                }
+                let id = Id::try_new(left.clone(), right.clone())?;
+                Ok(Application::Success(&[], id.into_val()))
+            }
+            ([base, _], None) | ([base], None) => {
+                unimplemented!("IdFamily into val, base type {:?}", base)
+            }
+            _ => Err(Error::TooManyArgs),
         }
     }
 }
