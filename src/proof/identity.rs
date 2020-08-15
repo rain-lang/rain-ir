@@ -6,8 +6,10 @@ use crate::eval::{Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::Regional;
 use crate::typing::{universe::FINITE_TY, Type, Typed};
-use crate::value::{Error, TypeId, TypeRef, UniverseId, ValId};
-use crate::{lifetime_region, substitute_to_valid};
+use crate::value::{
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+};
+use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 //use either::Either;
 
@@ -96,7 +98,64 @@ impl Substitute for Id {
     }
 }
 
-//substitute_to_valid!(Id);
+substitute_to_valid!(Id);
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Id {}
+    impl TryFrom<NormalValue> for Id { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Id { as ValueEnum, }
+}
+
+impl From<Id> for NormalValue {
+    #[inline]
+    fn from(id: Id) -> NormalValue {
+        NormalValue(ValueEnum::Id(id))
+    }
+}
+
+impl Value for Id {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        2
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        match ix {
+            0 => &self.left,
+            1 => &self.right,
+            ix => panic!("Invalid index into an identity type's dependencies: {}", ix),
+        }
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        self.into()
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        self.into()
+    }
+}
+
+impl Type for Id {
+    #[inline]
+    fn is_universe(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn universe(&self) -> UniverseRef {
+        self.ty.borrow_var()
+    }
+    #[inline]
+    fn is_affine(&self) -> bool {
+        //TODO
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        //TODO
+        false
+    }
+}
 
 /// The reflexivity axiom
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -118,5 +177,22 @@ impl Refl {
     #[inline]
     pub fn refl(_value: ValId) -> Refl {
         unimplemented!("Refl construction, as Id is not a type yet")
+    }
+}
+
+#[cfg(feature = "prettyprinter")]
+mod prettyprint_impl {
+    use super::*;
+    use crate::prettyprinter::{PrettyPrint, PrettyPrinter};
+    use std::fmt::{self, Display, Formatter};
+
+    impl PrettyPrint for Id {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "(identity prettyprinting unimplemented)")
+        }
     }
 }
