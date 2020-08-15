@@ -3,19 +3,53 @@ Proofs of identity and equivalence.
 */
 use crate::eval::Substitute;
 use crate::eval::{Apply, EvalCtx};
+use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::Regional;
+use crate::region::{Region, Regional};
 use crate::typing::{universe::FINITE_TY, Type, Typed};
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum,
+    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum, VarId,
 };
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 //use either::Either;
 
-/// The identity type family
+/// The identity type family, either of a given type or in general
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct IdFamily;
+pub struct IdFamily {
+    /// The base type of this family, if any
+    base_ty: Option<TypeId>,
+    /// The type of this family
+    ty: VarId<Pi>,
+    /// The lifetime of this family
+    lt: Lifetime,
+}
+
+impl IdFamily {
+    /// Get the constructor for all identity type families
+    #[inline]
+    pub fn constructor() -> IdFamily {
+        unimplemented!()
+    }
+    /// Get a given identity type family
+    #[inline]
+    pub fn family(base_ty: TypeId) -> IdFamily {
+        let region = Region::with(
+            [&base_ty, &base_ty].iter().copied().cloned().collect(),
+            base_ty.cloned_region(),
+        );
+        //TODO: proper target universe...
+        let ty = Pi::try_new(FINITE_TY.clone_ty(), region, &Lifetime::STATIC)
+            .expect("Valid pi-type")
+            .into_var();
+        let lt = base_ty.lifetime().clone_lifetime();
+        IdFamily {
+            ty,
+            lt,
+            base_ty: Some(base_ty),
+        }
+    }
+}
 
 /// A proof of identity for two values
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
