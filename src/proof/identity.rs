@@ -314,6 +314,27 @@ impl Typed for Refl {
     }
 }
 
+impl Live for Refl {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
+    }
+}
+
+lifetime_region!(Refl);
+
+impl Apply for Refl {}
+
+impl Substitute for Refl {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Refl, Error> {
+        Ok(Refl {
+            value: self.value.substitute(ctx)?,
+            ty: self.ty.substitute_ty(ctx)?,
+            lt: ctx.evaluate_lt(&self.lt)?,
+        })
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
