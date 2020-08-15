@@ -1,23 +1,15 @@
 /*!
 Proofs of identity and equivalence.
 */
-use crate::function::pi::Pi;
 use crate::lifetime::Lifetime;
 use crate::region::Regional;
 use crate::typing::{universe::FINITE_TY, Typed};
-use crate::value::{Error, /*arr::ValSet,*/ TypeId, ValId, VarId};
+use crate::value::{Error, TypeId, ValId};
 //use either::Either;
 
-/// The identity type family for a given type
+/// The identity type family
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct IdFamily {
-    /// The type being parametrized
-    param_ty: TypeId,
-    /// The type of this family
-    ty: VarId<Pi>,
-    /// The lifetime of this family
-    lt: Lifetime,
-}
+pub struct IdFamily;
 
 /// A proof of identity for two values
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -57,22 +49,6 @@ impl Id {
         })
     }
 }
-
-/*
-/// A proof of identity for a set of values
-///
-/// Values of this type can only be constructed where the type of the values is of kind `#set`, implying identity is a mere proposition.
-/// In this case `IdSet` is *always* a mere proposition.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct IdSet {
-    /// The values being compared, or the single-value making up the identity set
-    id_set: Either<ValSet, ValId>,
-    /// The type of this identity type
-    ty: TypeId,
-    /// The lifetime of this identity type
-    lt: Lifetime,
-}
-*/
 
 /// The reflexivity axiom
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
