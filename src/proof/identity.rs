@@ -296,8 +296,10 @@ pub struct Refl {
 impl Refl {
     /// Create a new instance of the reflexivity axiom on a given `ValId`
     #[inline]
-    pub fn refl(_value: ValId) -> Refl {
-        unimplemented!("Refl construction, as Id is not a type yet")
+    pub fn refl(value: ValId) -> Refl {
+        let ty = Id::refl(value.clone()).into_ty();
+        let lt = value.cloned_region().into();
+        Refl { value, ty, lt }
     }
 }
 
