@@ -3,13 +3,15 @@ Tuples of `rain` values and their associated finite (Cartesian) product types
 */
 use super::{
     arr::{TyArr, ValArr},
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
-    ValueEnum,
+    Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{Unit, UNIT_TY};
-use crate::typing::{universe::FINITE_TY, Type, Typed};
+use crate::typing::{
+    primitive::{PROP, SET},
+    Kind, Type, Typed,
+};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
@@ -266,7 +268,7 @@ pub struct Product {
     /// The (cached) lifetime of this product type
     lifetime: Lifetime,
     /// The (cached) type of this product type
-    ty: UniverseId,
+    ty: KindId,
     /// The flags on this product type
     flags: ProductFlags,
 }
@@ -284,7 +286,7 @@ impl Product {
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
         let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
         let flags = ProductFlags::new(affine, force_affine, relevant, force_relevant);
-        let ty = FINITE_TY.union_all(elems.iter().map(|t| t.universe()));
+        let ty = SET.clone().into_kind(); //TODO: this
         Ok(Product {
             elems,
             lifetime,
@@ -303,7 +305,7 @@ impl Product {
         Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
-            ty: FINITE_TY.clone(),
+            ty: PROP.clone().into_kind(),
             flags: ProductFlags(0),
         }
     }
@@ -313,7 +315,7 @@ impl Product {
         Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
-            ty: FINITE_TY.clone(),
+            ty: PROP.clone().into_kind(),
             flags: ProductFlags(FLAG_AFFIN | FLAG_ANCHR),
         }
     }
@@ -406,12 +408,6 @@ impl Typed for Product {
 impl Apply for Product {}
 
 impl Type for Product {
-    fn universe(&self) -> UniverseRef {
-        self.ty.borrow_var()
-    }
-    fn is_universe(&self) -> bool {
-        false
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         self.flags.is_affine()

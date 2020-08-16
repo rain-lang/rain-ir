@@ -261,6 +261,8 @@ impl Deref for LifetimeBorrow<'_> {
 }
 
 impl<'a> LifetimeBorrow<'a> {
+    /// A borrow of the static lifetime
+    pub const STATIC: LifetimeBorrow<'static> = LifetimeBorrow(None);
     /// Clone this lifetime
     #[inline]
     pub fn clone_lifetime(&self) -> Lifetime {

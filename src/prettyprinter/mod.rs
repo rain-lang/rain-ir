@@ -2,7 +2,7 @@
 A prettyprinter for `rain` programs
 */
 use crate::tokens::*;
-use crate::typing::{Type, Typed};
+use crate::typing::Typed;
 use crate::value::{NormalValue, ValRef, Value};
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
@@ -124,8 +124,9 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
             if ix == top.no_deps() {
                 ix += 1;
                 let ty = top.as_norm().ty();
-                if !ty.is_universe() {
-                    // Print the dependencies of non-universe types
+                if !ty.is_kind() {
+                    // Print the dependencies of non-kind types
+                    //TODO: be smarter about this, but later...
                     visit_stack.push((top, ix));
                     visit_stack.push((ty.as_val(), 0));
                     continue;
@@ -152,8 +153,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 }
                 // Print the correct number of tabs (corresponding to the current scope level)
                 self.print_tabs(fmt)?;
-                if !ty.is_universe() {
-                    // Only print the type of non-types
+                if !ty.is_kind() {
+                    // Only print the type of non-types, for now
                     write!(
                         fmt,
                         "{} {}{} {} {} ",

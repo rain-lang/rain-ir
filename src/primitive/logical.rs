@@ -6,9 +6,9 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::Region;
 use crate::tokens::*;
-use crate::typing::{universe::FINITE_TY, Type, Typed};
+use crate::typing::{primitive::FIN, Type, Typed};
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum, VarId,
+    Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
 use crate::{
     debug_from_display, display_pretty, enum_convert, normal_valid, quick_pretty, trivial_lifetime,
@@ -40,7 +40,7 @@ quick_pretty!(Bool, "{}", KEYWORD_BOOL);
 impl Typed for Bool {
     #[inline]
     fn ty(&self) -> TypeRef {
-        FINITE_TY.borrow_ty()
+        FIN.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -80,14 +80,6 @@ impl Value for Bool {
 impl ValueData for Bool {}
 
 impl Type for Bool {
-    #[inline]
-    fn is_universe(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        FINITE_TY.borrow_var()
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         false

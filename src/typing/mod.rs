@@ -4,9 +4,7 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     lifetime::Lifetime,
-    value::{
-        Error, KindRef, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value, ValueEnum,
-    },
+    value::{Error, KindRef, ReprRef, TypeId, TypeRef, ValId, ValRef, Value, ValueEnum},
 };
 use std::convert::TryInto;
 
@@ -115,15 +113,6 @@ pub trait Type: Value {
             None
         }
     }
-    /// Get the universe of this type
-    ///
-    /// # Notes
-    /// The result of this method *might* not be equal to the result of calling `.ty()` on this type.
-    /// Specifically, the universe of a type must be a supertype of it's type, but does not have to *be*
-    /// it's type.
-    fn universe(&self) -> UniverseRef;
-    /// Get whether this type is a universe
-    fn is_universe(&self) -> bool;
     /// Get whether this type is affine
     fn is_affine(&self) -> bool;
     /// Get whether this type is relevant
@@ -188,48 +177,17 @@ pub trait Type: Value {
 
 impl<P: TypePredicate> Type for ValId<P> {
     fn into_ty(self) -> TypeId {
+        debug_assert!(self.is_ty());
         self.coerce()
-    }
-    fn universe(&self) -> UniverseRef {
-        match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.universe(),
-            ValueEnum::Finite(f) => f.universe(),
-            ValueEnum::Pi(p) => p.universe(),
-            ValueEnum::Universe(u) => u.universe(),
-            ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(p) => unimplemented!("Parameter universes for parameter {}", p),
-            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation universes for sexpr {}", s),
-            v => panic!(
-                "Logic error: value {} is not a type, but was asserted as such!",
-                v
-            ),
-        }
-    }
-    fn is_universe(&self) -> bool {
-        match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.is_universe(),
-            ValueEnum::Finite(f) => f.is_universe(),
-            ValueEnum::Pi(p) => p.is_universe(),
-            ValueEnum::Universe(u) => u.is_universe(),
-            ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(p) => {
-                unimplemented!("Parameter universe check for parameter {}", p)
-            }
-            ValueEnum::Sexpr(s) => {
-                unimplemented!("Partial evaluation universe check for sexpr {}", s)
-            }
-            v => panic!(
-                "Logic error: value {} is not a type, but was asserted as such!",
-                v
-            ),
-        }
     }
     fn is_affine(&self) -> bool {
         match self.as_enum() {
             ValueEnum::BoolTy(b) => b.is_affine(),
             ValueEnum::Finite(f) => f.is_affine(),
             ValueEnum::Pi(p) => p.is_affine(),
-            ValueEnum::Universe(u) => u.is_affine(),
+            ValueEnum::Fin(u) => u.is_affine(),
+            ValueEnum::Prop(u) => u.is_affine(),
+            ValueEnum::Set(u) => u.is_affine(),
             ValueEnum::Product(p) => p.is_affine(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter affinity check for parameter {}", p)
@@ -248,7 +206,9 @@ impl<P: TypePredicate> Type for ValId<P> {
             ValueEnum::BoolTy(b) => b.is_relevant(),
             ValueEnum::Finite(f) => f.is_relevant(),
             ValueEnum::Pi(p) => p.is_relevant(),
-            ValueEnum::Universe(u) => u.is_relevant(),
+            ValueEnum::Prop(u) => u.is_relevant(),
+            ValueEnum::Fin(u) => u.is_relevant(),
+            ValueEnum::Set(u) => u.is_relevant(),
             ValueEnum::Product(p) => p.is_relevant(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter relevance check for parameter {}", p)
@@ -268,7 +228,9 @@ impl<P: TypePredicate> Type for ValId<P> {
             ValueEnum::BoolTy(b) => b.is_linear(),
             ValueEnum::Finite(f) => f.is_linear(),
             ValueEnum::Pi(p) => p.is_linear(),
-            ValueEnum::Universe(u) => u.is_linear(),
+            ValueEnum::Prop(u) => u.is_linear(),
+            ValueEnum::Fin(u) => u.is_linear(),
+            ValueEnum::Set(u) => u.is_linear(),
             ValueEnum::Product(p) => p.is_linear(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter linearity check for parameter {}", p)
@@ -288,7 +250,9 @@ impl<P: TypePredicate> Type for ValId<P> {
             ValueEnum::BoolTy(b) => b.is_substruct(),
             ValueEnum::Finite(f) => f.is_substruct(),
             ValueEnum::Pi(p) => p.is_substruct(),
-            ValueEnum::Universe(u) => u.is_substruct(),
+            ValueEnum::Prop(u) => u.is_substruct(),
+            ValueEnum::Fin(u) => u.is_substruct(),
+            ValueEnum::Set(u) => u.is_substruct(),
             ValueEnum::Product(p) => p.is_substruct(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter substructurality check for parameter {}", p)
@@ -310,7 +274,9 @@ impl<P: TypePredicate> Type for ValId<P> {
             ValueEnum::BoolTy(b) => b.apply_ty(args),
             ValueEnum::Finite(f) => f.apply_ty(args),
             ValueEnum::Pi(p) => p.apply_ty(args),
-            ValueEnum::Universe(u) => u.apply_ty(args),
+            ValueEnum::Prop(u) => u.apply_ty(args),
+            ValueEnum::Fin(u) => u.apply_ty(args),
+            ValueEnum::Set(u) => u.apply_ty(args),
             ValueEnum::Product(p) => p.apply_ty(args),
             ValueEnum::Parameter(p) => unimplemented!("Parameter application for parameter {}", p),
             ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation application for sexpr {}", s),
@@ -332,7 +298,9 @@ impl<P: TypePredicate> Type for ValId<P> {
             ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
             ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
             ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
-            ValueEnum::Universe(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Prop(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Fin(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Set(u) => u.apply_ty_in(args, ctx),
             ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter contextual application for parameter {}", p)
@@ -349,46 +317,14 @@ impl<P: TypePredicate> Type for ValId<P> {
 }
 
 impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
-    fn universe(&self) -> UniverseRef {
-        match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.universe(),
-            ValueEnum::Finite(f) => f.universe(),
-            ValueEnum::Pi(p) => p.universe(),
-            ValueEnum::Universe(u) => u.universe(),
-            ValueEnum::Product(p) => p.universe(),
-            ValueEnum::Parameter(p) => unimplemented!("Parameter universes for parameter {}", p),
-            ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation universes for sexpr {}", s),
-            v => panic!(
-                "Logic error: value {} is not a type, but was asserted as such!",
-                v
-            ),
-        }
-    }
-    fn is_universe(&self) -> bool {
-        match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.is_universe(),
-            ValueEnum::Finite(f) => f.is_universe(),
-            ValueEnum::Pi(p) => p.is_universe(),
-            ValueEnum::Universe(u) => u.is_universe(),
-            ValueEnum::Product(p) => p.is_universe(),
-            ValueEnum::Parameter(p) => {
-                unimplemented!("Parameter universe check for parameter {}", p)
-            }
-            ValueEnum::Sexpr(s) => {
-                unimplemented!("Partial evaluation universe check for sexpr {}", s)
-            }
-            v => panic!(
-                "Logic error: value {} is not a type, but was asserted as such!",
-                v
-            ),
-        }
-    }
     fn is_affine(&self) -> bool {
         match self.as_enum() {
             ValueEnum::BoolTy(b) => b.is_affine(),
             ValueEnum::Finite(f) => f.is_affine(),
             ValueEnum::Pi(p) => p.is_affine(),
-            ValueEnum::Universe(u) => u.is_affine(),
+            ValueEnum::Prop(u) => u.is_affine(),
+            ValueEnum::Fin(u) => u.is_affine(),
+            ValueEnum::Set(u) => u.is_affine(),
             ValueEnum::Product(p) => p.is_affine(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter affinity check for parameter {}", p)
@@ -407,7 +343,9 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
             ValueEnum::BoolTy(b) => b.is_relevant(),
             ValueEnum::Finite(f) => f.is_relevant(),
             ValueEnum::Pi(p) => p.is_relevant(),
-            ValueEnum::Universe(u) => u.is_relevant(),
+            ValueEnum::Prop(u) => u.is_relevant(),
+            ValueEnum::Fin(u) => u.is_relevant(),
+            ValueEnum::Set(u) => u.is_relevant(),
             ValueEnum::Product(p) => p.is_relevant(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter relevance check for parameter {}", p)
@@ -427,7 +365,9 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
             ValueEnum::BoolTy(b) => b.is_linear(),
             ValueEnum::Finite(f) => f.is_linear(),
             ValueEnum::Pi(p) => p.is_linear(),
-            ValueEnum::Universe(u) => u.is_linear(),
+            ValueEnum::Prop(u) => u.is_linear(),
+            ValueEnum::Fin(u) => u.is_linear(),
+            ValueEnum::Set(u) => u.is_linear(),
             ValueEnum::Product(p) => p.is_linear(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter linearity check for parameter {}", p)
@@ -447,7 +387,9 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
             ValueEnum::BoolTy(b) => b.is_substruct(),
             ValueEnum::Finite(f) => f.is_substruct(),
             ValueEnum::Pi(p) => p.is_substruct(),
-            ValueEnum::Universe(u) => u.is_substruct(),
+            ValueEnum::Prop(u) => u.is_substruct(),
+            ValueEnum::Fin(u) => u.is_substruct(),
+            ValueEnum::Set(u) => u.is_substruct(),
             ValueEnum::Product(p) => p.is_substruct(),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter substructurality check for parameter {}", p)
@@ -469,7 +411,9 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
             ValueEnum::BoolTy(b) => b.apply_ty(args),
             ValueEnum::Finite(f) => f.apply_ty(args),
             ValueEnum::Pi(p) => p.apply_ty(args),
-            ValueEnum::Universe(u) => u.apply_ty(args),
+            ValueEnum::Prop(u) => u.apply_ty(args),
+            ValueEnum::Fin(u) => u.apply_ty(args),
+            ValueEnum::Set(u) => u.apply_ty(args),
             ValueEnum::Product(p) => p.apply_ty(args),
             ValueEnum::Parameter(p) => unimplemented!("Parameter application for parameter {}", p),
             ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation application for sexpr {}", s),
@@ -491,7 +435,9 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
             ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
             ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
             ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
-            ValueEnum::Universe(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Prop(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Fin(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Set(u) => u.apply_ty_in(args, ctx),
             ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter contextual application for parameter {}", p)
