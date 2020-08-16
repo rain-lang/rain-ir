@@ -2,7 +2,7 @@
 Meta-types and layouts
 */
 use super::*;
-use crate::value::{KindId, ReprId, ValId, ValRef};
+use crate::value::{KindId, ReprId, UniverseId, ValId, ValRef};
 
 pub mod layout;
 pub mod primitive;
@@ -19,6 +19,13 @@ pub trait Kind: Type {
     }
     /// Get the kind of identity families over this kind
     fn id_kind(&self) -> KindId;
+    /*
+    /// Get the closure of this kind under the primitive type formers
+    ///
+    /// This is guaranteed to be a universe which has this kind as a subtype. If this kind is a universe,
+    /// then this is guaranteed to just return this kind as a `UniverseId`
+    fn closure(&self) -> UniverseId;
+    */
 }
 
 /// A trait implemented by `rain` values which can all be represented within a given memory layout
@@ -29,6 +36,18 @@ pub trait Repr: Kind {
     /// The result of this method should always be pointer equivalent to `self.into_val()`
     #[inline]
     fn into_repr(self) -> ReprId {
+        self.into_val().coerce()
+    }
+}
+
+/// A trait implemented by `rain` values which are closed under the primitive type formers, namely Pi and Sigma
+pub trait Universe: Kind {
+    /// Convert this representation into a `UniverseId`
+    ///
+    /// # Correctness
+    /// The result of this method should always be pointer equivalent to `self.into_val()`
+    #[inline]
+    fn into_universe(self) -> UniverseId {
         self.into_val().coerce()
     }
 }
