@@ -1,7 +1,7 @@
 /*!
 `rain` value regions
 */
-use crate::value::{arr::TyArr, Error, TypeId};
+use crate::value::{arr::TyArr, Error, TypeId, UniverseId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
@@ -235,8 +235,8 @@ impl Region {
     ///
     /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
     #[inline]
-    pub fn with_unchecked(param_tys: TyArr, parent: Option<Region>) -> Region {
-        Region::new(RegionData::with_unchecked(param_tys, parent))
+    pub fn with_unchecked(param_tys: TyArr, parent: Option<Region>, universe: UniverseId) -> Region {
+        Region::new(RegionData::with_unchecked(param_tys, parent, universe))
     }
     /// Create a new region with a given parameter type vector and a parent region
     #[inline]
@@ -271,6 +271,11 @@ impl Region {
     #[inline]
     pub fn into_param(self, ix: usize) -> Result<Parameter, Error> {
         Parameter::try_new(self, ix)
+    }
+    /// Get the universe of this region's parameters
+    #[inline]
+    pub fn universe(&self) -> &UniverseId {
+        &self.data().universe
     }
     /// Get the data behind this [`Region`](Region)
     ///

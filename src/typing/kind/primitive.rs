@@ -159,6 +159,10 @@ impl Kind for Prop {
     fn id_kind(&self) -> KindId {
         Prop.into_kind()
     }
+    #[inline]
+    fn closure(&self) -> UniverseId {
+        Prop.into_universe()
+    }
 }
 
 impl Universe for Prop {
@@ -235,6 +239,10 @@ impl Kind for Fin {
     #[inline]
     fn id_kind(&self) -> KindId {
         Prop.into_kind()
+    }
+    #[inline]
+    fn closure(&self) -> UniverseId {
+        Fin.into_universe()
     }
 }
 
@@ -313,6 +321,10 @@ impl Kind for Set {
     #[inline]
     fn id_kind(&self) -> KindId {
         Prop.into_kind()
+    }
+    #[inline]
+    fn closure(&self) -> UniverseId {
+        self.clone().into_universe()
     }
 }
 
