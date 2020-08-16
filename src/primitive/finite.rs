@@ -3,10 +3,8 @@ Finite-valued types
 */
 use crate::eval::Apply;
 use crate::tokens::*;
-use crate::typing::{universe::FINITE_TY, Type, Typed};
-use crate::value::{
-    NormalValue, TypeRef, UniverseRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef,
-};
+use crate::typing::{primitive::FIN, Type, Typed};
+use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef};
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_lifetime, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
@@ -68,7 +66,7 @@ trivial_lifetime!(Finite);
 impl Typed for Finite {
     #[inline]
     fn ty(&self) -> TypeRef {
-        FINITE_TY.borrow_ty()
+        FIN.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -107,14 +105,6 @@ impl Value for Finite {
 impl ValueData for Finite {}
 
 impl Type for Finite {
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        FINITE_TY.borrow_var()
-    }
-    #[inline]
-    fn is_universe(&self) -> bool {
-        false
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         false
@@ -312,8 +302,6 @@ mod tests {
         // Finite types are types but not universes, indices are not types
         assert!(f1.is_ty());
         assert!(!ix10.is_ty());
-        assert!(!f1.is_universe());
-        assert_eq!(f1.universe(), FINITE_TY.borrow_var());
 
         // Finite types and indices live for the static lifetime
         assert_eq!(f1.lifetime(), LifetimeBorrow::default());

@@ -4,11 +4,10 @@ Pi types
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
-use crate::typing::{Type, Typed};
+use crate::typing::{primitive::SET, Type, Typed};
 use crate::value::{
     arr::{TyArr, ValSet},
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
-    ValueEnum,
+    Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
@@ -18,9 +17,6 @@ use std::convert::TryInto;
 pub struct Pi {
     /// The result type of this pi type
     result: TypeId,
-    /// The type of this lambda function
-    /// TODO: extract from region
-    ty: UniverseId,
     /// The direct dependencies of this pi type
     deps: ValSet,
     /// The lifetime of this pi type itself
@@ -32,13 +28,10 @@ pub struct Pi {
 impl Pi {
     /// Create a new pi type from a parametrized `TypeId` with a given result lifetime
     pub fn new(result: Parametrized<TypeId>, result_lt: &Lifetime) -> Result<Pi, Error> {
-        //TODO: check result lifetime is compatible with type lifetime?
-        let ty = Self::universe(&result);
         let (region, result, deps, lt) = result.destruct();
         let result_lt = result_lt.in_region(Some(region))?;
         Ok(Pi {
             result,
-            ty,
             deps,
             lt,
             result_lt,
@@ -47,13 +40,6 @@ impl Pi {
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
         Self::new(param.ty(), &*param.value().lifetime()).expect("Region conjunction should work!")
-    }
-    /// Get the universe associated with a parametrized `TypeId`
-    pub fn universe(param: &Parametrized<TypeId>) -> UniverseId {
-        param
-            .value()
-            .universe()
-            .union_all(param.def_region().data().iter().map(|ty| ty.universe()))
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
     pub fn try_new(value: TypeId, region: Region, result_lt: &Lifetime) -> Result<Pi, Error> {
@@ -99,7 +85,8 @@ impl Pi {
 impl Typed for Pi {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.ty.borrow_ty()
+        //TODO: this
+        SET.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -153,14 +140,6 @@ impl Value for Pi {
 impl ValueData for Pi {}
 
 impl Type for Pi {
-    #[inline]
-    fn is_universe(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        self.ty.borrow_var()
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         unimplemented!("Pi type affinity")

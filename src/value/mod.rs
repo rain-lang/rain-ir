@@ -9,9 +9,9 @@ use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
-use crate::proof::identity::{Id, Refl, IdFamily};
+use crate::proof::identity::{Id, IdFamily, Refl};
 use crate::region::{Parameter, RegionBorrow, Regional};
-use crate::typing::universe::Universe;
+use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
@@ -71,8 +71,12 @@ pub enum ValueEnum {
     Tuple(Tuple),
     /// A finite Cartesian product of `rain` types, at least some of which are distinct.
     Product(Product),
-    /// A typing universe
-    Universe(Universe),
+    /// A mere proposition
+    Prop(Prop),
+    /// A finite type
+    Fin(Fin),
+    /// An n-set
+    Set(Set),
     /// The type of booleans
     BoolTy(Bool),
     /// A boolean value
@@ -96,7 +100,7 @@ pub enum ValueEnum {
     /// The `refl` constructor for identity types
     Refl(Refl),
     /// A family of identity types
-    IdFamily(IdFamily)
+    IdFamily(IdFamily),
 }
 
 // Common value type aliases:
@@ -118,12 +122,6 @@ pub type ReprId = ValId<IsRepr>;
 
 /// A `rain` representation reference
 pub type ReprRef<'a> = ValRef<'a, IsRepr>;
-
-/// A reference-counted pointer to a value guaranteed to be a typing universe
-pub type UniverseId = VarId<Universe>;
-
-/// A pointer to a value guaranteed to be a typing universe
-pub type UniverseRef<'a> = VarRef<'a, Universe>;
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
 pub type VarId<V> = ValId<Is<V>>;
@@ -506,7 +504,9 @@ macro_rules! forv {
             ValueEnum::Parameter($i) => $e,
             ValueEnum::Tuple($i) => $e,
             ValueEnum::Product($i) => $e,
-            ValueEnum::Universe($i) => $e,
+            ValueEnum::Prop($i) => $e,
+            ValueEnum::Fin($i) => $e,
+            ValueEnum::Set($i) => $e,
             ValueEnum::BoolTy($i) => $e,
             ValueEnum::Bool($i) => $e,
             ValueEnum::Finite($i) => $e,
@@ -596,7 +596,9 @@ normal_valid!(ValueEnum);
 normal_valid!(Sexpr);
 normal_valid!(Tuple);
 normal_valid!(Product);
-normal_valid!(Universe);
+normal_valid!(Prop);
+normal_valid!(Fin);
+normal_valid!(Set);
 normal_valid!(Bool);
 normal_valid!(bool); //TODO
 normal_valid!(Finite); //TODO: unit + empty?
@@ -625,7 +627,7 @@ macro_rules! impl_to_type {
 }
 
 impl_to_type!(Product);
-impl_to_type!(Universe);
+impl_to_type!(Set);
 impl_to_type!(Bool);
 impl_to_type!(Finite);
 impl_to_type!(Pi);

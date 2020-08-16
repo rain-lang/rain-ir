@@ -4,12 +4,12 @@ Primitive `rain` values and associated value descriptors
 use super::{
     eval::Apply,
     lifetime::{LifetimeBorrow, Live},
-    typing::{universe::FINITE_TY, Type, Typed},
+    typing::{Type, Typed},
 };
 use crate::value::{
     expr::Sexpr,
     tuple::{Product, Tuple},
-    NormalValue, TypeId, TypeRef, UniverseRef, ValId, Value, ValueEnum, VarId,
+    NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
 };
 use crate::{debug_from_display, lifetime_region, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
@@ -222,14 +222,6 @@ impl Live for Unit {
 lifetime_region!(Unit);
 
 impl Type for Unit {
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        FINITE_TY.borrow_var()
-    }
-    #[inline]
-    fn is_universe(&self) -> bool {
-        false
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         false

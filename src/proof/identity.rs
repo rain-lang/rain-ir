@@ -6,10 +6,8 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
-use crate::typing::{universe::FINITE_TY, Type, Typed};
-use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueEnum, VarId,
-};
+use crate::typing::{Kind, Type, Typed};
+use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 //use either::Either;
@@ -26,14 +24,14 @@ pub struct IdFamily {
 }
 
 impl IdFamily {
-    /// Get the constructor for all identity type families within a given universe
-    pub fn universal(universe: UniverseId) -> IdFamily {
-        let ty = Self::universal_pi(&universe).into_var();
-        let lt = universe.lifetime().clone_lifetime();
+    /// Get the constructor for all identity type families within a given kind
+    pub fn universal(kind: KindId) -> IdFamily {
+        let ty = Self::universal_pi(&kind).into_var();
+        let lt = kind.lifetime().clone_lifetime();
         IdFamily {
             ty,
             lt,
-            base_ty: Some(universe.into_ty()),
+            base_ty: None,
         }
     }
     /// Get a given identity type family
@@ -47,10 +45,10 @@ impl IdFamily {
         }
     }
     /// Get the pi type for a constructor family
-    pub fn universal_pi(universe: &UniverseId) -> Pi {
+    pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
-            std::iter::once(universe.clone_ty()).collect(),
-            universe.cloned_region(),
+            std::iter::once(kind.clone_ty()).collect(),
+            kind.cloned_region(),
         );
         let base_ty = universal_region
             .param(0)
@@ -68,7 +66,7 @@ impl IdFamily {
             base_ty.cloned_region(),
         );
         //TODO: proper target universe?
-        Pi::try_new(base_ty.universe().clone_ty(), region, &Lifetime::STATIC)
+        Pi::try_new(base_ty.ty_kind().clone_ty(), region, &Lifetime::STATIC)
             .expect("Valid pi-type")
     }
 }
@@ -128,7 +126,10 @@ impl Apply for IdFamily {
                     IdFamily {
                         base_ty,
                         lt,
-                        ty: ty.into_val().try_into().map_err(|_| Error::InvalidSubKind)?,
+                        ty: ty
+                            .into_val()
+                            .try_into()
+                            .map_err(|_| Error::InvalidSubKind)?,
                     }
                     .into_val(),
                 ))
@@ -209,7 +210,7 @@ pub struct Id {
     /// The right value being compared
     right: ValId,
     /// The type of this identity type
-    ty: UniverseId,
+    ty: KindId,
     /// The lifetime of this identity type
     lt: Lifetime,
 }
@@ -218,24 +219,27 @@ impl Id {
     /// Get the reflexivity type for a given value
     pub fn refl(value: ValId) -> Id {
         let lt = value.cloned_region().into();
+        let ty = value.kind().id_kind();
         Id {
             left: value.clone(),
             right: value,
-            ty: FINITE_TY.clone(), // TODO: this...
+            ty,
             lt,
         }
     }
     /// Get the identity type for comparison between two values of the same type
     pub fn try_new(left: ValId, right: ValId) -> Result<Id, Error> {
         if left.ty() != right.ty() {
+            //TODO: subtyping
             return Err(Error::TypeMismatch);
         }
+        let ty = left.kind().id_kind();
         let lt = left.lcr(&right)?.cloned_region().into();
         Ok(Id {
             left,
             right,
             lt,
-            ty: FINITE_TY.clone(), //TODO: this...
+            ty, //TODO: this...
         })
     }
     /// Get the left of this identity type
@@ -336,14 +340,6 @@ impl Value for Id {
 }
 
 impl Type for Id {
-    #[inline]
-    fn is_universe(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn universe(&self) -> UniverseRef {
-        self.ty.borrow_var()
-    }
     #[inline]
     fn is_affine(&self) -> bool {
         //TODO

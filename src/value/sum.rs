@@ -5,7 +5,7 @@ use crate::function::pi::Pi;
 use crate::lifetime::Lifetime;
 use crate::value::{
     arr::{ValArr, ValSet},
-    UniverseId, VarId,
+    KindId, VarId,
 };
 
 /// A sum type
@@ -16,7 +16,7 @@ pub struct Sum {
     /// The lifetime of this sum type
     lifetime: Lifetime,
     /// The type of this sum type
-    ty: UniverseId, //TODO: kind
+    ty: KindId
 }
 
 /// A union type
@@ -29,7 +29,7 @@ pub struct Union {
     /// The lifetime of this union
     lifetime: Lifetime,
     /// The type of this union
-    ty: UniverseId, //TODO: kind
+    ty: KindId
 }
 
 /// An injection into a sum type

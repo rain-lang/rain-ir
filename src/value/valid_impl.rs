@@ -593,6 +593,17 @@ impl TryFrom<ValId> for TypeId {
     }
 }
 
+impl TryFrom<ValId> for KindId {
+    type Error = ValId;
+    fn try_from(v: ValId) -> Result<KindId, ValId> {
+        if v.is_kind() {
+            Ok(v.coerce())
+        } else {
+            Err(v)
+        }
+    }
+}
+
 impl<V: ValueData> From<V> for VarId<V> {
     fn from(v: V) -> VarId<V> {
         v.into_val().coerce()
