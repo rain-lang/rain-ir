@@ -157,3 +157,17 @@ impl<'a, U: UniversePredicate> Universe for ValRef<'a, U> {
         }
     }
 }
+
+impl PartialOrd for UniverseId {
+    #[inline]
+    fn partial_cmp(&self, other: &UniverseId) -> Option<Ordering> {
+        Some(self.universe_cmp(other))
+    }
+}
+
+impl Ord for UniverseId {
+    #[inline]
+    fn cmp(&self, other: &UniverseId) -> Ordering {
+        self.universe_cmp(other)
+    }
+}
