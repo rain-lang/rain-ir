@@ -20,6 +20,8 @@ impl<P> Drop for ValId<P> {
 
 impl<P> Eq for ValId<P> {}
 
+impl<P> Eq for ValRef<'_, P> {}
+
 impl<'a, P, Q> PartialEq<ValRef<'a, P>> for ValId<Q> {
     fn eq(&self, other: &ValRef<'a, P>) -> bool {
         std::ptr::eq(self.as_val().deref(), other.as_val().deref())
