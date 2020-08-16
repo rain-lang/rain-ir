@@ -55,11 +55,6 @@ impl RegionData {
                 _ => {}
             }
             if let Some(universe) = &mut universe {
-                let param_universe = param_ty.borrow_universe();
-                let param_universe_ref = match &param_universe {
-                    Either::Left(r) => *r,
-                    Either::Right(id) => id.borrow_var(),
-                };
             } else {
                 universe = Some(param_ty.universe())
             }
