@@ -4,7 +4,9 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     lifetime::Lifetime,
-    value::{Error, KindRef, ReprRef, TypeId, TypeRef, ValId, ValRef, Value, ValueEnum},
+    value::{
+        Error, KindRef, ReprRef, TypeId, TypeRef, UniverseId, ValId, ValRef, Value, ValueEnum,
+    },
 };
 use std::convert::TryInto;
 
@@ -50,12 +52,12 @@ pub trait Typed {
     /// ```
     fn is_ty(&self) -> bool;
     /// Check whether this `rain` value is a kind
-    /// 
+    ///
     /// # Correctness
     /// If a value is a kind, it must *always* be a type.
     fn is_kind(&self) -> bool;
     /// Check whether this `rain` value is a representation
-    /// 
+    ///
     /// # Correctness
     /// If a value is a representation, it must *always* be a kind.
     #[inline]
@@ -63,7 +65,7 @@ pub trait Typed {
         false
     }
     /// Check whether this `rain` value is a universe
-    /// 
+    ///
     /// # Correctness
     /// If a value is a universe, it must *always* be a kind.
     #[inline]
@@ -106,6 +108,7 @@ pub trait Type: Value {
     /// # Correctness
     /// The result of this method must *always* be pointer-equivalent to the result of the `.into_val()` method of
     /// the `Value` trait.
+    #[inline]
     fn into_ty(self) -> TypeId {
         self.into_val().coerce()
     }
@@ -113,10 +116,16 @@ pub trait Type: Value {
     ///
     /// # Correctness
     /// The result of this method *must* be pointer-equivalent to the result of calling `.ty()` on this type
+    #[inline]
     fn ty_kind(&self) -> KindRef {
         let ty = self.ty();
         debug_assert!(ty.is_kind(), "The type of a type must be a kind!");
         ty.coerce()
+    }
+    /// Get the universe of this type
+    #[inline]
+    fn universe(&self) -> UniverseId {
+        self.ty_kind().closure()
     }
     /// Get the representation of this type, if any
     fn ty_repr(&self) -> Option<ReprRef> {

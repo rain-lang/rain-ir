@@ -6,7 +6,7 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::Region;
 use crate::tokens::*;
-use crate::typing::{primitive::FIN, Type, Typed};
+use crate::typing::{primitive::{Fin, FIN}, Type, Typed, Universe};
 use crate::value::{
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
@@ -253,13 +253,13 @@ trivial_substitute!(Bool);
 lazy_static! {
     /// Regions corresponding to primitive logical operations
     pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
-        Region::with_unchecked(tyarr![Bool.into(); 1], None),
-        Region::with_unchecked(tyarr![Bool.into(); 2], None),
-        Region::with_unchecked(tyarr![Bool.into(); 3], None),
-        Region::with_unchecked(tyarr![Bool.into(); 4], None),
-        Region::with_unchecked(tyarr![Bool.into(); 5], None),
-        Region::with_unchecked(tyarr![Bool.into(); 6], None),
-        Region::with_unchecked(tyarr![Bool.into(); 7], None),
+        Region::with_unchecked(tyarr![Bool.into(); 1], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 2], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 3], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 4], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 5], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 6], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 7], None, Fin.into_universe()),
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
