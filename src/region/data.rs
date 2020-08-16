@@ -55,10 +55,12 @@ impl RegionData {
             }
             if let Some(universe) = &mut universe {
                 let param_kind = param_ty.ty_kind();
-                if let Some(universe) = param_kind.try_closure() {
-                    //TODO: this
+                if let Some(param_universe) = param_kind.try_closure() {
+                    if param_universe > universe {
+                        universe = param_universe.clone_var();
+                    }
                 } else {
-                    let universe = param_kind.closure();
+                    let param_universe = param_kind.closure();
                     //TODO: this
                 }
             } else {
