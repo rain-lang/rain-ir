@@ -2,7 +2,7 @@
 Meta-types and layouts
 */
 use super::*;
-use crate::value::{KindId, ReprId, UniverseId, ValId, ValRef};
+use crate::value::{KindId, ReprId, UniverseId, UniverseRef, ValId, ValRef};
 use std::cmp::Ordering;
 
 pub mod layout;
@@ -20,6 +20,10 @@ pub trait Kind: Type {
     }
     /// Get the kind of identity families over this kind
     fn id_kind(&self) -> KindId;
+    /// Try to get this value's closure under the primitive type formers as a reference
+    fn try_closure(&self) -> Option<UniverseRef> {
+        None
+    }
     /// Get the closure of this kind under the primitive type formers
     ///
     /// This is guaranteed to be a universe which has this kind as a subtype. If this kind is a universe,
@@ -67,6 +71,19 @@ impl<K: KindPredicate> Kind for ValId<K> {
             v => panic!("{} is not a kind!", v),
         }
     }
+    fn try_closure(&self) -> Option<UniverseRef> {
+        if self.is_universe() {
+            return Some(self.borrow_var().coerce());
+        }
+        match self.as_enum() {
+            ValueEnum::Prop(p) => p.try_closure(),
+            ValueEnum::Fin(f) => f.try_closure(),
+            ValueEnum::Set(s) => s.try_closure(),
+            ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
+            ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
+            v => panic!("{} is not a kind!", v),
+        }
+    }
     fn closure(&self) -> UniverseId {
         match self.as_enum() {
             ValueEnum::Prop(p) => p.closure(),
@@ -87,6 +104,19 @@ impl<'a, K: KindPredicate> Kind for ValRef<'a, K> {
             ValueEnum::Set(s) => s.id_kind(),
             ValueEnum::Sexpr(s) => unimplemented!("Sexpr kinds for {}", s),
             ValueEnum::Parameter(p) => unimplemented!("Parameter kinds for {}", p),
+            v => panic!("{} is not a kind!", v),
+        }
+    }
+    fn try_closure(&self) -> Option<UniverseRef> {
+        if self.is_universe() {
+            return Some(self.coerce());
+        }
+        match self.as_enum() {
+            ValueEnum::Prop(p) => p.try_closure(),
+            ValueEnum::Fin(f) => f.try_closure(),
+            ValueEnum::Set(s) => s.try_closure(),
+            ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
+            ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
             v => panic!("{} is not a kind!", v),
         }
     }
