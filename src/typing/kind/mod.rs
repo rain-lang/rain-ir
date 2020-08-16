@@ -185,3 +185,18 @@ impl Ord for UniverseRef<'_> {
         self.universe_cmp(other.as_arc())
     }
 }
+
+impl PartialOrd<UniverseId> for UniverseRef<'_> {
+    #[inline]
+    fn partial_cmp(&self, other: &UniverseId) -> Option<Ordering> {
+        Some(self.universe_cmp(other))
+    }
+}
+
+impl PartialOrd<UniverseRef<'_>> for UniverseId {
+    #[inline]
+    fn partial_cmp(&self, other: &UniverseRef) -> Option<Ordering> {
+        Some(self.universe_cmp(other.as_arc()))
+    }
+}
+
