@@ -50,10 +50,24 @@ pub trait Typed {
     /// ```
     fn is_ty(&self) -> bool;
     /// Check whether this `rain` value is a kind
+    /// 
+    /// # Correctness
+    /// If a value is a kind, it must *always* be a type.
     fn is_kind(&self) -> bool;
     /// Check whether this `rain` value is a representation
+    /// 
+    /// # Correctness
+    /// If a value is a representation, it must *always* be a kind.
     #[inline]
     fn is_repr(&self) -> bool {
+        false
+    }
+    /// Check whether this `rain` value is a universe
+    /// 
+    /// # Correctness
+    /// If a value is a universe, it must *always* be a kind.
+    #[inline]
+    fn is_universe(&self) -> bool {
         false
     }
     /// Get the kind-level of this value

@@ -3,8 +3,8 @@ The primitive hierarchy of kinds
 */
 use crate::eval::Apply;
 use crate::lifetime::{LifetimeBorrow, Live};
-use crate::typing::{Kind, Type, Typed};
-use crate::value::{KindId, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::typing::{Kind, Type, Typed, Universe};
+use crate::value::{KindId, NormalValue, TypeRef, UniverseId, ValId, Value, ValueEnum, VarId};
 use crate::{enum_convert, lifetime_region, trivial_substitute};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
@@ -161,6 +161,14 @@ impl Kind for Prop {
     }
 }
 
+impl Universe for Prop {
+    #[inline]
+    fn universe_cmp(&self, _other: &UniverseId) -> Ordering {
+        // Prop is at the bottom of the hierarchy of universes
+        Ordering::Less
+    }
+}
+
 impl Typed for Fin {
     #[inline]
     fn ty(&self) -> TypeRef {
@@ -230,6 +238,19 @@ impl Kind for Fin {
     }
 }
 
+impl Universe for Fin {
+    #[inline]
+    fn universe_cmp(&self, other: &UniverseId) -> Ordering {
+        // Fin is the smallest universe strictly containing Prop, as it is the closure of Prop under +
+        use Ordering::*;
+        match other.as_enum() {
+            ValueEnum::Prop(_) => Greater,
+            ValueEnum::Fin(_) => Equal,
+            _ => Less,
+        }
+    }
+}
+
 impl Typed for Set {
     #[inline]
     fn ty(&self) -> TypeRef {
@@ -292,6 +313,17 @@ impl Kind for Set {
     #[inline]
     fn id_kind(&self) -> KindId {
         Prop.into_kind()
+    }
+}
+
+impl Universe for Set {
+    #[inline]
+    fn universe_cmp(&self, other: &UniverseId) -> Ordering {
+        // Fin is the smallest universe strictly containing Prop, as it is the closure of Prop under +
+        match other.as_enum() {
+            ValueEnum::Set(s) => self.cmp(s),
+            _ => Ordering::Less,
+        }
     }
 }
 

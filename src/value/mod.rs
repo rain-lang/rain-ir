@@ -12,7 +12,7 @@ use crate::primitive::{
 use crate::proof::identity::{Id, IdFamily, Refl};
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::primitive::{Fin, Prop, Set};
-use crate::typing::{IsKind, IsRepr, IsType, Typed};
+use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use either::Either;
@@ -123,6 +123,12 @@ pub type ReprId = ValId<IsRepr>;
 /// A `rain` representation reference
 pub type ReprRef<'a> = ValRef<'a, IsRepr>;
 
+/// A `rain` universe
+pub type UniverseId = ValId<IsUniverse>;
+
+/// A `rain` universe reference
+pub type UniverseRef<'a> = ValRef<'a, IsUniverse>;
+
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
 pub type VarId<V> = ValId<Is<V>>;
 
@@ -212,6 +218,15 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
     #[inline]
     fn try_into_repr(self) -> Result<ReprId, Self> {
         if self.is_repr() {
+            Ok(self.into_val().coerce())
+        } else {
+            Err(self)
+        }
+    }
+    /// Convert a value into a `UniverseId` if it is a universe, otherwise return it
+    #[inline]
+    fn try_into_universe(self) -> Result<UniverseId, Self> {
+        if self.is_universe() {
             Ok(self.into_val().coerce())
         } else {
             Err(self)

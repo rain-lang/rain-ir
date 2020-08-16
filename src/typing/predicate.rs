@@ -42,3 +42,18 @@ pub trait ReprPredicate: KindPredicate {}
 impl ReprPredicate for IsRepr {}
 
 impl<R: Repr> ReprPredicate for Is<R> {}
+
+/// A predicate indicating a `rain` value is a representation
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub struct IsUniverse;
+
+impl TypePredicate for IsUniverse {}
+
+impl KindPredicate for IsUniverse {}
+
+/// A predicate which indicates that a `rain` value is a universe
+pub trait UniversePredicate: KindPredicate {}
+
+impl UniversePredicate for IsUniverse {}
+
+impl<U: Universe> UniversePredicate for Is<U> {}
