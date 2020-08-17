@@ -7,7 +7,9 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
-use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
+};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 //use either::Either;
@@ -444,6 +446,73 @@ impl Value for Refl {
     #[inline]
     fn into_enum(self) -> ValueEnum {
         self.into()
+    }
+}
+
+/// The non-dependent applicativity axiom
+///
+/// NOTE: applicativity of dependent functions is not yet supported, as we do not yet support transport along types.
+///
+/// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ApConst {
+    /// The domain of functions being applied
+    domain: TyArr,
+    /// The target of functions being applied
+    target: Option<TypeId>,
+    /// The type of this instance of the axiom
+    ty: VarId<Pi>,
+    /// The lifetime of this instance of the axiom
+    lt: Lifetime,
+}
+
+impl ApConst {
+    /// Create a new instance of the applicativity axiom for a given domain and optional target
+    #[inline]
+    pub fn new(domain: TyArr, target: Option<TypeId>) -> Result<ApConst, Error> {
+        let ty = Self::compute_ty(domain.clone(), target.clone())?;
+        Ok(Self::new_helper(domain, target, ty))
+    }
+    /// Get the applicativity axiom over a given domain, with an unspecified target
+    #[inline]
+    pub fn over(domain: TyArr) -> Result<ApConst, Error> {
+        let ty = Self::over_ty(domain.clone())?;
+        Ok(Self::new_helper(domain, None, ty))
+    }
+    /// Get the applicativity axiom over a given domain with a given target
+    #[inline]
+    pub fn ap(domain: TyArr, target: TypeId) -> Result<ApConst, Error> {
+        let ty = Self::ap_ty(domain.clone(), target.clone())?;
+        Ok(Self::new_helper(domain, Some(target), ty))
+    }
+    /// Create an instance of the applicativity axiom with a given domain, optional target, and type
+    fn new_helper(domain: TyArr, target: Option<TypeId>, ty: Pi) -> ApConst {
+        let lt = ty.lifetime().clone_lifetime();
+        ApConst {
+            domain,
+            target,
+            ty: ty.into_var(),
+            lt,
+        }
+    }
+    /// Get the type of the applicativity axiom over a given domain, with an optional target
+    #[inline]
+    pub fn compute_ty(domain: TyArr, target: Option<TypeId>) -> Result<Pi, Error> {
+        if let Some(target) = target {
+            Self::ap_ty(domain, target)
+        } else {
+            Self::over_ty(domain)
+        }
+    }
+    /// Get the type of the applicativity axiom over a given domain, with an unspecified target
+    #[inline]
+    pub fn over_ty(domain: TyArr) -> Result<Pi, Error> {
+        unimplemented!("over_ty for domain {:?}", domain)
+    }
+    /// Get the type of the applicativity axiom over a given domain for a given target
+    #[inline]
+    pub fn ap_ty(domain: TyArr, target: TypeId) -> Result<Pi, Error> {
+        unimplemented!("ap_ty for domain {:?}, target {}", domain, target)
     }
 }
 
