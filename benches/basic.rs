@@ -16,8 +16,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let ix: u128 = rng.gen_range(0, finite.0);
         b.iter(|| {
             let ix = finite.ix(ix).unwrap();
-            let region = Region::with(vec![ix.ty().clone_ty()].into(), None);
-            let param = region.clone().param(0).unwrap();
+            let region = Region::with(vec![ix.ty().clone_ty()].into(), None).unwrap();
+            let param = region.param(0).unwrap();
             let id = Lambda::try_new(param.into(), region).unwrap();
             let ixv: ValId = ix.into();
             let sexpr: ValId = Sexpr::try_new(vec![id.into(), ixv.clone()]).unwrap().into();
@@ -30,8 +30,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let finite = Finite(rng.gen::<u128>().max(1));
         let ix: u128 = rng.gen_range(0, finite.0);
         let ix = finite.ix(ix).unwrap();
-        let region = Region::with(vec![ix.ty().clone_ty()].into(), None);
-        let param = region.clone().param(0).unwrap();
+        let region = Region::with(vec![ix.ty().clone_ty()].into(), None).unwrap();
+        let param = region.param(0).unwrap();
         let id: ValId = Lambda::try_new(param.into(), region).unwrap().into();
         let ixv: ValId = ix.into();
         b.iter(|| {
@@ -48,10 +48,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let in_low: bool = rng.gen();
         let in_sel: bool = rng.gen();
         b.iter(|| {
-            let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None);
-            let select: ValId = region.clone().param(0).unwrap().into();
-            let high = region.clone().param(1).unwrap();
-            let low = region.clone().param(2).unwrap();
+            let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None).unwrap();
+            let select: ValId = region.param(0).unwrap().into();
+            let high = region.param(1).unwrap();
+            let low = region.param(2).unwrap();
             let sel_high = Sexpr::try_new(vec![And.into(), select.clone(), high.into()])
                 .unwrap()
                 .into();
@@ -87,10 +87,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             in_low.clone()
         };
         let in_sel: ValId = in_sel.into();
-        let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None);
-        let select: ValId = region.clone().param(0).unwrap().into();
-        let high = region.clone().param(1).unwrap();
-        let low = region.clone().param(2).unwrap();
+        let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None).unwrap();
+        let select: ValId = region.param(0).unwrap().into();
+        let high = region.param(1).unwrap();
+        let low = region.param(2).unwrap();
         let sel_high = Sexpr::try_new(vec![And.into(), select.clone(), high.into()])
             .unwrap()
             .into();
