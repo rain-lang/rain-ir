@@ -533,8 +533,18 @@ mod tests {
                 .unwrap(),
             Application::Success(&[], falsey)
         );
-        
+
+        // Universal type application
+        //FIXME: partial type substitution
+        /*
+        assert_eq!(
+            base_family.applied(&[Bool.into_val()]).unwrap(),
+            bool_family.into_val()
+        );
+        */
+
         // Typed partial application
+        //FIXME: partial application bug
         /*
         let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
         let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
