@@ -204,7 +204,7 @@ impl Substitute for Pi {
 
 impl From<Pi> for NormalValue {
     fn from(p: Pi) -> NormalValue {
-        NormalValue(ValueEnum::Pi(p))
+        NormalValue::assert_normal(ValueEnum::Pi(p))
     }
 }
 

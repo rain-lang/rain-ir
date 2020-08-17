@@ -1,40 +1,10 @@
 /*!
 Predicates on a `rain` value
 */
-use super::{NormalValue, ValId, ValueEnum};
+use super::{NormalValue, ValId};
 use std::convert::TryInto;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
-use std::ops::Deref;
-
-/// A `NormalValue` satisfying a given predicate
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-#[repr(transparent)]
-pub struct PredicatedValue<P> {
-    value: NormalValue,
-    predicate: std::marker::PhantomData<P>,
-}
-
-impl<P> PredicatedValue<P> {
-    /// Coerce a `ValueEnum` into a predicated value
-    #[inline(always)]
-    pub(crate) fn coerce_value(value: &ValueEnum) -> &PredicatedValue<P> {
-        unsafe { &*(value as *const _ as *const PredicatedValue<P>) }
-    }
-    /// Coerce a `NormalValue` into a predicated value
-    #[inline(always)]
-    pub(crate) fn coerce_norm(value: &NormalValue) -> &PredicatedValue<P> {
-        unsafe { &*(value as *const _ as *const PredicatedValue<P>) }
-    }
-}
-
-impl<P> Deref for PredicatedValue<P> {
-    type Target = NormalValue;
-    #[inline]
-    fn deref(&self) -> &NormalValue {
-        &self.value
-    }
-}
 
 /// A predicate indicating a `rain` value is of a certain type
 pub struct Is<V>(pub std::marker::PhantomData<V>);

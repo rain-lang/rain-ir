@@ -331,9 +331,16 @@ impl Substitute<ValId> for ValueEnum {
 /// A normalized `rain` value
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct NormalValue(pub(crate) ValueEnum);
+pub struct NormalValue {
+    pub(crate) value: ValueEnum,
+}
 
 impl NormalValue {
+    /// Assert a given value is a normal value
+    #[inline(always)]
+    pub(crate) fn assert_normal(value: ValueEnum) -> NormalValue {
+        NormalValue { value }
+    }
     /*
     /// Assert a reference to a given value is a reference to a normal value
     pub(crate) fn assert_ref(value: &ValueEnum) -> &NormalValue {
@@ -345,7 +352,7 @@ impl NormalValue {
 impl Deref for NormalValue {
     type Target = ValueEnum;
     fn deref(&self) -> &ValueEnum {
-        &self.0
+        &self.value
     }
 }
 
@@ -363,14 +370,14 @@ impl From<ValueEnum> for NormalValue {
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &self.0
+        &self.value
     }
 }
 
 impl From<NormalValue> for ValueEnum {
     #[inline]
     fn from(normal: NormalValue) -> ValueEnum {
-        normal.0
+        normal.value
     }
 }
 
@@ -396,7 +403,7 @@ impl Apply for NormalValue {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        self.0.apply_in(args, ctx)
+        self.value.apply_in(args, ctx)
     }
 }
 
@@ -419,7 +426,7 @@ impl Value for NormalValue {
     }
     #[inline]
     fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
-        self.0.cast_into_lt(target)
+        self.value.cast_into_lt(target)
     }
 }
 
