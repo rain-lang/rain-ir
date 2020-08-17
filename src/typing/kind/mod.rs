@@ -21,6 +21,8 @@ pub trait Kind: Type {
     /// Get the kind of identity families over this kind
     fn id_kind(&self) -> KindId;
     /// Try to get this value's closure under the primitive type formers as a reference
+    ///
+    /// This should only fail if this value is itself a universe
     fn try_closure(&self) -> Option<UniverseRef> {
         None
     }
@@ -60,6 +62,28 @@ pub trait Universe: Kind {
     fn universe_cmp(&self, other: &UniverseId) -> Ordering;
 }
 
+impl<'a, K: KindPredicate> ValId<K> {
+    /// Borrow the closure of this kind
+    #[inline]
+    fn borrow_closure(&self) -> UniverseRef {
+        self.borrow_var().get_closure()
+    }
+}
+
+impl<'a, K: KindPredicate + 'a> ValRef<'a, K> {
+    /// Get the closure of this kind
+    #[inline]
+    fn get_closure(self) -> UniverseRef<'a> {
+        if self.is_universe() {
+            self.coerce()
+        } else {
+            self.as_pred()
+                .try_closure()
+                .expect("Non-universes should always have a closure pointer!")
+        }
+    }
+}
+
 impl<K: KindPredicate> Kind for ValId<K> {
     #[inline]
     fn id_kind(&self) -> KindId {
@@ -67,10 +91,7 @@ impl<K: KindPredicate> Kind for ValId<K> {
     }
     #[inline]
     fn try_closure(&self) -> Option<UniverseRef> {
-        if self.is_universe() {
-            return Some(self.borrow_var().coerce());
-        }
-        self.as_pred().try_closure()
+        Some(self.borrow_closure())
     }
     #[inline]
     fn closure(&self) -> UniverseId {
@@ -85,10 +106,7 @@ impl<'a, K: KindPredicate> Kind for ValRef<'a, K> {
     }
     #[inline]
     fn try_closure(&self) -> Option<UniverseRef> {
-        if self.is_universe() {
-            return Some(self.coerce());
-        }
-        self.as_pred().try_closure()
+        Some((*self).get_closure())
     }
     #[inline]
     fn closure(&self) -> UniverseId {

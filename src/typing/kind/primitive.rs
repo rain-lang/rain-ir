@@ -93,16 +93,20 @@ impl From<Set> for NormalValue {
 }
 
 impl Typed for Prop {
-    #[inline]
+    #[inline(always)]
     fn ty(&self) -> TypeRef {
-        unimplemented!("Fin into val")
+        FIN.borrow_ty()
     }
-    #[inline]
+    #[inline(always)]
     fn is_ty(&self) -> bool {
         true
     }
-    #[inline]
+    #[inline(always)]
     fn is_kind(&self) -> bool {
+        true
+    }
+    #[inline(always)]
+    fn is_universe(&self) -> bool {
         true
     }
 }
@@ -174,16 +178,20 @@ impl Universe for Prop {
 }
 
 impl Typed for Fin {
-    #[inline]
+    #[inline(always)]
     fn ty(&self) -> TypeRef {
-        unimplemented!("Set-0 into val")
+        SET.borrow_ty()
     }
-    #[inline]
+    #[inline(always)]
     fn is_ty(&self) -> bool {
         true
     }
-    #[inline]
+    #[inline(always)]
     fn is_kind(&self) -> bool {
+        true
+    }
+    #[inline(always)]
+    fn is_universe(&self) -> bool {
         true
     }
 }
@@ -260,16 +268,22 @@ impl Universe for Fin {
 }
 
 impl Typed for Set {
-    #[inline]
+    #[inline(always)]
     fn ty(&self) -> TypeRef {
-        unimplemented!("Set-n into val")
+        self.succ
+            .get_or_init(|| Set::new(self.n + 1).into_var())
+            .borrow_ty()
     }
-    #[inline]
+    #[inline(always)]
     fn is_ty(&self) -> bool {
         true
     }
-    #[inline]
+    #[inline(always)]
     fn is_kind(&self) -> bool {
+        true
+    }
+    #[inline(always)]
+    fn is_universe(&self) -> bool {
         true
     }
 }
