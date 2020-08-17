@@ -488,6 +488,8 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::primitive::logical::Bool;
+    use crate::typing::primitive::Fin;
+    use crate::value::Value;
 
     #[test]
     fn id_family_application() {
@@ -506,6 +508,7 @@ mod tests {
         let truthy = truthy.into_val();
         let falsey = falsey.into_val();
 
+        // Typed full application
         let bool_family = IdFamily::family(Bool.into_ty());
         assert_eq!(
             bool_family.curried(&[t.clone(), t.clone()]).unwrap(),
@@ -516,15 +519,25 @@ mod tests {
             Application::Success(&[], falsey.clone())
         );
 
-        //FIXME: universe-typed parameters are not yet implemented!
-        /*
-        let base_family = IdFamily::universal(FINITE_TY.clone());
+        // Universal full application
+        let base_family = IdFamily::universal(Fin.into_kind());
         assert_eq!(
             base_family
                 .curried(&[Bool.into_val(), t.clone(), t.clone()])
                 .unwrap(),
             Application::Success(&[], truthy)
         );
+        assert_eq!(
+            base_family
+                .curried(&[Bool.into_val(), t.clone(), f.clone()])
+                .unwrap(),
+            Application::Success(&[], falsey)
+        );
+        
+        // Typed partial application
+        /*
+        let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
+        let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
         */
     }
 }
