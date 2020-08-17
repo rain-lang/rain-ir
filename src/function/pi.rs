@@ -4,7 +4,7 @@ Pi types
 use crate::eval::{Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
-use crate::typing::{primitive::SET, Type, Typed};
+use crate::typing::{Type, Typed};
 use crate::value::{
     arr::{TyArr, ValSet},
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
@@ -85,8 +85,12 @@ impl Pi {
 impl Typed for Pi {
     #[inline]
     fn ty(&self) -> TypeRef {
-        //TODO: this
-        SET.borrow_ty()
+        self.def_region()
+            .data()
+            .universe()
+            .borrow_var()
+            .max(self.result().universe())
+            .as_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
