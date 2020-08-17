@@ -475,3 +475,21 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
         }
     }
 }
+
+impl<P: TypePredicate> ValId<P> {
+    /// Get this `ValId` as a `TypeId`
+    #[inline(always)]
+    pub fn as_ty(&self) -> &TypeId {
+        self.coerce_ref()
+    }
+    /// Clone this `ValId` as a `TypeId`
+    #[inline(always)]
+    pub fn clone_ty(&self) -> TypeId {
+        self.as_ty().clone()
+    }
+    /// Borrow this `ValId` as a `TypeRef`
+    #[inline(always)]
+    pub fn borrow_ty(&self) -> TypeRef {
+        self.as_ty().borrow_var()
+    }
+}

@@ -172,30 +172,6 @@ impl<P> ValId<P> {
     pub fn clone_val(&self) -> ValId {
         self.clone().coerce()
     }
-    /// Get this `VarId` as a `TypeId`
-    pub fn as_ty(&self) -> &TypeId
-    where
-        P: TypePredicate,
-    {
-        self.coerce_ref()
-    }
-    /// Clone this `VarId` as a `TypeId`
-    pub fn clone_ty(&self) -> TypeId
-    where
-        P: TypePredicate,
-    {
-        self.as_ty().clone()
-    }
-    /// Borrow this `VarId` as a `TypeRef`
-    pub fn borrow_ty(&self) -> TypeRef
-    where
-        P: TypePredicate,
-    {
-        ValRef {
-            ptr: self.ptr.borrow_arc(),
-            variant: PhantomData,
-        }
-    }
     /// Coerce this `ValId` into another predicated value
     #[inline]
     pub(crate) fn coerce<Q>(self) -> ValId<Q> {

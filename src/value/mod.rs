@@ -112,11 +112,17 @@ pub type TypeId = ValId<IsType>;
 /// A `rain` type reference
 pub type TypeRef<'a> = ValRef<'a, IsType>;
 
+/// A `rain` value known to be a type
+pub type TypeValue = NormalValue<IsType>;
+
 /// A `rain` kind
 pub type KindId = ValId<IsKind>;
 
 /// A `rain` kind reference
 pub type KindRef<'a> = ValRef<'a, IsKind>;
+
+/// A `rain` value known to be a kind
+pub type KindValue = NormalValue<IsKind>;
 
 /// A `rain` representation
 pub type ReprId = ValId<IsRepr>;
@@ -124,11 +130,17 @@ pub type ReprId = ValId<IsRepr>;
 /// A `rain` representation reference
 pub type ReprRef<'a> = ValRef<'a, IsRepr>;
 
+/// A `rain` value known to be a representation
+pub type ReprValue = NormalValue<IsRepr>;
+
 /// A `rain` universe
 pub type UniverseId = ValId<IsUniverse>;
 
 /// A `rain` universe reference
 pub type UniverseRef<'a> = ValRef<'a, IsUniverse>;
+
+/// A `rain` value known to be a universe
+pub type UniverseValue = NormalValue<IsUniverse>;
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
 pub type VarId<V> = ValId<Is<V>>;
@@ -349,9 +361,12 @@ impl<P> NormalValue<P> {
     /// Coerce a reference to this value to one guaranteed to satisfy a different predicate
     #[inline]
     pub(crate) fn coerce_ref<Q>(&self) -> &NormalValue<Q> {
-        unsafe {
-            &*(self as *const _ as *const NormalValue<Q>)
-        }
+        unsafe { &*(self as *const _ as *const NormalValue<Q>) }
+    }
+    /// Get this normal value as a plain normal value
+    #[inline]
+    pub fn as_norm(&self) -> &NormalValue {
+        self.coerce_ref()
     }
 }
 
