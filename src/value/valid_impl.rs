@@ -323,30 +323,70 @@ impl<P> Value for ValRef<'_, P> {
 impl<P> Typed for ValId<P> {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.as_norm().ty()
+        self.as_enum().ty()
+    }
+    #[inline]
+    fn kind(&self) -> KindRef {
+        self.as_enum().kind()
+    }
+    #[inline]
+    fn repr(&self) -> Option<ReprRef> {
+        self.as_enum().repr()
     }
     #[inline]
     fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
+        self.as_enum().is_ty()
     }
     #[inline]
     fn is_kind(&self) -> bool {
-        self.as_norm().is_kind()
+        self.as_enum().is_kind()
+    }
+    #[inline]
+    fn is_repr(&self) -> bool {
+        self.as_enum().is_repr()
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        self.as_enum().is_universe()
+    }
+    #[inline]
+    fn kind_level(&self) -> usize {
+        self.as_enum().kind_level()
     }
 }
 
 impl<P> Typed for ValRef<'_, P> {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.as_norm().ty()
+        self.as_enum().ty()
+    }
+    #[inline]
+    fn kind(&self) -> KindRef {
+        self.as_enum().kind()
+    }
+    #[inline]
+    fn repr(&self) -> Option<ReprRef> {
+        self.as_enum().repr()
     }
     #[inline]
     fn is_ty(&self) -> bool {
-        self.as_norm().is_ty()
+        self.as_enum().is_ty()
     }
     #[inline]
     fn is_kind(&self) -> bool {
-        self.as_norm().is_kind()
+        self.as_enum().is_kind()
+    }
+    #[inline]
+    fn is_repr(&self) -> bool {
+        self.as_enum().is_repr()
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        self.as_enum().is_universe()
+    }
+    #[inline]
+    fn kind_level(&self) -> usize {
+        self.as_enum().kind_level()
     }
 }
 

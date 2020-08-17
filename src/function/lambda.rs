@@ -44,8 +44,11 @@ impl Lambda {
     /// A utility constructor, which creates a new instance of the identity lambda for a given type
     pub fn id(ty: TypeId) -> Lambda {
         let tyset: TySet = std::iter::once(ty.clone()).collect();
-        let region =
-            Region::with_unchecked(tyset.as_arr().clone(), ty.cloned_region(), ty.universe());
+        let region = Region::with_unchecked(
+            tyset.as_arr().clone(),
+            ty.cloned_region(),
+            ty.universe().clone_var(),
+        );
         let result = Parameter::try_new(region.clone(), 0)
             .expect("Region has one parameter")
             .into();

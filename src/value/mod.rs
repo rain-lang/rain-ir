@@ -441,12 +441,32 @@ impl<P> Typed for NormalValue<P> {
         self.value.ty()
     }
     #[inline]
+    fn kind(&self) -> KindRef {
+        self.value.kind()
+    }
+    #[inline]
+    fn repr(&self) -> Option<ReprRef> {
+        self.value.repr()
+    }
+    #[inline]
     fn is_ty(&self) -> bool {
         self.value.is_ty()
     }
     #[inline]
     fn is_kind(&self) -> bool {
         self.value.is_kind()
+    }
+    #[inline]
+    fn is_repr(&self) -> bool {
+        self.value.is_repr()
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        self.value.is_universe()
+    }
+    #[inline]
+    fn kind_level(&self) -> usize {
+        self.value.kind_level()
     }
 }
 
@@ -642,6 +662,18 @@ impl Typed for ValueEnum {
         })
     }
     #[inline]
+    fn kind(&self) -> KindRef {
+        forv!(match (self) {
+            s => s.kind(),
+        })
+    }
+    #[inline]
+    fn repr(&self) -> Option<ReprRef> {
+        forv!(match (self) {
+            s => s.repr(),
+        })
+    }
+    #[inline]
     fn is_ty(&self) -> bool {
         forv!(match (self) {
             s => s.is_ty(),
@@ -651,6 +683,24 @@ impl Typed for ValueEnum {
     fn is_kind(&self) -> bool {
         forv!(match (self) {
             s => s.is_kind(),
+        })
+    }
+    #[inline]
+    fn is_repr(&self) -> bool {
+        forv!(match (self) {
+            s => s.is_repr(),
+        })
+    }
+    #[inline]
+    fn is_universe(&self) -> bool {
+        forv!(match (self) {
+            s => s.is_universe(),
+        })
+    }
+    #[inline]
+    fn kind_level(&self) -> usize {
+        forv!(match (self) {
+            s => s.kind_level(),
         })
     }
 }
