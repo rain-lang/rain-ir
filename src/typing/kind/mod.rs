@@ -61,42 +61,43 @@ pub trait Universe: Kind {
 }
 
 impl<K: KindPredicate> Kind for ValId<K> {
+    #[inline]
     fn id_kind(&self) -> KindId {
-        match self.as_enum() {
-            ValueEnum::Prop(p) => p.id_kind(),
-            ValueEnum::Fin(f) => f.id_kind(),
-            ValueEnum::Set(s) => s.id_kind(),
-            ValueEnum::Sexpr(s) => unimplemented!("Sexpr id kinds for {}", s),
-            ValueEnum::Parameter(p) => unimplemented!("Parameter id kinds for {}", p),
-            v => panic!("{} is not a kind!", v),
-        }
+        self.as_pred().id_kind()
     }
+    #[inline]
     fn try_closure(&self) -> Option<UniverseRef> {
         if self.is_universe() {
             return Some(self.borrow_var().coerce());
         }
-        match self.as_enum() {
-            ValueEnum::Prop(p) => p.try_closure(),
-            ValueEnum::Fin(f) => f.try_closure(),
-            ValueEnum::Set(s) => s.try_closure(),
-            ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
-            ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
-            v => panic!("{} is not a kind!", v),
-        }
+        self.as_pred().try_closure()
     }
+    #[inline]
     fn closure(&self) -> UniverseId {
-        match self.as_enum() {
-            ValueEnum::Prop(p) => p.closure(),
-            ValueEnum::Fin(f) => f.closure(),
-            ValueEnum::Set(s) => s.closure(),
-            ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
-            ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
-            v => panic!("{} is not a kind!", v),
-        }
+        self.as_pred().closure()
     }
 }
 
 impl<'a, K: KindPredicate> Kind for ValRef<'a, K> {
+    #[inline]
+    fn id_kind(&self) -> KindId {
+        self.as_pred().id_kind()
+    }
+    #[inline]
+    fn try_closure(&self) -> Option<UniverseRef> {
+        if self.is_universe() {
+            return Some(self.coerce());
+        }
+        self.as_pred().try_closure()
+    }
+    #[inline]
+    fn closure(&self) -> UniverseId {
+        self.as_pred().closure()
+    }
+}
+
+impl<'a, P: KindPredicate> Kind for NormalValue<P> {
+    #[inline]
     fn id_kind(&self) -> KindId {
         match self.as_enum() {
             ValueEnum::Prop(p) => p.id_kind(),
@@ -107,10 +108,8 @@ impl<'a, K: KindPredicate> Kind for ValRef<'a, K> {
             v => panic!("{} is not a kind!", v),
         }
     }
+    #[inline]
     fn try_closure(&self) -> Option<UniverseRef> {
-        if self.is_universe() {
-            return Some(self.coerce());
-        }
         match self.as_enum() {
             ValueEnum::Prop(p) => p.try_closure(),
             ValueEnum::Fin(f) => f.try_closure(),
@@ -120,6 +119,7 @@ impl<'a, K: KindPredicate> Kind for ValRef<'a, K> {
             v => panic!("{} is not a kind!", v),
         }
     }
+    #[inline]
     fn closure(&self) -> UniverseId {
         match self.as_enum() {
             ValueEnum::Prop(p) => p.closure(),
@@ -136,16 +136,19 @@ impl<U: UniversePredicate> Universe for ValId<U> {
     /// Compare two universes
     #[inline]
     fn universe_cmp(&self, other: &UniverseId) -> Ordering {
-        match self.as_enum() {
-            ValueEnum::Prop(p) => p.universe_cmp(other),
-            ValueEnum::Fin(f) => f.universe_cmp(other),
-            ValueEnum::Set(s) => s.universe_cmp(other),
-            v => panic!("Value {} asserted to be a universe, but is not!", v),
-        }
+        self.as_pred().universe_cmp(other)
     }
 }
 
 impl<'a, U: UniversePredicate> Universe for ValRef<'a, U> {
+    /// Compare two universes
+    #[inline]
+    fn universe_cmp(&self, other: &UniverseId) -> Ordering {
+        self.as_pred().universe_cmp(other)
+    }
+}
+
+impl<'a, P: UniversePredicate> Universe for NormalValue<P> {
     /// Compare two universes
     #[inline]
     fn universe_cmp(&self, other: &UniverseId) -> Ordering {
@@ -199,4 +202,3 @@ impl PartialOrd<UniverseRef<'_>> for UniverseId {
         Some(self.universe_cmp(other.as_arc()))
     }
 }
-
