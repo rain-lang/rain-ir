@@ -488,11 +488,11 @@ mod prettyprint_impl {
 mod tests {
     use super::*;
     use crate::primitive::logical::Bool;
-    use crate::typing::primitive::Fin;
+    use crate::typing::primitive::{Fin, Prop};
     use crate::value::Value;
 
     #[test]
-    fn id_family_application() {
+    fn basic_bool_id() {
         let t = true.into_val();
         let f = false.into_val();
         let truthy = Id::refl(t.clone());
@@ -507,6 +507,21 @@ mod tests {
 
         let truthy = truthy.into_val();
         let falsey = falsey.into_val();
+        assert_ne!(truthy, falsey);
+
+        // Type/lifetime tests
+        let prop = Prop.into_kind();
+        assert_eq!(truthy.ty(), prop);
+        assert_eq!(falsey.ty(), prop);
+        assert_ne!(truthy, prop);
+        assert_ne!(falsey, prop);
+        assert_eq!(truthy.lifetime(), LifetimeBorrow::STATIC);
+        assert_eq!(falsey.lifetime(), LifetimeBorrow::STATIC);
+
+        // Refl true
+        let refl_true = Refl::refl(true.into_val());
+        assert_eq!(refl_true.ty(), truthy);
+        assert_eq!(refl_true.lifetime(), LifetimeBorrow::STATIC);
 
         // Typed full application
         let bool_family = IdFamily::family(Bool.into_ty());
@@ -528,9 +543,7 @@ mod tests {
             Application::Success(&[], truthy)
         );
         assert_eq!(
-            base_family
-                .curried(&[Bool.into_val(), t, f])
-                .unwrap(),
+            base_family.curried(&[Bool.into_val(), t, f]).unwrap(),
             Application::Success(&[], falsey)
         );
 
