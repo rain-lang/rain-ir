@@ -49,7 +49,7 @@ impl IdFamily {
         let universal_region = Region::with_unchecked(
             std::iter::once(kind.clone_ty()).collect(),
             kind.cloned_region(),
-            kind.universe(),
+            kind.universe().clone_var(),
         );
         let base_ty = universal_region
             .param(0)
@@ -65,7 +65,7 @@ impl IdFamily {
         let region = Region::with_unchecked(
             [base_ty, base_ty].iter().copied().cloned().collect(),
             base_ty.cloned_region(),
-            base_ty.universe(),
+            base_ty.universe().clone_var(),
         );
         //TODO: proper target universe?
         Pi::try_new(base_ty.ty_kind().clone_ty(), region, &Lifetime::STATIC).expect("Valid pi-type")

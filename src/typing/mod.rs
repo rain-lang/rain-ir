@@ -5,7 +5,7 @@ use super::{
     eval::EvalCtx,
     lifetime::Lifetime,
     value::{
-        Error, KindRef, NormalValue, ReprRef, TypeId, TypeRef, UniverseId, ValId, ValRef, Value,
+        Error, KindRef, NormalValue, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value,
         ValueEnum,
     },
 };
@@ -125,8 +125,8 @@ pub trait Type: Value {
     }
     /// Get the universe of this type
     #[inline]
-    fn universe(&self) -> UniverseId {
-        self.ty_kind().closure()
+    fn universe(&self) -> UniverseRef {
+        self.ty_kind().get_closure()
     }
     /// Get the representation of this type, if any
     fn ty_repr(&self) -> Option<ReprRef> {

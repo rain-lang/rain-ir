@@ -65,7 +65,7 @@ pub trait Universe: Kind {
 impl<'a, K: KindPredicate> ValId<K> {
     /// Borrow the closure of this kind
     #[inline]
-    fn borrow_closure(&self) -> UniverseRef {
+    pub fn borrow_closure(&self) -> UniverseRef {
         self.borrow_var().get_closure()
     }
 }
@@ -73,7 +73,7 @@ impl<'a, K: KindPredicate> ValId<K> {
 impl<'a, K: KindPredicate + 'a> ValRef<'a, K> {
     /// Get the closure of this kind
     #[inline]
-    fn get_closure(self) -> UniverseRef<'a> {
+    pub fn get_closure(self) -> UniverseRef<'a> {
         if self.is_universe() {
             self.coerce()
         } else {

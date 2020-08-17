@@ -2,7 +2,7 @@
 The data composing a non-null `rain` region
 */
 use super::*;
-use crate::typing::{primitive::Prop, Kind, Type, Universe};
+use crate::typing::{primitive::Prop, Type, Universe};
 use crate::value::Error;
 use im::Vector;
 use std::hash::{Hash, Hasher};
@@ -53,20 +53,13 @@ impl RegionData {
                 Some(Greater) => return Err(Error::InvalidCastIntoLifetime),
                 _ => {}
             }
+            let param_universe = param_ty.universe();
             if let Some(universe) = &mut universe {
-                let param_kind = param_ty.ty_kind();
-                if let Some(param_universe) = param_kind.try_closure() {
-                    if param_universe > *universe {
-                        *universe = param_universe.clone_var();
-                    }
-                } else {
-                    let param_universe = param_kind.closure();
-                    if param_universe > *universe {
-                        *universe = param_universe;
-                    }
+                if param_universe > *universe {
+                    *universe = param_universe.clone_var();
                 }
             } else {
-                universe = Some(param_ty.universe())
+                universe = Some(param_universe.clone_var())
             }
         }
         Ok(Self::with_unchecked(
