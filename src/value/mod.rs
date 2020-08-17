@@ -23,6 +23,7 @@ use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 pub mod arr;
@@ -47,14 +48,14 @@ pub use valid_impl::*;
 #[repr(transparent)]
 pub struct ValId<P = ()> {
     ptr: Arc<NormalValue>,
-    variant: std::marker::PhantomData<P>,
+    variant: PhantomData<P>,
 }
 
 /// A borrowed `rain` value, optionally guaranteed to satisfy a given predicate `P`
 #[repr(transparent)]
 pub struct ValRef<'a, P = ()> {
     ptr: ArcBorrow<'a, NormalValue>,
-    variant: std::marker::PhantomData<P>,
+    variant: PhantomData<P>,
 }
 
 /// An enumeration of possible `rain` values
@@ -290,17 +291,17 @@ impl<V: Value> Deps<V> {
 
 // Implementation:
 
-impl Substitute for NormalValue {
+impl<P> Substitute for NormalValue<P> {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
-        self.deref().substitute(ctx)
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue<P>, Error> {
+        self.value.substitute(ctx).map(NormalValue::<()>::coerce)
     }
 }
 
-impl Substitute<ValId> for NormalValue {
+impl<P> Substitute<ValId> for NormalValue<P> {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        self.deref().substitute(ctx)
+        self.value.substitute(ctx)
     }
 }
 
@@ -328,18 +329,33 @@ impl Substitute<ValId> for ValueEnum {
     }
 }
 
-/// A normalized `rain` value
+/// A normalized `rain` value, asserted to satisfy a given predicate
 #[derive(Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct NormalValue {
-    pub(crate) value: ValueEnum,
+pub struct NormalValue<P = ()> {
+    value: ValueEnum,
+    predicate: PhantomData<P>,
+}
+
+impl<P> NormalValue<P> {
+    /// Coerce this value to one guaranteed to satisfy a different predicate
+    #[inline]
+    pub(crate) fn coerce<Q>(self) -> NormalValue<Q> {
+        NormalValue {
+            value: self.value,
+            predicate: PhantomData,
+        }
+    }
 }
 
 impl NormalValue {
     /// Assert a given value is a normal value
     #[inline(always)]
     pub(crate) fn assert_normal(value: ValueEnum) -> NormalValue {
-        NormalValue { value }
+        NormalValue {
+            value,
+            predicate: PhantomData,
+        }
     }
     /*
     /// Assert a reference to a given value is a reference to a normal value
@@ -349,8 +365,9 @@ impl NormalValue {
     */
 }
 
-impl Deref for NormalValue {
+impl<P> Deref for NormalValue<P> {
     type Target = ValueEnum;
+    #[inline(always)]
     fn deref(&self) -> &ValueEnum {
         &self.value
     }
@@ -381,22 +398,22 @@ impl From<NormalValue> for ValueEnum {
     }
 }
 
-impl Typed for NormalValue {
+impl<P> Typed for NormalValue<P> {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.deref().ty()
+        self.value.ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
-        self.deref().is_ty()
+        self.value.is_ty()
     }
     #[inline]
     fn is_kind(&self) -> bool {
-        self.deref().is_kind()
+        self.value.is_kind()
     }
 }
 
-impl Apply for NormalValue {
+impl<P> Apply for NormalValue<P> {
     #[inline]
     fn apply_in<'a>(
         &self,
@@ -407,22 +424,22 @@ impl Apply for NormalValue {
     }
 }
 
-impl Value for NormalValue {
+impl<P> Value for NormalValue<P> {
     #[inline]
     fn no_deps(&self) -> usize {
-        self.deref().no_deps()
+        self.value.no_deps()
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
+        self.value.get_dep(ix)
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
-        self
+        self.coerce()
     }
     #[inline]
     fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        self.deref().try_cast_into_lt(target)
+        self.value.try_cast_into_lt(target)
     }
     #[inline]
     fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
@@ -430,21 +447,21 @@ impl Value for NormalValue {
     }
 }
 
-impl Live for NormalValue {
+impl<P> Live for NormalValue<P> {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
+        self.value.lifetime()
     }
 }
 
-impl Regional for NormalValue {
+impl<P> Regional for NormalValue<P> {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        self.deref().region()
+        self.value.region()
     }
     #[inline]
     fn depth(&self) -> usize {
-        self.deref().depth()
+        self.value.depth()
     }
 }
 
