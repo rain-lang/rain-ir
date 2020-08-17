@@ -342,16 +342,26 @@ impl Substitute<ValId> for ValueEnum {
 }
 
 /// A normalized `rain` value, asserted to satisfy a given predicate
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct NormalValue<P = ()> {
     value: ValueEnum,
     predicate: PhantomData<P>,
 }
 
+impl<P> Clone for NormalValue<P> {
+    #[inline(always)]
+    fn clone(&self) -> NormalValue<P> {
+        NormalValue {
+            value: self.value.clone(),
+            predicate: PhantomData,
+        }
+    }
+}
+
 impl<P> NormalValue<P> {
     /// Coerce this value to one guaranteed to satisfy a different predicate
-    #[inline]
+    #[inline(always)]
     pub(crate) fn coerce<Q>(self) -> NormalValue<Q> {
         NormalValue {
             value: self.value,
@@ -359,14 +369,19 @@ impl<P> NormalValue<P> {
         }
     }
     /// Coerce a reference to this value to one guaranteed to satisfy a different predicate
-    #[inline]
+    #[inline(always)]
     pub(crate) fn coerce_ref<Q>(&self) -> &NormalValue<Q> {
         unsafe { &*(self as *const _ as *const NormalValue<Q>) }
     }
     /// Get this normal value as a plain normal value
-    #[inline]
+    #[inline(always)]
     pub fn as_norm(&self) -> &NormalValue {
         self.coerce_ref()
+    }
+    /// Get this `NormalValue` as a `ValueEnum`
+    #[inline(always)]
+    pub fn as_enum(&self) -> &ValueEnum {
+        &self.value
     }
 }
 

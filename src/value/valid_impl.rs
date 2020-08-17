@@ -199,6 +199,11 @@ impl<'a, P> ValRef<'a, P> {
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.ptr.get()
     }
+    /// Get this `ValRef<P>` as a `NormalValue<P>`
+    #[inline]
+    pub fn as_pred(&self) -> &'a NormalValue<P> {
+        self.ptr.get().coerce_ref()
+    }
     /// Get this `ValRef<P>` as a `ValRef`
     pub fn as_val(&self) -> ValRef<'a> {
         ValRef {
