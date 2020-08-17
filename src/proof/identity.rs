@@ -529,7 +529,7 @@ mod tests {
         );
         assert_eq!(
             base_family
-                .curried(&[Bool.into_val(), t.clone(), f.clone()])
+                .curried(&[Bool.into_val(), t, f])
                 .unwrap(),
             Application::Success(&[], falsey)
         );

@@ -34,7 +34,7 @@ pub struct Fin;
 /// Note `rain`'s standard typing universe does *not* obey univalence, so e.g. in `rain` we have `Id(bool, bool) = ()`, *not* `bool`. This is
 /// because we treat types more like `(type, representation, label)` pairs for the purposes of low-level programming. In a sense, then, we can
 /// view Set(n) as the product of the 0-truncation of Type(n) from HoTT with `(representation, label)` pairs.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq)]
 pub struct Set {
     n: usize,
     succ: OnceCell<VarId<Set>>,
@@ -359,6 +359,13 @@ impl Hash for Set {
     #[inline]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.n.hash(hasher)
+    }
+}
+
+impl PartialEq for Set {
+    #[inline]
+    fn eq(&self, other: &Set) -> bool {
+        self.n == other.n
     }
 }
 
