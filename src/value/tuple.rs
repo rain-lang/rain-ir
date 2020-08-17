@@ -8,10 +8,7 @@ use super::{
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{Unit, UNIT_TY};
-use crate::typing::{
-    primitive::{PROP, SET},
-    Kind, Type, Typed,
-};
+use crate::typing::{primitive::Prop, Kind, Type, Typed};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
 };
@@ -286,7 +283,12 @@ impl Product {
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
         let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
         let flags = ProductFlags::new(affine, force_affine, relevant, force_relevant);
-        let ty = SET.clone().into_kind(); //TODO: this
+        let ty = elems
+            .iter()
+            .map(|t| t.universe())
+            .max()
+            .map(Kind::into_kind)
+            .unwrap_or_else(|| Prop.into_kind());
         Ok(Product {
             elems,
             lifetime,
@@ -305,7 +307,7 @@ impl Product {
         Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
-            ty: PROP.clone().into_kind(),
+            ty: Prop.into_kind(),
             flags: ProductFlags(0),
         }
     }
@@ -315,7 +317,7 @@ impl Product {
         Product {
             elems: TyArr::EMPTY,
             lifetime: Lifetime::default(),
-            ty: PROP.clone().into_kind(),
+            ty: Prop.into_kind(),
             flags: ProductFlags(FLAG_AFFIN | FLAG_ANCHR),
         }
     }
