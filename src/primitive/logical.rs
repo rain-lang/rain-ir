@@ -6,7 +6,10 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, Live};
 use crate::region::Region;
 use crate::tokens::*;
-use crate::typing::{primitive::{Fin, FIN}, Type, Typed, Universe};
+use crate::typing::{
+    primitive::{Fin, FIN},
+    Type, Typed, Universe,
+};
 use crate::value::{
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
@@ -139,7 +142,7 @@ impl<'a> TryFrom<&'a ValueEnum> for &'a Bool {
 
 impl From<Bool> for NormalValue {
     fn from(b: Bool) -> NormalValue {
-        NormalValue(ValueEnum::BoolTy(b))
+        NormalValue::assert_normal(ValueEnum::BoolTy(b))
     }
 }
 
@@ -191,7 +194,7 @@ impl<'a> TryFrom<&'a ValueEnum> for &'a bool {
 
 impl From<bool> for NormalValue {
     fn from(b: bool) -> NormalValue {
-        NormalValue(ValueEnum::Bool(b))
+        NormalValue::assert_normal(ValueEnum::Bool(b))
     }
 }
 
@@ -646,7 +649,7 @@ trivial_substitute!(Logical);
 
 impl From<Logical> for NormalValue {
     fn from(l: Logical) -> NormalValue {
-        NormalValue(ValueEnum::Logical(l))
+        NormalValue::assert_normal(ValueEnum::Logical(l))
     }
 }
 

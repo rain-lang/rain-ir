@@ -238,7 +238,7 @@ enum_convert! {
 
 impl From<Lambda> for NormalValue {
     fn from(l: Lambda) -> NormalValue {
-        NormalValue(ValueEnum::Lambda(l))
+        NormalValue::assert_normal(ValueEnum::Lambda(l))
     }
 }
 

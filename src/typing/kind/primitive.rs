@@ -76,19 +76,19 @@ enum_convert! {
 
 impl From<Prop> for NormalValue {
     fn from(prop: Prop) -> NormalValue {
-        NormalValue(ValueEnum::Prop(prop))
+        NormalValue::assert_normal(ValueEnum::Prop(prop))
     }
 }
 
 impl From<Fin> for NormalValue {
     fn from(fin: Fin) -> NormalValue {
-        NormalValue(ValueEnum::Fin(fin))
+        NormalValue::assert_normal(ValueEnum::Fin(fin))
     }
 }
 
 impl From<Set> for NormalValue {
     fn from(set: Set) -> NormalValue {
-        NormalValue(ValueEnum::Set(set))
+        NormalValue::assert_normal(ValueEnum::Set(set))
     }
 }
 

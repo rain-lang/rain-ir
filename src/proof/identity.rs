@@ -169,7 +169,7 @@ enum_convert! {
 impl From<IdFamily> for NormalValue {
     #[inline]
     fn from(id: IdFamily) -> NormalValue {
-        NormalValue(ValueEnum::IdFamily(id))
+        NormalValue::assert_normal(ValueEnum::IdFamily(id))
     }
 }
 
@@ -313,7 +313,7 @@ enum_convert! {
 impl From<Id> for NormalValue {
     #[inline]
     fn from(id: Id) -> NormalValue {
-        NormalValue(ValueEnum::Id(id))
+        NormalValue::assert_normal(ValueEnum::Id(id))
     }
 }
 
@@ -421,7 +421,7 @@ enum_convert! {
 impl From<Refl> for NormalValue {
     #[inline]
     fn from(refl: Refl) -> NormalValue {
-        NormalValue(ValueEnum::Refl(refl))
+        NormalValue::assert_normal(ValueEnum::Refl(refl))
     }
 }
 

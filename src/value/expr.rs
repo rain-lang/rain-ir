@@ -252,7 +252,7 @@ impl From<Sexpr> for NormalValue {
         if sexpr.len() == 1 && sexpr[0].ty() == sexpr.ty && sexpr[0].lifetime() == sexpr.lifetime {
             return sexpr[0].as_norm().clone();
         }
-        NormalValue(ValueEnum::Sexpr(sexpr))
+        NormalValue::assert_normal(ValueEnum::Sexpr(sexpr))
     }
 }
 

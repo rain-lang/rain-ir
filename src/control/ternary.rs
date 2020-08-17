@@ -279,14 +279,14 @@ impl From<Ternary> for NormalValue {
     fn from(ternary: Ternary) -> NormalValue {
         if ternary.is_const() {
             // Cast this ternary to a constant lambda
-            NormalValue(ValueEnum::Lambda(Lambda {
+            NormalValue::assert_normal(ValueEnum::Lambda(Lambda {
                 result: ternary.high,
                 ty: ternary.ty,
                 lt: ternary.lt,
                 deps: std::iter::once(ternary.low).collect(),
             }))
         } else {
-            NormalValue(ValueEnum::Ternary(ternary))
+            NormalValue::assert_normal(ValueEnum::Ternary(ternary))
         }
     }
 }
@@ -457,7 +457,8 @@ mod tests {
         let ternary = Ternary::switch(ix.clone(), ix.clone()).unwrap();
         let ix1 = finite2.clone().ix(1).unwrap().into_val();
         let ix0 = finite2.clone().ix(0).unwrap().into_val();
-        let finite_region = Region::with(std::iter::once(finite2.into_ty()).collect(), None).unwrap();
+        let finite_region =
+            Region::with(std::iter::once(finite2.into_ty()).collect(), None).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), finite_region).unwrap();
         assert_eq!(
             ternary.apply(&[ix1.clone()]).unwrap(),

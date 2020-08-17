@@ -23,6 +23,7 @@ use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 pub mod arr;
@@ -47,14 +48,14 @@ pub use valid_impl::*;
 #[repr(transparent)]
 pub struct ValId<P = ()> {
     ptr: Arc<NormalValue>,
-    variant: std::marker::PhantomData<P>,
+    variant: PhantomData<P>,
 }
 
 /// A borrowed `rain` value, optionally guaranteed to satisfy a given predicate `P`
 #[repr(transparent)]
 pub struct ValRef<'a, P = ()> {
     ptr: ArcBorrow<'a, NormalValue>,
-    variant: std::marker::PhantomData<P>,
+    variant: PhantomData<P>,
 }
 
 /// An enumeration of possible `rain` values
@@ -111,11 +112,17 @@ pub type TypeId = ValId<IsType>;
 /// A `rain` type reference
 pub type TypeRef<'a> = ValRef<'a, IsType>;
 
+/// A `rain` value known to be a type
+pub type TypeValue = NormalValue<IsType>;
+
 /// A `rain` kind
 pub type KindId = ValId<IsKind>;
 
 /// A `rain` kind reference
 pub type KindRef<'a> = ValRef<'a, IsKind>;
+
+/// A `rain` value known to be a kind
+pub type KindValue = NormalValue<IsKind>;
 
 /// A `rain` representation
 pub type ReprId = ValId<IsRepr>;
@@ -123,11 +130,17 @@ pub type ReprId = ValId<IsRepr>;
 /// A `rain` representation reference
 pub type ReprRef<'a> = ValRef<'a, IsRepr>;
 
+/// A `rain` value known to be a representation
+pub type ReprValue = NormalValue<IsRepr>;
+
 /// A `rain` universe
 pub type UniverseId = ValId<IsUniverse>;
 
 /// A `rain` universe reference
 pub type UniverseRef<'a> = ValRef<'a, IsUniverse>;
+
+/// A `rain` value known to be a universe
+pub type UniverseValue = NormalValue<IsUniverse>;
 
 /// A value guaranteed to be a certain `ValueEnum` variant (may not be an actual variant)
 pub type VarId<V> = ValId<Is<V>>;
@@ -290,17 +303,17 @@ impl<V: Value> Deps<V> {
 
 // Implementation:
 
-impl Substitute for NormalValue {
+impl<P> Substitute for NormalValue<P> {
     #[inline]
-    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue, Error> {
-        self.deref().substitute(ctx)
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<NormalValue<P>, Error> {
+        self.value.substitute(ctx).map(NormalValue::<()>::coerce)
     }
 }
 
-impl Substitute<ValId> for NormalValue {
+impl<P> Substitute<ValId> for NormalValue<P> {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<ValId, Error> {
-        self.deref().substitute(ctx)
+        self.value.substitute(ctx)
     }
 }
 
@@ -328,12 +341,59 @@ impl Substitute<ValId> for ValueEnum {
     }
 }
 
-/// A normalized `rain` value
-#[derive(Clone, Eq, PartialEq, Hash)]
+/// A normalized `rain` value, asserted to satisfy a given predicate
+#[derive(Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct NormalValue(pub(crate) ValueEnum);
+pub struct NormalValue<P = ()> {
+    value: ValueEnum,
+    predicate: PhantomData<P>,
+}
+
+impl<P> Clone for NormalValue<P> {
+    #[inline(always)]
+    fn clone(&self) -> NormalValue<P> {
+        NormalValue {
+            value: self.value.clone(),
+            predicate: PhantomData,
+        }
+    }
+}
+
+impl<P> NormalValue<P> {
+    /// Coerce this value to one guaranteed to satisfy a different predicate
+    #[inline(always)]
+    pub(crate) fn coerce<Q>(self) -> NormalValue<Q> {
+        NormalValue {
+            value: self.value,
+            predicate: PhantomData,
+        }
+    }
+    /// Coerce a reference to this value to one guaranteed to satisfy a different predicate
+    #[inline(always)]
+    pub(crate) fn coerce_ref<Q>(&self) -> &NormalValue<Q> {
+        unsafe { &*(self as *const _ as *const NormalValue<Q>) }
+    }
+    /// Get this normal value as a plain normal value
+    #[inline(always)]
+    pub fn as_norm(&self) -> &NormalValue {
+        self.coerce_ref()
+    }
+    /// Get this `NormalValue` as a `ValueEnum`
+    #[inline(always)]
+    pub fn as_enum(&self) -> &ValueEnum {
+        &self.value
+    }
+}
 
 impl NormalValue {
+    /// Assert a given value is a normal value
+    #[inline(always)]
+    pub(crate) fn assert_normal(value: ValueEnum) -> NormalValue {
+        NormalValue {
+            value,
+            predicate: PhantomData,
+        }
+    }
     /*
     /// Assert a reference to a given value is a reference to a normal value
     pub(crate) fn assert_ref(value: &ValueEnum) -> &NormalValue {
@@ -342,10 +402,11 @@ impl NormalValue {
     */
 }
 
-impl Deref for NormalValue {
+impl<P> Deref for NormalValue<P> {
     type Target = ValueEnum;
+    #[inline(always)]
     fn deref(&self) -> &ValueEnum {
-        &self.0
+        &self.value
     }
 }
 
@@ -363,81 +424,81 @@ impl From<ValueEnum> for NormalValue {
 impl Borrow<ValueEnum> for NormalValue {
     #[inline]
     fn borrow(&self) -> &ValueEnum {
-        &self.0
+        &self.value
     }
 }
 
 impl From<NormalValue> for ValueEnum {
     #[inline]
     fn from(normal: NormalValue) -> ValueEnum {
-        normal.0
+        normal.value
     }
 }
 
-impl Typed for NormalValue {
+impl<P> Typed for NormalValue<P> {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.deref().ty()
+        self.value.ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
-        self.deref().is_ty()
+        self.value.is_ty()
     }
     #[inline]
     fn is_kind(&self) -> bool {
-        self.deref().is_kind()
+        self.value.is_kind()
     }
 }
 
-impl Apply for NormalValue {
+impl<P> Apply for NormalValue<P> {
     #[inline]
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        self.0.apply_in(args, ctx)
+        self.value.apply_in(args, ctx)
     }
 }
 
-impl Value for NormalValue {
+impl<P> Value for NormalValue<P> {
     #[inline]
     fn no_deps(&self) -> usize {
-        self.deref().no_deps()
+        self.value.no_deps()
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        self.deref().get_dep(ix)
+        self.value.get_dep(ix)
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
-        self
+        self.coerce()
     }
     #[inline]
     fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        self.deref().try_cast_into_lt(target)
+        self.value.try_cast_into_lt(target)
     }
     #[inline]
     fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
-        self.0.cast_into_lt(target)
+        self.value.cast_into_lt(target)
     }
 }
 
-impl Live for NormalValue {
+impl<P> Live for NormalValue<P> {
     #[inline]
     fn lifetime(&self) -> LifetimeBorrow {
-        self.deref().lifetime()
+        self.value.lifetime()
     }
 }
 
-impl Regional for NormalValue {
+impl<P> Regional for NormalValue<P> {
     #[inline]
     fn region(&self) -> Option<RegionBorrow> {
-        self.deref().region()
+        self.value.region()
     }
     #[inline]
     fn depth(&self) -> usize {
-        self.deref().depth()
+        self.value.depth()
     }
 }
 

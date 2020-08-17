@@ -212,7 +212,7 @@ impl From<Tuple> for NormalValue {
         if tuple == () {
             return ().into();
         }
-        NormalValue(ValueEnum::Tuple(tuple))
+        NormalValue::assert_normal(ValueEnum::Tuple(tuple))
     }
 }
 
@@ -423,7 +423,7 @@ impl From<Product> for NormalValue {
         if product == Unit {
             return Unit.into();
         }
-        NormalValue(ValueEnum::Product(product))
+        NormalValue::assert_normal(ValueEnum::Product(product))
     }
 }
 

@@ -1,6 +1,7 @@
 use super::*;
 use crate::typing::TypePredicate;
 use std::hash::Hasher;
+use std::marker::PhantomData;
 
 // Statics
 
@@ -94,7 +95,7 @@ impl ValId {
         let norm = v.into();
         ValId {
             ptr: VALUE_CACHE.cache(norm),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Deduplicate an `Arc<NormalValue>` to yield a `ValId`
@@ -102,7 +103,7 @@ impl ValId {
     pub fn dedup(norm: Arc<NormalValue>) -> ValId {
         ValId {
             ptr: VALUE_CACHE.cache(norm),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Perform a substitution. Here to avoid code duplication during monomorphization
@@ -120,16 +121,24 @@ impl ValId {
 
 impl<P> ValId<P> {
     /// Get this `ValId<P>` as a `NormalValue`
+    #[inline]
     pub fn as_norm(&self) -> &NormalValue {
         self.ptr.deref()
     }
     /// Get this `ValId<P>` as a `ValueEnum`
+    #[inline]
     pub fn as_enum(&self) -> &ValueEnum {
         self.ptr.deref()
     }
     /// Get this `ValId<P>` as a `ValId`
+    #[inline]
     pub fn as_val(&self) -> &ValId {
         self.coerce_ref()
+    }
+    /// Get this `ValId<P>` as a `NormalValue<P>`
+    #[inline]
+    pub fn as_pred(&self) -> &NormalValue<P> {
+        self.ptr.deref().coerce_ref()
     }
     /// Get the pointer behind this `ValId`
     #[inline]
@@ -149,7 +158,7 @@ impl<P> ValId<P> {
     pub fn borrow_val(&self) -> ValRef {
         ValRef {
             ptr: self.ptr.borrow_arc(),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Borrow this `ValId<P>` as a `ValRef<P>`
@@ -163,36 +172,12 @@ impl<P> ValId<P> {
     pub fn clone_val(&self) -> ValId {
         self.clone().coerce()
     }
-    /// Get this `VarId` as a `TypeId`
-    pub fn as_ty(&self) -> &TypeId
-    where
-        P: TypePredicate,
-    {
-        self.coerce_ref()
-    }
-    /// Clone this `VarId` as a `TypeId`
-    pub fn clone_ty(&self) -> TypeId
-    where
-        P: TypePredicate,
-    {
-        self.as_ty().clone()
-    }
-    /// Borrow this `VarId` as a `TypeRef`
-    pub fn borrow_ty(&self) -> TypeRef
-    where
-        P: TypePredicate,
-    {
-        ValRef {
-            ptr: self.ptr.borrow_arc(),
-            variant: std::marker::PhantomData,
-        }
-    }
     /// Coerce this `ValId` into another predicated value
     #[inline]
     pub(crate) fn coerce<Q>(self) -> ValId<Q> {
         ValId {
             ptr: unsafe { std::mem::transmute(self) },
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Coerce this `ValId` into a reference to another predicated value
@@ -214,11 +199,16 @@ impl<'a, P> ValRef<'a, P> {
     pub fn as_enum(&self) -> &'a ValueEnum {
         self.ptr.get()
     }
+    /// Get this `ValRef<P>` as a `NormalValue<P>`
+    #[inline]
+    pub fn as_pred(&self) -> &'a NormalValue<P> {
+        self.ptr.get().coerce_ref()
+    }
     /// Get this `ValRef<P>` as a `ValRef`
     pub fn as_val(&self) -> ValRef<'a> {
         ValRef {
             ptr: self.ptr,
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Get this `ValRef<P>` as a `ValId<P>`
@@ -234,7 +224,7 @@ impl<'a, P> ValRef<'a, P> {
     pub fn clone_val(&self) -> ValId {
         ValId {
             ptr: self.ptr.clone_arc(),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Get this `ValRef` as a `TypeRef`
@@ -244,7 +234,7 @@ impl<'a, P> ValRef<'a, P> {
     {
         ValRef {
             ptr: self.ptr,
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
     /// Clone this `ValRef` as a `TypeId`
@@ -271,7 +261,7 @@ impl<'a, P> ValRef<'a, P> {
     pub(crate) fn coerce<Q>(self) -> ValRef<'a, Q> {
         ValRef {
             ptr: self.ptr,
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
 }
@@ -445,7 +435,7 @@ impl<'a, V> VarId<V> {
         let norm: NormalValue = v.into();
         VarId {
             ptr: VALUE_CACHE.cache(norm),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
 }
@@ -543,7 +533,7 @@ impl From<NormalValue> for ValId {
     fn from(value: NormalValue) -> ValId {
         ValId {
             ptr: VALUE_CACHE.cache(value),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
 }
@@ -553,7 +543,7 @@ impl From<Arc<NormalValue>> for ValId {
     fn from(value: Arc<NormalValue>) -> ValId {
         ValId {
             ptr: VALUE_CACHE.cache(value),
-            variant: std::marker::PhantomData,
+            variant: PhantomData,
         }
     }
 }
@@ -621,7 +611,7 @@ where
         if TryInto::<&V>::try_into(v.as_norm()).is_ok() {
             Ok(VarRef {
                 ptr: v.ptr,
-                variant: std::marker::PhantomData,
+                variant: PhantomData,
             })
         } else {
             Err(v)

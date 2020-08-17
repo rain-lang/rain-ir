@@ -83,7 +83,7 @@ impl Apply for Phi {
 
 impl From<Phi> for NormalValue {
     fn from(p: Phi) -> NormalValue {
-        NormalValue(ValueEnum::Phi(p))
+        NormalValue::assert_normal(ValueEnum::Phi(p))
     }
 }
 

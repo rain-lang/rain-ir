@@ -190,13 +190,13 @@ impl Apply for Index {}
 
 impl From<Finite> for NormalValue {
     fn from(finite: Finite) -> NormalValue {
-        NormalValue(ValueEnum::Finite(finite))
+        NormalValue::assert_normal(ValueEnum::Finite(finite))
     }
 }
 
 impl From<Index> for NormalValue {
     fn from(ix: Index) -> NormalValue {
-        NormalValue(ValueEnum::Index(ix))
+        NormalValue::assert_normal(ValueEnum::Index(ix))
     }
 }
 

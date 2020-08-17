@@ -95,7 +95,7 @@ impl From<()> for ValueEnum {
 
 impl From<()> for NormalValue {
     fn from(_: ()) -> NormalValue {
-        NormalValue(ValueEnum::from(()))
+        NormalValue::assert_normal(ValueEnum::from(()))
     }
 }
 
@@ -289,7 +289,7 @@ impl From<Unit> for ValueEnum {
 impl From<Unit> for NormalValue {
     #[inline]
     fn from(_: Unit) -> NormalValue {
-        NormalValue(ValueEnum::from(Unit))
+        NormalValue::assert_normal(ValueEnum::from(Unit))
     }
 }
 
