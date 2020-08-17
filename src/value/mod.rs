@@ -346,6 +346,13 @@ impl<P> NormalValue<P> {
             predicate: PhantomData,
         }
     }
+    /// Coerce a reference to this value to one guaranteed to satisfy a different predicate
+    #[inline]
+    pub(crate) fn coerce_ref<Q>(&self) -> &NormalValue<Q> {
+        unsafe {
+            &*(self as *const _ as *const NormalValue<Q>)
+        }
+    }
 }
 
 impl NormalValue {

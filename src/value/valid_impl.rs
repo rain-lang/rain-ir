@@ -121,16 +121,24 @@ impl ValId {
 
 impl<P> ValId<P> {
     /// Get this `ValId<P>` as a `NormalValue`
+    #[inline]
     pub fn as_norm(&self) -> &NormalValue {
         self.ptr.deref()
     }
     /// Get this `ValId<P>` as a `ValueEnum`
+    #[inline]
     pub fn as_enum(&self) -> &ValueEnum {
         self.ptr.deref()
     }
     /// Get this `ValId<P>` as a `ValId`
+    #[inline]
     pub fn as_val(&self) -> &ValId {
         self.coerce_ref()
+    }
+    /// Get this `ValId<P>` as a `NormalValue<P>`
+    #[inline]
+    pub fn as_pred(&self) -> &NormalValue<P> {
+        self.ptr.deref().coerce_ref()
     }
     /// Get the pointer behind this `ValId`
     #[inline]
