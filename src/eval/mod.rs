@@ -2,10 +2,8 @@
 `rain` value evaluation.
 */
 
-use super::{
-    lifetime::{Lifetime, Live},
-    typing::{Type, Typed},
-};
+use super::typing::{Type, Typed};
+use crate::region::Regional;
 use crate::value::{expr::Sexpr, Error, TypeId, ValId, Value};
 mod ctx;
 pub use ctx::EvalCtx;
@@ -13,12 +11,8 @@ pub use ctx::EvalCtx;
 /// The result of a *valid* application. An invalid application should return an error!
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Application<'a, V = ValId> {
-    /// Stopped evaluation: not enough information without a change in parameters given
-    Stop(Lifetime, TypeId),
-    /// Complete evaluation: any more parameters will cause a failure
-    Complete(Lifetime, TypeId),
-    /// Incomplete information: may be enough information with more parameters
-    Incomplete(Lifetime, TypeId),
+    /// A symbolic evaluation to a type
+    Symbolic(TypeId),
     /// A successful evaluation to a value
     Success(&'a [ValId], V),
 }
@@ -30,18 +24,17 @@ impl<'a> Application<'a> {
         value: &V,
         args: &[ValId],
     ) -> (&'a [ValId], ValId) {
-        let (lt, ty) = match self {
-            Application::Stop(lt, ty) => (lt, ty),
-            Application::Complete(lt, ty) => (lt, ty),
-            Application::Incomplete(lt, ty) => (lt, ty),
+        let ty = match self {
+            Application::Symbolic(ty) => ty,
             Application::Success(rest, val) => return (rest, val),
         };
         let mut new_args = Vec::with_capacity(1 + args.len());
         new_args.push(value.clone().into_val());
         new_args.extend_from_slice(args);
+        let region = ty.gcrs(new_args.iter()).unwrap().clone_region();
         (
             &[],
-            Sexpr::new_unchecked(new_args.into_iter().collect(), lt, ty).into_val(),
+            Sexpr::new_unchecked(new_args.into_iter().collect(), region, ty).into_val(),
         )
     }
 }
@@ -100,7 +93,7 @@ macro_rules! substitute_to_valid {
 }
 
 /// An object which can be applied to a list of `rain` values
-pub trait Apply: Typed + Live {
+pub trait Apply: Typed {
     /**
     Attempt to apply an object to a list of `rain` values, returning an `Application` on success.
     Currying, while not incorrect behaviour, is optional to implementors and hence not to be relied on.
@@ -129,9 +122,7 @@ pub trait Apply: Typed + Live {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        self.ty()
-            .apply_ty_in(args, self.lifetime(), ctx)
-            .map(|(lt, ty)| Application::Complete(lt, ty))
+        self.ty().apply_ty_in(args, ctx).map(Application::Symbolic)
     }
     /**
     Attempt to apply an object to a list of `rain` values in a context, returning an `Application` on success.

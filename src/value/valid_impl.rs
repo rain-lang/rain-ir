@@ -289,10 +289,6 @@ impl<P> Value for ValId<P> {
     fn into_val(self) -> ValId {
         self.coerce()
     }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        self.as_norm().try_cast_into_lt(target)
-    }
 }
 
 impl<P> Value for ValRef<'_, P> {
@@ -428,7 +424,7 @@ impl<P> Substitute<ValId> for ValRef<'_, P> {
 
 impl<P> Regional for ValId<P> {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
+    fn region(&self) -> RegionBorrow {
         self.as_norm().region()
     }
     #[inline]
@@ -439,26 +435,12 @@ impl<P> Regional for ValId<P> {
 
 impl<P> Regional for ValRef<'_, P> {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
+    fn region(&self) -> RegionBorrow {
         self.as_norm().region()
     }
     #[inline]
     fn depth(&self) -> usize {
         self.as_norm().depth()
-    }
-}
-
-impl<P> Live for ValId<P> {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.as_norm().lifetime()
-    }
-}
-
-impl<P> Live for ValRef<'_, P> {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.as_norm().lifetime()
     }
 }
 

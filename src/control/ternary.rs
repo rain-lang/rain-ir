@@ -6,13 +6,12 @@ utilities for working with ternary operations.
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::finite::Finite;
 use crate::primitive::logical::BOOL_TY;
-use crate::region::{Region, Regional};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
-use crate::{lifetime_region, pretty_display, substitute_to_valid};
+use crate::{pretty_display, substitute_to_valid};
 use std::convert::TryInto;
 
 /// A ternary operation
@@ -20,8 +19,8 @@ use std::convert::TryInto;
 pub struct Ternary {
     /// The type of this ternary operation
     ty: VarId<Pi>,
-    /// The lifetime of this ternary operation
-    lt: Lifetime,
+    /// The region of this ternary operation
+    region: Region,
     /// The first branch of this ternary operation
     low: ValId,
     /// The second branch of this ternary operation
@@ -51,17 +50,22 @@ impl Ternary {
     pub fn conditional(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
         let low_ty = low.ty();
-        let lt = (low.lifetime() + high.lifetime())?;
+        let region = low.gcr(&high)?.clone_region();
         let unary_region = Region::with(
             std::iter::once(BOOL_TY.clone_ty()).collect(),
-            lt.region().map(|region| region.clone_region()),
+            region.clone(),
         )?;
         let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), unary_region, &lt)?.into()
+            Pi::try_new(high_ty.clone_ty(), unary_region)?.into()
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
-        Ok(Ternary { ty, lt, low, high })
+        Ok(Ternary {
+            ty,
+            region,
+            low,
+            high,
+        })
     }
     /// Construct a switch ternary operation with the smallest possible type
     ///
@@ -89,17 +93,22 @@ impl Ternary {
     pub fn switch(high: ValId, low: ValId) -> Result<Ternary, Error> {
         let high_ty = high.ty();
         let low_ty = low.ty();
-        let lt = (low.lifetime() + high.lifetime())?;
+        let region = low.gcr(&high)?.clone_region();
         let switch_region = Region::with(
             std::iter::once(Finite(2).into_ty()).collect(),
-            lt.region().map(|region| region.clone_region()),
+            region.clone(),
         )?;
         let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), switch_region, &lt)?.into()
+            Pi::try_new(high_ty.clone_ty(), switch_region)?.into()
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
-        Ok(Ternary { ty, lt, low, high })
+        Ok(Ternary {
+            ty,
+            region,
+            low,
+            high,
+        })
     }
     /// Get the parameter type type of this ternary operation
     ///
@@ -177,14 +186,12 @@ impl Typed for Ternary {
     }
 }
 
-impl Live for Ternary {
+impl Regional for Ternary {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Ternary);
 
 impl Apply for Ternary {
     fn apply_in<'a>(
@@ -194,7 +201,7 @@ impl Apply for Ternary {
     ) -> Result<Application<'a>, Error> {
         // Empty application
         if args.is_empty() {
-            return Ok(Application::Complete(self.lt.clone(), self.ty().clone_ty()));
+            return Ok(Application::Symbolic(self.ty().clone_ty()));
         }
         match self.ternary_kind() {
             TernaryKind::Bool => {
@@ -206,9 +213,7 @@ impl Apply for Ternary {
                         Ok(Application::Success(rest, self.low.clone()))
                     }
                 } else {
-                    self.ty
-                        .apply_ty_in(args, self.lifetime(), ctx)
-                        .map(|(lt, ty)| Application::Stop(lt, ty))
+                    self.ty.apply_ty_in(args, ctx).map(Application::Symbolic)
                 }
             }
             TernaryKind::Switch => {
@@ -223,9 +228,7 @@ impl Apply for Ternary {
                         Ok(Application::Success(rest, self.low.clone()))
                     }
                 } else {
-                    self.ty
-                        .apply_ty_in(args, self.lifetime(), ctx)
-                        .map(|(lt, ty)| Application::Stop(lt, ty))
+                    self.ty.apply_ty_in(args, ctx).map(Application::Symbolic)
                 }
             }
         }
@@ -241,7 +244,8 @@ impl Substitute for Ternary {
                 .try_into()
                 //TODO
                 .map_err(|_val| Error::InvalidSubKind)?,
-            lt: ctx.evaluate_lt(&self.lt)?,
+            //TODO: this
+            region: self.region.clone(),
             low: self.low.substitute(ctx)?,
             high: self.high.substitute(ctx)?,
         })
@@ -281,8 +285,9 @@ impl From<Ternary> for NormalValue {
             // Cast this ternary to a constant lambda
             NormalValue::assert_normal(ValueEnum::Lambda(Lambda {
                 result: ternary.high,
+                //FIXME!!!
+                region: ternary.ty.def_region().clone(),
                 ty: ternary.ty,
-                lt: ternary.lt,
                 deps: std::iter::once(ternary.low).collect(),
             }))
         } else {
@@ -458,7 +463,7 @@ mod tests {
         let ix1 = finite2.clone().ix(1).unwrap().into_val();
         let ix0 = finite2.clone().ix(0).unwrap().into_val();
         let finite_region =
-            Region::with(std::iter::once(finite2.into_ty()).collect(), None).unwrap();
+            Region::with(std::iter::once(finite2.into_ty()).collect(), Region::NULL).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), finite_region).unwrap();
         assert_eq!(
             ternary.apply(&[ix1.clone()]).unwrap(),
@@ -494,13 +499,9 @@ mod tests {
     #[test]
     fn nested_ternary_xor() {
         let id = Ternary::conditional(true.into(), false.into()).unwrap();
-        assert_eq!(id.lifetime(), Lifetime::STATIC);
         let not = Ternary::conditional(false.into(), true.into()).unwrap();
-        assert_eq!(not.lifetime(), Lifetime::STATIC);
         let xor = Ternary::conditional(not.into(), id.into()).unwrap();
-        assert_eq!(xor.lifetime(), Lifetime::STATIC);
         let xor = xor.into_val();
-        assert_eq!(xor.lifetime(), Lifetime::STATIC);
         for l in [true, false].iter().copied() {
             let lv = l.into_val();
             for r in [true, false].iter().copied() {

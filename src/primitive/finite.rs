@@ -2,10 +2,11 @@
 Finite-valued types
 */
 use crate::eval::Apply;
+use crate::region::Regional;
 use crate::tokens::*;
 use crate::typing::{primitive::FIN, Type, Typed};
 use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef};
-use crate::{debug_from_display, enum_convert, quick_pretty, trivial_lifetime, trivial_substitute};
+use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute};
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::cmp::Ordering;
@@ -61,7 +62,7 @@ impl VarId<Finite> {
     }
 }
 
-trivial_lifetime!(Finite);
+impl Regional for Finite {}
 
 impl Typed for Finite {
     #[inline]
@@ -144,12 +145,13 @@ impl PartialOrd for Index {
 debug_from_display!(Index);
 quick_pretty!(Index, s, fmt => write!(fmt, "{}({})[{}]", KEYWORD_IX, s.ty.0, s.ix));
 trivial_substitute!(Index);
-trivial_lifetime!(Index);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Index {}
     impl TryFrom<NormalValue> for Index { as ValueEnum, }
     impl TryFromRef<NormalValue> for Index { as ValueEnum, }
 }
+
+impl Regional for Index {}
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds
@@ -247,7 +249,6 @@ mod rand_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lifetime::{LifetimeBorrow, Live};
     #[test]
     fn indices_work() {
         // Index construction
@@ -302,14 +303,5 @@ mod tests {
         // Finite types are types but not universes, indices are not types
         assert!(f1.is_ty());
         assert!(!ix10.is_ty());
-
-        // Finite types and indices live for the static lifetime
-        assert_eq!(f1.lifetime(), LifetimeBorrow::default());
-        assert_eq!(f2.lifetime(), LifetimeBorrow::default());
-        assert_eq!(Finite(1).lifetime(), LifetimeBorrow::default());
-        assert_eq!(Finite(2).lifetime(), LifetimeBorrow::default());
-        assert_eq!(ix10.lifetime(), LifetimeBorrow::default());
-        assert_eq!(ix20.lifetime(), LifetimeBorrow::default());
-        assert_eq!(ix21.lifetime(), LifetimeBorrow::default());
     }
 }

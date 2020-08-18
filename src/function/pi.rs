@@ -2,7 +2,6 @@
 Pi types
 */
 use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
@@ -10,57 +9,45 @@ use crate::value::{
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
-use std::convert::TryInto;
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Pi {
+    /// The defining region of this pi type
+    def_region: Region,
     /// The result type of this pi type
     result: TypeId,
     /// The direct dependencies of this pi type
     deps: ValSet,
-    /// The lifetime of this pi type itself
-    lt: Lifetime,
-    /// The lifetime of this pi type's result
-    result_lt: Lifetime,
 }
 
 impl Pi {
     /// Create a new pi type from a parametrized `TypeId` with a given result lifetime
-    pub fn new(result: Parametrized<TypeId>, result_lt: &Lifetime) -> Result<Pi, Error> {
-        let (region, result, deps, lt) = result.destruct();
-        let result_lt = result_lt.in_region(Some(region))?;
+    pub fn new(result: Parametrized<TypeId>) -> Result<Pi, Error> {
+        let (def_region, result, deps) = result.destruct();
         Ok(Pi {
             result,
             deps,
-            lt,
-            result_lt,
+            def_region,
         })
     }
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
-        Self::new(param.ty(), &*param.value().lifetime()).expect("Region conjunction should work!")
+        Self::new(param.ty()).expect("Region conjunction should work!")
     }
     /// Attempt to create a new pi type from a region, type, and lifetime
-    pub fn try_new(value: TypeId, region: Region, result_lt: &Lifetime) -> Result<Pi, Error> {
-        Self::new(Parametrized::try_new(value, region)?, result_lt)
+    pub fn try_new(value: TypeId, region: Region) -> Result<Pi, Error> {
+        Self::new(Parametrized::try_new(value, region)?)
     }
     /// Get the result of this pi type
     #[inline]
     pub fn result(&self) -> &TypeId {
         &self.result
     }
-    /// Get the result lifetime of this pi type
-    #[inline]
-    pub fn result_lt(&self) -> &Lifetime {
-        &self.result_lt
-    }
     /// Get the defining region of this pi type
     #[inline]
-    pub fn def_region(&self) -> RegionBorrow {
-        self.result_lt
-            .region()
-            .expect("Pi type cannot have a null region!")
+    pub fn def_region(&self) -> &Region {
+        &self.def_region
     }
     /// Get the depth of the defining region of this pi type
     #[inline]
@@ -72,7 +59,7 @@ impl Pi {
     /// Get the parameter types of this pi type
     #[inline]
     pub fn param_tys(&self) -> &TyArr {
-        self.def_region().data().param_tys()
+        self.def_region().param_tys()
     }
     /// Get the parameters of this pi type
     //TODO: parameter lifetimes...
@@ -86,7 +73,6 @@ impl Typed for Pi {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.def_region()
-            .data()
             .universe()
             .borrow_var()
             .max(self.result().universe())
@@ -102,19 +88,10 @@ impl Typed for Pi {
     }
 }
 
-impl Live for Pi {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.result.lifetime()
-    }
-}
-
 impl Regional for Pi {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        self.def_region()
-            .parent()
-            .map(|parent| parent.borrow_region())
+    fn region(&self) -> RegionBorrow {
+        self.def_region().parent().region()
     }
 }
 
@@ -155,12 +132,11 @@ impl Type for Pi {
         true
     }
     #[inline]
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
+    fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
+        // Empty argument case
+        if args.is_empty() {
+            return Ok(self.clone().into_ty());
+        }
         // Rename context
         let ctx_handle = ctx;
 
@@ -168,16 +144,12 @@ impl Type for Pi {
         let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
         // Substitute
-        let region =
-            ctx.substitute_region(self.def_region().as_region(), args.iter().cloned(), false)?;
+        let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
 
         // Evaluate the result type and lifetime
-        let result = ctx.evaluate(self.result().as_val());
-        let result_lt = ctx.evaluate_lt(&self.result_lt); //TODO: think about this...
-                                                          // Pop the evaluation context
+        let result = self.result.substitute_ty(ctx);
         ctx.pop();
         let result = result?;
-        let result_lt = (result_lt? * lifetime)?;
 
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
@@ -189,17 +161,8 @@ impl Type for Pi {
         //     result_lt,
         // )?;
         //Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
-        } else if rest_args.is_empty() {
-            Ok((
-                result_lt,
-                result.try_into().expect("Pi result must be a type"),
-            ))
         } else {
-            let result: TypeId = result.try_into().expect("Nested pi result must be a type");
-            let (lt, ty) =
-                result.apply_ty_in(rest_args, result_lt.borrow_lifetime(), ctx_handle)?;
-            let lt = (lt + result_lt)?;
-            Ok((lt, ty))
+            result.apply_ty_in(rest_args, ctx_handle)
         }
     }
 }
@@ -242,7 +205,7 @@ mod prettyprint_impl {
                 printer,
                 fmt,
                 &self.result,
-                self.def_region().as_region(),
+                self.def_region(),
             )
         }
     }
@@ -257,17 +220,10 @@ mod tests {
     fn basic_pi_application() {
         let unary = unary_ty();
         let binary = binary_ty();
+        assert_eq!(unary.apply_ty(&[true.into()]).unwrap(), *BOOL_TY);
         assert_eq!(
-            unary
-                .apply_ty(&[true.into()], LifetimeBorrow::STATIC)
-                .unwrap(),
-            (Lifetime::STATIC, (*BOOL_TY).clone_ty())
-        );
-        assert_eq!(
-            binary
-                .apply_ty(&[true.into(), false.into()], LifetimeBorrow::STATIC)
-                .unwrap(),
-            (Lifetime::STATIC, (*BOOL_TY).clone_ty())
+            binary.apply_ty(&[true.into(), false.into()]).unwrap(),
+            *BOOL_TY
         );
         //FIXME: this should return an error or succeed, but it's returning the wrong result now...
         // assert_eq!(

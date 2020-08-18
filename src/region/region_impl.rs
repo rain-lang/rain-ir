@@ -3,49 +3,25 @@ Repetitive impls for `Region`, `Option<Region>`, etc.
 */
 use super::*;
 
-impl Regional for Option<Region> {
-    #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        self.as_ref().map(Region::borrow_region)
-    }
-    /// Get the depth of this object's region
-    #[inline]
-    fn depth(&self) -> usize {
-        self.as_ref().map(Regional::depth).unwrap_or(0)
-    }
-}
-
 impl Regional for Region {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        Some(self.borrow_region())
+    fn region(&self) -> RegionBorrow {
+        self.borrow_region()
     }
     #[inline]
     fn depth(&self) -> usize {
-        self.data().depth()
-    }
-}
-
-impl Regional for Option<RegionBorrow<'_>> {
-    #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        *self
-    }
-    /// Get the depth of this object's region
-    #[inline]
-    fn depth(&self) -> usize {
-        self.as_ref().map(Regional::depth).unwrap_or(0)
+        self.data().map(|data| data.depth()).unwrap_or(0)
     }
 }
 
 impl Regional for RegionBorrow<'_> {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        None
+    fn region(&self) -> RegionBorrow {
+        *self
     }
     #[inline]
     fn depth(&self) -> usize {
-        self.data().depth()
+        self.data().map(|data| data.depth()).unwrap_or(0)
     }
 }
 
@@ -53,46 +29,37 @@ impl Regional for RegionBorrow<'_> {
 
 impl PartialEq for Region {
     fn eq(&self, other: &Region) -> bool {
-        let self_ptr = self.data_ptr();
-        let other_ptr = other.data_ptr();
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
 impl PartialEq<RegionBorrow<'_>> for Region {
     fn eq(&self, other: &RegionBorrow) -> bool {
-        let self_ptr = self.data_ptr();
-        let other_ptr = other.data_ptr();
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
 impl PartialEq<RegionData> for Region {
     fn eq(&self, other: &RegionData) -> bool {
-        self.data() == other
+        self.data() == Some(other)
     }
 }
 
 impl PartialEq for RegionBorrow<'_> {
     fn eq(&self, other: &RegionBorrow) -> bool {
-        let self_ptr = self.data_ptr();
-        let other_ptr = other.data_ptr();
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
 impl PartialEq<Region> for RegionBorrow<'_> {
     fn eq(&self, other: &Region) -> bool {
-        let self_ptr = self.data_ptr();
-        let other_ptr = other.data_ptr();
-        self_ptr == other_ptr
+        self.data_ptr() == other.data_ptr()
     }
 }
 
 impl PartialEq<RegionData> for RegionBorrow<'_> {
     fn eq(&self, other: &RegionData) -> bool {
-        //TODO: pointer check?
-        self.data() == other
+        self.data() == Some(other)
     }
 }
 
@@ -104,7 +71,7 @@ impl PartialOrd for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &Region) -> Option<Ordering> {
-        self.data().partial_cmp(other.data())
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -116,7 +83,7 @@ impl PartialOrd<RegionData> for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        self.data().partial_cmp(other)
+        self.data().partial_cmp(&Some(other))
     }
 }
 
@@ -128,7 +95,7 @@ impl PartialOrd<RegionBorrow<'_>> for Region {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionBorrow) -> Option<Ordering> {
-        self.data().partial_cmp(other.data())
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -140,7 +107,7 @@ impl PartialOrd for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionBorrow<'_>) -> Option<Ordering> {
-        self.data().partial_cmp(other.data())
+        self.data().partial_cmp(&other.data())
     }
 }
 
@@ -152,7 +119,7 @@ impl PartialOrd<RegionData> for RegionBorrow<'_> {
     */
     #[inline]
     fn partial_cmp(&self, other: &RegionData) -> Option<Ordering> {
-        self.data().partial_cmp(other)
+        self.data().partial_cmp(&Some(other))
     }
 }
 

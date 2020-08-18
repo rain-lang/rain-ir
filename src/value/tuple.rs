@@ -6,13 +6,10 @@ use super::{
     Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::primitive::{Unit, UNIT_TY, UNIT};
+use crate::primitive::{Unit, UNIT, UNIT_TY};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::{primitive::Prop, Kind, Type, Typed};
-use crate::{
-    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
-};
-use either::Either;
+use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
 use std::ops::Deref;
 
@@ -21,8 +18,8 @@ use std::ops::Deref;
 pub struct Tuple {
     /// The elements of this tuple
     elems: ValArr,
-    /// The (cached) lifetime of this tuple
-    lifetime: Lifetime,
+    /// The (cached) region of this tuple
+    region: Region,
     /// The (cached) type of this tuple
     ty: TypeId,
 }
@@ -31,20 +28,16 @@ impl Tuple {
     /// Try to create a new product from a vector of values. Return an error if they have incompatible lifetimes.
     #[inline]
     pub fn try_new(elems: ValArr) -> Result<Tuple, Error> {
-        let lifetime = Lifetime::default().sep_conjs(elems.iter().map(|t| t.lifetime()))?;
+        let region = Region::NULL.gcrs(elems.iter())?.clone_region();
         let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
-        Ok(Tuple {
-            elems,
-            lifetime,
-            ty,
-        })
+        Ok(Tuple { elems, region, ty })
     }
     /// Create the tuple corresponding to the element of the unit type
     #[inline]
     pub fn unit() -> Tuple {
         Tuple {
             elems: ValArr::EMPTY,
-            lifetime: Lifetime::default(),
+            region: Region::NULL,
             ty: UNIT_TY.as_ty().clone(),
         }
     }
@@ -53,7 +46,7 @@ impl Tuple {
     pub fn const_anchor() -> Tuple {
         Tuple {
             elems: ValArr::EMPTY,
-            lifetime: Lifetime::default(),
+            region: Region::NULL,
             ty: Product::anchor_ty().into(),
         }
     }
@@ -67,13 +60,11 @@ impl Tuple {
     }
 }
 
-impl Live for Tuple {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
+impl Regional for Tuple {
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Tuple);
 
 impl Deref for Tuple {
     type Target = ValArr;
@@ -115,36 +106,6 @@ impl Value for Tuple {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(Either::Right(None)),
-            Some(Less) => {
-                let result = Tuple {
-                    lifetime: target,
-                    ty: self.ty.clone(),
-                    elems: self.elems.clone(),
-                };
-                Ok(Either::Left(result.into_val()))
-            }
-        }
-    }
-    #[inline]
-    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Greater) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(self.into_val()),
-            Some(Less) => {
-                self.lifetime = target;
-                Ok(self.into_val())
-            }
-        }
-    }
 }
 
 impl ValueData for Tuple {}
@@ -160,10 +121,7 @@ impl Apply for Tuple {
     ) -> Result<Application<'a>, Error> {
         // Check for a null application
         if args.is_empty() {
-            return Ok(Application::Complete(
-                self.lifetime().clone_lifetime(),
-                self.ty().clone_ty(),
-            ));
+            return Ok(Application::Symbolic(self.ty().clone_ty()));
         }
         // Do a type check
         match args[0].ty().as_enum() {
@@ -187,7 +145,8 @@ impl Apply for Tuple {
 
 impl Substitute for Tuple {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Tuple, Error> {
-        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
+        //FIXME!!!
+        let region = self.region.clone_region();
         let elems = self
             .elems
             .iter()
@@ -196,7 +155,7 @@ impl Substitute for Tuple {
             .collect::<Result<_, _>>()?;
         Ok(Tuple {
             elems,
-            lifetime,
+            region,
             ty: self.ty.substitute_ty(ctx)?,
         })
     }
@@ -262,8 +221,8 @@ const FLAG_FLARE: u8 = 0b00001000;
 pub struct Product {
     /// The elements of this product type
     elems: TyArr,
-    /// The (cached) lifetime of this product type
-    lifetime: Lifetime,
+    /// The (cached) region of this product type
+    region: Region,
     /// The (cached) type of this product type
     ty: KindId,
     /// The flags on this product type
@@ -279,7 +238,7 @@ impl Product {
         force_affine: bool,
         force_relevant: bool,
     ) -> Result<Product, Error> {
-        let lifetime = Lifetime::default().sep_conjs(elems.iter().map(|t| t.lifetime()))?;
+        let region = Region::NULL.gcrs(elems.iter())?.clone_region();
         let affine = force_affine || elems.iter().any(|t| t.is_affine());
         let relevant = force_relevant || elems.iter().any(|t| t.is_relevant());
         let flags = ProductFlags::new(affine, force_affine, relevant, force_relevant);
@@ -291,7 +250,7 @@ impl Product {
             .unwrap_or_else(|| Prop.into_kind());
         Ok(Product {
             elems,
-            lifetime,
+            region,
             ty,
             flags,
         })
@@ -306,7 +265,7 @@ impl Product {
     pub fn unit_ty() -> Product {
         Product {
             elems: TyArr::EMPTY,
-            lifetime: Lifetime::default(),
+            region: Region::NULL,
             ty: Prop.into_kind(),
             flags: ProductFlags(0),
         }
@@ -316,7 +275,7 @@ impl Product {
     pub fn anchor_ty() -> Product {
         Product {
             elems: TyArr::EMPTY,
-            lifetime: Lifetime::default(),
+            region: Region::NULL,
             ty: Prop.into_kind(),
             flags: ProductFlags(FLAG_AFFIN | FLAG_ANCHR),
         }
@@ -331,7 +290,7 @@ impl Product {
         let ty = Product::try_new(ty_elems).expect("Impossible").into();
         Tuple {
             elems: self.elems.as_vals().clone(),
-            lifetime: self.lifetime.clone(),
+            region: self.region.clone(),
             ty,
         }
     }
@@ -355,7 +314,8 @@ enum_convert! {
 
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
-        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
+        //FIXME!!!
+        let region = self.region.clone_region();
         let elems: TyArr = self
             .elems
             .iter()
@@ -367,7 +327,7 @@ impl Substitute for Product {
         let flags = ProductFlags::new(affine, self.is_anchor(), relevant, self.is_flare());
         Ok(Product {
             elems,
-            lifetime,
+            region,
             ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
             flags,
         })
@@ -376,13 +336,11 @@ impl Substitute for Product {
 
 substitute_to_valid!(Product);
 
-impl Live for Product {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
+impl Regional for Product {
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Product);
 
 impl Deref for Product {
     type Target = TyArr;
@@ -419,14 +377,9 @@ impl Type for Product {
         self.flags.is_relevant()
     }
     #[inline]
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        if args.is_empty() { 
-            return Ok((self.lifetime().clone_lifetime(), self.ty().clone_ty()));
+    fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
+        if args.is_empty() {
+            return Ok(self.ty().clone_ty());
         }
         match args[0].as_enum() {
             ValueEnum::Index(ix) => {
@@ -435,13 +388,13 @@ impl Type for Product {
                 }
                 let ix = ix.ix() as usize;
                 //TODO: fix lifetime
-                self[ix].apply_ty_in(&args[1..], lifetime, ctx)
+                self[ix].apply_ty_in(&args[1..], ctx)
             }
             v => {
                 if let ValueEnum::Finite(f) = v.ty().as_enum() {
                     unimplemented!("Parameter like product indices {}", f)
                 } else if self.len() == 1 && args[0] == *UNIT {
-                    self[0].apply_ty_in(&args[1..], lifetime, ctx)
+                    self[0].apply_ty_in(&args[1..], ctx)
                 } else {
                     Err(Error::TypeMismatch)
                 }
@@ -475,37 +428,6 @@ impl Value for Product {
     #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
-    }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Less) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(Either::Right(None)),
-            Some(Greater) => {
-                let result = Product {
-                    lifetime: target.clone(),
-                    ty: self.ty.clone(),
-                    elems: self.elems.clone(),
-                    flags: self.flags,
-                };
-                Ok(Either::Left(result.into_val()))
-            }
-        }
-    }
-    #[inline]
-    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Less) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(self.into_val()),
-            Some(Greater) => {
-                self.lifetime = target;
-                Ok(self.into_val())
-            }
-        }
     }
 }
 

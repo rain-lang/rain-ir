@@ -3,39 +3,33 @@ Phi nodes, describing general recursion
 */
 
 use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
+use crate::region::{RegionBorrow, Regional};
 use crate::typing::Typed;
 use crate::value::{
     arr::{ValArr, ValSet},
     tuple::Product,
     Error, NormalValue, TypeRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{
-    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
-};
+use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 
 /// A phi node, representing mutual recursion
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Phi {
     /// The tuple of recursively defined objects in this node
     ///
-    /// This should be nonempty, and all objects should reside in the same region
+    /// This should be nonempty, and all objects should reside in the same region, namely the defining region
     values: ValArr,
     /// The dependencies of this node
     deps: ValSet,
-    /// The lifetime of this phi node as a value
-    lifetime: Lifetime,
     /// The type of this phi node as a value
     ty: VarId<Product>,
 }
 
-impl Live for Phi {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
+impl Regional for Phi {
+    fn region(&self) -> RegionBorrow {
+        self.values[0].region().parent().region()
     }
 }
-
-lifetime_region!(Phi);
 
 impl Typed for Phi {
     #[inline]

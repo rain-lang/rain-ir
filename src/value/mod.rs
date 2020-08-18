@@ -4,7 +4,6 @@
 use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
@@ -15,7 +14,6 @@ use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
-use either::Either;
 use elysees::{Arc, ArcBorrow};
 use lazy_static::lazy_static;
 use ref_cast::RefCast;
@@ -151,7 +149,7 @@ pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
 // The `Value` trait:
 
 /// A trait implemented by all `rain` values
-pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
+pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional {
     /// Get the number of dependencies of this value
     ///
     /// Note that this does *not* include the type: as all `rain` values have exactly one type, this is counted
@@ -243,33 +241,6 @@ pub trait Value: Sized + Typed + Live + Apply + Substitute<ValId> + Regional {
             Ok(self.into_val().coerce())
         } else {
             Err(self)
-        }
-    }
-    /// Try to cast this into a lifetime
-    ///
-    /// On failure, return an error. On success, return either
-    /// - The successfully cast value, on cast
-    /// - The lifetime to cast to if a cast is necessary, or `None` if it is not
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime().partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Less) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(Either::Right(None)),
-            Some(Greater) => Ok(Either::Right(Some(target))),
-        }
-    }
-    /// Cast into a lifetime, which is implied to strictly weaken the lifetime
-    #[inline]
-    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
-        match self.try_cast_into_lt(target)? {
-            Either::Left(value) => Ok(value),
-            Either::Right(None) => Ok(self.into_val()),
-            Either::Right(Some(target)) => {
-                let ty = self.ty().clone_ty();
-                Ok(Sexpr::cast_singleton(self.into_val(), target, ty).into_val())
-            }
         }
     }
 }
@@ -494,26 +465,11 @@ impl<P> Value for NormalValue<P> {
     fn into_norm(self) -> NormalValue {
         self.coerce()
     }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        self.value.try_cast_into_lt(target)
-    }
-    #[inline]
-    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
-        self.value.cast_into_lt(target)
-    }
-}
-
-impl<P> Live for NormalValue<P> {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.value.lifetime()
-    }
 }
 
 impl<P> Regional for NormalValue<P> {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
+    fn region(&self) -> RegionBorrow {
         self.value.region()
     }
     #[inline]
@@ -566,22 +522,6 @@ impl Value for ValueEnum {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        forv! {
-            match(self) {
-                v => v.try_cast_into_lt(target),
-            }
-        }
-    }
-    #[inline]
-    fn cast_into_lt(self, target: Lifetime) -> Result<ValId, Error> {
-        forv! {
-            match(self) {
-                v => v.cast_into_lt(target),
-            }
-        }
-    }
 }
 
 /// Perform an action for each variant of `ValueEnum`. Add additional match arms, if desired.
@@ -631,17 +571,9 @@ pretty_display!(ValueEnum, v, fmt => forv! {
     match (v) { v => write!(fmt, "{}", v), }
 });
 
-impl Live for ValueEnum {
-    fn lifetime(&self) -> LifetimeBorrow {
-        forv!(match (self) {
-            s => s.lifetime(),
-        })
-    }
-}
-
 impl Regional for ValueEnum {
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
+    fn region(&self) -> RegionBorrow {
         forv!(match (self) {
             s => s.region(),
         })

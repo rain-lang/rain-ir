@@ -2,10 +2,10 @@
 The primitive hierarchy of kinds
 */
 use crate::eval::Apply;
-use crate::lifetime::{LifetimeBorrow, Live};
+use crate::region::Regional;
 use crate::typing::{Kind, Type, Typed, Universe};
 use crate::value::{KindId, NormalValue, TypeRef, UniverseId, ValId, Value, ValueEnum, VarId};
-use crate::{enum_convert, lifetime_region, trivial_substitute};
+use crate::{enum_convert, trivial_substitute};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use std::cmp::Ordering;
@@ -111,14 +111,8 @@ impl Typed for Prop {
     }
 }
 
-impl Live for Prop {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::STATIC
-    }
-}
+impl Regional for Prop {}
 
-lifetime_region!(Prop);
 trivial_substitute!(Prop);
 
 impl Apply for Prop {}
@@ -196,14 +190,8 @@ impl Typed for Fin {
     }
 }
 
-impl Live for Fin {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::STATIC
-    }
-}
+impl Regional for Fin {}
 
-lifetime_region!(Fin);
 trivial_substitute!(Fin);
 
 impl Apply for Fin {}
@@ -288,14 +276,8 @@ impl Typed for Set {
     }
 }
 
-impl Live for Set {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::STATIC
-    }
-}
+impl Regional for Set {}
 
-lifetime_region!(Set);
 trivial_substitute!(Set);
 
 impl Apply for Set {}

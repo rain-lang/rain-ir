@@ -24,13 +24,9 @@ impl RegionData {
     /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
     /// Similarly, it does not check whether all parameter types lie within the given parent universe, but it is a *logic error* if they do not!
     #[inline]
-    pub fn with_unchecked(
-        param_tys: TyArr,
-        parent: Option<Region>,
-        universe: UniverseId,
-    ) -> RegionData {
-        let parents = if let Some(parent) = parent {
-            let mut result = parent.data().parents.clone();
+    pub fn with_unchecked(param_tys: TyArr, parent: Region, universe: UniverseId) -> RegionData {
+        let parents = if let Some(data) = parent.data() {
+            let mut result = data.parents.clone();
             result.push_back(parent);
             result
         } else {
@@ -44,7 +40,7 @@ impl RegionData {
     }
     /// Create data for a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Result<RegionData, Error> {
+    pub fn with(param_tys: TyArr, parent: Region) -> Result<RegionData, Error> {
         use Ordering::*;
         let mut universe = None;
         for param_ty in param_tys.iter() {
@@ -70,7 +66,7 @@ impl RegionData {
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
-    pub fn with_parent(parent: Option<Region>) -> RegionData {
+    pub fn with_parent(parent: Region) -> RegionData {
         Self::with_unchecked(TyArr::default(), parent, Prop.into_universe())
     }
     /// Get the depth of this region
@@ -80,8 +76,8 @@ impl RegionData {
     }
     /// Get the parent of this region
     #[inline]
-    pub fn parent(&self) -> Option<&Region> {
-        self.parents.last()
+    pub fn parent(&self) -> &Region {
+        self.parents.last().unwrap_or(&Region::NULL)
     }
     /// Get the parameter types of this region
     #[inline]

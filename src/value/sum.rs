@@ -2,7 +2,6 @@
 Sum types and injections
 */
 use crate::function::pi::Pi;
-use crate::lifetime::Lifetime;
 use crate::value::{
     arr::{ValArr, ValSet},
     KindId, VarId,
@@ -13,8 +12,6 @@ use crate::value::{
 pub struct Sum {
     /// The variants of this sum type
     variants: ValArr,
-    /// The lifetime of this sum type
-    lifetime: Lifetime,
     /// The type of this sum type
     ty: KindId
 }
@@ -26,8 +23,6 @@ pub struct Sum {
 pub struct Union {
     /// The members of this union
     members: ValSet,
-    /// The lifetime of this union
-    lifetime: Lifetime,
     /// The type of this union
     ty: KindId
 }
@@ -43,8 +38,6 @@ pub struct Injection {
     ix: usize,
     /// The type of this injection
     ty: VarId<Pi>,
-    /// The lifetime of this injection
-    lifetime: Lifetime,
 }
 
 //TODO: represent applications of injections as Sexprs or evaluate them somehow?

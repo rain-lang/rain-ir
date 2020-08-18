@@ -3,17 +3,13 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::lifetime::Live;
-use crate::lifetime::{Lifetime, LifetimeBorrow};
 use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
     arr::{TySet, ValSet},
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
-use crate::{
-    debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
-};
+use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
 
 /// A lambda function
@@ -25,19 +21,19 @@ pub struct Lambda {
     pub(crate) ty: VarId<Pi>,
     /// The direct dependencies of this lambda function
     pub(crate) deps: ValSet,
-    /// The lifetime of this lambda function
-    pub(crate) lt: Lifetime,
+    /// The region of this lambda function
+    pub(crate) region: Region,
 }
 
 impl Lambda {
     /// Create a new lambda function from a parametrized `ValId`
     pub fn new(result: Parametrized<ValId>) -> Lambda {
         let ty = VarId::from(Pi::ty(&result));
-        let (_region, result, deps, lt) = result.destruct();
+        let (region, result, deps) = result.destruct();
         Lambda {
             result,
             deps,
-            lt,
+            region,
             ty,
         }
     }
@@ -46,26 +42,21 @@ impl Lambda {
         let tyset: TySet = std::iter::once(ty.clone()).collect();
         let region = Region::with_unchecked(
             tyset.as_arr().clone(),
-            ty.cloned_region(),
+            ty.clone_region(),
             ty.universe().clone_var(),
         );
         let result = Parameter::try_new(region.clone(), 0)
             .expect("Region has one parameter")
             .into();
-        let ty: VarId<Pi> = Pi::try_new(
-            ty,
-            region.clone(),
-            &Lifetime::param(region, 0).expect("Identity region has first parameter"),
-        )
-        .expect("Identity pi type is valid")
-        .into();
-        let lt = ty.lifetime().clone_lifetime(); //TODO: someday...
+        let ty: VarId<Pi> = Pi::try_new(ty, region.clone())
+            .expect("Identity pi type is valid")
+            .into();
         let deps = tyset.into_vals();
         Lambda {
             result,
             ty,
             deps,
-            lt,
+            region,
         }
     }
     /// Attempt to create a new lambda function from a region and value
@@ -74,8 +65,8 @@ impl Lambda {
     }
     /// Get the defining region of this lambda function
     #[inline]
-    pub fn def_region(&self) -> RegionBorrow {
-        self.ty.def_region()
+    pub fn def_region(&self) -> &Region {
+        &self.region
     }
     /// Get the depth of the defining region of this lambda function
     #[inline]
@@ -88,11 +79,6 @@ impl Lambda {
     #[inline]
     pub fn result(&self) -> &ValId {
         &self.result
-    }
-    /// Get the result lifetime of this lambda function
-    #[inline]
-    pub fn result_lt(&self) -> &Lifetime {
-        &self.ty.result_lt()
     }
     /// Get the result type of this lambda function
     #[inline]
@@ -126,14 +112,12 @@ impl Typed for Lambda {
     }
 }
 
-impl Live for Lambda {
+impl Regional for Lambda {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Lambda);
 
 impl Apply for Lambda {
     fn apply_in<'a>(
@@ -143,8 +127,10 @@ impl Apply for Lambda {
     ) -> Result<Application<'a>, Error> {
         // Partial application check
         if self.def_region().len() > args.len() {
-            let (lt, ty) = self.get_ty().apply_ty_in(args, self.lifetime(), ctx)?;
-            return Ok(Application::Incomplete(lt, ty));
+            return self
+                .get_ty()
+                .apply_ty_in(args, ctx)
+                .map(Application::Symbolic);
         }
 
         // Initialize context
@@ -158,21 +144,13 @@ impl Apply for Lambda {
         let ctx = ctx.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
         // Substitute
-        let region =
-            ctx.substitute_region(self.def_region().as_region(), args.iter().cloned(), false)?;
+        let region = ctx.substitute_region(self.def_region(), args.iter().cloned(), false)?;
 
-        // Evaluate the result's lifetime
-        let result_lt = ctx.evaluate_lt(self.result_lt());
-        // Evaluate the result if it has a valid lifetime
-        let result = if result_lt.is_ok() {
-            ctx.evaluate(self.result())
-        } else {
-            Err(Error::LifetimeError)
-        };
+        // Evaluate the result
+        let result = self.result().substitute(ctx);
         // Pop the evaluation context, and bubble up errors
         ctx.pop();
-        let result_lt = result_lt?;
-        let result = result?.cast_into_lt(result_lt)?;
+        let result = result?;
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
         if let Some(region) = region {
@@ -210,20 +188,23 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
+        let result = self.result.substitute(ctx)?;
+        let ty: VarId<Pi> = self
+            .ty
+            .substitute(ctx)?
+            .try_into()
+            .map_err(|_val| Error::InvalidSubKind)?;
+        let deps: ValSet = self
+            .deps
+            .iter()
+            .map(|d| d.substitute(ctx))
+            .collect::<Result<_, _>>()?;
+        let region = result.gcr(&ty)?.gcrs(deps.iter())?.clone_region();
         Ok(Lambda {
-            result: self.result.substitute(ctx)?,
-            ty: self
-                .ty
-                .substitute(ctx)?
-                .try_into()
-                //TODO
-                .map_err(|_val| Error::InvalidSubKind)?,
-            deps: self
-                .deps
-                .iter()
-                .map(|d| d.substitute(ctx))
-                .collect::<Result<_, _>>()?,
-            lt: ctx.evaluate_lt(&self.lt)?,
+            result,
+            deps,
+            ty,
+            region,
         })
     }
 }
@@ -261,7 +242,7 @@ mod prettyprint_impl {
                 printer,
                 fmt,
                 &self.result,
-                self.def_region().as_region(),
+                self.def_region(),
             )
         }
     }
@@ -270,7 +251,6 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lifetime::Color;
     use crate::primitive::{finite::Finite, logical::*};
     use crate::typing::Type;
     use crate::value::{expr::Sexpr, tuple::Tuple};
@@ -308,30 +288,20 @@ mod tests {
         let anchor_val = anchor.clone().into_val();
         let anchor_ty = anchor.ty().clone_ty();
         let id = Lambda::id(anchor_ty);
-        let id_val = id.clone().into_val();
+        let id_val = id.into_val();
         assert_eq!(
             Sexpr::try_new(vec![id_val, anchor_val.clone()])
                 .unwrap()
                 .into_val(),
             anchor_val
         );
-        // Different lifetimes!
-        assert_ne!(*id.result(), anchor_val);
-        // Specifically, color static vs. color param 0
-        let region = id.def_region();
-        let color = Color::param(region.as_region(), 0).unwrap();
-        let lt = Lifetime::owns(color);
-        assert_eq!(id.result().lifetime(), lt);
-        //TODO: fix this
-        //assert_eq!(*id.result().lifetime(), *id.result_lt());
-        assert_eq!(anchor.lifetime(), Lifetime::STATIC);
     }
 
     #[test]
     fn boolean_mux_works_properly() {
         let region = Region::with(
             vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into(),
-            None,
+            Region::NULL,
         )
         .unwrap();
         let select = region.param(0).unwrap().into_val();
