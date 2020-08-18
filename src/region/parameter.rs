@@ -39,7 +39,7 @@ impl Parameter {
     ```rust
     use rain_ir::region::{Region, Parameter};
     use rain_ir::value::Error;
-    let empty_region = Region::with_parent(None);
+    let empty_region = Region::with_parent(Region::NULL);
     assert_eq!(Parameter::try_new(empty_region, 1), Err(Error::InvalidParam));
     ```
     */
@@ -59,7 +59,7 @@ impl Parameter {
     ```rust
     use rain_ir::region::{Region, Parameter};
     use rain_ir::value::Error;
-    let empty_region = Region::with_parent(None);
+    let empty_region = Region::with_parent(Region::NULL);
     assert_eq!(Parameter::try_clone_new(&empty_region, 1), Err(Error::InvalidParam));
     ```
     */

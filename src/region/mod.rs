@@ -107,20 +107,20 @@ pub trait Regional {
     ///
     /// // Constants reside in the null region:
     ///
-    /// assert_eq!(true.cloned_region(), Region::default());
-    /// assert_eq!(false.cloned_region(), Region::default());
+    /// assert_eq!(true.clone_region(), Region::NULL);
+    /// assert_eq!(false.clone_region(), Region::NULL);
     ///
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(once(Bool.into_ty()).collect(), Region::default()).unwrap();
+    /// let region = Region::with(once(Bool.into_ty()).collect(), Region::NULL).unwrap();
     ///
     /// // We extract the first parameter
-    /// let param = region.clone().param(0).unwrap();
-    /// assert_eq!(param.cloned_region(), region.clone());
+    /// let param = region.param(0).unwrap();
+    /// assert_eq!(param.clone_region(), region);
     ///
     /// // Regions return themselves as a region
-    /// assert_eq!(region.cloned_region(), region.clone());
+    /// assert_eq!(region.clone_region(), region);
     /// ```
     #[inline]
     fn clone_region(&self) -> Region {
@@ -184,20 +184,14 @@ pub trait Regional {
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
+    /// let region = Region::with(once(Bool.into_ty()).collect(), Region::NULL).unwrap();
     ///
     /// // We extract the first parameter
-    /// let param = region.clone().param(0).unwrap();
+    /// let param = region.param(0).unwrap();
     /// assert_eq!(param.depth(), 1);
     ///
     /// // We can, of course, call this function directly on a region
     /// assert_eq!(region.depth(), 1);
-    ///
-    /// // An `Option` works too, with `None` representing the null region
-    /// let mut opt = Some(region.clone());
-    /// assert_eq!(opt.depth(), 1);
-    /// opt = None;
-    /// assert_eq!(opt.depth(), 0);
     #[inline]
     fn depth(&self) -> usize {
         self.region().depth()
@@ -305,11 +299,11 @@ impl Region {
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
     ///
-    /// let empty_region = Region::with_parent(None);
-    /// let nested_empty = Region::with_parent(Some(empty_region.clone()));
+    /// let empty_region = Region::with_parent(Region::NULL);
+    /// let nested_empty = Region::with_parent(empty_region.clone());
     /// let nested_full = Region::with(
     ///     once(Bool.into_ty()).collect(),
-    ///     Some(nested_empty.clone())
+    ///     nested_empty.clone()
     /// ).unwrap();
     ///
     /// assert!(empty_region.is_empty());
@@ -338,15 +332,15 @@ impl Region {
     /// use rain_ir::primitive::logical::Bool;
     /// use rain_ir::typing::Type;
     ///
-    /// let empty_region = Region::with_parent(None);
-    /// let nested_empty = Region::with_parent(Some(empty_region.clone()));
+    /// let empty_region = Region::with_parent(Region::NULL);
+    /// let nested_empty = Region::with_parent(empty_region.clone());
     /// let nested_full = Region::with(
     ///     std::iter::once(Bool.into_ty()).collect(),
-    ///     Some(nested_empty.clone())
+    ///     nested_empty.clone()
     /// ).unwrap();
     /// let nested_many = Region::with(
     ///     vec![Bool.into_ty(), Bool.into_ty(), Bool.into_ty()].into_iter().collect(),
-    ///     Some(empty_region.clone())
+    ///     empty_region.clone()
     /// ).unwrap();
     ///
     /// assert_eq!(empty_region.len(), 0);
