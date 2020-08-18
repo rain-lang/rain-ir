@@ -71,26 +71,20 @@ pub trait Regional {
     ///
     /// // Constants reside in the null region:
     ///
-    /// assert_eq!(true.region(), None);
-    /// assert_eq!(false.region(), None);
+    /// assert_eq!(true.region(), Region::NULL);
+    /// assert_eq!(false.region(), Region::NULL);
     ///
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
+    /// let region = Region::with(once(Bool.into_ty()).collect(), Region::NULL).unwrap();
     ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
-    /// assert_eq!(param.region(), Some(region.borrow_region()));
+    /// assert_eq!(param.region(), region);
     ///
     /// // Regions return themselves as a region
-    /// assert_eq!(region.region(), Some(region.borrow_region()));
-    ///
-    /// // An `Option` works too
-    /// let mut opt = Some(region.clone());
-    /// assert_eq!(opt.region(), Some(region.borrow_region()));
-    /// opt = None;
-    /// assert_eq!(opt.region(), None);
+    /// assert_eq!(region.region(), region);
     /// ```
     #[inline]
     fn region(&self) -> RegionBorrow {
