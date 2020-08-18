@@ -7,7 +7,9 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
-use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
+};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 use std::iter::once;
@@ -457,6 +459,8 @@ impl Value for Refl {
 pub struct ApConst {
     /// The type of functions being applied
     ap_ty: VarId<Pi>,
+    /// The particular function being applied, if any
+    func: Option<ValId>,
     /// The type of this instance of the axiom
     ty: VarId<Pi>,
     /// The lifetime of this instance of the axiom
@@ -466,20 +470,42 @@ pub struct ApConst {
 impl ApConst {
     /// Create a new instance of the applicativity axiom for a pi type
     #[inline]
-    pub fn try_new(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
-        let ty = Self::instance_ty(ap_ty.clone())?;
+    pub fn try_new_pi(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
+        let ty = Self::pi_ty(ap_ty.clone())?;
         let lt = ty.lifetime().clone_lifetime();
         Ok(ApConst {
             ap_ty,
+            func: None,
             lt,
             ty: ty.into_var(),
         })
     }
+    /// Create a new instance of the applicativity axiom for a given function
+    #[inline]
+    pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<ApConst, Error> {
+        let ty = Self::fn_ty(&ap_ty, param_fn)?;
+        let lt = ty.lifetime().clone_lifetime();
+        Ok(ApConst {
+            ap_ty,
+            func: None,
+            lt,
+            ty: ty.into_var(),
+        })
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function
+    #[inline]
+    pub fn fn_ty(ap_ty: &VarId<Pi>, param_fn: ValId) -> Result<Pi, Error> {
+        if param_fn.ty() != *ap_ty {
+            //TODO: subtyping?
+            return Err(Error::TypeMismatch);
+        }
+        let domain = ap_ty.param_tys().clone();
+        Self::fn_ty_helper(param_fn, domain)
+    }
     /// Get the pi type corresponding to an instance of this axiom for a given function type
     #[inline]
-    pub fn instance_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
+    pub fn pi_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
         let domain = ap_ty.param_tys().clone();
-        let no_params = domain.len();
         let ap_ty_region = ap_ty.cloned_region();
         let pi_region = Region::with(once(ap_ty.into_ty()).collect(), ap_ty_region)
             .expect("ap_ty lies in it's own region...");
@@ -487,7 +513,15 @@ impl ApConst {
             .param(0)
             .expect("Pi region has exactly one parameter")
             .into_val();
-        let left_region = Region::with(domain.clone(), pi_region.cloned_region())
+        let param_pi = Self::fn_ty_helper(param_fn, domain)?;
+        Ok(
+            Pi::try_new(param_pi.into_ty(), pi_region, &Lifetime::STATIC)
+                .expect("Final pi is valid"),
+        )
+    }
+    fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
+        let no_params = domain.len();
+        let left_region = Region::with(domain.clone(), param_fn.cloned_region())
             .expect("domain lies in ap_ty's region");
         let right_region = Region::with(domain, left_region.cloned_region())
             .expect("domain lies in ap_ty's region");
@@ -510,11 +544,9 @@ impl ApConst {
             .expect("Arrow pi is valid");
         let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
             .expect("Right pi is valid");
-        let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
-            .expect("Left pi is valid");
         Ok(
-            Pi::try_new(left_pi.into_ty(), pi_region, &Lifetime::STATIC)
-                .expect("Final pi is valid"),
+            Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
+                .expect("Left pi is valid"),
         )
     }
 }
@@ -684,8 +716,9 @@ mod tests {
         let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
             .expect("Left pi is valid");
         let ap_type = Pi::try_new(left_pi.into_ty(), binary_region, &Lifetime::STATIC)
-            .expect("Binary operation application type is valid").into_ty();
-        let ap_const = ApConst::try_new(binary_ty).unwrap();
+            .expect("Binary operation application type is valid")
+            .into_ty();
+        let ap_const = ApConst::try_new_pi(binary_ty).unwrap();
         assert_eq!(ap_const.ty(), ap_type);
     }
 }
