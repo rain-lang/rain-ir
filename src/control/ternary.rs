@@ -207,7 +207,7 @@ impl Apply for Ternary {
                     }
                 } else {
                     self.ty
-                        .apply_ty_in(args, ctx)
+                        .apply_ty_in(args, self.lifetime(), ctx)
                         .map(|(lt, ty)| Application::Stop(lt, ty))
                 }
             }
@@ -224,7 +224,7 @@ impl Apply for Ternary {
                     }
                 } else {
                     self.ty
-                        .apply_ty_in(args, ctx)
+                        .apply_ty_in(args, self.lifetime(), ctx)
                         .map(|(lt, ty)| Application::Stop(lt, ty))
                 }
             }

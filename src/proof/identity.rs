@@ -108,7 +108,7 @@ impl Apply for IdFamily {
         let base_ty_val = self.base_ty.as_ref().map(|ty| ty.as_val());
         match (args, base_ty_val) {
             ([], _) | ([_], Some(_)) => {
-                let (lt, ty) = self.ty.apply_ty_in(args, ctx)?;
+                let (lt, ty) = self.ty.apply_ty_in(args, self.lifetime(), ctx)?;
                 Ok(Application::Complete(lt, ty))
             }
             ([left, right], Some(base)) | ([base, left, right], None) => {
@@ -124,7 +124,7 @@ impl Apply for IdFamily {
                         .try_into_ty()
                         .map_err(|_| Error::NotATypeError)?,
                 );
-                let (lt, ty) = self.ty.apply_ty_in(&args[..1], ctx)?;
+                let (lt, ty) = self.ty.apply_ty_in(&args[..1], self.lifetime(), ctx)?;
                 Ok(Application::Success(
                     &args[1..],
                     IdFamily {
@@ -455,7 +455,7 @@ impl Value for Refl {
 /// NOTE: applicativity of dependent functions is not yet supported, as we do not yet support transport along types.
 ///
 /// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
-/// 
+///
 /// TODO: this should not be a primitive value, but rather a descriptor for a primitive value to be constructed
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApConst {

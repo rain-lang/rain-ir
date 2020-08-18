@@ -143,7 +143,7 @@ impl Apply for Parameter {
         }
         match self.ty().as_enum() {
             ValueEnum::Pi(p) => p
-                .apply_ty_in(args, ctx)
+                .apply_ty_in(args, self.lifetime(), ctx)
                 .map(|(lt, ty)| Application::Complete(lt, ty)),
             ValueEnum::Product(p) => {
                 if args.len() > 1 {

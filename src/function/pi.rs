@@ -158,6 +158,7 @@ impl Type for Pi {
     fn apply_ty_in(
         &self,
         args: &[ValId],
+        lifetime: LifetimeBorrow,
         ctx: &mut Option<EvalCtx>,
     ) -> Result<(Lifetime, TypeId), Error> {
         // Rename context
@@ -176,7 +177,7 @@ impl Type for Pi {
                                                           // Pop the evaluation context
         ctx.pop();
         let result = result?;
-        let result_lt = result_lt?;
+        let result_lt = (result_lt? * lifetime)?;
 
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
@@ -195,7 +196,8 @@ impl Type for Pi {
             ))
         } else {
             let result: TypeId = result.try_into().expect("Nested pi result must be a type");
-            let (lt, ty) = result.apply_ty_in(rest_args, ctx_handle)?;
+            let (lt, ty) =
+                result.apply_ty_in(rest_args, result_lt.borrow_lifetime(), ctx_handle)?;
             let lt = (lt + result_lt)?;
             Ok((lt, ty))
         }
@@ -256,11 +258,15 @@ mod tests {
         let unary = unary_ty();
         let binary = binary_ty();
         assert_eq!(
-            unary.apply_ty(&[true.into()]).unwrap(),
+            unary
+                .apply_ty(&[true.into()], LifetimeBorrow::STATIC)
+                .unwrap(),
             (Lifetime::STATIC, (*BOOL_TY).clone_ty())
         );
         assert_eq!(
-            binary.apply_ty(&[true.into(), false.into()]).unwrap(),
+            binary
+                .apply_ty(&[true.into(), false.into()], LifetimeBorrow::STATIC)
+                .unwrap(),
             (Lifetime::STATIC, (*BOOL_TY).clone_ty())
         );
         //FIXME: this should return an error or succeed, but it's returning the wrong result now...
