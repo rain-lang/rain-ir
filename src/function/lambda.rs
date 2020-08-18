@@ -143,7 +143,7 @@ impl Apply for Lambda {
     ) -> Result<Application<'a>, Error> {
         // Partial application check
         if self.def_region().len() > args.len() {
-            let (lt, ty) = self.get_ty().apply_ty_in(args, ctx)?;
+            let (lt, ty) = self.get_ty().apply_ty_in(args, self.lifetime(), ctx)?;
             return Ok(Application::Incomplete(lt, ty));
         }
 

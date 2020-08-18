@@ -7,7 +7,7 @@ use super::{
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::primitive::{Unit, UNIT_TY};
+use crate::primitive::{Unit, UNIT_TY, UNIT};
 use crate::typing::{primitive::Prop, Kind, Type, Typed};
 use crate::{
     debug_from_display, enum_convert, lifetime_region, pretty_display, substitute_to_valid,
@@ -417,6 +417,36 @@ impl Type for Product {
     #[inline]
     fn is_relevant(&self) -> bool {
         self.flags.is_relevant()
+    }
+    #[inline]
+    fn apply_ty_in(
+        &self,
+        args: &[ValId],
+        lifetime: LifetimeBorrow,
+        ctx: &mut Option<EvalCtx>,
+    ) -> Result<(Lifetime, TypeId), Error> {
+        if args.is_empty() { 
+            return Ok((self.lifetime().clone_lifetime(), self.ty().clone_ty()));
+        }
+        match args[0].as_enum() {
+            ValueEnum::Index(ix) => {
+                if ix.get_ty().0 != self.len() as u128 {
+                    return Err(Error::TupleLengthMismatch);
+                }
+                let ix = ix.ix() as usize;
+                //TODO: fix lifetime
+                self[ix].apply_ty_in(&args[1..], lifetime, ctx)
+            }
+            v => {
+                if let ValueEnum::Finite(f) = v.ty().as_enum() {
+                    unimplemented!("Parameter like product indices {}", f)
+                } else if self.len() == 1 && args[0] == *UNIT {
+                    self[0].apply_ty_in(&args[1..], lifetime, ctx)
+                } else {
+                    Err(Error::TypeMismatch)
+                }
+            }
+        }
     }
 }
 
