@@ -75,13 +75,13 @@ impl<'a, P> Copy for ValRef<'a, P> {}
 
 impl<P> Hash for ValId<P> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.as_val().deref(), hasher)
+        std::ptr::hash(self.as_ptr(), hasher)
     }
 }
 
 impl<'a, P> Hash for ValRef<'a, P> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        std::ptr::hash(self.as_val().deref(), hasher)
+        std::ptr::hash(self.as_ptr(), hasher)
     }
 }
 
@@ -144,6 +144,11 @@ impl<P> ValId<P> {
     #[inline]
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
+    }
+    /// Get the address behind this `ValId`
+    #[inline]
+    pub fn as_addr(&self) -> ValAddr {
+        ValAddr(self.as_norm() as *const NormalValue as usize)
     }
     /// Try to get this `ValId<P>` as a type
     #[inline]
@@ -255,6 +260,11 @@ impl<'a, P> ValRef<'a, P> {
     #[inline]
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
+    }
+    /// Get the address behind this `ValRef`
+    #[inline]
+    pub fn as_addr(&self) -> ValAddr {
+        ValAddr(self.as_norm() as *const NormalValue as usize)
     }
     /// Coerce this reference
     #[inline]

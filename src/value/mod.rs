@@ -250,6 +250,53 @@ pub trait ValueData: Value {}
 
 // Utilities:
 
+/// The address of a value
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[repr(transparent)]
+pub struct ValAddr(pub usize);
+
+impl From<ValAddr> for usize {
+    #[inline(always)]
+    fn from(val: ValAddr) -> usize {
+        val.0
+    }
+}
+
+impl From<usize> for ValAddr {
+    #[inline(always)]
+    fn from(addr: usize) -> ValAddr {
+        ValAddr(addr)
+    }
+}
+
+impl<P> From<*const NormalValue<P>> for ValAddr {
+    #[inline(always)]
+    fn from(addr: *const NormalValue<P>) -> ValAddr {
+        ValAddr(addr as usize)
+    }
+}
+
+impl From<*const ValueEnum> for ValAddr {
+    #[inline(always)]
+    fn from(addr: *const ValueEnum) -> ValAddr {
+        ValAddr(addr as usize)
+    }
+}
+
+impl<P> From<&'_ NormalValue<P>> for ValAddr {
+    #[inline(always)]
+    fn from(addr: &NormalValue<P>) -> ValAddr {
+        ValAddr(addr as *const _ as usize)
+    }
+}
+
+impl From<&'_ ValueEnum> for ValAddr {
+    #[inline(always)]
+    fn from(addr: &ValueEnum) -> ValAddr {
+        ValAddr(addr as *const _ as usize)
+    }
+}
+
 /// The dependencies of a value
 #[derive(Debug, Copy, Clone, RefCast)]
 #[repr(transparent)]

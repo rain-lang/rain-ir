@@ -3,7 +3,7 @@ A prettyprinter for `rain` programs
 */
 use crate::tokens::*;
 use crate::typing::Typed;
-use crate::value::{NormalValue, ValRef, Value};
+use crate::value::{NormalValue, ValAddr, ValRef, Value};
 use crate::{debug_from_display, quick_display};
 use fxhash::FxBuildHasher;
 use hayami::{SymbolMap, SymbolTable};
@@ -12,7 +12,6 @@ use smallvec::SmallVec;
 use std::default::Default;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::BuildHasher;
-use std::ops::Deref;
 
 /// The virtual register name format for `rain` values
 #[derive(Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -30,7 +29,7 @@ quick_display!(VirtualRegister, s, fmt => write!(fmt, "%{}", s.0));
 /// A prettyprinter for `rain` values
 #[derive(Clone)]
 pub struct PrettyPrinter<I = VirtualRegister, S: BuildHasher = FxBuildHasher> {
-    symbols: SymbolTable<*const NormalValue, I, S>,
+    symbols: SymbolTable<ValAddr, I, S>,
     unique: usize,
     scope: Vec<bool>,
     open_scopes: usize,
@@ -81,12 +80,11 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     }
     /// Check whether a `ValId` has an associated identifier
     pub fn has_id(&self, value: ValRef) -> bool {
-        self.symbols
-            .contains_key(&(value.deref() as *const NormalValue))
+        self.symbols.contains_key(&value.as_addr())
     }
     /// Try to prettyprint a `ValId`'s associated identifier. Return whether it was printed or not
     pub fn try_prettyprint(&self, fmt: &mut Formatter, value: ValRef) -> Result<bool, fmt::Error> {
-        if let Some(id) = self.symbols.get(&(value.deref() as *const NormalValue)) {
+        if let Some(id) = self.symbols.get(&value.as_addr()) {
             write!(fmt, "{}", id)?;
             Ok(true)
         } else {
@@ -165,7 +163,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 }
                 top.prettyprint(self, fmt)?;
                 writeln!(fmt, "{}", STATEMENT_DELIM)?;
-                self.symbols.insert(top.deref(), name);
+                self.symbols.insert(top.as_addr(), name);
                 // Record the increase in the number of defined names
                 self.unique += 1;
                 new_deps += 1;
@@ -183,7 +181,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     ) -> Result<(), fmt::Error> {
         let name: I = self.unique.into();
         write!(fmt, "{}: {}", name, value.ty())?;
-        self.symbols.insert(value.deref(), name);
+        self.symbols.insert(value.as_addr(), name);
         self.unique += 1;
         Ok(())
     }
@@ -230,7 +228,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     }
     /// Lookup a value in this symbol table
     pub fn lookup(&self, value: &NormalValue) -> Option<&I> {
-        self.symbols.get(&(value as *const NormalValue))
+        self.symbols.get(&value.into())
     }
 }
 
