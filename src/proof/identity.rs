@@ -455,6 +455,8 @@ impl Value for Refl {
 /// NOTE: applicativity of dependent functions is not yet supported, as we do not yet support transport along types.
 ///
 /// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
+/// 
+/// TODO: this should not be a primitive value, but rather a descriptor for a primitive value to be constructed
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApConst {
     /// The type of functions being applied
