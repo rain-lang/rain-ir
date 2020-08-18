@@ -3,9 +3,9 @@ Parameters to a `rain` region
 */
 use super::{Region, RegionBorrow, Regional};
 use crate::enum_convert;
-use crate::eval::{Application, Apply, EvalCtx};
+use crate::eval::Apply;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::typing::{Type, Typed};
+use crate::typing::Typed;
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 
@@ -132,47 +132,7 @@ impl Typed for Parameter {
     }
 }
 
-impl Apply for Parameter {
-    fn apply_in<'a>(
-        &self,
-        args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<Application<'a>, Error> {
-        if args.is_empty() {
-            return Ok(Application::Success(args, self.clone().into()));
-        }
-        match self.ty().as_enum() {
-            ValueEnum::Pi(p) => p
-                .apply_ty_in(args, self.lifetime(), ctx)
-                .map(|(lt, ty)| Application::Complete(lt, ty)),
-            ValueEnum::Product(p) => {
-                if args.len() > 1 {
-                    unimplemented!("Multi-tuple application: blocking on ApplyTy")
-                }
-                let ix = match args[0].as_enum() {
-                    ValueEnum::Index(ix) => {
-                        if ix.get_ty().0 == p.len() as u128 {
-                            ix.ix()
-                        } else {
-                            return Err(Error::TupleLengthMismatch);
-                        }
-                    }
-                    ValueEnum::Parameter(pi) => unimplemented!(
-                        "Parameter {} indexing parameter product {}: {}",
-                        pi,
-                        self,
-                        p
-                    ),
-                    _ => return Err(Error::TypeMismatch),
-                };
-                let lt = p.lifetime().clone_lifetime(); // TODO: this
-                let ty = p[ix as usize].clone();
-                Ok(Application::Stop(lt, ty))
-            }
-            _ => Err(Error::NotAFunction),
-        }
-    }
-}
+impl Apply for Parameter {}
 
 impl From<Parameter> for NormalValue {
     fn from(param: Parameter) -> NormalValue {

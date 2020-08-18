@@ -4,7 +4,7 @@
 
 use super::{
     lifetime::{Lifetime, Live},
-    typing::Typed,
+    typing::{Type, Typed},
 };
 use crate::value::{expr::Sexpr, Error, TypeId, ValId, Value};
 mod ctx;
@@ -127,16 +127,11 @@ pub trait Apply: Typed + Live {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _ctx: &mut Option<EvalCtx>,
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        if args.is_empty() {
-            Ok(Application::Complete(
-                self.lifetime().clone_lifetime(),
-                self.ty().clone_ty(),
-            ))
-        } else {
-            Err(Error::NotAFunction)
-        }
+        self.ty()
+            .apply_ty_in(args, self.lifetime(), ctx)
+            .map(|(lt, ty)| Application::Complete(lt, ty))
     }
     /**
     Attempt to apply an object to a list of `rain` values in a context, returning an `Application` on success.
