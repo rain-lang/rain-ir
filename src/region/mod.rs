@@ -1,6 +1,7 @@
 /*!
 `rain` value regions
 */
+use crate::typing::primitive::PROP;
 use crate::value::{arr::TyArr, Error, TypeId, UniverseId};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
@@ -30,8 +31,8 @@ mod region_impl;
 /// are planned to this, including, but not limited to
 /// - Termination typing, for potentially non-terminating nodes such as phi-nodes
 /// - Monadic regions
-#[derive(Debug, Clone, Eq)]
-pub struct Region(Arc<RegionData>);
+#[derive(Debug, Clone, Eq, Default)]
+pub struct Region(Option<Arc<RegionData>>);
 
 /// A borrow of a `rain` region
 ///
@@ -44,8 +45,8 @@ pub struct Region(Arc<RegionData>);
 ///
 /// In cases where an [`&Region`](Region) is needed, a [`RegionBorrow`](RegionBorrow) can
 /// be dereferenced into one with the [`as_region`](RegionBorrow::as_region) method.
-#[derive(Debug, Copy, Clone, Eq)]
-pub struct RegionBorrow<'a>(ArcBorrow<'a, RegionData>);
+#[derive(Debug, Copy, Clone, Eq, Default)]
+pub struct RegionBorrow<'a>(Option<ArcBorrow<'a, RegionData>>);
 
 /// A trait for objects which lie in a region, or representations of regions
 ///
@@ -92,8 +93,8 @@ pub trait Regional {
     /// assert_eq!(opt.region(), None);
     /// ```
     #[inline]
-    fn region(&self) -> Option<RegionBorrow> {
-        None
+    fn region(&self) -> RegionBorrow {
+        RegionBorrow::default()
     }
     /// Get the region of this object, cloned
     ///
@@ -112,52 +113,60 @@ pub trait Regional {
     ///
     /// // Constants reside in the null region:
     ///
-    /// assert_eq!(true.cloned_region(), None);
-    /// assert_eq!(false.cloned_region(), None);
+    /// assert_eq!(true.cloned_region(), Region::default());
+    /// assert_eq!(false.cloned_region(), Region::default());
     ///
     /// // Parameters reside in their region:
     ///
     /// // We construct the region of a function taking a single bool as a parameter
-    /// let region = Region::with(once(Bool.into_ty()).collect(), None).unwrap();
+    /// let region = Region::with(once(Bool.into_ty()).collect(), Region::default()).unwrap();
     ///
     /// // We extract the first parameter
     /// let param = region.clone().param(0).unwrap();
-    /// assert_eq!(param.cloned_region(), Some(region.clone()));
+    /// assert_eq!(param.cloned_region(), region.clone());
     ///
     /// // Regions return themselves as a region
-    /// assert_eq!(region.cloned_region(), Some(region.clone()));
-    ///
-    /// // An `Option` works too
-    /// let mut opt = Some(region.clone());
-    /// assert_eq!(opt.cloned_region(), Some(region));
-    /// opt = None;
-    /// assert_eq!(opt.cloned_region(), None);
+    /// assert_eq!(region.cloned_region(), region.clone());
     /// ```
     #[inline]
-    fn cloned_region(&self) -> Option<Region> {
-        self.region().map(|region| region.clone_region())
+    fn clone_region(&self) -> Region {
+        self.region().clone_region()
     }
     /// Get the greatest region containing this object and another, if any
     #[inline]
-    fn gcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<Option<RegionBorrow<'a>>, Error> {
-        let this_region = self.region();
-        let other_region = other.region();
-        match this_region.partial_cmp(&other_region) {
-            Some(Ordering::Less) => Ok(other_region),
-            Some(_) => Ok(this_region),
-            _ => Err(Error::IncomparableRegions),
+    fn gcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<RegionBorrow<'a>, Error> {
+        self.region().get_gcr(other.region())
+    }
+    /// Get the greatest common region containing this object and those in an iterator, if any
+    #[inline]
+    fn gcrs<'a, R, I>(&'a self, other: I) -> Result<RegionBorrow<'a>, Error>
+    where
+        R: Regional + 'a,
+        I: Iterator<Item = &'a R>,
+    {
+        let mut gcr = self.region();
+        for regional in other {
+            gcr = gcr.get_gcr(regional.region())?;
         }
+        Ok(gcr)
     }
     /// Get the least common region containing this object and another, if any
     #[inline]
-    fn lcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<Option<RegionBorrow<'a>>, Error> {
-        let this_region = self.region();
-        let other_region = other.region();
-        match this_region.partial_cmp(&other_region) {
-            Some(Ordering::Greater) => Ok(other_region),
-            Some(_) => Ok(this_region),
-            _ => Err(Error::IncomparableRegions),
+    fn lcr<'a, R: Regional>(&'a self, other: &'a R) -> Result<RegionBorrow<'a>, Error> {
+        self.region().get_lcr(other.region())
+    }
+    /// Get the least common region containing this object and those in an iterator, if any
+    #[inline]
+    fn lcrs<'a, R, I>(&'a self, other: I) -> Result<RegionBorrow<'a>, Error>
+    where
+        R: Regional + 'a,
+        I: Iterator<Item = &'a R>,
+    {
+        let mut lcr = self.region();
+        for regional in other {
+            lcr = lcr.get_lcr(regional.region())?;
         }
+        Ok(lcr)
     }
     /// Get the depth of the region associated with this object
     ///
@@ -201,21 +210,19 @@ pub trait Regional {
     }
     /// Get the ancestor of this region up to a given depth, or this value's region if `depth >= self.depth()`
     #[inline]
-    fn ancestor(&self, depth: usize) -> Option<RegionBorrow> {
+    fn ancestor(&self, depth: usize) -> RegionBorrow {
         if depth == 0 {
-            return None;
+            return RegionBorrow::NULL;
         }
-        if let Some(region) = self.region() {
-            Some(
-                region
-                    .data()
-                    .parents
-                    .get(depth - 1)
-                    .map(|region| region.borrow_region())
-                    .unwrap_or(region),
-            )
+        let region = self.region();
+        if let Some(data) = region.data() {
+            data.parents
+                .get(depth - 1)
+                .map(|region| region.borrow_region())
+                .unwrap_or(region)
         } else {
-            None
+            //TODO: think about this, when termination flags are added to regions...
+            region
         }
     }
 }
@@ -226,41 +233,43 @@ lazy_static! {
 }
 
 impl Region {
+    /// The null region
+    pub const NULL: Region = Region(None);
     /// Create a new reference from a given [`RegionData`](RegionData), caching if possible
     #[inline]
     pub fn new(data: RegionData) -> Region {
-        Region(REGION_CACHE.cache(data))
+        Region(Some(REGION_CACHE.cache(data)))
     }
     /// Create data for a new region with a given parameter type vector and a parent region
     ///
     /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
     #[inline]
-    pub fn with_unchecked(param_tys: TyArr, parent: Option<Region>, universe: UniverseId) -> Region {
+    pub fn with_unchecked(param_tys: TyArr, parent: Region, universe: UniverseId) -> Region {
         Region::new(RegionData::with_unchecked(param_tys, parent, universe))
     }
     /// Create a new region with a given parameter type vector and a parent region
     #[inline]
-    pub fn with(param_tys: TyArr, parent: Option<Region>) -> Result<Region, Error> {
+    pub fn with(param_tys: TyArr, parent: Region) -> Result<Region, Error> {
         RegionData::with(param_tys, parent).map(Region::new)
     }
     /// Create a new region with a given parent region, having no parameters
     ///
     /// This is a bit useless now, but eventually when termination typing comes around this may come in handy.
     #[inline]
-    pub fn with_parent(parent: Option<Region>) -> Region {
+    pub fn with_parent(parent: Region) -> Region {
         Region::new(RegionData::with_parent(parent))
     }
     /// Get a reference to a borrow of this region. More efficient than taking an [`&Region`](Region)
     #[inline]
     pub fn borrow_region(&self) -> RegionBorrow {
-        RegionBorrow(self.0.borrow_arc())
+        RegionBorrow(self.0.as_ref().map(Arc::borrow_arc))
     }
     /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
     ///
     /// TODO: add an `into_arc` method?
     #[inline]
-    pub fn get_arc(&self) -> &Arc<RegionData> {
-        &self.0
+    pub fn get_arc(&self) -> Option<&Arc<RegionData>> {
+        self.0.as_ref()
     }
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
@@ -275,21 +284,21 @@ impl Region {
     /// Get the universe of this region's parameters
     #[inline]
     pub fn universe(&self) -> &UniverseId {
-        &self.data().universe
+        self.data()
+            .map(|data| &data.universe)
+            .unwrap_or_else(|| PROP.coerce_ref())
     }
-    /// Get the data behind this [`Region`](Region)
-    ///
-    /// This method will always return the same value as `self.deref()`
+    /// Get the data behind this [`Region`](Region), if any
     #[inline]
-    pub fn data(&self) -> &RegionData {
-        &self.0
+    pub fn data(&self) -> Option<&RegionData> {
+        self.0.as_deref()
     }
     /// Get a pointer to the data behind this [`Region`](Region)
-    ///
-    /// This method will always return the same value as `self.data() as *const _` or `self.deref() as *const _`.
     #[inline]
     pub fn data_ptr(&self) -> *const RegionData {
-        self.data() as *const _
+        self.data()
+            .map(|data| data as *const _)
+            .unwrap_or(std::ptr::null())
     }
     /// Check whether this [`Region`](Region) has any parameters
     ///
@@ -315,7 +324,17 @@ impl Region {
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.data().is_empty()
+        self.data().map(|data| data.is_empty()).unwrap_or(true)
+    }
+    ///  Check whether this [`Region`](Region) is the null region
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.0.is_none()
+    }
+    ///  Check whether this [`Region`](Region) is the not null region
+    #[inline]
+    pub fn is_nonnull(&self) -> bool {
+        self.0.is_some()
     }
     /// Get the number of parameters of this [`Region`](Region)
     ///
@@ -343,12 +362,14 @@ impl Region {
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
-        self.data().len()
+        self.data().map(|data| data.len()).unwrap_or(0)
     }
     /// Get the parent of this region, if any
     #[inline]
-    pub fn parent(&self) -> Option<&Region> {
-        self.data().parent()
+    pub fn parent(&self) -> &Region {
+        self.data()
+            .map(|data| data.parent())
+            .unwrap_or(&Region::NULL)
     }
     /// Iterate over the parameters of this [`Region`](Region)
     #[inline]
@@ -365,26 +386,14 @@ impl Region {
         let l = self.len();
         (0..l).map(move |ix| self.clone().param(ix).expect("Index always valid"))
     }
-    /// Get a slice of the parameter types of this region
+    /// Get the parameter types of this region
     #[inline]
-    pub fn param_tys(&self) -> &[TypeId] {
-        self.data().param_tys()
-    }
-    /// Get the conjunction of two regions, if any
-    ///
-    /// The conjunction of two regions is defined to be the largest region contained in both
-    /// regions. It is guaranteed, in the current design, to be one of the two regions if it
-    /// exists. If two regions have no conjunction, this function returns a [`value::Error`](Error).
-    #[inline]
-    pub fn conj<'a>(
-        this: &'a Option<Region>,
-        other: &'a Option<Region>,
-    ) -> Result<&'a Option<Region>, Error> {
-        use Ordering::*;
-        match this.partial_cmp(other) {
-            None => Err(Error::IncomparableRegions),
-            Some(Greater) | Some(Equal) => Ok(this),
-            Some(Less) => Ok(other),
+    pub fn param_tys(&self) -> &TyArr {
+        static EMPTY: TyArr = TyArr::EMPTY;
+        if let Some(data) = self.data() {
+            data.param_tys()
+        } else {
+            &EMPTY
         }
     }
 }
@@ -393,7 +402,7 @@ impl Index<usize> for Region {
     type Output = TypeId;
     #[inline]
     fn index(&self, ix: usize) -> &TypeId {
-        self.data().index(ix)
+        self.data().expect("The null region is empty").index(ix)
     }
 }
 
@@ -404,29 +413,49 @@ impl Hash for Region {
 }
 
 impl<'a> RegionBorrow<'a> {
+    /// A borrow of the null region
+    pub const NULL: RegionBorrow<'static> = RegionBorrow(None);
     /// Clone this region. This bumps the refcount
     #[inline]
     pub fn clone_region(&self) -> Region {
-        Region(self.0.clone_arc())
+        Region(self.0.as_ref().map(ArcBorrow::clone_arc))
     }
     /// Get the underlying `ArcBorrow` of this `RegionData`, if any
-    pub fn get_borrow(&self) -> ArcBorrow<'a, RegionData> {
+    pub fn get_borrow(&self) -> Option<ArcBorrow<'a, RegionData>> {
         self.0
     }
     /// Get the data behind this `Region`, if any
     #[inline]
-    pub fn data(&self) -> &'a RegionData {
-        self.0.get()
+    pub fn data(&self) -> Option<&'a RegionData> {
+        self.0.as_ref().map(ArcBorrow::get)
     }
     /// Get the parent of this region if any
     #[inline]
-    pub fn parent(&self) -> Option<&'a Region> {
-        self.data().parent()
+    pub fn parent(&self) -> &'a Region {
+        self.data().map(RegionData::parent).unwrap_or(&Region::NULL)
     }
     /// Get this region borrow as a region
     #[inline]
     pub fn as_region(&self) -> &Region {
         unsafe { &*(self as *const _ as *const Region) }
+    }
+    /// Get the greatest region containing this object and another, if any
+    #[inline]
+    fn get_gcr(self, other: RegionBorrow<'a>) -> Result<RegionBorrow<'a>, Error> {
+        match self.partial_cmp(&other) {
+            Some(Ordering::Less) => Ok(other),
+            Some(_) => Ok(self),
+            _ => Err(Error::IncomparableRegions),
+        }
+    }
+    /// Get the greatest region containing this object and another, if any
+    #[inline]
+    fn get_lcr(self, other: RegionBorrow<'a>) -> Result<RegionBorrow<'a>, Error> {
+        match self.partial_cmp(&other) {
+            Some(Ordering::Greater) => Ok(other),
+            Some(_) => Ok(self),
+            _ => Err(Error::IncomparableRegions),
+        }
     }
 }
 
@@ -442,7 +471,7 @@ impl Index<usize> for RegionBorrow<'_> {
     type Output = TypeId;
     #[inline]
     fn index(&self, ix: usize) -> &TypeId {
-        self.data().index(ix)
+        self.data().expect("The null region is empty!").index(ix)
     }
 }
 

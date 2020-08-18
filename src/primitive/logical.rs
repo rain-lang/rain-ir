@@ -3,8 +3,7 @@ Boolean types and logical operations
 */
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::lifetime::{Lifetime, Live};
-use crate::region::Region;
+use crate::region::{Region, Regional};
 use crate::tokens::*;
 use crate::typing::{
     primitive::{Fin, FIN},
@@ -14,7 +13,7 @@ use crate::value::{
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId,
 };
 use crate::{
-    debug_from_display, display_pretty, enum_convert, normal_valid, quick_pretty, trivial_lifetime,
+    debug_from_display, display_pretty, enum_convert, normal_valid, quick_pretty,
     trivial_substitute, tyarr,
 };
 use either::Either;
@@ -39,6 +38,8 @@ lazy_static! {
 
 debug_from_display!(Bool);
 quick_pretty!(Bool, "{}", KEYWORD_BOOL);
+
+impl Regional for Bool {}
 
 impl Typed for Bool {
     #[inline]
@@ -93,26 +94,16 @@ impl Type for Bool {
     }
 }
 
-trivial_lifetime!(Bool);
+impl Regional for bool {}
 
 impl Typed for bool {
     #[inline]
     fn ty(&self) -> TypeRef {
         BOOL_TY.borrow_ty()
     }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_kind(&self) -> bool {
-        false
-    }
 }
 
 impl Apply for bool {}
-
-trivial_lifetime!(bool);
 
 impl From<Bool> for ValueEnum {
     fn from(b: Bool) -> ValueEnum {
@@ -256,23 +247,23 @@ trivial_substitute!(Bool);
 lazy_static! {
     /// Regions corresponding to primitive logical operations
     pub static ref LOGICAL_OP_REGIONS: [Region; 7] = [
-        Region::with_unchecked(tyarr![Bool.into(); 1], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 2], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 3], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 4], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 5], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 6], None, Fin.into_universe()),
-        Region::with_unchecked(tyarr![Bool.into(); 7], None, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 1], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 2], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 3], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 4], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 5], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 6], Region::NULL, Fin.into_universe()),
+        Region::with_unchecked(tyarr![Bool.into(); 7], Region::NULL, Fin.into_universe()),
     ];
     /// Types corresponding to primitive logical operations
     pub static ref LOGICAL_OP_TYS: [VarId<Pi>; 7] = [
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone(), &Lifetime::STATIC).unwrap().into(),
-        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone(), &Lifetime::STATIC).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[0].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[1].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[2].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[3].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[4].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[5].clone()).unwrap().into(),
+        Pi::try_new(Bool.into(), LOGICAL_OP_REGIONS[6].clone()).unwrap().into(),
     ];
 }
 
@@ -598,10 +589,7 @@ impl Apply for Logical {
     ) -> Result<Application<'a>, Error> {
         // Null evaluation
         if args.is_empty() {
-            return Ok(Application::Stop(
-                self.lifetime().clone_lifetime(),
-                self.ty().clone_ty(),
-            ));
+            return Ok(Application::Symbolic(self.ty().clone_ty()));
         }
         // Over-evaluation
         if args.len() > self.arity as usize {
@@ -641,11 +629,7 @@ impl Apply for Logical {
         if cut_ix == args.len() {
             Ok(Application::Success(&[], l.into()))
         } else {
-            let lifetimes = args[cut_ix..].iter().map(|arg| arg.lifetime());
-            let lifetime = Lifetime::default()
-                .sep_conjs(lifetimes)
-                .map_err(|_| Error::LifetimeError)?;
-            Ok(Application::Incomplete(lifetime, Bool.into()))
+            Ok(Application::Symbolic(Bool.into()))
         }
     }
 }
@@ -682,7 +666,7 @@ impl Value for Logical {
 
 impl ValueData for Logical {}
 
-trivial_lifetime!(Logical);
+impl Regional for Logical {}
 
 debug_from_display!(Logical);
 display_pretty!(Logical);
@@ -726,7 +710,7 @@ macro_rules! make_logical {
                 false
             }
         }
-        trivial_lifetime!($t);
+        impl Regional for $t {}
         trivial_substitute!($t);
         normal_valid!($t);
         impl Apply for $t {

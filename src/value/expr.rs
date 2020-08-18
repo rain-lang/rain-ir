@@ -4,11 +4,10 @@
 use super::{arr::ValArr, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
-use crate::{debug_from_display, lifetime_region, pretty_display, substitute_to_valid, valarr};
-use either::Either;
+use crate::{debug_from_display, pretty_display, substitute_to_valid, valarr};
 use std::ops::Deref;
 
 /// An S-expression
@@ -16,8 +15,8 @@ use std::ops::Deref;
 pub struct Sexpr {
     /// The arguments of this S-expression
     pub(super) args: ValArr,
-    /// The (cached) lifetime of this S-expression
-    pub(super) lifetime: Lifetime,
+    /// The (cached) region of this S-expression
+    pub(super) region: Region,
     /// The (cached) type of this S-expression
     pub(super) ty: TypeId,
 }
@@ -33,8 +32,8 @@ enum_convert! {
 
 impl Sexpr {
     /// Create a new S-expression fron unchecked components
-    pub(crate) fn new_unchecked(args: ValArr, lifetime: Lifetime, ty: TypeId) -> Sexpr {
-        Sexpr { args, lifetime, ty }
+    pub(crate) fn new_unchecked(args: ValArr, region: Region, ty: TypeId) -> Sexpr {
+        Sexpr { args, region, ty }
     }
     /// Attempt to create an S-expression from an owned argument list, evaluating as necessary.
     pub fn try_new(mut args: Vec<ValId>) -> Result<Sexpr, Error> {
@@ -55,15 +54,14 @@ impl Sexpr {
             args = new_args;
         }
         // General case
-        let (lifetime, ty) = match args[0].apply(&args[1..])? {
+        let ty = match args[0].apply(&args[1..])? {
             Application::Success(rest, valid) => return Self::applied_with(valid, rest),
-            Application::Complete(lifetime, ty)
-            | Application::Incomplete(lifetime, ty)
-            | Application::Stop(lifetime, ty) => (lifetime, ty),
+            Application::Symbolic(ty) => ty,
         };
+        let region = ty.gcrs(args.iter())?.clone_region();
         Ok(Sexpr {
             args: args.into(),
-            lifetime,
+            region,
             ty,
         })
     }
@@ -83,16 +81,15 @@ impl Sexpr {
                     f = v;
                     continue;
                 }
-                Application::Complete(lifetime, ty)
-                | Application::Incomplete(lifetime, ty)
-                | Application::Stop(lifetime, ty) => {
+                Application::Symbolic(ty) => {
                     let mut a = Vec::with_capacity(1 + args.len());
                     a.push(f);
                     a.clone_from_slice(args);
+                    let region = ty.gcrs(args.iter())?.clone_region();
                     return Ok(Sexpr {
                         args: a.into(),
-                        lifetime,
                         ty,
+                        region,
                     });
                 }
             };
@@ -103,7 +100,7 @@ impl Sexpr {
     pub fn unit() -> Sexpr {
         Sexpr {
             args: ValArr::EMPTY,
-            lifetime: Lifetime::default(),
+            region: Region::NULL,
             ty: UNIT_TY.as_ty().clone(),
         }
     }
@@ -114,32 +111,22 @@ impl Sexpr {
             return s.clone();
         }
         let ty = value.ty().clone_ty();
-        let lifetime = value.lifetime().clone_lifetime();
+        let region = value.clone_region();
         Sexpr {
             args: valarr![value],
-            lifetime,
+            region,
             ty,
         }
-    }
-    /// Create an S-expression corresponding to a cast
-    pub(super) fn cast_singleton(value: ValId, lifetime: Lifetime, ty: TypeId) -> Sexpr {
-        Sexpr {
-            args: vec![value].into(),
-            ty,
-            lifetime,
-        }
-    }
-}
-
-impl Live for Sexpr {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
     }
 }
 
 impl ValueData for Sexpr {}
 
-lifetime_region!(Sexpr);
+impl Regional for Sexpr {
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
+    }
+}
 
 impl Typed for Sexpr {
     #[inline]
@@ -183,36 +170,6 @@ impl Value for Sexpr {
     fn into_norm(self) -> NormalValue {
         self.into()
     }
-    #[inline]
-    fn try_cast_into_lt(&self, target: Lifetime) -> Result<Either<ValId, Option<Lifetime>>, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Less) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(Either::Right(None)),
-            Some(Greater) => {
-                let result = Sexpr {
-                    lifetime: target,
-                    ty: self.ty.clone(),
-                    args: self.args.clone(),
-                };
-                Ok(Either::Left(result.into_val()))
-            }
-        }
-    }
-    #[inline]
-    fn cast_into_lt(mut self, target: Lifetime) -> Result<ValId, Error> {
-        use std::cmp::Ordering::*;
-        match self.lifetime.partial_cmp(&target) {
-            None => Err(Error::IncomparableLifetimes),
-            Some(Less) => Err(Error::InvalidCastIntoLifetime),
-            Some(Equal) => Ok(self.into_val()),
-            Some(Greater) => {
-                self.lifetime = target;
-                Ok(self.into_val())
-            }
-        }
-    }
 }
 
 impl Deref for Sexpr {
@@ -226,21 +183,14 @@ impl Apply for Sexpr {}
 
 impl Substitute for Sexpr {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Sexpr, Error> {
-        use std::cmp::Ordering::*;
         let args: Result<_, _> = self
             .args
             .iter()
             .cloned()
             .map(|val| val.substitute(ctx))
             .collect();
-        let lifetime = ctx.evaluate_lt(&self.lifetime)?;
-        let mut result = Sexpr::try_new(args?)?;
-        match result.lifetime.partial_cmp(&lifetime) {
-            None => return Err(Error::LifetimeError),
-            Some(Greater) => result.lifetime = lifetime,
-            _ => {}
-        };
-        Ok(result)
+        //TODO: this
+        Sexpr::try_new(args?)
     }
 }
 
@@ -249,7 +199,7 @@ impl From<Sexpr> for NormalValue {
         if sexpr.len() == 0 {
             return ().into();
         }
-        if sexpr.len() == 1 && sexpr[0].ty() == sexpr.ty && sexpr[0].lifetime() == sexpr.lifetime {
+        if sexpr.len() == 1 && sexpr[0].ty() == sexpr.ty {
             return sexpr[0].as_norm().clone();
         }
         NormalValue::assert_normal(ValueEnum::Sexpr(sexpr))

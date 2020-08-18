@@ -4,13 +4,12 @@ Proofs of identity and equivalence.
 use crate::eval::Substitute;
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::region::{Region, Regional};
+use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::{Kind, Type, Typed};
 use crate::value::{
     arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{enum_convert, lifetime_region, substitute_to_valid};
+use crate::{enum_convert, substitute_to_valid};
 use std::convert::TryInto;
 use std::iter::once;
 //use either::Either;
@@ -22,28 +21,28 @@ pub struct IdFamily {
     base_ty: Option<TypeId>,
     /// The type of this family
     ty: VarId<Pi>,
-    /// The lifetime of this family
-    lt: Lifetime,
+    /// The region of this family
+    region: Region,
 }
 
 impl IdFamily {
     /// Get the constructor for all identity type families within a given kind
     pub fn universal(kind: KindId) -> IdFamily {
         let ty = Self::universal_pi(&kind).into_var();
-        let lt = kind.lifetime().clone_lifetime();
+        let region = kind.clone_region();
         IdFamily {
             ty,
-            lt,
+            region,
             base_ty: None,
         }
     }
     /// Get a given identity type family
     pub fn family(base_ty: TypeId) -> IdFamily {
         let ty = Self::family_pi(&base_ty).into_var();
-        let lt = base_ty.lifetime().clone_lifetime();
+        let region = base_ty.clone_region();
         IdFamily {
             ty,
-            lt,
+            region,
             base_ty: Some(base_ty),
         }
     }
@@ -51,7 +50,7 @@ impl IdFamily {
     pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
             once(kind.clone_ty()).collect(),
-            kind.cloned_region(),
+            kind.clone_region(),
             kind.universe().clone_var(),
         );
         let base_ty = universal_region
@@ -60,18 +59,17 @@ impl IdFamily {
             .try_into_ty()
             .expect("Is type");
         let family_pi = Self::family_pi(&base_ty).into_ty();
-        let lt = family_pi.lifetime().clone_lifetime();
-        Pi::try_new(family_pi, universal_region, &lt).expect("Valid pi-type")
+        Pi::try_new(family_pi, universal_region).expect("Valid pi-type")
     }
     /// Get the pi type for an identity type family
     pub fn family_pi(base_ty: &TypeId) -> Pi {
         let region = Region::with_unchecked(
             [base_ty, base_ty].iter().copied().cloned().collect(),
-            base_ty.cloned_region(),
+            base_ty.clone_region(),
             base_ty.universe().clone_var(),
         );
         //TODO: proper target universe?
-        Pi::try_new(base_ty.ty_kind().clone_ty(), region, &Lifetime::STATIC).expect("Valid pi-type")
+        Pi::try_new(base_ty.ty_kind().clone_ty(), region).expect("Valid pi-type")
     }
 }
 
@@ -90,14 +88,12 @@ impl Typed for IdFamily {
     }
 }
 
-impl Live for IdFamily {
+impl Regional for IdFamily {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(IdFamily);
 
 impl Apply for IdFamily {
     fn apply_in<'a>(
@@ -107,10 +103,7 @@ impl Apply for IdFamily {
     ) -> Result<Application<'a>, Error> {
         let base_ty_val = self.base_ty.as_ref().map(|ty| ty.as_val());
         match (args, base_ty_val) {
-            ([], _) | ([_], Some(_)) => {
-                let (lt, ty) = self.ty.apply_ty_in(args, self.lifetime(), ctx)?;
-                Ok(Application::Complete(lt, ty))
-            }
+            ([], _) | ([_], Some(_)) => self.ty.apply_ty_in(args, ctx).map(Application::Symbolic),
             ([left, right], Some(base)) | ([base, left, right], None) => {
                 if left.ty() != *base {
                     return Err(Error::TypeMismatch);
@@ -124,12 +117,12 @@ impl Apply for IdFamily {
                         .try_into_ty()
                         .map_err(|_| Error::NotATypeError)?,
                 );
-                let (lt, ty) = self.ty.apply_ty_in(&args[..1], self.lifetime(), ctx)?;
+                let ty = self.ty.apply_ty_in(&args[..1], ctx)?;
                 Ok(Application::Success(
                     &args[1..],
                     IdFamily {
                         base_ty,
-                        lt,
+                        region: ty.clone_region(),
                         ty: ty
                             .into_val()
                             .try_into()
@@ -145,18 +138,25 @@ impl Apply for IdFamily {
 
 impl Substitute for IdFamily {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<IdFamily, Error> {
+        let base_ty = self
+            .base_ty
+            .as_ref()
+            .map(|ty| ty.substitute_ty(ctx))
+            .transpose()?;
+        let ty: VarId<Pi> = self
+            .ty
+            .substitute(ctx)?
+            .try_into()
+            .map_err(|_| Error::InvalidSubKind)?;
+        let region = if let Some(base_ty) = &base_ty {
+            base_ty.gcr(&ty)?.clone_region()
+        } else {
+            ty.clone_region()
+        };
         Ok(IdFamily {
-            base_ty: self
-                .base_ty
-                .as_ref()
-                .map(|ty| ty.substitute_ty(ctx))
-                .transpose()?,
-            ty: self
-                .ty
-                .substitute(ctx)?
-                .try_into()
-                .map_err(|_| Error::InvalidSubKind)?,
-            lt: ctx.evaluate_lt(&self.lt)?,
+            base_ty,
+            ty,
+            region,
         })
     }
 }
@@ -215,20 +215,20 @@ pub struct Id {
     right: ValId,
     /// The type of this identity type
     ty: KindId,
-    /// The lifetime of this identity type
-    lt: Lifetime,
+    /// The region of this identity type
+    region: Region,
 }
 
 impl Id {
     /// Get the reflexivity type for a given value
     pub fn refl(value: ValId) -> Id {
-        let lt = value.cloned_region().into();
         let ty = value.kind().id_kind();
+        let region = value.clone_region();
         Id {
             left: value.clone(),
             right: value,
             ty,
-            lt,
+            region,
         }
     }
     /// Get the identity type for comparison between two values of the same type
@@ -238,11 +238,11 @@ impl Id {
             return Err(Error::TypeMismatch);
         }
         let ty = left.kind().id_kind();
-        let lt = left.lcr(&right)?.cloned_region().into();
+        let region = left.gcr(&right)?.clone_region();
         Ok(Id {
             left,
             right,
-            lt,
+            region,
             ty, //TODO: this...
         })
     }
@@ -278,29 +278,31 @@ impl Typed for Id {
     }
 }
 
-impl Live for Id {
+impl Regional for Id {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Id);
 
 impl Apply for Id {}
 
 impl Substitute for Id {
     #[inline]
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Id, Error> {
+        let left = self.left.substitute(ctx)?;
+        let right = self.right.substitute(ctx)?;
+        let ty: KindId = self
+            .ty
+            .substitute(ctx)?
+            .try_into()
+            .map_err(|_| Error::TypeMismatch)?;
+        let region = left.gcr(&right)?.gcr(&ty)?.clone_region();
         Ok(Id {
-            left: self.left.substitute(ctx)?,
-            right: self.right.substitute(ctx)?,
-            lt: ctx.evaluate_lt(&self.lt)?,
-            ty: self
-                .ty
-                .substitute(ctx)?
-                .try_into()
-                .map_err(|_| Error::TypeMismatch)?,
+            left,
+            right,
+            ty,
+            region,
         })
     }
 }
@@ -363,8 +365,8 @@ pub struct Refl {
     value: ValId,
     /// The type of this invocation
     ty: TypeId,
-    /// The lifetime of this invocation
-    lt: Lifetime,
+    /// The region of this invocation
+    region: Region,
 }
 
 impl Refl {
@@ -372,8 +374,8 @@ impl Refl {
     #[inline]
     pub fn refl(value: ValId) -> Refl {
         let ty = Id::refl(value.clone()).into_ty();
-        let lt = value.cloned_region().into();
-        Refl { value, ty, lt }
+        let region = value.clone_region();
+        Refl { value, ty, region }
     }
 }
 
@@ -392,24 +394,21 @@ impl Typed for Refl {
     }
 }
 
-impl Live for Refl {
+impl Regional for Refl {
     #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }
-
-lifetime_region!(Refl);
 
 impl Apply for Refl {}
 
 impl Substitute for Refl {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Refl, Error> {
-        Ok(Refl {
-            value: self.value.substitute(ctx)?,
-            ty: self.ty.substitute_ty(ctx)?,
-            lt: ctx.evaluate_lt(&self.lt)?,
-        })
+        let value = self.value.substitute(ctx)?;
+        let ty = self.ty.substitute_ty(ctx)?;
+        let region = value.lcr(&ty)?.clone_region();
+        Ok(Refl { value, ty, region })
     }
 }
 
@@ -465,8 +464,8 @@ pub struct ApConst {
     func: Option<ValId>,
     /// The type of this instance of the axiom
     ty: VarId<Pi>,
-    /// The lifetime of this instance of the axiom
-    lt: Lifetime,
+    /// The region of this axiom
+    region: Region,
 }
 
 impl ApConst {
@@ -474,11 +473,11 @@ impl ApConst {
     #[inline]
     pub fn try_new_pi(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
         let ty = Self::pi_ty(ap_ty.clone())?;
-        let lt = ty.lifetime().clone_lifetime();
+        let region = ty.clone_region();
         Ok(ApConst {
             ap_ty,
             func: None,
-            lt,
+            region,
             ty: ty.into_var(),
         })
     }
@@ -486,11 +485,11 @@ impl ApConst {
     #[inline]
     pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<ApConst, Error> {
         let ty = Self::fn_ty(&ap_ty, param_fn)?;
-        let lt = ty.lifetime().clone_lifetime();
+        let region = ty.clone_region();
         Ok(ApConst {
             ap_ty,
             func: None,
-            lt,
+            region,
             ty: ty.into_var(),
         })
     }
@@ -508,7 +507,7 @@ impl ApConst {
     #[inline]
     pub fn pi_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
         let domain = ap_ty.param_tys().clone();
-        let ap_ty_region = ap_ty.cloned_region();
+        let ap_ty_region = ap_ty.clone_region();
         let pi_region = Region::with(once(ap_ty.into_ty()).collect(), ap_ty_region)
             .expect("ap_ty lies in it's own region...");
         let param_fn = pi_region
@@ -516,16 +515,13 @@ impl ApConst {
             .expect("Pi region has exactly one parameter")
             .into_val();
         let param_pi = Self::fn_ty_helper(param_fn, domain)?;
-        Ok(
-            Pi::try_new(param_pi.into_ty(), pi_region, &Lifetime::STATIC)
-                .expect("Final pi is valid"),
-        )
+        Ok(Pi::try_new(param_pi.into_ty(), pi_region).expect("Final pi is valid"))
     }
     fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
         let no_params = domain.len();
-        let left_region = Region::with(domain.clone(), param_fn.cloned_region())
+        let left_region = Region::with(domain.clone(), param_fn.clone_region())
             .expect("domain lies in ap_ty's region");
-        let right_region = Region::with(domain, left_region.cloned_region())
+        let right_region = Region::with(domain, left_region.clone_region())
             .expect("domain lies in ap_ty's region");
         let mut identity_params = Vec::with_capacity(no_params);
         let mut left_params = Vec::with_capacity(no_params);
@@ -537,19 +533,15 @@ impl ApConst {
             right_params.push(right.clone());
             identity_params.push(Id::try_new(left, right)?.into_ty());
         }
-        let identity_region = Region::with(identity_params.into(), right_region.cloned_region())
+        let identity_region = Region::with(identity_params.into(), right_region.clone_region())
             .expect("identity types lie in ap_ty's region");
         let left_ap = param_fn.applied(&left_params[..])?;
         let right_ap = param_fn.applied(&right_params[..])?;
         let result_id = Id::try_new(left_ap, right_ap)?;
-        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
-            .expect("Arrow pi is valid");
-        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
-            .expect("Right pi is valid");
-        Ok(
-            Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
-                .expect("Left pi is valid"),
-        )
+        let arrow_pi =
+            Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
+        Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
     }
 }
 
@@ -557,13 +549,6 @@ impl Typed for ApConst {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
-    }
-}
-
-impl Live for ApConst {
-    #[inline]
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lt.borrow_lifetime()
     }
 }
 
@@ -635,13 +620,13 @@ mod tests {
         assert_eq!(falsey.ty(), prop);
         assert_ne!(truthy, prop);
         assert_ne!(falsey, prop);
-        assert_eq!(truthy.lifetime(), LifetimeBorrow::STATIC);
-        assert_eq!(falsey.lifetime(), LifetimeBorrow::STATIC);
+        assert_eq!(truthy.region(), Region::NULL);
+        assert_eq!(falsey.region(), Region::NULL);
 
         // Refl true
         let refl_true = Refl::refl(true.into_val());
         assert_eq!(refl_true.ty(), truthy);
-        assert_eq!(refl_true.lifetime(), LifetimeBorrow::STATIC);
+        assert_eq!(refl_true.region(), Region::NULL);
 
         // Typed full application
         let bool_family = IdFamily::family(Bool.into_ty());
@@ -691,11 +676,11 @@ mod tests {
         let binary_args_arr = [bool_ty.borrow_ty(), bool_ty.borrow_ty()];
         let binary_args = binary_args_arr.iter().map(ValRef::clone_ty);
         let binary_region =
-            Region::with(once(binary_ty.clone().into_ty()).collect(), None).unwrap();
+            Region::with(once(binary_ty.clone().into_ty()).collect(), Region::NULL).unwrap();
         let operator = binary_region.param(0).unwrap().into_val();
         let left_region =
-            Region::with(binary_args.clone().collect(), Some(binary_region.clone())).unwrap();
-        let right_region = Region::with(binary_args.collect(), Some(left_region.clone())).unwrap();
+            Region::with(binary_args.clone().collect(), binary_region.clone()).unwrap();
+        let right_region = Region::with(binary_args.collect(), left_region.clone()).unwrap();
         let mut identity_params = Vec::with_capacity(2);
         let mut left_params = Vec::with_capacity(2);
         let mut right_params = Vec::with_capacity(2);
@@ -706,18 +691,15 @@ mod tests {
             right_params.push(right.clone());
             identity_params.push(Id::try_new(left, right).unwrap().into_ty());
         }
-        let identity_region =
-            Region::with(identity_params.into(), Some(right_region.clone())).unwrap();
+        let identity_region = Region::with(identity_params.into(), right_region.clone()).unwrap();
         let left_ap = operator.applied(&left_params[..]).unwrap();
         let right_ap = operator.applied(&right_params[..]).unwrap();
         let result_id = Id::try_new(left_ap, right_ap).unwrap();
-        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
-            .expect("Arrow pi is valid");
-        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
-            .expect("Right pi is valid");
-        let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
-            .expect("Left pi is valid");
-        let ap_type = Pi::try_new(left_pi.into_ty(), binary_region, &Lifetime::STATIC)
+        let arrow_pi =
+            Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
+        let left_pi = Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid");
+        let ap_type = Pi::try_new(left_pi.into_ty(), binary_region)
             .expect("Binary operation application type is valid")
             .into_ty();
         let ap_const = ApConst::try_new_pi(binary_ty).unwrap();

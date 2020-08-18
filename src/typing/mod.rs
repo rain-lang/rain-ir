@@ -3,7 +3,6 @@ The `rain` type system
 */
 use super::{
     eval::EvalCtx,
-    lifetime::{Lifetime, LifetimeBorrow},
     value::{
         Error, KindRef, NormalValue, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value,
         ValueEnum,
@@ -170,15 +169,11 @@ pub trait Type: Value {
     /// # Correctness
     /// This method must always return the same value as calling `self.apply_ty_in(args, &mut None)`.
     /// The default implementation does exactly this, and in general should be used as is.
-    fn apply_ty(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-    ) -> Result<(Lifetime, TypeId), Error>
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error>
     where
         Self: Clone,
     {
-        self.apply_ty_in(args, lifetime, &mut None)
+        self.apply_ty_in(args, &mut None)
     }
     /// Apply this type to a set of arguments, yielding a result type and lifetime
     ///
@@ -186,17 +181,12 @@ pub trait Type: Value {
     /// The default implementation for this method returns this value and it's lifetime
     /// for an empty argument vector, and a `NotAFunctionType` error otherwise. It is appropriate
     /// for types which are, as the error indicates, not function types.
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        _ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error>
+    fn apply_ty_in(&self, args: &[ValId], _ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error>
     where
         Self: Clone,
     {
         if args.is_empty() {
-            Ok((lifetime.clone_lifetime(), self.clone().into_ty()))
+            Ok(self.clone().into_ty())
         } else {
             Err(Error::NotAFunctionType)
         }
@@ -231,21 +221,12 @@ impl<P: TypePredicate> Type for ValId<P> {
         self.as_pred().is_substruct()
     }
     #[inline]
-    fn apply_ty(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        self.as_pred().apply_ty(args, lifetime)
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error> {
+        self.as_pred().apply_ty(args)
     }
     #[inline]
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        self.as_pred().apply_ty_in(args, lifetime, ctx)
+    fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
+        self.as_pred().apply_ty_in(args, ctx)
     }
 }
 
@@ -267,21 +248,12 @@ impl<'a, P: TypePredicate> Type for ValRef<'a, P> {
         self.as_pred().is_substruct()
     }
     #[inline]
-    fn apply_ty(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        self.as_pred().apply_ty(args, lifetime)
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error> {
+        self.as_pred().apply_ty(args)
     }
     #[inline]
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
-        self.as_pred().apply_ty_in(args, lifetime, ctx)
+    fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
+        self.as_pred().apply_ty_in(args, ctx)
     }
 }
 
@@ -375,19 +347,15 @@ impl<'a, P: TypePredicate> Type for NormalValue<P> {
         }
     }
     #[inline]
-    fn apply_ty(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-    ) -> Result<(Lifetime, TypeId), Error> {
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error> {
         match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.apply_ty(args, lifetime),
-            ValueEnum::Finite(f) => f.apply_ty(args, lifetime),
-            ValueEnum::Pi(p) => p.apply_ty(args, lifetime),
-            ValueEnum::Prop(u) => u.apply_ty(args, lifetime),
-            ValueEnum::Fin(u) => u.apply_ty(args, lifetime),
-            ValueEnum::Set(u) => u.apply_ty(args, lifetime),
-            ValueEnum::Product(p) => p.apply_ty(args, lifetime),
+            ValueEnum::BoolTy(b) => b.apply_ty(args),
+            ValueEnum::Finite(f) => f.apply_ty(args),
+            ValueEnum::Pi(p) => p.apply_ty(args),
+            ValueEnum::Prop(u) => u.apply_ty(args),
+            ValueEnum::Fin(u) => u.apply_ty(args),
+            ValueEnum::Set(u) => u.apply_ty(args),
+            ValueEnum::Product(p) => p.apply_ty(args),
             ValueEnum::Parameter(p) => unimplemented!("Parameter application for parameter {}", p),
             ValueEnum::Sexpr(s) => unimplemented!("Partial evaluation application for sexpr {}", s),
             v => panic!(
@@ -397,20 +365,15 @@ impl<'a, P: TypePredicate> Type for NormalValue<P> {
         }
     }
     #[inline]
-    fn apply_ty_in(
-        &self,
-        args: &[ValId],
-        lifetime: LifetimeBorrow,
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<(Lifetime, TypeId), Error> {
+    fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
         match self.as_enum() {
-            ValueEnum::BoolTy(b) => b.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Finite(f) => f.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Pi(p) => p.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Prop(u) => u.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Fin(u) => u.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Set(u) => u.apply_ty_in(args, lifetime, ctx),
-            ValueEnum::Product(p) => p.apply_ty_in(args, lifetime, ctx),
+            ValueEnum::BoolTy(b) => b.apply_ty_in(args, ctx),
+            ValueEnum::Finite(f) => f.apply_ty_in(args, ctx),
+            ValueEnum::Pi(p) => p.apply_ty_in(args, ctx),
+            ValueEnum::Prop(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Fin(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Set(u) => u.apply_ty_in(args, ctx),
+            ValueEnum::Product(p) => p.apply_ty_in(args, ctx),
             ValueEnum::Parameter(p) => {
                 unimplemented!("Parameter contextual application for parameter {}", p)
             }

@@ -3,7 +3,6 @@ A parametrized `rain` value of a given type
 */
 
 use crate::eval::{EvalCtx, Substitute};
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::Typed;
 use crate::value::{arr::ValSet, Error, TypeId, ValId, Value};
@@ -16,7 +15,6 @@ pub struct Parametrized<V> {
     region: Region,
     value: V,
     deps: ValSet,
-    lifetime: Lifetime,
 }
 
 impl<V: Value + Clone> Parametrized<V> {
@@ -26,7 +24,7 @@ impl<V: Value + Clone> Parametrized<V> {
     pub fn try_new(value: V, region: Region) -> Result<Parametrized<V>, Error> {
         use Ordering::*;
         let depth = region.depth();
-        let deps: ValSet = match value.region().partial_cmp(&Some(region.borrow_region())) {
+        let deps: ValSet = match value.region().partial_cmp(&region) {
             None | Some(Greater) => return Err(Error::IncomparableRegions),
             Some(Equal) => {
                 let mut results = Vec::new();
@@ -42,14 +40,10 @@ impl<V: Value + Clone> Parametrized<V> {
             }
             Some(Less) => std::iter::once(value.clone().into_val()).collect(),
         };
-        let lifetime = Lifetime::default()
-            .sep_conjs(deps.iter().map(|dep: &ValId| dep.lifetime()))
-            .map_err(|_| Error::LifetimeError)?;
         Ok(Parametrized {
             region,
             value,
             deps,
-            lifetime,
         })
     }
 }
@@ -93,8 +87,8 @@ impl<V> Parametrized<V> {
     Decompose this `Parametrized` into its components
     */
     #[inline]
-    pub fn destruct(self) -> (Region, V, ValSet, Lifetime) {
-        (self.region, self.value, self.deps, self.lifetime)
+    pub fn destruct(self) -> (Region, V, ValSet) {
+        (self.region, self.value, self.deps)
     }
 }
 
@@ -111,7 +105,6 @@ impl<V: Value> Parametrized<V> {
             region: self.region,
             value: self.value.into(),
             deps: self.deps,
-            lifetime: self.lifetime,
         }
     }
     /**
@@ -126,20 +119,13 @@ impl<V: Value> Parametrized<V> {
             region: self.region,
             value: self.value.try_into()?,
             deps: self.deps,
-            lifetime: self.lifetime,
         })
     }
 }
 
-impl<V: Value> Live for Parametrized<V> {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
-    }
-}
-
 impl<V: Value> Regional for Parametrized<V> {
-    fn region(&self) -> Option<RegionBorrow> {
-        self.lifetime().get_region()
+    fn region(&self) -> RegionBorrow {
+        self.region.parent().region()
     }
 }
 

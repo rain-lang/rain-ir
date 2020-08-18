@@ -3,7 +3,7 @@ Primitive `rain` values and associated value descriptors
 */
 use super::{
     eval::Apply,
-    lifetime::{LifetimeBorrow, Live},
+    region::Regional,
     typing::{Type, Typed},
 };
 use crate::value::{
@@ -11,7 +11,7 @@ use crate::value::{
     tuple::{Product, Tuple},
     NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
 };
-use crate::{debug_from_display, lifetime_region, quick_pretty, trivial_substitute};
+use crate::{debug_from_display, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use std::convert::TryFrom;
 use std::ops::Deref;
@@ -142,13 +142,7 @@ impl From<()> for ValId {
     }
 }
 
-impl Live for () {
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
-
-lifetime_region!(());
+impl Regional for () {}
 
 impl Typed for () {
     #[inline]
@@ -213,13 +207,7 @@ impl Typed for Unit {
     }
 }
 
-impl Live for Unit {
-    fn lifetime(&self) -> LifetimeBorrow {
-        LifetimeBorrow::default()
-    }
-}
-
-lifetime_region!(Unit);
+impl Regional for Unit {}
 
 impl Type for Unit {
     #[inline]

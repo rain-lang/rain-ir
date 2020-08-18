@@ -20,7 +20,6 @@ pub mod data;
 pub mod eval;
 pub mod function;
 pub mod graph;
-pub mod lifetime;
 pub mod primitive;
 pub mod proof;
 pub mod region;

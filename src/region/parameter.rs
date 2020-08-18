@@ -4,7 +4,6 @@ Parameters to a `rain` region
 use super::{Region, RegionBorrow, Regional};
 use crate::enum_convert;
 use crate::eval::Apply;
-use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::typing::Typed;
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
@@ -20,8 +19,6 @@ pub struct Parameter {
     region: Region,
     /// The index of this parameter in the region's type vector
     ix: usize,
-    /// The lifetime of this parameter
-    lifetime: Lifetime,
 }
 
 quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
@@ -34,20 +31,6 @@ enum_convert! {
 }
 
 impl Parameter {
-    /**
-    Create a parameter from a given region and index, when you know the region is in bounds.
-
-    Note that this will *still* return an error if the parameter is out of bounds, *but* suffers from degraded performance in this case.
-    */
-    #[inline]
-    pub fn try_new_inbounds(region: Region, ix: usize) -> Result<Parameter, Error> {
-        let lifetime = Lifetime::param(region.clone(), ix)?;
-        Ok(Parameter {
-            region,
-            lifetime,
-            ix,
-        })
-    }
     /**
      Reference the `ix`th parameter of the given region. Return `Err` if the parameter is out of bounds.
 
@@ -65,7 +48,7 @@ impl Parameter {
         if ix >= region.len() {
             Err(Error::InvalidParam)
         } else {
-            Self::try_new_inbounds(region, ix)
+            Ok(Parameter { region, ix })
         }
     }
     /**
@@ -85,7 +68,10 @@ impl Parameter {
         if ix >= region.len() {
             Err(Error::InvalidParam)
         } else {
-            Self::try_new_inbounds(region.clone(), ix)
+            Ok(Parameter {
+                region: region.clone(),
+                ix,
+            })
         }
     }
     /// Get the index of this parameter
@@ -100,15 +86,9 @@ impl Parameter {
     }
 }
 
-impl Live for Parameter {
-    fn lifetime(&self) -> LifetimeBorrow {
-        self.lifetime.borrow_lifetime()
-    }
-}
-
 impl Regional for Parameter {
-    fn region(&self) -> Option<RegionBorrow> {
-        Some(self.get_region().borrow_region())
+    fn region(&self) -> RegionBorrow {
+        self.region.borrow_region()
     }
     fn depth(&self) -> usize {
         let depth = self.get_region().depth();

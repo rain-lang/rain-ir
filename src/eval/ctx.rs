@@ -4,7 +4,6 @@ A `rain` evaluation context
 
 use super::Error;
 use super::Substitute;
-use crate::lifetime::{Color, Lifetime};
 use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::value::{ValId, Value};
@@ -17,17 +16,13 @@ use std::iter::Iterator;
 pub struct EvalCtx {
     /// The cache for evaluated values
     eval_cache: HashMap<ValId, ValId, FxBuildHasher>,
-    /// The color map
-    color_map: HashMap<Color, Lifetime, FxBuildHasher>,
-    /// The cache for lifetime substitutions
-    lt_cache: HashMap<Lifetime, Lifetime, FxBuildHasher>,
     /// The parents of this context
     parents: Vector<EvalCtx>,
     /// The root depth of this evaluation context
     /// Every context below this depth is assumed to be empty
     root_depth: usize,
     /// This context's current region
-    curr_region: Option<Region>,
+    curr_region: Region,
 }
 
 impl EvalCtx {
@@ -36,17 +31,15 @@ impl EvalCtx {
     pub fn new(root_depth: usize) -> EvalCtx {
         EvalCtx {
             eval_cache: HashMap::default(),
-            color_map: HashMap::default(),
-            lt_cache: HashMap::default(),
             parents: Vector::new(),
             root_depth,
-            curr_region: None,
+            curr_region: Region::NULL,
         }
     }
     /// Get whether this evaluation context is empty
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.eval_cache.is_empty() && self.color_map.is_empty() && self.lt_cache.is_empty()
+        self.eval_cache.is_empty()
     }
     /// Get the root depth
     #[inline]
@@ -57,7 +50,7 @@ impl EvalCtx {
     #[inline]
     pub fn depth(&self) -> usize {
         let depth = self.root_depth + self.parents.len();
-        if self.curr_region.is_some() {
+        if !self.curr_region.is_null() {
             debug_assert_eq!(depth, self.curr_region.depth());
         }
         depth
@@ -83,8 +76,6 @@ impl EvalCtx {
         self.root_depth = self.depth();
         self.parents.clear();
         self.eval_cache.clear();
-        self.color_map.clear();
-        self.lt_cache.clear();
     }
     /// Get this evaluation context at a given depth
     ///
@@ -194,8 +185,6 @@ impl EvalCtx {
         let region_depth = region.depth();
         struct OldCaches {
             eval_cache: HashMap<ValId, ValId, FxBuildHasher>,
-            lt_cache: HashMap<Lifetime, Lifetime, FxBuildHasher>,
-            color_map: HashMap<Color, Lifetime, FxBuildHasher>,
         };
         let mut old_caches: Option<OldCaches> = None;
         let old_is_empty = self.is_empty();
@@ -205,20 +194,14 @@ impl EvalCtx {
                 if !old_is_empty && old_caches.is_none() {
                     old_caches = Some(OldCaches {
                         eval_cache: self.eval_cache.clone(),
-                        lt_cache: self.lt_cache.clone(),
-                        color_map: self.color_map.clone(),
                     });
                 }
                 // In case of error, restore old caches or clear caches if none
                 if let Err(err) = self.substitute_impl(param.clone(), value, true, false) {
                     if let Some(old_caches) = old_caches {
                         self.eval_cache = old_caches.eval_cache;
-                        self.lt_cache = old_caches.lt_cache;
-                        self.color_map = old_caches.color_map;
                     } else {
                         self.eval_cache.clear();
-                        self.lt_cache.clear();
-                        self.color_map.clear();
                     }
                     return Err(err);
                 }
@@ -233,20 +216,16 @@ impl EvalCtx {
             while self.root_depth < region_depth - 1 {
                 self.parents.push_back(EvalCtx {
                     eval_cache: old_caches.eval_cache.clone(),
-                    lt_cache: old_caches.lt_cache.clone(),
-                    color_map: old_caches.color_map.clone(),
                     parents: self.parents.clone(),
-                    curr_region: region.ancestor(self.root_depth).cloned_region(),
+                    curr_region: region.ancestor(self.root_depth).clone_region(),
                     root_depth: self.root_depth,
                 });
                 self.root_depth += 1;
             }
             self.parents.push_back(EvalCtx {
                 eval_cache: old_caches.eval_cache,
-                lt_cache: old_caches.lt_cache,
-                color_map: old_caches.color_map,
                 parents: self.parents.clone(),
-                curr_region: region.ancestor(self.root_depth).cloned_region(),
+                curr_region: region.ancestor(self.root_depth).clone_region(),
                 root_depth: self.root_depth,
             });
             self.root_depth += 1;
@@ -255,7 +234,7 @@ impl EvalCtx {
             self.root_depth = region_depth
         }
         // Set the current region
-        self.curr_region = Some(region.clone());
+        self.curr_region = region.clone();
         Ok(None)
     }
     /// Try to quickly evaluate a given value in the current scope. Return None on failure
@@ -282,27 +261,6 @@ impl EvalCtx {
         debug_assert_eq!(root_depth, self.root_depth);
         debug_assert_eq!(depth, self.depth());
         result
-    }
-    /// Evaulate a given lifetime. Return an error on evaluation failure.
-    #[inline]
-    pub fn evaluate_lt(&mut self, lifetime: &Lifetime) -> Result<Lifetime, Error> {
-        // Ignore lifetimes below the root depth
-        if lifetime.depth() < self.root_depth {
-            return Ok(lifetime.clone());
-        }
-        // Check if the lifetime has been cached
-        if let Some(lifetime) = self.lt_cache.get(lifetime) {
-            return Ok(lifetime.clone());
-        }
-        // Attempt to color map the lifetime to the root depth
-        let result = lifetime.color_map(
-            |color| Some(self.color_map.get(color).unwrap_or(&Lifetime::STATIC)),
-            //TODO: shallow borrow restriction?
-            |value| self.eval_cache.get(value).cloned().ok_or(Error::UndefParam),
-            self.root_depth,
-        )?;
-        self.lt_cache.insert(lifetime.clone(), result.clone());
-        Ok(result)
     }
 }
 
