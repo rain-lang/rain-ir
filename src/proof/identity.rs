@@ -7,9 +7,7 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
-use crate::value::{
-    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
-};
+use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
 //use either::Either;
@@ -456,10 +454,8 @@ impl Value for Refl {
 /// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApConst {
-    /// The domain of functions being applied
-    domain: TyArr,
-    /// The target of functions being applied
-    target: Option<TypeId>,
+    /// The type of functions being applied
+    ap_ty: VarId<Pi>,
     /// The type of this instance of the axiom
     ty: VarId<Pi>,
     /// The lifetime of this instance of the axiom
@@ -467,52 +463,58 @@ pub struct ApConst {
 }
 
 impl ApConst {
-    /// Create a new instance of the applicativity axiom for a given domain and optional target
+    /// Create a new instance of the applicativity axiom for a pi type
     #[inline]
-    pub fn new(domain: TyArr, target: Option<TypeId>) -> Result<ApConst, Error> {
-        let ty = Self::compute_ty(domain.clone(), target.clone())?;
-        Ok(Self::new_helper(domain, target, ty))
-    }
-    /// Get the applicativity axiom over a given domain, with an unspecified target
-    #[inline]
-    pub fn over(domain: TyArr) -> Result<ApConst, Error> {
-        let ty = Self::over_ty(domain.clone())?;
-        Ok(Self::new_helper(domain, None, ty))
-    }
-    /// Get the applicativity axiom over a given domain with a given target
-    #[inline]
-    pub fn ap(domain: TyArr, target: TypeId) -> Result<ApConst, Error> {
-        let ty = Self::ap_ty(domain.clone(), target.clone())?;
-        Ok(Self::new_helper(domain, Some(target), ty))
-    }
-    /// Create an instance of the applicativity axiom with a given domain, optional target, and type
-    fn new_helper(domain: TyArr, target: Option<TypeId>, ty: Pi) -> ApConst {
+    pub fn new(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
+        let ty = Self::instance_ty(ap_ty.clone())?;
         let lt = ty.lifetime().clone_lifetime();
-        ApConst {
-            domain,
-            target,
-            ty: ty.into_var(),
+        Ok(ApConst {
+            ap_ty,
             lt,
+            ty: ty.into_var(),
+        })
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function type
+    #[inline]
+    pub fn instance_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
+        let domain = ap_ty.param_tys().clone();
+        let no_params = domain.len();
+        let ap_ty_region = ap_ty.cloned_region();
+        let pi_region = Region::with(std::iter::once(ap_ty.into_ty()).collect(), ap_ty_region)
+            .expect("ap_ty lies in it's own region...");
+        let param_fn = pi_region
+            .param(0)
+            .expect("Pi region has exactly one parameter")
+            .into_val();
+        let left_region = Region::with(domain.clone(), pi_region.cloned_region())
+            .expect("domain lies in ap_ty's region");
+        let right_region = Region::with(domain, left_region.cloned_region())
+            .expect("domain lies in ap_ty's region");
+        let mut identity_params = Vec::with_capacity(no_params);
+        let mut left_params = Vec::with_capacity(no_params);
+        let mut right_params = Vec::with_capacity(no_params);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right)?.into_ty());
         }
-    }
-    /// Get the type of the applicativity axiom over a given domain, with an optional target
-    #[inline]
-    pub fn compute_ty(domain: TyArr, target: Option<TypeId>) -> Result<Pi, Error> {
-        if let Some(target) = target {
-            Self::ap_ty(domain, target)
-        } else {
-            Self::over_ty(domain)
-        }
-    }
-    /// Get the type of the applicativity axiom over a given domain, with an unspecified target
-    #[inline]
-    pub fn over_ty(domain: TyArr) -> Result<Pi, Error> {
-        unimplemented!("over_ty for domain {:?}", domain)
-    }
-    /// Get the type of the applicativity axiom over a given domain for a given target
-    #[inline]
-    pub fn ap_ty(domain: TyArr, target: TypeId) -> Result<Pi, Error> {
-        unimplemented!("ap_ty for domain {:?}, target {}", domain, target)
+        let identity_region = Region::with(identity_params.into(), right_region.cloned_region())
+            .expect("identity types lie in ap_ty's region");
+        let left_ap = param_fn.applied(&left_params[..])?;
+        let right_ap = param_fn.applied(&right_params[..])?;
+        let result_id = Id::try_new(left_ap, right_ap)?;
+        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
+            .expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
+            .expect("Right pi is valid");
+        let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
+            .expect("Left pi is valid");
+        Ok(
+            Pi::try_new(left_pi.into_ty(), pi_region, &Lifetime::STATIC)
+                .expect("Final pi is valid"),
+        )
     }
 }
 
