@@ -7,9 +7,12 @@ use crate::function::pi::Pi;
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
-use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::value::{
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
+};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
+use std::iter::once;
 //use either::Either;
 
 /// The identity type family, either of a given type or in general
@@ -47,7 +50,7 @@ impl IdFamily {
     /// Get the pi type for a constructor family
     pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
-            std::iter::once(kind.clone_ty()).collect(),
+            once(kind.clone_ty()).collect(),
             kind.cloned_region(),
             kind.universe().clone_var(),
         );
@@ -447,6 +450,123 @@ impl Value for Refl {
     }
 }
 
+/// The non-dependent applicativity axiom
+///
+/// NOTE: applicativity of dependent functions is not yet supported, as we do not yet support transport along types.
+///
+/// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
+/// 
+/// TODO: this should not be a primitive value, but rather a descriptor for a primitive value to be constructed
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ApConst {
+    /// The type of functions being applied
+    ap_ty: VarId<Pi>,
+    /// The particular function being applied, if any
+    func: Option<ValId>,
+    /// The type of this instance of the axiom
+    ty: VarId<Pi>,
+    /// The lifetime of this instance of the axiom
+    lt: Lifetime,
+}
+
+impl ApConst {
+    /// Create a new instance of the applicativity axiom for a pi type
+    #[inline]
+    pub fn try_new_pi(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
+        let ty = Self::pi_ty(ap_ty.clone())?;
+        let lt = ty.lifetime().clone_lifetime();
+        Ok(ApConst {
+            ap_ty,
+            func: None,
+            lt,
+            ty: ty.into_var(),
+        })
+    }
+    /// Create a new instance of the applicativity axiom for a given function
+    #[inline]
+    pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<ApConst, Error> {
+        let ty = Self::fn_ty(&ap_ty, param_fn)?;
+        let lt = ty.lifetime().clone_lifetime();
+        Ok(ApConst {
+            ap_ty,
+            func: None,
+            lt,
+            ty: ty.into_var(),
+        })
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function
+    #[inline]
+    pub fn fn_ty(ap_ty: &VarId<Pi>, param_fn: ValId) -> Result<Pi, Error> {
+        if param_fn.ty() != *ap_ty {
+            //TODO: subtyping?
+            return Err(Error::TypeMismatch);
+        }
+        let domain = ap_ty.param_tys().clone();
+        Self::fn_ty_helper(param_fn, domain)
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function type
+    #[inline]
+    pub fn pi_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
+        let domain = ap_ty.param_tys().clone();
+        let ap_ty_region = ap_ty.cloned_region();
+        let pi_region = Region::with(once(ap_ty.into_ty()).collect(), ap_ty_region)
+            .expect("ap_ty lies in it's own region...");
+        let param_fn = pi_region
+            .param(0)
+            .expect("Pi region has exactly one parameter")
+            .into_val();
+        let param_pi = Self::fn_ty_helper(param_fn, domain)?;
+        Ok(
+            Pi::try_new(param_pi.into_ty(), pi_region, &Lifetime::STATIC)
+                .expect("Final pi is valid"),
+        )
+    }
+    fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
+        let no_params = domain.len();
+        let left_region = Region::with(domain.clone(), param_fn.cloned_region())
+            .expect("domain lies in ap_ty's region");
+        let right_region = Region::with(domain, left_region.cloned_region())
+            .expect("domain lies in ap_ty's region");
+        let mut identity_params = Vec::with_capacity(no_params);
+        let mut left_params = Vec::with_capacity(no_params);
+        let mut right_params = Vec::with_capacity(no_params);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right)?.into_ty());
+        }
+        let identity_region = Region::with(identity_params.into(), right_region.cloned_region())
+            .expect("identity types lie in ap_ty's region");
+        let left_ap = param_fn.applied(&left_params[..])?;
+        let right_ap = param_fn.applied(&right_params[..])?;
+        let result_id = Id::try_new(left_ap, right_ap)?;
+        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
+            .expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
+            .expect("Right pi is valid");
+        Ok(
+            Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
+                .expect("Left pi is valid"),
+        )
+    }
+}
+
+impl Typed for ApConst {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+}
+
+impl Live for ApConst {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
+    }
+}
+
 #[cfg(feature = "prettyprinter")]
 mod prettyprint_impl {
     use super::*;
@@ -487,9 +607,9 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::logical::Bool;
+    use crate::primitive::logical::{binary_ty, Bool};
     use crate::typing::primitive::{Fin, Prop};
-    use crate::value::Value;
+    use crate::value::{ValRef, Value};
 
     #[test]
     fn basic_bool_id() {
@@ -562,5 +682,45 @@ mod tests {
         let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
         let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
         */
+    }
+
+    #[test]
+    fn apconst_and() {
+        let binary_ty = binary_ty();
+        let bool_ty = Bool.into_ty();
+        let binary_args_arr = [bool_ty.borrow_ty(), bool_ty.borrow_ty()];
+        let binary_args = binary_args_arr.iter().map(ValRef::clone_ty);
+        let binary_region =
+            Region::with(once(binary_ty.clone().into_ty()).collect(), None).unwrap();
+        let operator = binary_region.param(0).unwrap().into_val();
+        let left_region =
+            Region::with(binary_args.clone().collect(), Some(binary_region.clone())).unwrap();
+        let right_region = Region::with(binary_args.collect(), Some(left_region.clone())).unwrap();
+        let mut identity_params = Vec::with_capacity(2);
+        let mut left_params = Vec::with_capacity(2);
+        let mut right_params = Vec::with_capacity(2);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right).unwrap().into_ty());
+        }
+        let identity_region =
+            Region::with(identity_params.into(), Some(right_region.clone())).unwrap();
+        let left_ap = operator.applied(&left_params[..]).unwrap();
+        let right_ap = operator.applied(&right_params[..]).unwrap();
+        let result_id = Id::try_new(left_ap, right_ap).unwrap();
+        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
+            .expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
+            .expect("Right pi is valid");
+        let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
+            .expect("Left pi is valid");
+        let ap_type = Pi::try_new(left_pi.into_ty(), binary_region, &Lifetime::STATIC)
+            .expect("Binary operation application type is valid")
+            .into_ty();
+        let ap_const = ApConst::try_new_pi(binary_ty).unwrap();
+        assert_eq!(ap_const.ty(), ap_type);
     }
 }

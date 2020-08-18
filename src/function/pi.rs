@@ -146,11 +146,13 @@ impl ValueData for Pi {}
 impl Type for Pi {
     #[inline]
     fn is_affine(&self) -> bool {
-        unimplemented!("Pi type affinity")
+        //TODO: think about this...
+        true
     }
     #[inline]
     fn is_relevant(&self) -> bool {
-        unimplemented!("Pi type relevance")
+        //TODO: think about this...
+        true
     }
     #[inline]
     fn apply_ty_in(
