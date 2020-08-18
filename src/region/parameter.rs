@@ -5,7 +5,7 @@ use super::{Region, RegionBorrow, Regional};
 use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
-use crate::typing::Typed;
+use crate::typing::{Type, Typed};
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
 
@@ -136,13 +136,15 @@ impl Apply for Parameter {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        _ctx: &mut Option<EvalCtx>,
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.is_empty() {
             return Ok(Application::Success(args, self.clone().into()));
         }
         match self.ty().as_enum() {
-            ValueEnum::Pi(p) => unimplemented!("Pi type parameters: parameter = {}: {}", self, p),
+            ValueEnum::Pi(p) => p
+                .apply_ty_in(args, ctx)
+                .map(|(lt, ty)| Application::Complete(lt, ty)),
             ValueEnum::Product(p) => {
                 if args.len() > 1 {
                     unimplemented!("Multi-tuple application: blocking on ApplyTy")

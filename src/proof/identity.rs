@@ -10,6 +10,7 @@ use crate::typing::{Kind, Type, Typed};
 use crate::value::{Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{enum_convert, lifetime_region, substitute_to_valid};
 use std::convert::TryInto;
+use std::iter::once;
 //use either::Either;
 
 /// The identity type family, either of a given type or in general
@@ -47,7 +48,7 @@ impl IdFamily {
     /// Get the pi type for a constructor family
     pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
-            std::iter::once(kind.clone_ty()).collect(),
+            once(kind.clone_ty()).collect(),
             kind.cloned_region(),
             kind.universe().clone_var(),
         );
@@ -465,7 +466,7 @@ pub struct ApConst {
 impl ApConst {
     /// Create a new instance of the applicativity axiom for a pi type
     #[inline]
-    pub fn new(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
+    pub fn try_new(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
         let ty = Self::instance_ty(ap_ty.clone())?;
         let lt = ty.lifetime().clone_lifetime();
         Ok(ApConst {
@@ -480,7 +481,7 @@ impl ApConst {
         let domain = ap_ty.param_tys().clone();
         let no_params = domain.len();
         let ap_ty_region = ap_ty.cloned_region();
-        let pi_region = Region::with(std::iter::once(ap_ty.into_ty()).collect(), ap_ty_region)
+        let pi_region = Region::with(once(ap_ty.into_ty()).collect(), ap_ty_region)
             .expect("ap_ty lies in it's own region...");
         let param_fn = pi_region
             .param(0)
@@ -515,6 +516,20 @@ impl ApConst {
             Pi::try_new(left_pi.into_ty(), pi_region, &Lifetime::STATIC)
                 .expect("Final pi is valid"),
         )
+    }
+}
+
+impl Typed for ApConst {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+}
+
+impl Live for ApConst {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lt.borrow_lifetime()
     }
 }
 
@@ -558,9 +573,9 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::logical::Bool;
+    use crate::primitive::logical::{binary_ty, Bool};
     use crate::typing::primitive::{Fin, Prop};
-    use crate::value::Value;
+    use crate::value::{ValRef, Value};
 
     #[test]
     fn basic_bool_id() {
@@ -633,5 +648,44 @@ mod tests {
         let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
         let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
         */
+    }
+
+    #[test]
+    fn apconst_and() {
+        let binary_ty = binary_ty();
+        let bool_ty = Bool.into_ty();
+        let binary_args_arr = [bool_ty.borrow_ty(), bool_ty.borrow_ty()];
+        let binary_args = binary_args_arr.iter().map(ValRef::clone_ty);
+        let binary_region =
+            Region::with(once(binary_ty.clone().into_ty()).collect(), None).unwrap();
+        let operator = binary_region.param(0).unwrap().into_val();
+        let left_region =
+            Region::with(binary_args.clone().collect(), Some(binary_region.clone())).unwrap();
+        let right_region = Region::with(binary_args.collect(), Some(left_region.clone())).unwrap();
+        let mut identity_params = Vec::with_capacity(2);
+        let mut left_params = Vec::with_capacity(2);
+        let mut right_params = Vec::with_capacity(2);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right).unwrap().into_ty());
+        }
+        let identity_region =
+            Region::with(identity_params.into(), Some(right_region.clone())).unwrap();
+        let left_ap = operator.applied(&left_params[..]).unwrap();
+        let right_ap = operator.applied(&right_params[..]).unwrap();
+        let result_id = Id::try_new(left_ap, right_ap).unwrap();
+        let arrow_pi = Pi::try_new(result_id.into_ty(), identity_region, &Lifetime::STATIC)
+            .expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region, &Lifetime::STATIC)
+            .expect("Right pi is valid");
+        let left_pi = Pi::try_new(right_pi.into_ty(), left_region, &Lifetime::STATIC)
+            .expect("Left pi is valid");
+        let ap_type = Pi::try_new(left_pi.into_ty(), binary_region, &Lifetime::STATIC)
+            .expect("Binary operation application type is valid").into_ty();
+        let ap_const = ApConst::try_new(binary_ty).unwrap();
+        assert_eq!(ap_const.ty(), ap_type);
     }
 }

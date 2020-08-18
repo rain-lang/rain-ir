@@ -51,12 +51,16 @@ pub trait Typed {
     /// assert!(!true.is_ty());
     /// assert!(Bool.is_ty());
     /// ```
-    fn is_ty(&self) -> bool;
+    fn is_ty(&self) -> bool {
+        false
+    }
     /// Check whether this `rain` value is a kind
     ///
     /// # Correctness
     /// If a value is a kind, it must *always* be a type.
-    fn is_kind(&self) -> bool;
+    fn is_kind(&self) -> bool {
+        false
+    }
     /// Check whether this `rain` value is a representation
     ///
     /// # Correctness

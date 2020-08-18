@@ -281,6 +281,11 @@ pub fn unary_region() -> Region {
     LOGICAL_OP_REGIONS[0].clone()
 }
 
+/// The region of a function taking in two booleans
+pub fn binary_region() -> Region {
+    LOGICAL_OP_REGIONS[1].clone()
+}
+
 /// The type of a unary function
 pub fn unary_ty() -> VarId<Pi> {
     LOGICAL_OP_TYS[0].clone()
