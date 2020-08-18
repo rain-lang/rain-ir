@@ -16,7 +16,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let ix: u128 = rng.gen_range(0, finite.0);
         b.iter(|| {
             let ix = finite.ix(ix).unwrap();
-            let region = Region::with(vec![ix.ty().clone_ty()].into(), None).unwrap();
+            let region = Region::with(vec![ix.ty().clone_ty()].into(), Region::NULL).unwrap();
             let param = region.param(0).unwrap();
             let id = Lambda::try_new(param.into(), region).unwrap();
             let ixv: ValId = ix.into();
@@ -30,7 +30,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let finite = Finite(rng.gen::<u128>().max(1));
         let ix: u128 = rng.gen_range(0, finite.0);
         let ix = finite.ix(ix).unwrap();
-        let region = Region::with(vec![ix.ty().clone_ty()].into(), None).unwrap();
+        let region = Region::with(vec![ix.ty().clone_ty()].into(), Region::NULL).unwrap();
         let param = region.param(0).unwrap();
         let id: ValId = Lambda::try_new(param.into(), region).unwrap().into();
         let ixv: ValId = ix.into();
@@ -48,7 +48,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let in_low: bool = rng.gen();
         let in_sel: bool = rng.gen();
         b.iter(|| {
-            let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None).unwrap();
+            let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), Region::NULL).unwrap();
             let select: ValId = region.param(0).unwrap().into();
             let high = region.param(1).unwrap();
             let low = region.param(2).unwrap();
@@ -87,7 +87,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             in_low.clone()
         };
         let in_sel: ValId = in_sel.into();
-        let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), None).unwrap();
+        let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), Region::NULL).unwrap();
         let select: ValId = region.param(0).unwrap().into();
         let high = region.param(1).unwrap();
         let low = region.param(2).unwrap();
