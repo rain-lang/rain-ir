@@ -188,20 +188,23 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
+        let result = self.result.substitute(ctx)?;
+        let ty: VarId<Pi> = self
+            .ty
+            .substitute(ctx)?
+            .try_into()
+            .map_err(|_val| Error::InvalidSubKind)?;
+        let deps: ValSet = self
+            .deps
+            .iter()
+            .map(|d| d.substitute(ctx))
+            .collect::<Result<_, _>>()?;
+        let region = result.gcr(&ty)?.gcrs(deps.iter())?.clone_region();
         Ok(Lambda {
-            result: self.result.substitute(ctx)?,
-            ty: self
-                .ty
-                .substitute(ctx)?
-                .try_into()
-                .map_err(|_val| Error::InvalidSubKind)?,
-            deps: self
-                .deps
-                .iter()
-                .map(|d| d.substitute(ctx))
-                .collect::<Result<_, _>>()?,
-            //FIXME!!!!
-            region: self.region.clone(),
+            result,
+            deps,
+            ty,
+            region,
         })
     }
 }
