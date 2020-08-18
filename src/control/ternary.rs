@@ -60,7 +60,12 @@ impl Ternary {
         } else {
             unimplemented!("Dependently typed conditional: {} or {}", high, low);
         };
-        Ok(Ternary { ty, region, low, high })
+        Ok(Ternary {
+            ty,
+            region,
+            low,
+            high,
+        })
     }
     /// Construct a switch ternary operation with the smallest possible type
     ///
@@ -280,8 +285,9 @@ impl From<Ternary> for NormalValue {
             // Cast this ternary to a constant lambda
             NormalValue::assert_normal(ValueEnum::Lambda(Lambda {
                 result: ternary.high,
+                //FIXME!!!
+                region: ternary.ty.def_region().clone(),
                 ty: ternary.ty,
-                region: ternary.region,
                 deps: std::iter::once(ternary.low).collect(),
             }))
         } else {
