@@ -9,6 +9,7 @@ use fxhash::FxHashMap as HashMap;
 pub struct NodeId(usize);
 
 impl From<NodeId> for NodeIdEnum {
+    #[inline]
     fn from(node: NodeId) -> NodeIdEnum {
         if node & 0b1 != 0 {
             NodeIdEnum::AbstractNode(node.0)
