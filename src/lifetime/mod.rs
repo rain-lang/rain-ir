@@ -20,6 +20,8 @@ impl BackTable {
         Ok(())
     }
     /// Register a consumer for a given address
+    /// 
+    /// Note this implicitly assumes the address is affine, and hence can be consumed
     pub fn register_consumer(&mut self, addr: ValAddr, consumer: Consumer) -> Result<(), Error> {
         self.backlinks
             .entry(addr)
@@ -27,6 +29,8 @@ impl BackTable {
             .register_consumer(consumer)
     }
     /// Register a borrow for a given address
+    /// 
+    /// Note this implicitly assumes the address is affine, and hence can be borrowed
     pub fn register_borrow(&mut self, addr: ValAddr, borrow: ValId) {
         self.backlinks
             .entry(addr)
