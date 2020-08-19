@@ -1,7 +1,7 @@
 /*!
 The `rain` lifetime system
 */
-use crate::value::{Error, ValAddr, ValId, ValRef};
+use crate::value::{ValAddr, ValId};
 use fxhash::FxHashMap as HashMap;
 
 /// A node ID, which is either a `ValAddr` or an `AbstractNode`
