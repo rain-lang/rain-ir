@@ -8,8 +8,12 @@ use fxhash::FxHashMap as HashMap;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct NodeId(usize);
 
-impl NodeId {
-    
+/// A node ID enum, which represents the two possibilities:
+pub enum NodeIdEnum {
+    /// A value node
+    Value(ValAddr),
+    /// An abstract node
+    AbstractNode(usize),
 }
 
 /// A data structure tracking ownerships and borrowing within a single parametrized value
