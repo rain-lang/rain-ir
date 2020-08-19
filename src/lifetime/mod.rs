@@ -19,6 +19,7 @@ impl From<NodeId> for NodeIdEnum {
 }
 
 impl From<ValAddr> for NodeId {
+    #[inline]
     fn from(addr: ValAddr) -> NodeId {
         NodeId(addr.0)
     }
