@@ -38,7 +38,7 @@ pub enum NodeIdEnum {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BorrowGraph {
     /// The nodes making up this graph
-    nodes: HashMap<ValAddr, Node>,
+    nodes: HashMap<NodeId, Node>,
 }
 
 /// A node in the borrow-checking graph
