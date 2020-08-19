@@ -18,6 +18,12 @@ impl From<NodeId> for NodeIdEnum {
     }
 }
 
+impl From<ValAddr> for NodeId {
+    fn from(addr: ValAddr) -> NodeId {
+        NodeId(addr.0)
+    }
+}
+
 /// A node ID enum, which represents the two possibilities:
 pub enum NodeIdEnum {
     /// A value node
