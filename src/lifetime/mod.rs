@@ -8,6 +8,16 @@ use fxhash::FxHashMap as HashMap;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct NodeId(usize);
 
+impl From<NodeId> for NodeIdEnum {
+    fn from(node: NodeId) -> NodeIdEnum {
+        if node & 0b1 != 0 {
+            NodeIdEnum::AbstractNode(node.0)
+        } else {
+            NodeIdEnum::ValAddr(ValAddr(node.0))
+        }
+    }
+}
+
 /// A node ID enum, which represents the two possibilities:
 pub enum NodeIdEnum {
     /// A value node
