@@ -4,6 +4,14 @@ The `rain` lifetime system
 use crate::value::{Error, ValAddr, ValId, ValRef};
 use fxhash::FxHashMap as HashMap;
 
+/// A node ID, which is either a `ValAddr` or an `AbstractNode`
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct NodeId(usize);
+
+impl NodeId {
+    
+}
+
 /// A data structure tracking ownerships and borrowing within a single parametrized value
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BorrowGraph {
@@ -17,11 +25,11 @@ pub struct BorrowGraph {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Node {
     /// The consumer of this node in the graph
-    /// 
+    ///
     /// This can be a single owner, consuming an entire node, or a different owner for each field
     consumer: Consumer,
     /// The nodes which this node borrows
-    borrows: Vec<ValId>
+    borrows: Vec<ValId>,
 }
 
 /// A consumer for a node in the borrow-checking graph
