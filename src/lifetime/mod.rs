@@ -19,7 +19,9 @@ pub struct Node {
     /// The consumer of this node in the graph
     /// 
     /// This can be a single owner, consuming an entire node, or a different owner for each field
-    consumer: Consumer
+    consumer: Consumer,
+    /// The nodes which this node borrows
+    borrows: Vec<ValId>
 }
 
 /// A consumer for a node in the borrow-checking graph
