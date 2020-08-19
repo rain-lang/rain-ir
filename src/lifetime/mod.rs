@@ -8,3 +8,10 @@ use fxhash::FxHashMap as HashMap;
 pub struct OwnerTable {
 
 }
+
+/// A node in the ownership graph
+/// 
+/// Each one of these represents a value of an affine type, by virtue of either owning or borrowing a resource
+pub struct Node {
+
+}
