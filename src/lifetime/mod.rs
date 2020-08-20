@@ -5,16 +5,16 @@ use crate::value::{ValAddr, ValId};
 use fxhash::FxHashMap as HashMap;
 
 /// A node ID, which is either a `ValAddr` or an `AbstractNode`
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct NodeId(usize);
 
 impl From<NodeId> for NodeIdEnum {
     #[inline]
     fn from(node: NodeId) -> NodeIdEnum {
-        if node & 0b1 != 0 {
+        if node.0 & 0b1 != 0 {
             NodeIdEnum::AbstractNode(node.0)
         } else {
-            NodeIdEnum::ValAddr(ValAddr(node.0))
+            NodeIdEnum::Value(ValAddr(node.0))
         }
     }
 }
@@ -27,6 +27,7 @@ impl From<ValAddr> for NodeId {
 }
 
 /// A node ID enum, which represents the two possibilities:
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum NodeIdEnum {
     /// A value node
     Value(ValAddr),
