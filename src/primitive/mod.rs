@@ -18,6 +18,7 @@ use std::ops::Deref;
 
 pub mod finite;
 pub mod logical;
+pub mod bits;
 
 lazy_static! {
     /// An instance of the unit value
