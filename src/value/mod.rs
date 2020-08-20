@@ -7,6 +7,7 @@ use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
+    bits::{BitsTy, Bits}
 };
 use crate::proof::identity::{Id, IdFamily, Refl};
 use crate::region::{Parameter, RegionBorrow, Regional};
@@ -76,6 +77,10 @@ pub enum ValueEnum {
     Fin(Fin),
     /// An n-set
     Set(Set),
+    /// The type of Bits
+    BitsTy(BitsTy),
+    /// A bitset value
+    Bits(Bits),
     /// The type of booleans
     BoolTy(Bool),
     /// A boolean value
@@ -602,6 +607,8 @@ macro_rules! forv {
             ValueEnum::Id($i) => $e,
             ValueEnum::Refl($i) => $e,
             ValueEnum::IdFamily($i) => $e,
+            ValueEnum::BitsTy($i) => $e,
+            ValueEnum::Bits($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -717,6 +724,8 @@ normal_valid!(Ternary);
 normal_valid!(Id);
 normal_valid!(Refl);
 normal_valid!(IdFamily);
+normal_valid!(BitsTy);
+normal_valid!(Bits);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
