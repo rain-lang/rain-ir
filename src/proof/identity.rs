@@ -7,7 +7,8 @@ use crate::function::pi::Pi;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::{Kind, Type, Typed};
 use crate::value::{
-    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, ValId, Value, ValueEnum,
+    VarId,
 };
 use crate::{enum_convert, substitute_to_valid};
 use std::convert::TryInto;
@@ -446,6 +447,53 @@ impl Value for Refl {
     #[inline]
     fn into_enum(self) -> ValueEnum {
         self.into()
+    }
+}
+
+/// Path induction
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct PathInd {
+    /// The base type over which path induction is being performed
+    base_ty: Option<TypeId>,
+    /// The type of families over which path induction is to be performed
+    family_ty: VarId<Pi>,
+    /// The type of this instance of path induction
+    ///
+    /// This type's region must *always* be equal to this value's region, so no region pointer is necessary
+    ty: VarId<Pi>,
+}
+
+impl PathInd {
+    /// Create a new instance of path induction for a given kind
+    pub fn over_kind(kind: KindId) -> PathInd {
+        unimplemented!()
+    }
+    /// Create a new instance of path induction with a given base type
+    pub fn over_base(base_ty: TypeId) -> PathInd {
+        let family_ty = Self::compute_family_ty(base_ty.clone()).into_var();
+        let ty = Self::ty_over_base_helper(base_ty.clone(), family_ty.clone()).into_var();
+        PathInd {
+            base_ty: Some(base_ty),
+            family_ty,
+            ty,
+        }
+    }
+    /// Get the type of path induction for a given kind
+    pub fn ty_over_kind(kind: KindId) -> Pi {
+        unimplemented!()
+    }
+    /// Get the type of families for an instance of path induction with a given base type
+    pub fn compute_family_ty(base_ty: TypeId) -> Pi {
+        unimplemented!()
+    }
+    /// Get the type of path induction for a given base type given the family type
+    fn ty_over_base_helper(base_ty: TypeId, family_ty: VarId<Pi>) -> Pi {
+        unimplemented!()
+    }
+    /// Get the type of path induction for a given base type
+    pub fn ty_over_base(base_ty: TypeId) -> Pi {
+        let family_ty = Self::compute_family_ty(base_ty.clone()).into_var();
+        Self::ty_over_base_helper(base_ty, family_ty)
     }
 }
 
