@@ -9,7 +9,7 @@ use crate::primitive::{
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
-use crate::proof::identity::{Id, IdFamily, PathInd, Refl};
+use crate::proof::paths::{induction::PathInd, Id, IdFamily, Refl};
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
