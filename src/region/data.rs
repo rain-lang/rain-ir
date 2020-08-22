@@ -64,6 +64,26 @@ impl RegionData {
             universe.unwrap_or_else(|| Prop.into_universe()),
         ))
     }
+    /// Get the minimal region for a set of parameters
+    #[inline]
+    pub fn minimal(param_tys: TyArr) -> Result<RegionData, Error> {
+        let mut universe = None;
+        let mut gcr = RegionBorrow::NULL;
+        for param_ty in param_tys.iter() {
+            gcr = gcr.get_gcr(param_ty.region())?;
+            let param_universe = param_ty.universe();
+            if let Some(universe) = &mut universe {
+                if param_universe > *universe {
+                    *universe = param_universe.clone_var();
+                }
+            } else {
+                universe = Some(param_universe.clone_var())
+            }
+        }
+        let parent = gcr.clone_region();
+        let universe = universe.unwrap_or_else(|| Prop.into_universe());
+        Ok(Self::with_unchecked(param_tys, parent, universe))
+    }
     /// Create data for a new, empty region with an optional parent region
     #[inline]
     pub fn with_parent(parent: Region) -> RegionData {

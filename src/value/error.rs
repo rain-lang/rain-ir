@@ -52,6 +52,6 @@ pub enum Error {
     InvalidParam,
     /// An undefined parameter
     UndefParam,
-    /// An too many bits error
+    /// Too many bits error
     TooManyBits,
 }

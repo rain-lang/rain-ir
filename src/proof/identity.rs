@@ -7,8 +7,7 @@ use crate::function::pi::Pi;
 use crate::region::{Region, RegionBorrow, Regional};
 use crate::typing::{Kind, Type, Typed};
 use crate::value::{
-    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, ValId, Value, ValueEnum,
-    VarId,
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
 };
 use crate::{enum_convert, substitute_to_valid};
 use std::convert::TryInto;
@@ -450,13 +449,13 @@ impl Value for Refl {
     }
 }
 
-/// Path induction
+/// Path induction over a type or kind
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct PathInd {
-    /// The base type over which path induction is being performed
-    base_ty: Option<TypeId>,
-    /// The type of families over which path induction is to be performed
-    family_ty: VarId<Pi>,
+    /// The base types over which path induction is being performed
+    base_tys: TyArr,
+    /// The target kind over which path induction is to be performed
+    target: KindId,
     /// The type of this instance of path induction
     ///
     /// This type's region must *always* be equal to this value's region, so no region pointer is necessary
@@ -464,35 +463,114 @@ pub struct PathInd {
 }
 
 impl PathInd {
-    /// Create a new instance of path induction for a given kind
-    pub fn over_kind(kind: KindId) -> PathInd {
-        unimplemented!()
-    }
     /// Create a new instance of path induction with a given base type
-    pub fn over_base(base_ty: TypeId) -> PathInd {
-        let family_ty = Self::compute_family_ty(base_ty.clone()).into_var();
-        let ty = Self::ty_over_base_helper(base_ty.clone(), family_ty.clone()).into_var();
-        PathInd {
-            base_ty: Some(base_ty),
-            family_ty,
+    pub fn over_base(base_tys: TyArr, target: KindId) -> Result<PathInd, Error> {
+        let family_ty = Self::compute_family_ty(base_tys.clone(), target.clone())?.into_var();
+        let ty = Self::ty_over_base_helper(base_tys.clone(), family_ty)?.into_var();
+        Ok(PathInd {
+            base_tys,
+            target,
             ty,
-        }
-    }
-    /// Get the type of path induction for a given kind
-    pub fn ty_over_kind(kind: KindId) -> Pi {
-        unimplemented!()
+        })
     }
     /// Get the type of families for an instance of path induction with a given base type
-    pub fn compute_family_ty(base_ty: TypeId) -> Pi {
-        unimplemented!()
+    pub fn compute_family_ty(base_tys: TyArr, target: KindId) -> Result<Pi, Error> {
+        let left_region = Region::minimal(base_tys.clone())?;
+        let right_region =
+            Region::with(base_tys, left_region.clone()).expect("Right region is valid");
+        let ids = left_region
+            .params()
+            .zip(right_region.params())
+            .map(|(x, y)| {
+                Id::try_new(x.into_val(), y.into_val())
+                    .expect("Identity type is valid for same-type pairs")
+                    .into_ty()
+            });
+        let id_region =
+            Region::with(ids.collect(), right_region.clone()).expect("Identity region is valid");
+        let target_pi = Pi::try_new(target.into_ty(), id_region).expect("Target pi");
+        let right_pi = Pi::try_new(target_pi.into_ty(), right_region).expect("Right pi");
+        Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi"))
+    }
+    /// Get the type of loops for an instance of path induction with a given family
+    pub fn compute_loop_ty(base_tys: TyArr, family: &ValId) -> Result<Pi, Error> {
+        let arity = base_tys.len();
+        let unary_region =
+            Region::minimal(base_tys).expect("Single-parameter minimal region is always valid");
+        let mut params = Vec::with_capacity(3 * arity);
+        for param in unary_region.params() {
+            params.push(param.into_val())
+        }
+        for ix in 0..arity {
+            params.push(params[ix].clone())
+        }
+        for ix in 0..arity {
+            params.push(Id::refl(params[ix].clone()).into_val())
+        }
+        let application = family
+            .applied(&params[..])?
+            .try_into_ty()
+            .map_err(|_| Error::NotATypeError)?;
+        Pi::try_new(application, unary_region)
     }
     /// Get the type of path induction for a given base type given the family type
-    fn ty_over_base_helper(base_ty: TypeId, family_ty: VarId<Pi>) -> Pi {
-        unimplemented!()
+    fn ty_over_base_helper(base_tys: TyArr, family_ty: VarId<Pi>) -> Result<Pi, Error> {
+        let arity = base_tys.len();
+        let family_region = Region::minimal(once(family_ty.into_ty()).collect())
+            .expect("Single parameter minimal region is always valid");
+        let family = family_region
+            .param(0)
+            .expect("Family region has first parameter")
+            .into_val();
+        let loop_ty = Self::compute_loop_ty(base_tys.clone(), &family).expect("Valid loop type");
+        let loop_region = Region::with(once(loop_ty.into_ty()).collect(), family_region.clone())
+            .expect("Loop region is valid");
+        let left_region =
+            Region::with(base_tys.clone(), loop_region.clone()).expect("Left region is valid");
+        let right_region =
+            Region::with(base_tys, left_region.clone()).expect("Right region is valid");
+        let ids = left_region
+            .params()
+            .zip(right_region.params())
+            .map(|(x, y)| {
+                Id::try_new(x.into_val(), y.into_val())
+                    .expect("Identity type is valid for same-type pairs")
+                    .into_ty()
+            });
+        let id_region =
+            Region::with(ids.collect(), right_region.clone()).expect("Identity region is valid");
+        let mut params = Vec::with_capacity(3 * arity);
+        for param in left_region.params() {
+            params.push(param.into_val())
+        }
+        for param in right_region.params() {
+            params.push(param.into_val())
+        }
+        for param in id_region.params() {
+            params.push(param.into_val())
+        }
+        let application = family
+            .applied(&params[..])
+            .expect("Valid application of type family")
+            .try_into_ty()
+            .expect("Application of type family is a type");
+        let specific_family_instantiation = Pi::try_new(application, id_region)
+            .expect("Specific family instantiation is valid")
+            .into_ty();
+        let right_family_instantiation = Pi::try_new(specific_family_instantiation, right_region)
+            .expect("Right family instantiation is valid")
+            .into_ty();
+        let left_family_instantiation = Pi::try_new(right_family_instantiation, left_region)
+            .expect("Left family instantiation is valid")
+            .into_ty();
+        let loop_instantiation = Pi::try_new(left_family_instantiation, loop_region)
+            .expect("Loop instantiation is valid")
+            .into_ty();
+        Ok(Pi::try_new(loop_instantiation, family_region).expect("Family instantiation is valid"))
     }
     /// Get the type of path induction for a given base type
-    pub fn ty_over_base(base_ty: TypeId) -> Pi {
-        let family_ty = Self::compute_family_ty(base_ty.clone()).into_var();
+    pub fn ty_over_base(base_ty: TyArr, target: KindId) -> Result<Pi, Error> {
+        let family_ty = Self::compute_family_ty(base_ty.clone(), target)?.into_var();
         Self::ty_over_base_helper(base_ty, family_ty)
     }
 }
