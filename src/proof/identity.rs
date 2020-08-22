@@ -505,7 +505,7 @@ impl PathInd {
 ///
 /// TODO: this should not be a primitive value, but rather a descriptor for a primitive value to be constructed
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ApConst {
+pub struct Happly {
     /// The type of functions being applied
     ap_ty: VarId<Pi>,
     /// The particular function being applied, if any
@@ -516,13 +516,13 @@ pub struct ApConst {
     region: Region,
 }
 
-impl ApConst {
+impl Happly {
     /// Create a new instance of the applicativity axiom for a pi type
     #[inline]
-    pub fn try_new_pi(ap_ty: VarId<Pi>) -> Result<ApConst, Error> {
+    pub fn try_new_pi(ap_ty: VarId<Pi>) -> Result<Happly, Error> {
         let ty = Self::pi_ty(ap_ty.clone())?;
         let region = ty.clone_region();
-        Ok(ApConst {
+        Ok(Happly {
             ap_ty,
             func: None,
             region,
@@ -531,10 +531,10 @@ impl ApConst {
     }
     /// Create a new instance of the applicativity axiom for a given function
     #[inline]
-    pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<ApConst, Error> {
+    pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<Happly, Error> {
         let ty = Self::fn_ty(&ap_ty, param_fn)?;
         let region = ty.clone_region();
-        Ok(ApConst {
+        Ok(Happly {
             ap_ty,
             func: None,
             region,
@@ -593,7 +593,7 @@ impl ApConst {
     }
 }
 
-impl Typed for ApConst {
+impl Typed for Happly {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
@@ -750,7 +750,7 @@ mod tests {
         let ap_type = Pi::try_new(left_pi.into_ty(), binary_region)
             .expect("Binary operation application type is valid")
             .into_ty();
-        let ap_const = ApConst::try_new_pi(binary_ty).unwrap();
+        let ap_const = Happly::try_new_pi(binary_ty).unwrap();
         assert_eq!(ap_const.ty(), ap_type);
     }
 }
