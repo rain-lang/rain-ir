@@ -785,7 +785,6 @@ mod prettyprint_impl {
         }
     }
 
-
     impl PrettyPrint for PathInd {
         fn prettyprint<I: From<usize> + Display>(
             &self,
@@ -802,7 +801,7 @@ mod tests {
     use super::*;
     use crate::primitive::logical::{binary_ty, Bool};
     use crate::typing::primitive::{Fin, Prop};
-    use crate::value::{ValRef, Value};
+    use crate::value::Value;
 
     #[test]
     fn basic_bool_id() {
@@ -878,17 +877,15 @@ mod tests {
     }
 
     #[test]
-    fn apconst_and() {
+    fn happly_helpers() {
         let binary_ty = binary_ty();
-        let bool_ty = Bool.into_ty();
-        let binary_args_arr = [bool_ty.borrow_ty(), bool_ty.borrow_ty()];
-        let binary_args = binary_args_arr.iter().map(ValRef::clone_ty);
         let binary_region =
             Region::with(once(binary_ty.clone().into_ty()).collect(), Region::NULL).unwrap();
         let operator = binary_region.param(0).unwrap().into_val();
         let left_region =
-            Region::with(binary_args.clone().collect(), binary_region.clone()).unwrap();
-        let right_region = Region::with(binary_args.collect(), left_region.clone()).unwrap();
+            Region::with(binary_ty.param_tys().clone(), binary_region.clone()).unwrap();
+        let right_region =
+            Region::with(binary_ty.param_tys().clone(), left_region.clone()).unwrap();
         let mut identity_params = Vec::with_capacity(2);
         let mut left_params = Vec::with_capacity(2);
         let mut right_params = Vec::with_capacity(2);
