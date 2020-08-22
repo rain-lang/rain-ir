@@ -464,7 +464,7 @@ pub struct PathInd {
 
 impl PathInd {
     /// Create a new instance of path induction with a given base type
-    pub fn over_base(base_tys: TyArr, target: KindId) -> Result<PathInd, Error> {
+    pub fn try_new(base_tys: TyArr, target: KindId) -> Result<PathInd, Error> {
         let family_ty = Self::compute_family_ty(base_tys.clone(), target.clone())?.into_var();
         let ty = Self::ty_over_base_helper(base_tys.clone(), family_ty)?.into_var();
         Ok(PathInd {
@@ -472,6 +472,11 @@ impl PathInd {
             target,
             ty,
         })
+    }
+    /// Get the type of path induction for a given base type
+    pub fn compute_ty(base_ty: TyArr, target: KindId) -> Result<Pi, Error> {
+        let family_ty = Self::compute_family_ty(base_ty.clone(), target)?.into_var();
+        Self::ty_over_base_helper(base_ty, family_ty)
     }
     /// Get the type of families for an instance of path induction with a given base type
     pub fn compute_family_ty(base_tys: TyArr, target: KindId) -> Result<Pi, Error> {
@@ -568,10 +573,76 @@ impl PathInd {
             .into_ty();
         Ok(Pi::try_new(loop_instantiation, family_region).expect("Family instantiation is valid"))
     }
-    /// Get the type of path induction for a given base type
-    pub fn ty_over_base(base_ty: TyArr, target: KindId) -> Result<Pi, Error> {
-        let family_ty = Self::compute_family_ty(base_ty.clone(), target)?.into_var();
-        Self::ty_over_base_helper(base_ty, family_ty)
+}
+
+impl Typed for PathInd {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+}
+
+impl Regional for PathInd {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.ty.region()
+    }
+}
+
+impl Apply for PathInd {}
+
+impl Substitute for PathInd {
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<PathInd, Error> {
+        let target = self.target.substitute_kind(ctx)?;
+        let base_tys: Result<Vec<_>, _> = self
+            .base_tys
+            .iter()
+            .map(|ty| ty.substitute_ty(ctx))
+            .collect();
+        let ty = self
+            .ty
+            .substitute(ctx)?
+            .try_into()
+            .map_err(|_| Error::InvalidSubKind)?;
+        Ok(PathInd {
+            target,
+            base_tys: base_tys?.into(),
+            ty,
+        })
+    }
+}
+
+substitute_to_valid!(PathInd);
+
+enum_convert! {
+    impl InjectionRef<ValueEnum> for PathInd {}
+    impl TryFrom<NormalValue> for PathInd { as ValueEnum, }
+    impl TryFromRef<NormalValue> for PathInd { as ValueEnum, }
+}
+
+impl Value for PathInd {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!("Invalid dependency {} for path induction", ix)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        NormalValue::assert_normal(ValueEnum::PathInd(self))
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::PathInd(self)
+    }
+}
+
+impl From<PathInd> for NormalValue {
+    #[inline]
+    fn from(path: PathInd) -> NormalValue {
+        NormalValue::assert_normal(ValueEnum::PathInd(path))
     }
 }
 
@@ -711,6 +782,17 @@ mod prettyprint_impl {
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
             write!(fmt, "(refl prettyprinting unimplemented)")
+        }
+    }
+
+
+    impl PrettyPrint for PathInd {
+        fn prettyprint<I: From<usize> + Display>(
+            &self,
+            _printer: &mut PrettyPrinter<I>,
+            fmt: &mut Formatter,
+        ) -> Result<(), fmt::Error> {
+            write!(fmt, "(path induction prettyprinting unimplemented)")
         }
     }
 }

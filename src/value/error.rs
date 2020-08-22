@@ -39,6 +39,12 @@ pub enum Error {
     NoInlineError,
     /// A value is no longer a type after substitution
     NotATypeError,
+    /// A value is no longer a kind after substitution
+    NotAKindError,
+    /// A value is no longer a representation after substitution
+    NotAReprError,
+    /// A value is no longer a universe after substitution
+    NotAUniverseError,
     /// Too many arguments for a (non-curried!) function
     /// (or sometimes an object which *may* be a function)
     TooManyArgs,
