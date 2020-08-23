@@ -57,7 +57,7 @@ impl PathInd {
             params.push(params[ix].clone())
         }
         for ix in 0..arity {
-            params.push(Id::refl(params[ix].clone()).into_val())
+            params.push(Refl::refl(params[ix].clone()).into_val())
         }
         let application = family
             .applied(&params[..])?

@@ -138,6 +138,7 @@ impl EvalCtx {
         check_region: bool,
     ) -> Result<(), Error> {
         if check_ty && lhs.ty() != rhs.ty() {
+            println!("SUBSTITUTION FAILURE: LHS = {}: {}, RHS = {}: {}", lhs, lhs.ty(), rhs, rhs.ty());
             return Err(Error::TypeMismatch);
         }
         if check_region {
