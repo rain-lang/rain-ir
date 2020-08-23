@@ -137,9 +137,21 @@ impl Type for Pi {
         if args.is_empty() {
             return Ok(self.clone().into_ty());
         }
+
+        // Skip null substitutions:
+        let param_tys = self.param_tys();
+        if args.len() >= param_tys.len()
+            && (self.result.region() != self.def_region || args[..param_tys.len()] == **param_tys)
+        {
+            return if args.len() > param_tys.len() {
+                self.result.apply_ty_in(&args[param_tys.len()..], ctx)
+            } else {
+                Ok(self.result.clone())
+            };
+        }
+
         // Rename context
         let ctx_handle = ctx;
-
         // Initialize context
         let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
@@ -169,6 +181,7 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
+        println!("STARTING PI SUBSTITUTION!");
         let result = self.result.substitute_ty(ctx)?;
         let deps: ValSet = self
             .deps
@@ -182,6 +195,10 @@ impl Substitute for Pi {
         } else {
             Region::minimal_with(self.param_tys().clone(), dep_gcr)?
         };
+        println!(
+            "PI SUBSTITUTION:\nSUBSTITUTING: {}\nRESULT = {}\nDEPS = {:#?}\n\n\n", 
+            self, result, deps,
+        );
         Ok(Pi {
             result,
             deps,

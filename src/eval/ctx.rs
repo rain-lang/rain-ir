@@ -223,6 +223,7 @@ impl EvalCtx {
         let old_is_empty = self.is_empty();
         for param in region.params().map(Value::into_val) {
             if let Some(value) = values.next() {
+                println!("SUBSTITUTING PARAMETER {:#?} FOR {:#?}:\n\n\n", param, value);
                 // Save old caches, if necessary
                 if !old_is_empty && old_caches.is_none() {
                     old_caches = Some(OldCaches {
