@@ -233,6 +233,8 @@ pub struct ApConst {
 }
 
 impl ApConst {
+    // === Construction ===
+
     /// Create a new instance of the applicativity axiom for a pi type
     #[inline]
     pub fn try_new_pi(ap_ty: VarId<Pi>) -> ApConst {
@@ -246,6 +248,9 @@ impl ApConst {
         }
         Ok(ApConst { ap_ty, func: None })
     }
+
+    // === Manipulation ===
+
     /// Get the base type of this instance of the applicativity axiom
     #[inline]
     pub fn ap_ty(&self) -> &VarId<Pi> {
@@ -269,6 +274,39 @@ impl ApConst {
         std::mem::swap(&mut func, &mut self.func);
         Ok(func)
     }
+
+    // === Value constructon ===
+
+    /// Construct a `ValId` corresponding to a proof of path induction for the given instance of `ApConst`
+    #[inline]
+    pub fn into_val(self) -> ValId {
+        if let Some(param_fn) = self.func {
+            let domain = self.ap_ty.param_tys().clone();
+            Self::prove_for_func(param_fn, domain)
+                .expect("Transforming a valid ApConst instance to a `ValId` should always succeed!")
+        } else {
+            Self::prove_over(self.ap_ty)
+        }
+    }
+
+    /// Construct a `ValId` corresponding to a proof of applicativity for a given (fixed) function and domain
+    #[inline]
+    pub fn prove_for_func(param_fn: ValId, domain: TyArr) -> Result<ValId, Error> {
+        unimplemented!(
+            "Prove apconst for function {} over domain {:?} (unverified)",
+            param_fn,
+            domain
+        )
+    }
+
+    /// Construct a `ValId` corresponding to a proof of applicativity for any function of a given type
+    #[inline]
+    pub fn prove_over(ap_ty: VarId<Pi>) -> ValId {
+        unimplemented!("Prove apconst for function type {}", ap_ty)
+    }
+
+    // === Type construction ===
+
     /// Compute the type of this instance of the applicativity axiom as a `VarId<Pi>`
     #[inline]
     pub fn compute_ty(&self) -> VarId<Pi> {
@@ -331,6 +369,13 @@ impl ApConst {
             Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
         let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
+    }
+}
+
+impl From<ApConst> for ValId {
+    #[inline]
+    fn from(ap_const: ApConst) -> ValId {
+        ap_const.into_val()
     }
 }
 
