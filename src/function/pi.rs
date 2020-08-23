@@ -176,7 +176,6 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        println!("STARTING PI SUBSTITUTION!");
         let result = self.result.substitute_ty(ctx)?;
         let deps: ValSet = self
             .deps
@@ -190,10 +189,6 @@ impl Substitute for Pi {
         } else {
             Region::minimal_with(self.param_tys().clone(), dep_gcr)?
         };
-        println!(
-            "PI SUBSTITUTION:\nSUBSTITUTING: {}\nRESULT = {}\nDEPS = {:#?}\n\n\n",
-            self, result, deps,
-        );
         Ok(Pi {
             result,
             deps,
