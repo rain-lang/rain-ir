@@ -34,19 +34,8 @@ impl PathInd {
     }
     /// Get the type of families for an instance of path induction with a given base type
     pub fn compute_family_ty(base_tys: TyArr, target: KindId) -> Result<Pi, Error> {
-        let left_region = Region::minimal(base_tys.clone())?;
-        let right_region =
-            Region::with(base_tys, left_region.clone()).expect("Right region is valid");
-        let ids = left_region
-            .params()
-            .zip(right_region.params())
-            .map(|(x, y)| {
-                Id::try_new(x.into_val(), y.into_val())
-                    .expect("Identity type is valid for same-type pairs")
-                    .into_ty()
-            });
-        let id_region =
-            Region::with(ids.collect(), right_region.clone()).expect("Identity region is valid");
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(base_tys, None, |_, _| {})?;
         let target_pi = Pi::try_new(target.into_ty(), id_region).expect("Target pi");
         let right_pi = Pi::try_new(target_pi.into_ty(), right_region).expect("Right pi");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi"))
@@ -84,12 +73,9 @@ impl PathInd {
         let loop_ty = Self::compute_loop_ty(base_tys.clone(), &family).expect("Valid loop type");
         let loop_region = Region::with(once(loop_ty.into_ty()).collect(), family_region.clone())
             .expect("Loop region is valid");
-        let left_region =
-            Region::with(base_tys.clone(), loop_region.clone()).expect("Left region is valid");
-        let right_region =
-            Region::with(base_tys, left_region.clone()).expect("Right region is valid");
-        let id_region = construct_id_region(&left_region, &right_region, |_, _| {})
-            .expect("Identity region is valid");
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(base_tys, Some(loop_region.clone()), |_, _| {})
+                .expect("Constructing argument regions succeeds");
         let mut params = Vec::with_capacity(3 * arity);
         for param in left_region.params() {
             params.push(param.into_val())
@@ -336,17 +322,13 @@ impl ApConst {
     }
     fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
         let no_params = domain.len();
-        let left_region = Region::with(domain.clone(), param_fn.clone_region())
-            .expect("domain lies in ap_ty's region");
-        let right_region = Region::with(domain, left_region.clone_region())
-            .expect("domain lies in ap_ty's region");
         let mut left_params = Vec::with_capacity(no_params);
         let mut right_params = Vec::with_capacity(no_params);
-        let id_region = construct_id_region(&left_region, &right_region, |left, right| {
-            left_params.push(left.clone());
-            right_params.push(right.clone())
-        })
-        .expect("Constructing identity region works");
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain, Some(param_fn.clone_region()), |left, right| {
+                left_params.push(left.clone());
+                right_params.push(right.clone())
+            })?;
         let left_ap = param_fn.applied(&left_params[..])?;
         let right_ap = param_fn.applied(&right_params[..])?;
         let result_id = Id::try_new(left_ap, right_ap)?;
