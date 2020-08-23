@@ -135,15 +135,12 @@ pub trait Apply: Typed {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        println!("PRE CURRY");
         let applied = self.apply_in(args, ctx)?;
         let (mut rest, mut value) = match applied {
             Application::Success(rest, value) => (rest, value),
             app => return Ok(app),
         };
-        println!("STARTING CURRY");
         while !rest.is_empty() {
-            println!("CURRY REST: {:#?}", rest);
             let applied = value.apply_in(rest, ctx)?;
             let (new_rest, new_value) = match applied {
                 Application::Success(rest, value) => (rest, value),
@@ -155,7 +152,6 @@ pub trait Apply: Typed {
             rest = new_rest;
             value = new_value
         }
-        println!("ENDING CURRY");
         Ok(Application::Success(rest, value))
     }
 }

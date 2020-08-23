@@ -143,8 +143,6 @@ impl Type for Pi {
         // Initialize context
         let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
-        println!("PI DEF REGION: {:#?}", self.def_region());
-
         // Substitute
         let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
 
@@ -182,7 +180,7 @@ impl Substitute for Pi {
         let def_region = if dep_gcr < result_region {
             result_region.clone_region()
         } else {
-            Region::with(self.param_tys().clone(), dep_gcr.clone_region())?
+            Region::minimal_with(self.param_tys().clone(), dep_gcr)?
         };
         Ok(Pi {
             result,
