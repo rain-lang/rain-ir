@@ -88,16 +88,8 @@ impl PathInd {
             Region::with(base_tys.clone(), loop_region.clone()).expect("Left region is valid");
         let right_region =
             Region::with(base_tys, left_region.clone()).expect("Right region is valid");
-        let ids = left_region
-            .params()
-            .zip(right_region.params())
-            .map(|(x, y)| {
-                Id::try_new(x.into_val(), y.into_val())
-                    .expect("Identity type is valid for same-type pairs")
-                    .into_ty()
-            });
-        let id_region =
-            Region::with(ids.collect(), right_region.clone()).expect("Identity region is valid");
+        let id_region = construct_id_region(&left_region, &right_region, |_, _| {})
+            .expect("Identity region is valid");
         let mut params = Vec::with_capacity(3 * arity);
         for param in left_region.params() {
             params.push(param.into_val())
@@ -350,8 +342,8 @@ impl ApConst {
             .expect("domain lies in ap_ty's region");
         let mut left_params = Vec::with_capacity(no_params);
         let mut right_params = Vec::with_capacity(no_params);
-        let identity_region =
-            Self::construct_identity(&left_region, &right_region, |left, right| {
+        let id_region =
+            construct_id_region(&left_region, &right_region, |left, right| {
                 left_params.push(left.clone());
                 right_params.push(right.clone())
             })
@@ -360,45 +352,9 @@ impl ApConst {
         let right_ap = param_fn.applied(&right_params[..])?;
         let result_id = Id::try_new(left_ap, right_ap)?;
         let arrow_pi =
-            Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
+            Pi::try_new(result_id.into_ty(), id_region).expect("Arrow pi is valid");
         let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
-    }
-
-    // === Helpers
-
-    /// Construct an identity region over a left and right region, while calling a callback on the generated left and right parameter `ValId`s
-    pub fn construct_identity<F>(
-        left: &Region,
-        right: &Region,
-        mut callback: F,
-    ) -> Result<Region, Error>
-    where
-        F: FnMut(&ValId, &ValId),
-    {
-        let left_len = left.len();
-        let right_len = right.len();
-        if left_len != right_len {
-            return Err(Error::TooManyArgs);
-        }
-        let mut identity_params = Vec::with_capacity(left_len);
-        for (left, right) in left.params().zip(right.params()) {
-            let left = left.into_val();
-            let right = right.into_val();
-            callback(&left, &right);
-            identity_params.push(Id::try_new(left, right)?.into_ty());
-        }
-        Region::with(identity_params.into(), right.clone())
-    }
-
-    /// Construct a left region, right region, and identity region for a domain over an (optional) base region
-    /// 
-    /// If the base region is null, constructs a minimal region
-    pub fn construct_left_right_identity(
-        domain: TyArr,
-        base: Option<Region>,
-    ) -> Result<(Region, Region, Region), Error> {
-        unimplemented!()
     }
 }
 
@@ -407,6 +363,49 @@ impl From<ApConst> for ValId {
     fn from(ap_const: ApConst) -> ValId {
         ap_const.into_val()
     }
+}
+
+// === Helper functions ===
+
+/// Construct an identity region over a left and right region
+///
+/// The callback is called on the left and right region's parameters as they are generated.
+pub fn construct_id_region<F>(
+    left: &Region,
+    right: &Region,
+    mut callback: F,
+) -> Result<Region, Error>
+where
+    F: FnMut(&ValId, &ValId),
+{
+    let left_len = left.len();
+    let right_len = right.len();
+    if left_len != right_len {
+        return Err(Error::TooManyArgs);
+    }
+    let mut identity_params = Vec::with_capacity(left_len);
+    for (left, right) in left.params().zip(right.params()) {
+        let left = left.into_val();
+        let right = right.into_val();
+        callback(&left, &right);
+        identity_params.push(Id::try_new(left, right)?.into_ty());
+    }
+    Region::with(identity_params.into(), right.clone())
+}
+
+/// Construct a left region, right region, and identity region for a domain over an (optional) base region
+///
+/// If the base region is null, constructs a minimal region. The callback is called on the left and right region's parameters as they are generated.
+/// Note the callback may still be called even if the overall function returns an error!
+pub fn construct_arg_id_regions<F>(
+    domain: TyArr,
+    base: Option<Region>,
+    mut callback: F,
+) -> Result<(Region, Region, Region), Error>
+where
+    F: FnMut(&ValId, &ValId),
+{
+    unimplemented!()
 }
 
 #[cfg(test)]
