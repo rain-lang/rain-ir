@@ -487,6 +487,6 @@ mod test {
         let ap_const = ApConst::try_new_pi(binary_ty);
         let ap_type = ap_const.compute_ty();
         assert_eq!(ap_type, manual_ap_type);
-        let ap_const = ap_const.into_val();
+        //let ap_const = ap_const.into_val();
     }
 }
