@@ -2,10 +2,18 @@
 Finite-valued types
 */
 use crate::eval::Apply;
-use crate::region::Regional;
-use crate::typing::{primitive::FIN, Type, Typed};
-use crate::value::{NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, Error, VarRef, ValueData};
-use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute};
+use crate::function::{pi::Pi};
+use crate::region::{Regional, Region};
+use crate::typing::{
+    primitive::{FIN, Fin}, Type, Typed, Universe
+};
+use crate::value::{
+    NormalValue, TypeRef, ValId, Value, ValueEnum, VarId, Error, VarRef, 
+    ValueData, TypeId
+};
+use crate::{
+    debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr
+};
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::ops::Deref;
@@ -14,7 +22,7 @@ use std::convert::TryInto;
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
 #[repr(transparent)]
-pub struct BitsTy(pub u64);
+pub struct BitsTy(pub u32);
 
 debug_from_display!(BitsTy);
 quick_pretty!(BitsTy, "Unimplemented!");
@@ -177,6 +185,101 @@ impl From<Bits> for NormalValue {
         b.into_norm()
     }
 }
+
+/// The add operator
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Add {
+    /// Type of the add operator
+    ty: VarId<Pi>,
+    /// The length of the bit vector,
+    len: u32
+}
+debug_from_display!(Add);
+quick_pretty!(Add, "Add(Need to change this)");
+trivial_substitute!(Add);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for Add {}
+    impl TryFrom<NormalValue> for Add { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Add { as ValueEnum, }
+}
+
+impl From<Add> for NormalValue {
+    fn from(a: Add) -> NormalValue {
+        a.into_norm()
+    }
+}
+
+impl Regional for Add {}
+
+impl Apply for Add {
+    // fn apply_in<'a>(
+    //     &self,
+    //     args: &'a [ValId],
+    //     ctx: &mut Option<EvalCtx>,
+    // ) -> Result<Application<'a>, Error> {
+    //     Logical::from(*self).apply_in(args, ctx)
+    // }
+}
+
+impl Add {
+    /// Try to initilize an add operator for #bit(len)
+    pub fn new(len: u32) -> Add {
+        let region = Region::with_unchecked(tyarr![BitsTy{0: len}.into_ty(); 2], Region::NULL, Fin.into_universe());
+        let pi = Pi::try_new(BitsTy{0: len}.into_ty(), region).unwrap().into_var();
+        Add {
+            ty: pi,
+            len: len
+        }
+    }
+}
+
+impl Typed for Add {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        self.ty.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
+}
+
+impl Type for Add {
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
+}
+
+impl Value for Add {
+    fn no_deps(&self) -> usize {
+        0
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Add operation {} has no dependencies (tried to get dep #{})",
+            self, ix
+        )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::Add(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        NormalValue::assert_normal(ValueEnum::Add(self))
+    }
+}
+
+impl ValueData for Add {}
 
 #[cfg(test)]
 mod tests {
