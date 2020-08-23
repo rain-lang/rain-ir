@@ -21,14 +21,8 @@ pub enum Error {
     BorrowUsed,
     /// Unused relevant type
     RelevantUnused,
-    /// Lifetime error
-    LifetimeError,
     /// Incomparable regions
     IncomparableRegions,
-    /// Incomparable lifetimes
-    IncomparableLifetimes,
-    /// Invalid casting into a lifetime
-    InvalidCastIntoLifetime,
     /// Evaluation error
     EvalError,
     /// Tuple length mismatch

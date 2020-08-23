@@ -473,7 +473,13 @@ mod prettyprint_impl {
             printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(#id {} {} {})", self.ty(), self.left, self.right)
+            write!(fmt, "(#id ")?;
+            self.left.ty().prettyprint(printer, fmt)?;
+            write!(fmt, " ")?;
+            self.left.prettyprint(printer, fmt)?;
+            write!(fmt, " ")?;
+            self.right.prettyprint(printer, fmt)?;
+            write!(fmt, ")")
         }
     }
 
