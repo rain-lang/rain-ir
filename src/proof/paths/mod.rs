@@ -486,10 +486,14 @@ mod prettyprint_impl {
     impl PrettyPrint for Refl {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(refl prettyprinting unimplemented)")
+            write!(fmt, "(#refl ")?;
+            self.value.ty().prettyprint(printer, fmt)?;
+            write!(fmt, " ")?;
+            self.value.prettyprint(printer, fmt)?;
+            write!(fmt, ")")
         }
     }
 }
