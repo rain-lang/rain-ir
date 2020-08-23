@@ -140,34 +140,13 @@ impl EvalCtx {
         if check_ty && lhs != rhs {
             let lhs_sub_ty = lhs.ty().substitute_ty(self)?;
             if lhs_sub_ty != rhs.ty() {
-                println!(
-                    "SUBSTITUTION FAILURE:\nLHS = {}: {} ==> {},\nRHS = {}: {}\nCACHE: {:#?}\n\n\n",
-                    lhs,
-                    lhs.ty(),
-                    lhs_sub_ty,
-                    rhs,
-                    rhs.ty(),
-                    self.eval_cache
-                );
                 return Err(Error::TypeMismatch);
             }
         }
         if check_region {
             //TODO: region check
         }
-        self.eval_cache.insert(lhs.clone(), rhs.clone());
-        if lhs != rhs {
-            println!(
-                "SUBSTITUTION SUCCESS:\nLHS = {}: {}\nRHS = {}: {}\nCACHE: {:#?}\n\n\n",
-                lhs,
-                lhs.ty(),
-                rhs,
-                rhs.ty(),
-                self.eval_cache
-            );
-        } else {
-            println!("NULL SUBSTITUTION: {}\n\n\n", lhs)
-        }
+        self.eval_cache.insert(lhs, rhs);
 
         //TODO: lifetime substitutions
         Ok(())
@@ -223,7 +202,6 @@ impl EvalCtx {
         let old_is_empty = self.is_empty();
         for param in region.params().map(Value::into_val) {
             if let Some(value) = values.next() {
-                println!("SUBSTITUTING PARAMETER {:#?} FOR {:#?}:\n\n\n", param, value);
                 // Save old caches, if necessary
                 if !old_is_empty && old_caches.is_none() {
                     old_caches = Some(OldCaches {
