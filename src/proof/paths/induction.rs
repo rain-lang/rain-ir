@@ -2,6 +2,7 @@
 Path induction
 */
 use super::*;
+use crate::function::lambda::Lambda;
 
 /// Path induction over a type or kind
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -272,11 +273,41 @@ impl ApConst {
 
     /// Construct a `ValId` corresponding to a proof of applicativity for a given (fixed) function and domain
     pub fn prove_for_func(param_fn: ValId, domain: TyArr) -> Result<ValId, Error> {
-        unimplemented!(
-            "Prove apconst for function {} over domain {:?} (unverified)",
-            param_fn,
-            domain
-        )
+        let ty: VarId<Pi> = param_fn
+            .ty()
+            .clone_val()
+            .try_into()
+            .map_err(|_| Error::NotAFunctionType)?;
+        let target = ty.result().ty_kind().clone_var();
+        let arity = domain.len();
+        let mut left_params = Vec::with_capacity(arity);
+        let mut right_params = Vec::with_capacity(arity);
+        let (left_region, _right_region, id_region) = construct_arg_id_regions(
+            domain.clone(),
+            Some(param_fn.clone_region()),
+            |left, right| {
+                left_params.push(left.clone());
+                right_params.push(right.clone());
+            },
+        )?;
+        let left_ap = param_fn
+            .applied(&left_params[..])
+            .expect("Left parameters are valid");
+        let right_ap = param_fn
+            .applied(&right_params[..])
+            .expect("Right parameters are valid");
+        //TODO: handle dependent typing properly here...
+        let ap_id = Id::try_new(left_ap.clone(), right_ap)?.into_ty();
+        let family = Pi::try_new(ap_id, id_region)
+            .expect("Identity application lies in id region")
+            .into_val();
+        let refl_case = Lambda::try_new(Refl::refl(left_ap).into_val(), left_region)
+            .expect("Left refl lies in left region")
+            .into_val();
+        let path_induction = PathInd::try_new(domain, target)?;
+        Ok(path_induction
+            .applied(&[family, refl_case])
+            .expect("Path induction application"))
     }
 
     /// Construct a `ValId` corresponding to a proof of applicativity for any function of a given type
