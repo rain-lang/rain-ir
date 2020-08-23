@@ -290,7 +290,6 @@ impl ApConst {
     }
 
     /// Construct a `ValId` corresponding to a proof of applicativity for a given (fixed) function and domain
-    #[inline]
     pub fn prove_for_func(param_fn: ValId, domain: TyArr) -> Result<ValId, Error> {
         unimplemented!(
             "Prove apconst for function {} over domain {:?} (unverified)",
@@ -300,7 +299,6 @@ impl ApConst {
     }
 
     /// Construct a `ValId` corresponding to a proof of applicativity for any function of a given type
-    #[inline]
     pub fn prove_over(ap_ty: VarId<Pi>) -> ValId {
         unimplemented!("Prove apconst for function type {}", ap_ty)
     }
@@ -350,18 +348,14 @@ impl ApConst {
             .expect("domain lies in ap_ty's region");
         let right_region = Region::with(domain, left_region.clone_region())
             .expect("domain lies in ap_ty's region");
-        let mut identity_params = Vec::with_capacity(no_params);
         let mut left_params = Vec::with_capacity(no_params);
         let mut right_params = Vec::with_capacity(no_params);
-        for (left, right) in left_region.params().zip(right_region.params()) {
-            let left = left.into_val();
-            let right = right.into_val();
-            left_params.push(left.clone());
-            right_params.push(right.clone());
-            identity_params.push(Id::try_new(left, right)?.into_ty());
-        }
-        let identity_region = Region::with(identity_params.into(), right_region.clone_region())
-            .expect("identity types lie in ap_ty's region");
+        let identity_region =
+            Self::construct_identity(&left_region, &right_region, |left, right| {
+                left_params.push(left.clone());
+                right_params.push(right.clone())
+            })
+            .expect("Constructing identity region works");
         let left_ap = param_fn.applied(&left_params[..])?;
         let right_ap = param_fn.applied(&right_params[..])?;
         let result_id = Id::try_new(left_ap, right_ap)?;
@@ -369,6 +363,42 @@ impl ApConst {
             Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
         let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
+    }
+
+    // === Helpers
+
+    /// Construct an identity region over a left and right region, while calling a callback on the generated left and right parameter `ValId`s
+    pub fn construct_identity<F>(
+        left: &Region,
+        right: &Region,
+        mut callback: F,
+    ) -> Result<Region, Error>
+    where
+        F: FnMut(&ValId, &ValId),
+    {
+        let left_len = left.len();
+        let right_len = right.len();
+        if left_len != right_len {
+            return Err(Error::TooManyArgs);
+        }
+        let mut identity_params = Vec::with_capacity(left_len);
+        for (left, right) in left.params().zip(right.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            callback(&left, &right);
+            identity_params.push(Id::try_new(left, right)?.into_ty());
+        }
+        Region::with(identity_params.into(), right.clone())
+    }
+
+    /// Construct a left region, right region, and identity region for a domain over an (optional) base region
+    /// 
+    /// If the base region is null, constructs a minimal region
+    pub fn construct_left_right_identity(
+        domain: TyArr,
+        base: Option<Region>,
+    ) -> Result<(Region, Region, Region), Error> {
+        unimplemented!()
     }
 }
 
