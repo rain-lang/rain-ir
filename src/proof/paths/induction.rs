@@ -312,7 +312,18 @@ impl ApConst {
 
     /// Construct a `ValId` corresponding to a proof of applicativity for any function of a given type
     pub fn prove_over(ap_ty: VarId<Pi>) -> ValId {
-        unimplemented!("Prove apconst for function type {}", ap_ty)
+        let domain = ap_ty.param_tys().clone();
+        let function_region = Region::minimal(once(ap_ty.into_ty()).collect())
+            .expect("Minimal region of one parameter is always valid!");
+        let param_fn = function_region
+            .param(0)
+            .expect("Function region has one parameter")
+            .into_val();
+        let specific_proof = Self::prove_for_func(param_fn, domain)
+            .expect("Specific proof for parameter function works");
+        Lambda::try_new(specific_proof, function_region)
+            .expect("General proof lambda works")
+            .into_val()
     }
 
     // === Type construction ===
