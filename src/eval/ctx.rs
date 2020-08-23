@@ -5,7 +5,7 @@ A `rain` evaluation context
 use super::Error;
 use super::Substitute;
 use crate::region::{Region, Regional};
-use crate::typing::Typed;
+use crate::typing::{Type, Typed};
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
 use im_rc::{HashMap, Vector};
@@ -137,14 +137,38 @@ impl EvalCtx {
         check_ty: bool,
         check_region: bool,
     ) -> Result<(), Error> {
-        if check_ty && lhs.ty() != rhs.ty() {
-            println!("SUBSTITUTION FAILURE: LHS = {}: {}, RHS = {}: {}", lhs, lhs.ty(), rhs, rhs.ty());
-            return Err(Error::TypeMismatch);
+        if check_ty && lhs != rhs {
+            let lhs_sub_ty = lhs.ty().substitute_ty(self)?;
+            if lhs_sub_ty != rhs.ty() {
+                println!(
+                    "SUBSTITUTION FAILURE:\nLHS = {}: {} ==> {},\nRHS = {}: {}\nCACHE: {:#?}\n\n\n",
+                    lhs,
+                    lhs.ty(),
+                    lhs_sub_ty,
+                    rhs,
+                    rhs.ty(),
+                    self.eval_cache
+                );
+                return Err(Error::TypeMismatch);
+            }
         }
         if check_region {
             //TODO: region check
         }
-        self.eval_cache.insert(lhs, rhs);
+        self.eval_cache.insert(lhs.clone(), rhs.clone());
+        if lhs != rhs {
+            println!(
+                "SUBSTITUTION SUCCESS:\nLHS = {}: {}\nRHS = {}: {}\nCACHE: {:#?}\n\n\n",
+                lhs,
+                lhs.ty(),
+                rhs,
+                rhs.ty(),
+                self.eval_cache
+            );
+        } else {
+            println!("NULL SUBSTITUTION: {}\n\n\n", lhs)
+        }
+
         //TODO: lifetime substitutions
         Ok(())
     }
@@ -169,7 +193,7 @@ impl EvalCtx {
         I: Iterator<Item = ValId>,
     {
         if region.is_null() {
-            return Err(Error::NullRegionSub)
+            return Err(Error::NullRegionSub);
         }
         // Get the LCR, returning an error on incompatible regions
         let lcr = region.lcr(&self.curr_region)?;
