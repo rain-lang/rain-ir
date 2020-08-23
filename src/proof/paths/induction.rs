@@ -41,8 +41,8 @@ impl PathInd {
         let right_pi = Pi::try_new(target_pi.into_ty(), right_region).expect("Right pi");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi"))
     }
-    /// Get the type of loops for an instance of path induction with a given family
-    pub fn compute_loop_ty(base_tys: TyArr, family: &ValId) -> Result<Pi, Error> {
+    /// Get the type of refl proofs for an instance of path induction with a given family
+    pub fn compute_refl_ty(base_tys: TyArr, family: &ValId) -> Result<Pi, Error> {
         let arity = base_tys.len();
         let unary_region =
             Region::minimal(base_tys).expect("Single-parameter minimal region is always valid");
@@ -74,11 +74,11 @@ impl PathInd {
             .param(0)
             .expect("Family region has first parameter")
             .into_val();
-        let loop_ty = Self::compute_loop_ty(base_tys.clone(), &family).expect("Valid loop type");
-        let loop_region = Region::with(once(loop_ty.into_ty()).collect(), family_region.clone())
+        let refl_ty = Self::compute_refl_ty(base_tys.clone(), &family).expect("Valid refl type");
+        let refl_region = Region::with(once(refl_ty.into_ty()).collect(), family_region.clone())
             .expect("Loop region is valid");
         let (left_region, right_region, id_region) =
-            construct_arg_id_regions(base_tys, Some(loop_region.clone()), |_, _| {})
+            construct_arg_id_regions(base_tys, Some(refl_region.clone()), |_, _| {})
                 .expect("Constructing argument regions succeeds");
         let mut params = Vec::with_capacity(3 * arity);
         for param in left_region.params() {
@@ -104,7 +104,7 @@ impl PathInd {
         let left_family_instantiation = Pi::try_new(right_family_instantiation, left_region)
             .expect("Left family instantiation is valid")
             .into_ty();
-        let loop_instantiation = Pi::try_new(left_family_instantiation, loop_region)
+        let loop_instantiation = Pi::try_new(left_family_instantiation, refl_region)
             .expect("Loop instantiation is valid")
             .into_ty();
         Ok(Pi::try_new(loop_instantiation, family_region).expect("Family instantiation is valid"))
@@ -487,5 +487,6 @@ mod test {
         let ap_const = ApConst::try_new_pi(binary_ty);
         let ap_type = ap_const.compute_ty();
         assert_eq!(ap_type, manual_ap_type);
+        let ap_const = ap_const.into_val();
     }
 }

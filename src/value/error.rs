@@ -60,4 +60,6 @@ pub enum Error {
     UndefParam,
     /// Too many bits error
     TooManyBits,
+    /// Tried to substitute into the null region
+    NullRegionSub,
 }

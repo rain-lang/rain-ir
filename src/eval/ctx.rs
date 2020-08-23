@@ -167,11 +167,19 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
+        if region.is_null() {
+            return Err(Error::NullRegionSub)
+        }
         // Get the LCR, returning an error on incompatible regions
         let lcr = region.lcr(&self.curr_region)?;
         let lcr_depth = lcr.depth();
         // Check if the current region is not the LCR
         if lcr != self.curr_region.region() {
+            debug_assert_ne!(
+                lcr_depth, 0,
+                "Substituting region {:#?}\nin context {:#?}\nwith LCR {:#?}",
+                region, self, lcr
+            );
             // Get the evaluation context at the LCR, if any, and substitute within it
             let mut at_lcr = self
                 .at_depth(lcr_depth - 1)

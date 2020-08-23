@@ -168,8 +168,19 @@ impl Type for Pi {
 }
 
 impl Substitute for Pi {
-    fn substitute(&self, _ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        unimplemented!("Pi type substitution")
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
+        let result = self.result.substitute_ty(ctx)?;
+        let deps: ValSet = self
+            .deps
+            .iter()
+            .map(|d| d.substitute(ctx))
+            .collect::<Result<_, _>>()?;
+        let def_region = Region::NULL.gcrs(deps.iter())?.clone_region();
+        Ok(Pi {
+            result,
+            deps,
+            def_region,
+        })
     }
 }
 
