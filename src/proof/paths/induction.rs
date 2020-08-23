@@ -342,17 +342,15 @@ impl ApConst {
             .expect("domain lies in ap_ty's region");
         let mut left_params = Vec::with_capacity(no_params);
         let mut right_params = Vec::with_capacity(no_params);
-        let id_region =
-            construct_id_region(&left_region, &right_region, |left, right| {
-                left_params.push(left.clone());
-                right_params.push(right.clone())
-            })
-            .expect("Constructing identity region works");
+        let id_region = construct_id_region(&left_region, &right_region, |left, right| {
+            left_params.push(left.clone());
+            right_params.push(right.clone())
+        })
+        .expect("Constructing identity region works");
         let left_ap = param_fn.applied(&left_params[..])?;
         let right_ap = param_fn.applied(&right_params[..])?;
         let result_id = Id::try_new(left_ap, right_ap)?;
-        let arrow_pi =
-            Pi::try_new(result_id.into_ty(), id_region).expect("Arrow pi is valid");
+        let arrow_pi = Pi::try_new(result_id.into_ty(), id_region).expect("Arrow pi is valid");
         let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
         Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
     }
@@ -396,16 +394,25 @@ where
 /// Construct a left region, right region, and identity region for a domain over an (optional) base region
 ///
 /// If the base region is null, constructs a minimal region. The callback is called on the left and right region's parameters as they are generated.
-/// Note the callback may still be called even if the overall function returns an error!
 pub fn construct_arg_id_regions<F>(
     domain: TyArr,
     base: Option<Region>,
-    mut callback: F,
+    callback: F,
 ) -> Result<(Region, Region, Region), Error>
 where
     F: FnMut(&ValId, &ValId),
 {
-    unimplemented!()
+    let left = if let Some(base) = base {
+        Region::with(domain.clone(), base)?
+    } else {
+        Region::minimal(domain.clone())?
+    };
+    let right = Region::with(domain, left.clone()).expect(
+        "If left region construction succeeds, then right region construction must succeed",
+    );
+    let id_region = construct_id_region(&left, &right, callback)
+        .expect("If left and right region construction succeeds, then identity region construction must succeed");
+    Ok((left, right, id_region))
 }
 
 #[cfg(test)]
