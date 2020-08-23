@@ -481,7 +481,7 @@ mod test {
     }
 
     #[test]
-    fn happly_helpers() {
+    fn ap_helpers() {
         let binary_ty = binary_ty();
         let manual_ap_type = manually_construct_binary_happly();
         let ap_const = ApConst::try_new_pi(binary_ty);
