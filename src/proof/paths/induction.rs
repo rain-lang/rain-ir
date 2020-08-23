@@ -216,3 +216,168 @@ mod prettyprint_impl {
         }
     }
 }
+
+/// The non-dependent applicativity axiom
+///
+/// NOTE: applicativity of dependent functions is not yet supported, as we do not yet support transport along types.
+///
+/// We also do not yet have a family of non-dependent applicativity axioms, as we first need a supported way to pass a TyArr at all.
+///
+/// TODO: this should not be a primitive value, but rather a descriptor for a primitive value to be constructed
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ApConst {
+    /// The type of functions being applied
+    ap_ty: VarId<Pi>,
+    /// The particular function being applied, if any
+    func: Option<ValId>,
+}
+
+impl ApConst {
+    /// Create a new instance of the applicativity axiom for a pi type
+    #[inline]
+    pub fn try_new_pi(ap_ty: VarId<Pi>) -> ApConst {
+        ApConst { ap_ty, func: None }
+    }
+    /// Create a new instance of the applicativity axiom for a given function
+    #[inline]
+    pub fn try_new_fn(ap_ty: VarId<Pi>, param_fn: ValId) -> Result<ApConst, Error> {
+        if param_fn.ty() != ap_ty {
+            return Err(Error::TypeMismatch);
+        }
+        Ok(ApConst { ap_ty, func: None })
+    }
+    /// Get the base type of this instance of the applicativity axiom
+    #[inline]
+    pub fn ap_ty(&self) -> &VarId<Pi> {
+        &self.ap_ty
+    }
+    /// Get the particular function being applied by this instance, if any
+    #[inline]
+    pub fn func(&self) -> Option<&ValId> {
+        self.func.as_ref()
+    }
+    /// Set the function being applied by this instance, returning the old one if any
+    ///
+    /// Leave this value unchanged and return an error if the function is incompatible with this instance.
+    #[inline]
+    pub fn set_func(&mut self, mut func: Option<ValId>) -> Result<Option<ValId>, Error> {
+        if let Some(func) = &func {
+            if func.ty() != self.ap_ty {
+                return Err(Error::TypeMismatch);
+            }
+        }
+        std::mem::swap(&mut func, &mut self.func);
+        Ok(func)
+    }
+    /// Compute the type of this instance of the applicativity axiom as a `VarId<Pi>`
+    #[inline]
+    pub fn compute_ty(&self) -> VarId<Pi> {
+        self.compute_pi().into_var()
+    }
+    /// Compute the pi type of this instance of the applicativity axiom: warning, slow!
+    #[inline]
+    pub fn compute_pi(&self) -> Pi {
+        let result_pi = if let Some(param_fn) = &self.func {
+            Self::fn_ty(&self.ap_ty, param_fn.clone())
+        } else {
+            Self::pi_ty(self.ap_ty.clone())
+        };
+        result_pi.expect("Constructing an ApConst instance is always valid")
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function
+    pub fn fn_ty(ap_ty: &VarId<Pi>, param_fn: ValId) -> Result<Pi, Error> {
+        if param_fn.ty() != *ap_ty {
+            //TODO: subtyping?
+            return Err(Error::TypeMismatch);
+        }
+        let domain = ap_ty.param_tys().clone();
+        Self::fn_ty_helper(param_fn, domain)
+    }
+    /// Get the pi type corresponding to an instance of this axiom for a given function type
+    pub fn pi_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
+        let domain = ap_ty.param_tys().clone();
+        let ap_ty_region = ap_ty.clone_region();
+        let pi_region = Region::with(once(ap_ty.into_ty()).collect(), ap_ty_region)
+            .expect("ap_ty lies in it's own region...");
+        let param_fn = pi_region
+            .param(0)
+            .expect("Pi region has exactly one parameter")
+            .into_val();
+        let param_pi = Self::fn_ty_helper(param_fn, domain)?;
+        Ok(Pi::try_new(param_pi.into_ty(), pi_region).expect("Final pi is valid"))
+    }
+    fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
+        let no_params = domain.len();
+        let left_region = Region::with(domain.clone(), param_fn.clone_region())
+            .expect("domain lies in ap_ty's region");
+        let right_region = Region::with(domain, left_region.clone_region())
+            .expect("domain lies in ap_ty's region");
+        let mut identity_params = Vec::with_capacity(no_params);
+        let mut left_params = Vec::with_capacity(no_params);
+        let mut right_params = Vec::with_capacity(no_params);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right)?.into_ty());
+        }
+        let identity_region = Region::with(identity_params.into(), right_region.clone_region())
+            .expect("identity types lie in ap_ty's region");
+        let left_ap = param_fn.applied(&left_params[..])?;
+        let right_ap = param_fn.applied(&right_params[..])?;
+        let result_id = Id::try_new(left_ap, right_ap)?;
+        let arrow_pi =
+            Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
+        Ok(Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid"))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::primitive::logical::binary_ty;
+    use crate::value::Value;
+
+    fn manually_construct_binary_happly() -> VarId<Pi> {
+        let binary_ty = binary_ty();
+        let binary_region =
+            Region::with(once(binary_ty.clone().into_ty()).collect(), Region::NULL).unwrap();
+        let operator = binary_region.param(0).unwrap().into_val();
+        let left_region =
+            Region::with(binary_ty.param_tys().clone(), binary_region.clone()).unwrap();
+        let right_region =
+            Region::with(binary_ty.param_tys().clone(), left_region.clone()).unwrap();
+        let mut identity_params = Vec::with_capacity(2);
+        let mut left_params = Vec::with_capacity(2);
+        let mut right_params = Vec::with_capacity(2);
+        for (left, right) in left_region.params().zip(right_region.params()) {
+            let left = left.into_val();
+            let right = right.into_val();
+            left_params.push(left.clone());
+            right_params.push(right.clone());
+            identity_params.push(Id::try_new(left, right).unwrap().into_ty());
+        }
+        let identity_region = Region::with(identity_params.into(), right_region.clone()).unwrap();
+        let left_ap = operator.applied(&left_params[..]).unwrap();
+        let right_ap = operator.applied(&right_params[..]).unwrap();
+        let result_id = Id::try_new(left_ap, right_ap).unwrap();
+        let arrow_pi =
+            Pi::try_new(result_id.into_ty(), identity_region).expect("Arrow pi is valid");
+        let right_pi = Pi::try_new(arrow_pi.into_ty(), right_region).expect("Right pi is valid");
+        let left_pi = Pi::try_new(right_pi.into_ty(), left_region).expect("Left pi is valid");
+        Pi::try_new(left_pi.into_ty(), binary_region)
+            .expect("Binary operation application type is valid")
+            .into_var()
+    }
+
+    #[test]
+    fn happly_helpers() {
+        let binary_ty = binary_ty();
+        let manual_ap_type = manually_construct_binary_happly();
+        let ap_const = ApConst::try_new_pi(binary_ty);
+        let ap_type = ap_const.compute_ty();
+        assert_eq!(ap_type, manual_ap_type);
+    }
+}
