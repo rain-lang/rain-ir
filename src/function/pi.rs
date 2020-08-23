@@ -165,14 +165,9 @@ impl Type for Pi {
 
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
-        if let Some(_region) = region {
-            unimplemented!("Partial pi substitution")
-        // let new_pi = Pi::try_new(
-        //     result.try_into().expect("Partial pi result must be a type"),
-        //     region,
-        //     result_lt,
-        // )?;
-        //Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
+        if let Some(def_region) = region {
+            let pi = Pi::try_new(result, def_region)?;
+            Ok(pi.into_ty())
         } else {
             result.apply_ty_in(rest_args, ctx_handle)
         }
@@ -196,7 +191,7 @@ impl Substitute for Pi {
             Region::minimal_with(self.param_tys().clone(), dep_gcr)?
         };
         println!(
-            "PI SUBSTITUTION:\nSUBSTITUTING: {}\nRESULT = {}\nDEPS = {:#?}\n\n\n", 
+            "PI SUBSTITUTION:\nSUBSTITUTING: {}\nRESULT = {}\nDEPS = {:#?}\n\n\n",
             self, result, deps,
         );
         Ok(Pi {
