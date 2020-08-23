@@ -49,6 +49,9 @@ impl PathInd {
         for param in unary_region.params() {
             params.push(param.into_val())
         }
+        debug_assert_eq!(arity, params.len());
+        // This should help the optimizer, but is not strictly necessary
+        let arity = params.len();
         for ix in 0..arity {
             params.push(params[ix].clone())
         }
