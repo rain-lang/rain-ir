@@ -470,10 +470,10 @@ mod prettyprint_impl {
     impl PrettyPrint for Id {
         fn prettyprint<I: From<usize> + Display>(
             &self,
-            _printer: &mut PrettyPrinter<I>,
+            printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(identity prettyprinting unimplemented)")
+            write!(fmt, "(#id {} {} {})", self.ty(), self.left, self.right)
         }
     }
 

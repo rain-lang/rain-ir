@@ -122,6 +122,7 @@ pub trait Apply: Typed {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
+        println!("SYMBOLIC APPLICATION: {:#?} => {:#?}", self.ty(),args);
         self.ty().apply_ty_in(args, ctx).map(Application::Symbolic)
     }
     /**
