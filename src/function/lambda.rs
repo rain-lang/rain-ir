@@ -22,33 +22,33 @@ pub struct Lambda {
     /// The direct dependencies of this lambda function
     pub(crate) deps: ValSet,
     /// The region of this lambda function
-    pub(crate) region: Region,
+    pub(crate) def_region: Region,
 }
 
 impl Lambda {
     /// Create a new lambda function from a parametrized `ValId`
     pub fn new(result: Parametrized<ValId>) -> Lambda {
         let ty = VarId::from(Pi::ty(&result));
-        let (region, result, deps) = result.destruct();
+        let (def_region, result, deps) = result.destruct();
         Lambda {
             result,
             deps,
-            region,
+            def_region,
             ty,
         }
     }
     /// A utility constructor, which creates a new instance of the identity lambda for a given type
     pub fn id(ty: TypeId) -> Lambda {
         let tyset: TySet = std::iter::once(ty.clone()).collect();
-        let region = Region::with_unchecked(
+        let def_region = Region::with_unchecked(
             tyset.as_arr().clone(),
             ty.clone_region(),
             ty.universe().clone_var(),
         );
-        let result = Parameter::try_new(region.clone(), 0)
+        let result = Parameter::try_new(def_region.clone(), 0)
             .expect("Region has one parameter")
             .into();
-        let ty: VarId<Pi> = Pi::try_new(ty, region.clone())
+        let ty: VarId<Pi> = Pi::try_new(ty, def_region.clone())
             .expect("Identity pi type is valid")
             .into();
         let deps = tyset.into_vals();
@@ -56,7 +56,7 @@ impl Lambda {
             result,
             ty,
             deps,
-            region,
+            def_region,
         }
     }
     /// Attempt to create a new lambda function from a region and value
@@ -66,7 +66,7 @@ impl Lambda {
     /// Get the defining region of this lambda function
     #[inline]
     pub fn def_region(&self) -> &Region {
-        &self.region
+        &self.def_region
     }
     /// Get the depth of the defining region of this lambda function
     #[inline]
@@ -115,7 +115,7 @@ impl Typed for Lambda {
 impl Regional for Lambda {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.region.region()
+        self.def_region.parent().borrow_region()
     }
 }
 
@@ -199,12 +199,18 @@ impl Substitute for Lambda {
             .iter()
             .map(|d| d.substitute(ctx))
             .collect::<Result<_, _>>()?;
-        let region = result.gcr(&ty)?.gcrs(deps.iter())?.clone_region();
+        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
+        let result_region = result.region();
+        let def_region = if dep_gcr < result_region {
+            result_region.clone_region()
+        } else {
+            Region::minimal_with(self.ty.param_tys().clone(), dep_gcr)?
+        };
         Ok(Lambda {
             result,
             deps,
             ty,
-            region,
+            def_region,
         })
     }
 }

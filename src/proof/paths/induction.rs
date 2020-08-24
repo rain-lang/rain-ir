@@ -510,6 +510,19 @@ mod test {
     }
 
     #[test]
+    fn family_refl_types_work() {
+        let domain: TyArr = repeat(Bool.into_ty()).take(2).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain.clone(), None, |_, _| {}).unwrap();
+        let id_const = Lambda::try_new(Unit.into(), id_region).unwrap();
+        let right_const = Lambda::try_new(id_const.into(), right_region).unwrap();
+        let family = Lambda::try_new(right_const.into(), left_region)
+            .unwrap()
+            .into_val();
+        assert!(PathInd::compute_refl_ty(domain, &family).is_ok());
+    }
+
+    #[test]
     fn ap_helpers() {
         let binary_ty = binary_ty();
         let manual_ap_type = manually_construct_binary_happly();
