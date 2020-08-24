@@ -192,8 +192,31 @@ pub struct Add {
     len: u32,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl Add {
+    /// Create an addition operator with bitwidth `len`
+    pub fn new(len: u32) -> Add {
+        Add {
+            ty: Self::compute_ty(len).into_var(),
+            len,
+        }
+    }
+    /// Get the pi type of the addition operator with bitwidth `len`
+    /// 
+    /// Note that the result of this method called on `len` is always equal to the type of `Add::new(len)`.
+    pub fn compute_ty(len: u32) -> Pi {
+        let region = Region::with_unchecked(
+            tyarr![BitsTy{0: len}.into_ty(); 2],
+            Region::NULL,
+            Fin.into_universe(),
+        );
+        Pi::try_new(BitsTy(len).into_ty(), region)
+            .expect("The type of the addition operator is always valid")
+    }
     /// Perform wrapping bitvector addition, discarding high order bits
+    ///
+    /// This method assumes both `left` and `right` are valid bitvectors for this addition operation, namely that they have length
+    /// less than or equal to `self.len()`
     #[inline(always)]
     pub fn masked_add(&self, left: u128, right: u128) -> u128 {
         debug_assert_eq!(
@@ -207,6 +230,11 @@ impl Add {
             "Right bitvector has length greater than len"
         );
         masked_add(self.len, left, right)
+    }
+    /// Get the bitwidth of this addition operator
+    #[inline(always)]
+    pub fn len(&self) -> u32 {
+        self.len
     }
 }
 
@@ -292,21 +320,6 @@ impl Apply for Add {
                 }
             }
         }
-    }
-}
-
-impl Add {
-    /// Try to initilize an add operator for #bit(len)
-    pub fn new(len: u32) -> Add {
-        let region = Region::with_unchecked(
-            tyarr![BitsTy{0: len}.into_ty(); 2],
-            Region::NULL,
-            Fin.into_universe(),
-        );
-        let pi = Pi::try_new(BitsTy { 0: len }.into_ty(), region)
-            .unwrap()
-            .into_var();
-        Add { ty: pi, len }
     }
 }
 
