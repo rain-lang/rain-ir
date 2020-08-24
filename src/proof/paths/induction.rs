@@ -449,8 +449,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::primitive::logical::binary_ty;
+    use crate::primitive::{
+        logical::{binary_ty, Bool},
+        Unit,
+    };
     use crate::value::Value;
+    use std::iter::repeat;
 
     fn manually_construct_binary_happly() -> VarId<Pi> {
         let binary_ty = binary_ty();
@@ -482,6 +486,27 @@ mod test {
         Pi::try_new(left_pi.into_ty(), binary_region)
             .expect("Binary operation application type is valid")
             .into_var()
+    }
+
+    #[test]
+    fn minimal_arg_id_regions_work() {
+        let domain = repeat(Bool.into_ty()).take(3).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain, None, |_, _| {}).unwrap();
+        assert_eq!(*id_region.parent(), right_region);
+        assert_eq!(*right_region.parent(), left_region);
+        assert_eq!(*left_region.parent(), Region::NULL)
+    }
+
+    #[test]
+    fn non_minimal_arg_id_regions_work() {
+        let base = Region::minimal(once(Unit.into_ty()).collect()).unwrap();
+        let domain = repeat(Bool.into_ty()).take(7).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain, Some(base.clone()), |_, _| {}).unwrap();
+        assert_eq!(*id_region.parent(), right_region);
+        assert_eq!(*right_region.parent(), left_region);
+        assert_eq!(*left_region.parent(), base)
     }
 
     #[test]
