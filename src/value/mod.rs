@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Bits, BitsTy, Add},
+    bits::{Bits, BitsTy, Add, Multiply},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -109,6 +109,8 @@ pub enum ValueEnum {
     PathInd(PathInd),
     /// An unsigned addition operation on bitvectors
     Add(Add),
+    /// An unsigned multiplication operation on bitvectors
+    Multiply(Multiply)
 }
 
 // Common value type aliases:
@@ -615,6 +617,7 @@ macro_rules! forv {
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
             ValueEnum::Add($i) => $e,
+            ValueEnum::Multiply($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -734,6 +737,7 @@ normal_valid!(BitsTy);
 normal_valid!(Bits);
 normal_valid!(PathInd);
 normal_valid!(Add);
+normal_valid!(Multiply);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
