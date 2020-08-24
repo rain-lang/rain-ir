@@ -23,6 +23,8 @@ pub enum Error {
     RelevantUnused,
     /// Incomparable regions
     IncomparableRegions,
+    /// Value in an overly-nested region
+    NestedResult,
     /// Evaluation error
     EvalError,
     /// Tuple length mismatch
