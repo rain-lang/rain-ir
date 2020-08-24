@@ -276,7 +276,7 @@ impl Add {
         let pi = Pi::try_new(BitsTy { 0: len }.into_ty(), region)
             .unwrap()
             .into_var();
-        Add { ty: pi, len: len }
+        Add { ty: pi, len }
     }
 }
 
