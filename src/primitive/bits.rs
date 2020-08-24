@@ -330,18 +330,27 @@ impl ValueData for Add {}
 mod tests {
     use super::*;
     #[test]
-    fn bitset_work() {
-        let _data_1 = BitsTy(2).data(1).unwrap();
-        let _data_2 = BitsTy(2).data(3).unwrap();
+    fn bitvector_construction_works() {
+        let data_1 = BitsTy(2).data(1).unwrap();
+        let data_2 = BitsTy(2).data(3).unwrap();
         assert!(BitsTy(2).data(4).is_err());
+        assert_ne!(data_1, data_2, "Bitvector equality sanity test");
 
-        let _data_3 = BitsTy(4).data(3).unwrap();
+        let data_3 = BitsTy(4).data(3).unwrap();
         assert!(BitsTy(4).data(16).is_err());
+        assert_ne!(
+            data_2, data_3,
+            "Bitvector equality should take length into account"
+        );
 
-        let _data_4 = BitsTy(128).data(534567).unwrap();
+        // Testing a literal which overflows a u64
+        let _big_data = BitsTy(128).data(0x595643948456453445454512u128).unwrap();
+
+        // Negative data fails
+        assert!(BitsTy(23).data(-1).is_err());
     }
     #[test]
-    fn bitset_add_work() {
+    fn bitvector_addition_works() {
         let test_cases: [(u32, u128, u128); 2] = [(2, 1, 2), (4, 3, 4)];
         for (len, num_1, num_2) in test_cases.iter() {
             let data_1 = BitsTy(*len).data(*num_1).unwrap();
