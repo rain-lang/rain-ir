@@ -285,8 +285,8 @@ impl From<Ternary> for NormalValue {
             // Cast this ternary to a constant lambda
             NormalValue::assert_normal(ValueEnum::Lambda(Lambda {
                 result: ternary.high,
-                //FIXME!!!
-                region: ternary.ty.def_region().clone(),
+                //FIXME: stack def region appropriately!
+                def_region: ternary.ty.def_region().clone(),
                 ty: ternary.ty,
                 deps: std::iter::once(ternary.low).collect(),
             }))

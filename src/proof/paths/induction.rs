@@ -44,8 +44,7 @@ impl PathInd {
     /// Get the type of refl proofs for an instance of path induction with a given family
     pub fn compute_refl_ty(base_tys: TyArr, family: &ValId) -> Result<Pi, Error> {
         let arity = base_tys.len();
-        let unary_region =
-            Region::minimal(base_tys).expect("Single-parameter minimal region is always valid");
+        let unary_region = Region::minimal_with(base_tys, family.region())?;
         let mut params = Vec::with_capacity(3 * arity);
         for param in unary_region.params() {
             params.push(param.into_val())
@@ -449,8 +448,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::primitive::logical::binary_ty;
+    use crate::primitive::{
+        logical::{binary_ty, Bool},
+        Unit,
+    };
     use crate::value::Value;
+    use std::iter::repeat;
 
     fn manually_construct_binary_happly() -> VarId<Pi> {
         let binary_ty = binary_ty();
@@ -485,12 +488,47 @@ mod test {
     }
 
     #[test]
+    fn minimal_arg_id_regions_work() {
+        let domain = repeat(Bool.into_ty()).take(3).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain, None, |_, _| {}).unwrap();
+        assert_eq!(*id_region.parent(), right_region);
+        assert_eq!(*right_region.parent(), left_region);
+        assert_eq!(*left_region.parent(), Region::NULL)
+    }
+
+    #[test]
+    fn non_minimal_arg_id_regions_work() {
+        let base = Region::minimal(once(Unit.into_ty()).collect()).unwrap();
+        let domain = repeat(Bool.into_ty()).take(7).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain, Some(base.clone()), |_, _| {}).unwrap();
+        assert_eq!(*id_region.parent(), right_region);
+        assert_eq!(*right_region.parent(), left_region);
+        assert_eq!(*left_region.parent(), base)
+    }
+
+    #[test]
+    fn family_refl_types_work() {
+        let domain: TyArr = repeat(Bool.into_ty()).take(2).collect();
+        let (left_region, right_region, id_region) =
+            construct_arg_id_regions(domain.clone(), None, |_, _| {}).unwrap();
+        let id_const = Lambda::try_new(Unit.into(), id_region).unwrap();
+        let right_const = Lambda::try_new(id_const.into(), right_region).unwrap();
+        let family = Lambda::try_new(right_const.into(), left_region)
+            .unwrap()
+            .into_val();
+        assert!(PathInd::compute_refl_ty(domain, &family).is_ok());
+    }
+
+    #[test]
     fn ap_helpers() {
         let binary_ty = binary_ty();
         let manual_ap_type = manually_construct_binary_happly();
         let ap_const = ApConst::try_new_pi(binary_ty);
         let ap_type = ap_const.compute_ty();
         assert_eq!(ap_type, manual_ap_type);
+        //FIXME
         //let ap_const = ap_const.into_val();
     }
 }
