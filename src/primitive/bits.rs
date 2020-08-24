@@ -342,4 +342,28 @@ mod tests {
 
         let _data_4 = BitsTy(128).data(534567).unwrap();
     }
+    #[test]
+    fn bitset_add_work() {
+        let test_cases: [(u32, u128, u128); 2] = [
+            (2, 1, 2),
+            (4, 3, 4),
+        ];
+        for (len, num_1, num_2) in test_cases.iter() {
+            let data_1 = BitsTy(*len).data(*num_1).unwrap();
+            let data_2 = BitsTy(*len).data(*num_2).unwrap();
+            let add_struct = Add::new(*len);
+            let data_arr = [data_1.into_val(), data_2.into_val()];
+            match add_struct.apply_in(&data_arr[..], &mut None).unwrap() {
+                Application::Success(&[], v) => {
+                    match v.as_enum() {
+                        ValueEnum::Bits(b) => {
+                            assert_eq!(b.len, *len);
+                        },
+                        _ => panic!("Returned result should be a Bits value"),
+                    }
+                },
+                _ => panic!("Should be a Application::Success"),
+            };
+        }
+    }
 }
