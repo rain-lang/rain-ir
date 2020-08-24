@@ -214,7 +214,7 @@ impl Add {
     /// Get the pi type of the addition operator with bitwidth `len`
     ///
     /// Note that the result of this method called on `len` is always equal to the type of `Add::new(len)`.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use rain_ir::primitive::bits::Add;
@@ -235,7 +235,17 @@ impl Add {
     /// Perform wrapping bitvector addition, discarding high order bits
     ///
     /// This method assumes both `left` and `right` are valid bitvectors for this addition operation, namely that they have length
-    /// less than or equal to `self.len()`
+    /// less than or equal to `self.len()`. If this is not the case, this function will panic *in debug mode*, while in release mode,
+    /// the behaviour is unspecified but safe.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use rain_ir::primitive::bits::Add;
+    /// let add3 = Add::new(3);
+    /// assert_eq!(add3.masked_add(1, 2), 3);
+    /// assert_eq!(add3.masked_add(6, 1), 7);
+    /// assert_eq!(add3.masked_add(7, 1), 0);
+    /// ```
     #[inline(always)]
     pub fn masked_add(&self, left: u128, right: u128) -> u128 {
         debug_assert_eq!(
@@ -251,6 +261,13 @@ impl Add {
         masked_add(self.len, left, right)
     }
     /// Get the bitwidth of this addition operator
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use rain_ir::primitive::bits::Add;
+    /// let add462 = Add::new(462);
+    /// assert_eq!(add462.len(), 462);
+    /// ```
     #[inline(always)]
     pub fn len(&self) -> u32 {
         self.len
