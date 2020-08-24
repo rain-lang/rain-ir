@@ -143,8 +143,8 @@ impl EvalCtx {
                 return Err(Error::TypeMismatch);
             }
         }
-        if check_region {
-            //TODO: region check
+        if check_region && lhs.depth() < self.root_depth() {
+            return Err(Error::ShallowSub);
         }
         self.eval_cache.insert(lhs, rhs);
 
@@ -253,7 +253,6 @@ impl EvalCtx {
     #[inline]
     pub fn try_evaluate(&self, value: &ValId) -> Option<ValId> {
         // Check if the value's depth is too shallow to have been touched by this context
-        //TODO: proper region check?
         if value.depth() < self.root_depth {
             return Some(value.clone());
         }
