@@ -31,7 +31,14 @@ impl<'a> Application<'a> {
         let mut new_args = Vec::with_capacity(1 + args.len());
         new_args.push(value.clone().into_val());
         new_args.extend_from_slice(args);
-        let region = ty.gcrs(new_args.iter()).unwrap().clone_region();
+        let region = if let Ok(region) = ty.gcrs(new_args.iter()) {
+            region.clone_region()
+        } else {
+            panic!(
+                "Incomparable regions in successful application:\nTYPE = {}\nARGS = {:#?}",
+                ty, new_args
+            );
+        };
         (
             &[],
             Sexpr::new_unchecked(new_args.into_iter().collect(), region, ty).into_val(),

@@ -44,8 +44,7 @@ impl PathInd {
     /// Get the type of refl proofs for an instance of path induction with a given family
     pub fn compute_refl_ty(base_tys: TyArr, family: &ValId) -> Result<Pi, Error> {
         let arity = base_tys.len();
-        let unary_region =
-            Region::minimal(base_tys).expect("Single-parameter minimal region is always valid");
+        let unary_region = Region::minimal_with(base_tys, family.region())?;
         let mut params = Vec::with_capacity(3 * arity);
         for param in unary_region.params() {
             params.push(param.into_val())
