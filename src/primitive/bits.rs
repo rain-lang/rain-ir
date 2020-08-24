@@ -362,9 +362,9 @@ mod tests {
                     ValueEnum::Bits(b) => {
                         assert_eq!(b.len, *len);
                     }
-                    _ => panic!("Returned result should be a Bits value"),
+                    _ => panic!("Result should be a bitvector constant (ValueEnum::Bits)"),
                 },
-                _ => panic!("Should be a Application::Success"),
+                _ => panic!("Application should not be symbolic"),
             };
         }
     }
