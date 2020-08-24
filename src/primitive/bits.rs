@@ -191,6 +191,38 @@ pub struct Add {
     /// The length of the bit vector,
     len: u32,
 }
+
+impl Add {
+    /// Perform wrapping bitvector addition, discarding high order bits
+    #[inline(always)]
+    pub fn masked_add(&self, left: u128, right: u128) -> u128 {
+        debug_assert_eq!(
+            left,
+            mask(self.len, left),
+            "Left bitvector has length greater than len"
+        );
+        debug_assert_eq!(
+            right,
+            mask(self.len, right),
+            "Right bitvector has length greater than len"
+        );
+        masked_add(self.len, left, right)
+    }
+}
+
+/// Mask a bitvector, discarding bits of order greater than `len`
+#[inline(always)]
+pub fn mask(len: u32, vector: u128) -> u128 {
+    let len = len.min(128);
+    vector.wrapping_shl(128 - len).wrapping_shr(128 - len)
+}
+
+/// Perform wrapping bitvector addition, discarding bits of order greater than `len`
+#[inline(always)]
+pub fn masked_add(len: u32, left: u128, right: u128) -> u128 {
+    mask(len, left.wrapping_add(right))
+}
+
 debug_from_display!(Add);
 quick_pretty!(Add, "Add(Need to change this)");
 trivial_substitute!(Add);
@@ -228,7 +260,7 @@ impl Apply for Add {
                     }
                     let result = Bits {
                         ty: left.ty.clone(),
-                        data: left.data.wrapping_add(right.data),
+                        data: self.masked_add(left.data, right.data),
                         len: left.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
@@ -361,6 +393,7 @@ mod tests {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
                         assert_eq!(b.len, *len);
+                        assert_eq!(b.data, num_1.wrapping_add(*num_2) % (1 << len));
                     }
                     _ => panic!("Result should be a bitvector constant (ValueEnum::Bits)"),
                 },
