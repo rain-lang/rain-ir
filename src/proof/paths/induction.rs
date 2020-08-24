@@ -333,6 +333,7 @@ impl ApConst {
     pub fn compute_ty(&self) -> VarId<Pi> {
         self.compute_pi().into_var()
     }
+
     /// Compute the pi type of this instance of the applicativity axiom: warning, slow!
     #[inline]
     pub fn compute_pi(&self) -> Pi {
@@ -343,6 +344,7 @@ impl ApConst {
         };
         result_pi.expect("Constructing an ApConst instance is always valid")
     }
+
     /// Get the pi type corresponding to an instance of this axiom for a given function
     pub fn fn_ty(ap_ty: &VarId<Pi>, param_fn: ValId) -> Result<Pi, Error> {
         if param_fn.ty() != *ap_ty {
@@ -352,6 +354,7 @@ impl ApConst {
         let domain = ap_ty.param_tys().clone();
         Self::fn_ty_helper(param_fn, domain)
     }
+
     /// Get the pi type corresponding to an instance of this axiom for a given function type
     pub fn pi_ty(ap_ty: VarId<Pi>) -> Result<Pi, Error> {
         let domain = ap_ty.param_tys().clone();
@@ -365,6 +368,7 @@ impl ApConst {
         let param_pi = Self::fn_ty_helper(param_fn, domain)?;
         Ok(Pi::try_new(param_pi.into_ty(), pi_region).expect("Final pi is valid"))
     }
+
     fn fn_ty_helper(param_fn: ValId, domain: TyArr) -> Result<Pi, Error> {
         let no_params = domain.len();
         let mut left_params = Vec::with_capacity(no_params);
