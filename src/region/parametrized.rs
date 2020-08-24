@@ -25,7 +25,8 @@ impl<V: Value + Clone> Parametrized<V> {
         use Ordering::*;
         let depth = region.depth();
         let deps: ValSet = match value.region().partial_cmp(&region) {
-            None | Some(Greater) => return Err(Error::IncomparableRegions),
+            None => return Err(Error::IncomparableRegions),
+            Some(Greater) => return Err(Error::NestedResult),
             Some(Equal) => {
                 let mut results = Vec::new();
                 for _ in value.deps().search(|dep| {

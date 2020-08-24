@@ -5,7 +5,7 @@ A `rain` evaluation context
 use super::Error;
 use super::Substitute;
 use crate::region::{Region, Regional};
-use crate::typing::Typed;
+use crate::typing::{Type, Typed};
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
 use im_rc::{HashMap, Vector};
@@ -137,13 +137,17 @@ impl EvalCtx {
         check_ty: bool,
         check_region: bool,
     ) -> Result<(), Error> {
-        if check_ty && lhs.ty() != rhs.ty() {
-            return Err(Error::TypeMismatch);
+        if check_ty && lhs != rhs {
+            let lhs_sub_ty = lhs.ty().substitute_ty(self)?;
+            if lhs_sub_ty != rhs.ty() {
+                return Err(Error::TypeMismatch);
+            }
         }
         if check_region {
             //TODO: region check
         }
         self.eval_cache.insert(lhs, rhs);
+
         //TODO: lifetime substitutions
         Ok(())
     }
@@ -167,11 +171,19 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
+        if region.is_null() {
+            return Err(Error::NullRegionSub);
+        }
         // Get the LCR, returning an error on incompatible regions
         let lcr = region.lcr(&self.curr_region)?;
         let lcr_depth = lcr.depth();
         // Check if the current region is not the LCR
         if lcr != self.curr_region.region() {
+            debug_assert_ne!(
+                lcr_depth, 0,
+                "Substituting region {:#?}\nin context {:#?}\nwith LCR {:#?}",
+                region, self, lcr
+            );
             // Get the evaluation context at the LCR, if any, and substitute within it
             let mut at_lcr = self
                 .at_depth(lcr_depth - 1)

@@ -21,7 +21,7 @@ pub struct Parameter {
     ix: usize,
 }
 
-quick_pretty!(Parameter, s, fmt => write!(fmt, "#parameter(depth={}, ix={})", s.depth(), s.ix()));
+quick_pretty!(Parameter, s, fmt => write!(fmt, "#param(d={}, ix={}, r={:?})", s.depth(), s.ix(), s.region.data_ptr()));
 trivial_substitute!(Parameter);
 
 enum_convert! {

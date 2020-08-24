@@ -46,7 +46,7 @@ impl RegionData {
         for param_ty in param_tys.iter() {
             match param_ty.region().partial_cmp(&parent.region()) {
                 None => return Err(Error::IncomparableRegions),
-                Some(Greater) => return Err(Error::InvalidCastIntoLifetime),
+                Some(Greater) => return Err(Error::IncomparableRegions),
                 _ => {}
             }
             let param_universe = param_ty.universe();
@@ -63,6 +63,31 @@ impl RegionData {
             parent,
             universe.unwrap_or_else(|| Prop.into_universe()),
         ))
+    }
+    /// Get the minimal region for a set of parameters above a given base region
+    #[inline]
+    pub fn minimal_with(param_tys: TyArr, parent: RegionBorrow) -> Result<RegionData, Error> {
+        let mut universe = None;
+        let mut gcr = parent;
+        for param_ty in param_tys.iter() {
+            gcr = gcr.get_gcr(param_ty.region())?;
+            let param_universe = param_ty.universe();
+            if let Some(universe) = &mut universe {
+                if param_universe > *universe {
+                    *universe = param_universe.clone_var();
+                }
+            } else {
+                universe = Some(param_universe.clone_var())
+            }
+        }
+        let parent = gcr.clone_region();
+        let universe = universe.unwrap_or_else(|| Prop.into_universe());
+        Ok(Self::with_unchecked(param_tys, parent, universe))
+    }
+    /// Get the minimal region for a set of parameters
+    #[inline]
+    pub fn minimal(param_tys: TyArr) -> Result<RegionData, Error> {
+        Self::minimal_with(param_tys, RegionBorrow::NULL)
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]

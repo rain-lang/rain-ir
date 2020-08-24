@@ -21,14 +21,10 @@ pub enum Error {
     BorrowUsed,
     /// Unused relevant type
     RelevantUnused,
-    /// Lifetime error
-    LifetimeError,
     /// Incomparable regions
     IncomparableRegions,
-    /// Incomparable lifetimes
-    IncomparableLifetimes,
-    /// Invalid casting into a lifetime
-    InvalidCastIntoLifetime,
+    /// Value in an overly-nested region
+    NestedResult,
     /// Evaluation error
     EvalError,
     /// Tuple length mismatch
@@ -39,6 +35,12 @@ pub enum Error {
     NoInlineError,
     /// A value is no longer a type after substitution
     NotATypeError,
+    /// A value is no longer a kind after substitution
+    NotAKindError,
+    /// A value is no longer a representation after substitution
+    NotAReprError,
+    /// A value is no longer a universe after substitution
+    NotAUniverseError,
     /// Too many arguments for a (non-curried!) function
     /// (or sometimes an object which *may* be a function)
     TooManyArgs,
@@ -52,6 +54,8 @@ pub enum Error {
     InvalidParam,
     /// An undefined parameter
     UndefParam,
-    /// An too many bits error
+    /// Too many bits error
     TooManyBits,
+    /// Tried to substitute into the null region
+    NullRegionSub,
 }

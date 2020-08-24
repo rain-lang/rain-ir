@@ -378,7 +378,7 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(Prop prettyprinting unimplemented)")
+            write!(fmt, "#prop")
         }
     }
     impl PrettyPrint for Fin {
@@ -387,7 +387,7 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(Fin prettyprinting unimplemented)")
+            write!(fmt, "#fin")
         }
     }
     impl PrettyPrint for Set {
@@ -396,7 +396,7 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(Set prettyprinting unimplemented)")
+            write!(fmt, "#set({})", self.n)
         }
     }
 }

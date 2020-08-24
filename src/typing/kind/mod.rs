@@ -31,6 +31,11 @@ pub trait Kind: Type {
     /// This is guaranteed to be a universe which has this kind as a subtype. If this kind is a universe,
     /// then this is guaranteed to just return this kind as a `UniverseId`
     fn closure(&self) -> UniverseId;
+    /// Substitute this value while preserving the fact that it is a kind
+    fn substitute_kind(&self, ctx: &mut EvalCtx) -> Result<KindId, Error> {
+        let value = self.substitute(ctx)?;
+        value.try_into_kind().map_err(|_| Error::NotAKindError)
+    }
 }
 
 /// A trait implemented by `rain` values which can all be represented within a given memory layout
@@ -42,6 +47,11 @@ pub trait Repr: Kind {
     #[inline]
     fn into_repr(self) -> ReprId {
         self.into_val().coerce()
+    }
+    /// Substitute this value while preserving the fact that it is a representation
+    fn substitute_repr(&self, ctx: &mut EvalCtx) -> Result<ReprId, Error> {
+        let value = self.substitute(ctx)?;
+        value.try_into_repr().map_err(|_| Error::NotAReprError)
     }
 }
 
@@ -60,6 +70,11 @@ pub trait Universe: Kind {
     }
     /// Compare two universes
     fn universe_cmp(&self, other: &UniverseId) -> Ordering;
+    /// Substitute this value while preserving the fact that it is a kind
+    fn substitute_universe(&self, ctx: &mut EvalCtx) -> Result<UniverseId, Error> {
+        let value = self.substitute(ctx)?;
+        value.try_into_universe().map_err(|_| Error::NotAUniverseError)
+    }
 }
 
 impl<'a, K: KindPredicate> ValId<K> {

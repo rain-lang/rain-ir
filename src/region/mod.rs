@@ -240,6 +240,16 @@ impl Region {
     pub fn with(param_tys: TyArr, parent: Region) -> Result<Region, Error> {
         RegionData::with(param_tys, parent).map(Region::new)
     }
+    /// Get the minimal region for a set of parameters
+    #[inline]
+    pub fn minimal(param_tys: TyArr) -> Result<Region, Error> {
+        RegionData::minimal(param_tys).map(Region::new)
+    }
+    /// Get the minimal region for a set of parameters above a given base region
+    #[inline]
+    pub fn minimal_with(param_tys: TyArr, parent: RegionBorrow) -> Result<Region, Error> {
+        RegionData::minimal_with(param_tys, parent).map(Region::new)
+    }
     /// Create a new region with a given parent region, having no parameters
     ///
     /// This is a bit useless now, but eventually when termination typing comes around this may come in handy.

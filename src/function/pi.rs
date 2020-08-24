@@ -137,9 +137,21 @@ impl Type for Pi {
         if args.is_empty() {
             return Ok(self.clone().into_ty());
         }
+
+        // Skip null substitutions:
+        let param_tys = self.param_tys();
+        if args.len() >= param_tys.len()
+            && (self.result.region() != self.def_region || args[..param_tys.len()] == **param_tys)
+        {
+            return if args.len() > param_tys.len() {
+                self.result.apply_ty_in(&args[param_tys.len()..], ctx)
+            } else {
+                Ok(self.result.clone())
+            };
+        }
+
         // Rename context
         let ctx_handle = ctx;
-
         // Initialize context
         let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
 
@@ -153,14 +165,9 @@ impl Type for Pi {
 
         let rest_args = &args[self.def_region().len().min(args.len())..];
 
-        if let Some(_region) = region {
-            unimplemented!("Partial pi substitution")
-        // let new_pi = Pi::try_new(
-        //     result.try_into().expect("Partial pi result must be a type"),
-        //     region,
-        //     result_lt,
-        // )?;
-        //Ok((new_pi.lifetime().clone_lifetime(), new_pi.into()))
+        if let Some(def_region) = region {
+            let pi = Pi::try_new(result, def_region)?;
+            Ok(pi.into_ty())
         } else {
             result.apply_ty_in(rest_args, ctx_handle)
         }
@@ -168,8 +175,25 @@ impl Type for Pi {
 }
 
 impl Substitute for Pi {
-    fn substitute(&self, _ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        unimplemented!("Pi type substitution")
+    fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
+        let result = self.result.substitute_ty(ctx)?;
+        let deps: ValSet = self
+            .deps
+            .iter()
+            .map(|d| d.substitute(ctx))
+            .collect::<Result<_, _>>()?;
+        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
+        let result_region = result.region();
+        let def_region = if dep_gcr < result_region {
+            result_region.clone_region()
+        } else {
+            Region::minimal_with(self.param_tys().clone(), dep_gcr)?
+        };
+        Ok(Pi {
+            result,
+            deps,
+            def_region,
+        })
     }
 }
 

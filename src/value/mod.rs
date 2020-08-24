@@ -5,11 +5,11 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
+    bits::{Bits, BitsTy, Add},
     finite::{Finite, Index},
     logical::{Bool, Logical},
-    bits::{BitsTy, Bits}
 };
-use crate::proof::identity::{Id, IdFamily, Refl};
+use crate::proof::paths::{induction::PathInd, Id, IdFamily, Refl};
 use crate::region::{Parameter, RegionBorrow, Regional};
 use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
@@ -105,6 +105,10 @@ pub enum ValueEnum {
     Refl(Refl),
     /// A family of identity types
     IdFamily(IdFamily),
+    /// An instance of the path induction axiom
+    PathInd(PathInd),
+    /// An unsigned addition operation on bitvectors
+    Add(Add),
 }
 
 // Common value type aliases:
@@ -609,6 +613,8 @@ macro_rules! forv {
             ValueEnum::IdFamily($i) => $e,
             ValueEnum::BitsTy($i) => $e,
             ValueEnum::Bits($i) => $e,
+            ValueEnum::PathInd($i) => $e,
+            ValueEnum::Add($i) => $e,
         }
     };
     (match ($v:expr) { $i:ident => $e:expr, }) => {
@@ -726,6 +732,8 @@ normal_valid!(Refl);
 normal_valid!(IdFamily);
 normal_valid!(BitsTy);
 normal_valid!(Bits);
+normal_valid!(PathInd);
+normal_valid!(Add);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
 /// asserting that a type's values are all `rain` types
