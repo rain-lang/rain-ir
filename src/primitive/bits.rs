@@ -195,6 +195,16 @@ pub struct Add {
 #[allow(clippy::len_without_is_empty)]
 impl Add {
     /// Create an addition operator with bitwidth `len`
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use rain_ir::primitive::bits::Add;
+    /// let add32 = Add::new(32);
+    /// assert_eq!(add32.len(), 32);
+    /// assert_eq!(add32.masked_add(u32::MAX as u128, 1), 0);
+    /// assert_eq!(add32.masked_add(7, 1), 8);
+    /// assert_ne!(Add::new(64), add32);
+    /// ```
     pub fn new(len: u32) -> Add {
         Add {
             ty: Self::compute_ty(len).into_var(),
@@ -202,8 +212,17 @@ impl Add {
         }
     }
     /// Get the pi type of the addition operator with bitwidth `len`
-    /// 
+    ///
     /// Note that the result of this method called on `len` is always equal to the type of `Add::new(len)`.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use rain_ir::primitive::bits::Add;
+    /// # use rain_ir::typing::Typed;
+    /// # use rain_ir::value::Value;
+    /// let add64 = Add::new(64);
+    /// assert_eq!(add64.ty(), Add::compute_ty(64).into_var());
+    /// ```
     pub fn compute_ty(len: u32) -> Pi {
         let region = Region::with_unchecked(
             tyarr![BitsTy{0: len}.into_ty(); 2],
