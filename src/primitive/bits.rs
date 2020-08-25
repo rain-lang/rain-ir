@@ -409,7 +409,7 @@ impl ValueData for Add {}
 
 /// The multiplication operator
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Multiply {
+pub struct Mul {
     /// Type of the multiply operator
     ty: VarId<Pi>,
     /// The length of the bit vector,
@@ -417,17 +417,17 @@ pub struct Multiply {
 }
 
 #[allow(clippy::len_without_is_empty)]
-impl Multiply {
-    /// Create an multiply operator with bitwidth `len`
-    pub fn new(len: u32) -> Multiply {
-        Multiply {
+impl Mul {
+    /// Create a multiply operator with bitwidth `len`
+    pub fn new(len: u32) -> Mul {
+        Mul {
             ty: Self::compute_ty(len).into_var(),
             len,
         }
     }
     /// Get the pi type of the multiplication operator with bitwidth `len`
     ///
-    /// Note that the result of this method called on `len` is always equal to the type of `Multiply::new(len)`.
+    /// Note that the result of this method called on `len` is always equal to the type of `Mul::new(len)`.
     pub fn compute_ty(len: u32) -> Pi {
         let region = Region::with_unchecked(
             tyarr![BitsTy{0: len}.into_ty(); 2],
@@ -435,7 +435,7 @@ impl Multiply {
             Fin.into_universe(),
         );
         Pi::try_new(BitsTy(len).into_ty(), region)
-            .expect("The type of the multiply operator is always valid")
+            .expect("The type of the multiplication operator is always valid")
     }
     /// Perform wrapping bitvector multiplication, discarding high order bits
     ///
@@ -443,7 +443,7 @@ impl Multiply {
     /// less than or equal to `self.len()`. If this is not the case, this function will panic *in debug mode*, while in release mode,
     /// the behaviour is unspecified but safe.
     #[inline(always)]
-    pub fn masked_multiply(&self, left: u128, right: u128) -> u128 {
+    pub fn masked_mul(&self, left: u128, right: u128) -> u128 {
         debug_assert_eq!(
             left,
             mask(self.len, left),
@@ -454,7 +454,7 @@ impl Multiply {
             mask(self.len, right),
             "Right bitvector has length greater than len"
         );
-        masked_multiply(self.len, left, right)
+        masked_mul(self.len, left, right)
     }
     /// Get the bitwidth of this addition operator
     #[inline(always)]
@@ -465,28 +465,28 @@ impl Multiply {
 
 /// Perform wrapping bitvector multiplication, discarding bits of order greater than `len`
 #[inline(always)]
-pub fn masked_multiply(len: u32, left: u128, right: u128) -> u128 {
+pub fn masked_mul(len: u32, left: u128, right: u128) -> u128 {
     mask(len, left.wrapping_mul(right))
 }
 
-debug_from_display!(Multiply);
-quick_pretty!(Multiply, "Multiply(Need to change this)");
-trivial_substitute!(Multiply);
+debug_from_display!(Mul);
+quick_pretty!(Mul, "Mul(Need to change this)");
+trivial_substitute!(Mul);
 enum_convert! {
-    impl InjectionRef<ValueEnum> for Multiply {}
-    impl TryFrom<NormalValue> for Multiply { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Multiply { as ValueEnum, }
+    impl InjectionRef<ValueEnum> for Mul {}
+    impl TryFrom<NormalValue> for Mul { as ValueEnum, }
+    impl TryFromRef<NormalValue> for Mul { as ValueEnum, }
 }
 
-impl From<Multiply> for NormalValue {
-    fn from(a: Multiply) -> NormalValue {
+impl From<Mul> for NormalValue {
+    fn from(a: Mul) -> NormalValue {
         a.into_norm()
     }
 }
 
-impl Regional for Multiply {}
+impl Regional for Mul {}
 
-impl Apply for Multiply {
+impl Apply for Mul {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
@@ -506,7 +506,7 @@ impl Apply for Multiply {
                     }
                     let result = Bits {
                         ty: left.ty.clone(),
-                        data: self.masked_multiply(left.data, right.data),
+                        data: self.masked_mul(left.data, right.data),
                         len: left.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
@@ -536,7 +536,7 @@ impl Apply for Multiply {
     }
 }
 
-impl Typed for Multiply {
+impl Typed for Mul {
     #[inline]
     fn ty(&self) -> TypeRef {
         self.ty.borrow_ty()
@@ -551,7 +551,7 @@ impl Typed for Multiply {
     }
 }
 
-impl Type for Multiply {
+impl Type for Mul {
     #[inline]
     fn is_affine(&self) -> bool {
         false
@@ -562,7 +562,7 @@ impl Type for Multiply {
     }
 }
 
-impl Value for Multiply {
+impl Value for Mul {
     fn no_deps(&self) -> usize {
         0
     }
@@ -574,15 +574,15 @@ impl Value for Multiply {
     }
     #[inline]
     fn into_enum(self) -> ValueEnum {
-        ValueEnum::Multiply(self)
+        ValueEnum::Mul(self)
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::Multiply(self))
+        NormalValue::assert_normal(ValueEnum::Mul(self))
     }
 }
 
-impl ValueData for Multiply {}
+impl ValueData for Mul {}
 
 /// The subtraction operator
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -647,7 +647,7 @@ pub fn masked_subtract(len: u32, left: u128, right: u128) -> u128 {
 }
 
 debug_from_display!(Subtract);
-quick_pretty!(Subtract, "Multiply(Need to change this)");
+quick_pretty!(Subtract, "Mul(Need to change this)");
 trivial_substitute!(Subtract);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Subtract {}
@@ -774,7 +774,7 @@ impl Neg {
     }
     /// Get the pi type of the negation operator with bitwidth `len`
     ///
-    /// Note that the result of this method called on `len` is always equal to the type of `Multiply::new(len)`.
+    /// Note that the result of this method called on `len` is always equal to the type of `Mul::new(len)`.
     pub fn compute_ty(len: u32) -> Pi {
         let region = Region::with_unchecked(
             tyarr![BitsTy{0: len}.into_ty(); 2],
@@ -812,7 +812,7 @@ pub fn masked_neg(len: u32, b: u128,) -> u128 {
 }
 
 debug_from_display!(Neg);
-quick_pretty!(Neg, "Multiply(Need to change this)");
+quick_pretty!(Neg, "Mul(Need to change this)");
 trivial_substitute!(Neg);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Neg {}
@@ -982,7 +982,7 @@ mod tests {
         for (len, left, right, result) in test_cases.iter() {
             let left_data = BitsTy(*len).data(*left).expect("Left data is valid");
             let right_data = BitsTy(*len).data(*right).expect("Right data is valid");
-            let multiply_struct = Multiply::new(*len);
+            let multiply_struct = Mul::new(*len);
             let data_arr = [left_data.into_val(), right_data.into_val()];
             let mut ctx = None;
             match multiply_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
@@ -991,8 +991,8 @@ mod tests {
                         assert_eq!(b.len, *len);
                         assert_eq!(b.data, *result);
                         assert_eq!(b.data, mask(*len, left.wrapping_mul(*right)));
-                        assert_eq!(b.data, masked_multiply(*len, *left, *right));
-                        assert_eq!(b.data, multiply_struct.masked_multiply(*left, *right));
+                        assert_eq!(b.data, masked_mul(*len, *left, *right));
+                        assert_eq!(b.data, multiply_struct.masked_mul(*left, *right));
                     }
                     _ => panic!("Result should be a bitvector constant (ValueEnum::Bits)"),
                 },

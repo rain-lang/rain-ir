@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Bits, BitsTy, Add, Multiply, Subtract, Neg},
+    bits::{Bits, BitsTy, Add, Mul, Subtract, Neg},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -110,7 +110,7 @@ pub enum ValueEnum {
     /// An unsigned addition operation on bitvectors
     Add(Add),
     /// An unsigned multiplication operation on bitvectors
-    Multiply(Multiply),
+    Mul(Mul),
     /// An subtraction operation on bitvectors
     Subtract(Subtract),
     /// An negation operation on bitvectors
@@ -621,7 +621,7 @@ macro_rules! forv {
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
             ValueEnum::Add($i) => $e,
-            ValueEnum::Multiply($i) => $e,
+            ValueEnum::Mul($i) => $e,
             ValueEnum::Subtract($i) => $e,
             ValueEnum::Neg($i) => $e,
         }
@@ -743,7 +743,7 @@ normal_valid!(BitsTy);
 normal_valid!(Bits);
 normal_valid!(PathInd);
 normal_valid!(Add);
-normal_valid!(Multiply);
+normal_valid!(Mul);
 normal_valid!(Subtract);
 normal_valid!(Neg);
 
