@@ -112,7 +112,7 @@ impl ValId {
             return Ok(value);
         }
         let result: ValId = self.deref().substitute(ctx)?;
-        ctx.substitute_impl(self.clone(), result.clone(), false, false)?;
+        ctx.substitute_unchecked(self.clone(), result.clone())?;
         Ok(result)
     }
 }

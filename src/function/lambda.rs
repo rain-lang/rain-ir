@@ -141,7 +141,7 @@ impl Apply for Lambda {
             ));
         }
 
-        let ctx = ctx.get_or_insert_with(|| EvalCtx::new(self.depth()));
+        let ctx = ctx.get_or_insert_with(EvalCtx::default);
 
         // Substitute
         let region = ctx.substitute_region(self.def_region(), args.iter().cloned(), false)?;
@@ -188,7 +188,7 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
-        let result = self.result.substitute(ctx)?;
+        let result = ctx.evaluate_subvalue(&self.result)?;
         let ty: VarId<Pi> = self
             .ty
             .substitute(ctx)?

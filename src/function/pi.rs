@@ -153,7 +153,7 @@ impl Type for Pi {
         // Rename context
         let ctx_handle = ctx;
         // Initialize context
-        let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
+        let ctx = ctx_handle.get_or_insert_with(EvalCtx::default);
 
         // Substitute
         let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
@@ -176,7 +176,10 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        let result = self.result.substitute_ty(ctx)?;
+        let result = ctx
+            .evaluate_subvalue(self.result.as_val())?
+            .try_into_ty()
+            .map_err(|_| Error::NotATypeError)?;
         let deps: ValSet = self
             .deps
             .iter()
