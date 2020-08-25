@@ -136,12 +136,14 @@ impl EvalCtx {
         } else {
             debug_assert!(
                 rhs.region() <= self.target_region,
-                "Invalid release-unchecked substitution:
-                \nRHS = {}
-                \nLHS = {}
-                \nRHS_REGION(depth = {}) <=> TARGET_REGION(depth = {}) = {:?}",
+                "Invalid release-unchecked substitution: RHS NOT IN TARGET
+RHS = {}
+LHS = {}
+ROOT_DEPTH = {}
+RHS_REGION(depth = {}) <=> TARGET_REGION(depth = {}) = {:?}",
                 rhs,
                 lhs,
+                self.root_depth(),
                 rhs.depth(),
                 self.target_region.depth(),
                 rhs.region().partial_cmp(&self.target_region)
@@ -160,7 +162,34 @@ impl EvalCtx {
                 _ => {}
             }
         } else {
-            debug_assert!(lhs.region() <= self.domain_region && lhs.depth() >= self.root_depth());
+            debug_assert!(
+                lhs.region() <= self.domain_region,
+                "Invalid release-unchecked substitution: LHS NOT IN DOMAIN
+RHS = {}
+LHS = {}
+ROOT_DEPTH = {}
+LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
+                rhs,
+                lhs,
+                self.root_depth(),
+                lhs.depth(),
+                self.domain_region.depth(),
+                lhs.region().partial_cmp(&self.domain_region)
+            );
+            debug_assert!(
+                lhs.depth() >= self.root_depth,
+                "Invalid release-unchecked substitution: SHALLOW LHS SUBSTITUTION
+RHS = {}
+LHS = {}
+ROOT_DEPTH = {}
+LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
+                rhs,
+                lhs,
+                self.root_depth(),
+                lhs.depth(),
+                self.domain_region.depth(),
+                lhs.region().partial_cmp(&self.domain_region)
+            );
         }
 
         // Evaluation cache insertion
