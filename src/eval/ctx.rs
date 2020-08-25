@@ -8,8 +8,12 @@ use crate::region::{Region, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{ValId, Value};
 use fxhash::FxBuildHasher;
+use im_rc::hashmap::Entry;
 use im_rc::{HashMap, Vector};
+use std::cmp::Ordering;
 use std::iter::Iterator;
+use std::ops::Deref;
+use Ordering::*;
 
 /// A `rain` evaluation context
 #[derive(Debug, Clone, PartialEq)]
@@ -18,22 +22,35 @@ pub struct EvalCtx {
     eval_cache: HashMap<ValId, ValId, FxBuildHasher>,
     /// The parents of this context
     parents: Vector<EvalCtx>,
-    /// The root depth of this evaluation context
-    /// Every context below this depth is assumed to be empty
+    /// The current domain region of this evaluation context.
+    /// Anything deeper than this region should just get transported down.
+    domain_region: Region,
+    /// The current target region of this evaluation context.
+    /// Any substitution made must lie within this target region
+    target_region: Region,
+    /// The current root depth of this evaluation context.
+    /// Anything shallower than this should just be ignored
+    /// This must *always* be less than or equal to the depth of the current region
     root_depth: usize,
-    /// This context's current region
-    curr_region: Region,
+}
+
+impl Default for EvalCtx {
+    #[inline]
+    fn default() -> EvalCtx {
+        EvalCtx::new()
+    }
 }
 
 impl EvalCtx {
     /// Create a new, empty evaluation context *within* a given region
     #[inline]
-    pub fn new(root_depth: usize) -> EvalCtx {
+    pub fn new() -> EvalCtx {
         EvalCtx {
             eval_cache: HashMap::default(),
             parents: Vector::new(),
-            root_depth,
-            curr_region: Region::NULL,
+            root_depth: 0,
+            domain_region: Region::NULL,
+            target_region: Region::NULL,
         }
     }
     /// Get whether this evaluation context is empty
@@ -49,120 +66,122 @@ impl EvalCtx {
     /// Get the current evaluation depth
     #[inline]
     pub fn depth(&self) -> usize {
-        let depth = self.root_depth + self.parents.len();
-        if !self.curr_region.is_null() {
-            debug_assert_eq!(depth, self.curr_region.depth());
-        }
-        depth
-    }
-    /// Push a new (empty) scope onto this evaluation context
-    #[inline]
-    pub fn push(&mut self) {
-        if self.is_empty() {
-            self.root_depth += 1
-        } else {
-            let old_self = self.clone();
-            self.parents.push_back(old_self)
-        }
+        self.domain_region.depth()
     }
     /// Get the parent of this evaluation context, if any
     #[inline]
     pub fn parent(&self) -> Option<&EvalCtx> {
         self.parents.last()
     }
-    /// Clear this evaluation context, setting the root depth to the current evaluation depth
+    /// Pop the most recently defined region from this evaluation context, if any
+    #[inline]
+    pub fn pop(&mut self) {
+        if let Some(parent) = self.parent().cloned() {
+            *self = parent
+        } else {
+            self.clear()
+        }
+    }
+    /// Clear this evaluation context
     #[inline]
     pub fn clear(&mut self) {
-        self.root_depth = self.depth();
+        self.root_depth = 0;
+        self.domain_region = Region::NULL;
+        self.target_region = Region::NULL;
         self.parents.clear();
         self.eval_cache.clear();
     }
-    /// Get this evaluation context at a given depth
+    /// Register a substitution in the given scope. Return the re-defined value, if any.
     ///
-    /// Return `None` if the evaluation context at that depth is null or the depth is out of bounds
+    /// We pass in the following flags
+    /// - `check_ty`: if this is `true`, perform a type check. If false, assume the type is correct (it is a logic error if it is not).
+    /// - `update_target`: if this is `true`, potentially make the target region deeper as required by the `rhs`
+    /// - `check_target`: if this is `true`, checks the `rhs` lies within the target region. This happens pre-update in the case of updating targets
+    /// - `check_domain`: if this is `true`, checks that the `lhs` lies within the current region *and* has depth greater than the root depth
+    /// - `allow_redef`: if this is `true`, allow re-definition. If not, return an error
     #[inline]
-    pub fn at_depth(&self, depth: usize) -> Option<&EvalCtx> {
-        if depth < self.root_depth {
-            return None;
-        }
-        let ix = depth - self.root_depth;
-        if ix == self.parents.len() {
-            return Some(self);
-        }
-        self.parents.get(ix)
-    }
-    /// Send this evaluation context to a given depth
-    #[inline]
-    pub fn send_to_depth(&mut self, depth: usize) {
-        // No-op on equality
-        if depth == self.depth() {
-            return;
-        }
-        if let Some(ctx) = self.at_depth(depth).cloned() {
-            // Restore previous state
-            *self = ctx
-        } else if depth > self.depth() {
-            // Push on new state
-            while depth > self.depth() {
-                self.push()
-            }
-        } else {
-            // Clear caches, send root pointer backwards
-            self.clear();
-            self.root_depth = depth;
-        }
-    }
-    /// Pop a level off this evaluation context
-    #[inline]
-    pub fn pop(&mut self) {
-        if let Some(last) = self.parents.last().cloned() {
-            // Restore previous state
-            *self = last
-        } else {
-            // Clear caches, send root pointer backwards
-            self.clear();
-            self.root_depth = self.root_depth.saturating_sub(1);
-        }
-    }
-    /// Register a substitution in the given scope.
-    ///
-    /// If `check_ty` is true, perform a type check and return an error on failure
-    /// If `check_region` is true, perform a region check and return an error if the value is defined in too shallow or too deep of a region.
-    /// It is logic error to invalidate region requirements, though this may be done *internally* for more efficient implementations
-    #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn substitute_impl(
         &mut self,
         lhs: ValId,
         rhs: ValId,
         check_ty: bool,
-        check_region: bool,
-    ) -> Result<(), Error> {
+        update_target: bool,
+        check_target: bool,
+        check_domain: bool,
+        allow_redef: bool,
+    ) -> Result<Option<ValId>, Error> {
+        // Typecheck
         if check_ty && lhs != rhs {
             let lhs_sub_ty = lhs.ty().substitute_ty(self)?;
             if lhs_sub_ty != rhs.ty() {
                 return Err(Error::TypeMismatch);
             }
         }
-        if check_region && lhs.depth() < self.root_depth() {
-            return Err(Error::ShallowSub);
-        }
-        self.eval_cache.insert(lhs, rhs);
 
-        //TODO: lifetime substitutions
-        Ok(())
+        // Target check/update
+        if update_target || check_target {
+            let rhs_region = rhs.region();
+            match rhs_region.partial_cmp(&self.target_region) {
+                None => return Err(Error::IncomparableRegions),
+                Some(Greater) => {
+                    if update_target {
+                        self.target_region = rhs_region.clone_region();
+                    } else {
+                        return Err(Error::DeepSub);
+                    }
+                }
+                _ => {}
+            }
+        } else {
+            debug_assert!(rhs.region() <= self.target_region);
+        }
+
+        // Region check
+        if check_domain {
+            let lhs_region = lhs.region();
+            match lhs_region.partial_cmp(&self.domain_region) {
+                None => return Err(Error::IncomparableRegions),
+                Some(Greater) => return Err(Error::DeepSub),
+                Some(Less) if lhs_region.depth() < self.root_depth() => {
+                    return Err(Error::ShallowSub);
+                }
+                _ => {}
+            }
+        } else {
+            debug_assert!(lhs.region() <= self.domain_region && lhs.depth() >= self.root_depth());
+        }
+
+        // Evaluation cache insertion
+        match self.eval_cache.entry(lhs) {
+            Entry::Vacant(v) => {
+                v.insert(rhs);
+                Ok(None)
+            }
+            Entry::Occupied(mut o) => {
+                if *o.get() == rhs {
+                    Ok(None)
+                } else if allow_redef {
+                    Ok(Some(o.insert(rhs)))
+                } else {
+                    Err(Error::InvalidRedef)
+                }
+            }
+        }
     }
-    /// Register a substitution in the given scope, always checking types and region validities
+    /// Register a substitution in the given scope, not checking anything!
+    #[inline]
+    pub fn substitute_unchecked(&mut self, lhs: ValId, rhs: ValId) -> Result<Option<ValId>, Error> {
+        self.substitute_impl(lhs, rhs, false, false, false, false, false)
+    }
+    /// Register a substitution in the given scope, checking everything
     #[inline]
     pub fn substitute(&mut self, lhs: ValId, rhs: ValId) -> Result<(), Error> {
-        self.substitute_impl(lhs, rhs, true, true)
+        self.substitute_impl(lhs, rhs, true, false, true, true, false)
+            .map(|_| ())
     }
-    /// Register substitutes values for each value in a region, creating a new scope if necessary
-    ///
-    /// Return an error on a type/lifetime mismatch.
-    /// If `inline` is true, create a new region with any leftover parameters, and return it if made
-    /// If `inline` is false, return an error in this case.
-    #[inline]
-    pub fn substitute_region<I>(
+    /// The body of region substitution. Potentially leaves this context in an invalid state on error.
+    fn substitute_region_body<I>(
         &mut self,
         region: &Region,
         mut values: I,
@@ -171,83 +190,84 @@ impl EvalCtx {
     where
         I: Iterator<Item = ValId>,
     {
-        if region.is_null() {
-            return Err(Error::NullRegionSub);
-        }
-        // Get the LCR, returning an error on incompatible regions
-        let lcr = region.lcr(&self.curr_region)?;
-        let lcr_depth = lcr.depth();
-        // Check if the current region is not the LCR
-        if lcr != self.curr_region.region() {
-            debug_assert_ne!(
-                lcr_depth, 0,
-                "Substituting region {:#?}\nin context {:#?}\nwith LCR {:#?}",
-                region, self, lcr
-            );
-            // Get the evaluation context at the LCR, if any, and substitute within it
-            let mut at_lcr = self
-                .at_depth(lcr_depth - 1)
-                .cloned()
-                .unwrap_or_else(|| EvalCtx::new(lcr_depth - 1));
-            debug_assert_eq!(at_lcr.curr_region.region(), lcr.ancestor(lcr_depth - 1));
-            let result = at_lcr.substitute_region(region, values, inline)?;
-            *self = at_lcr;
-            return Ok(result);
-        }
-        let region_depth = region.depth();
-        struct OldCaches {
-            eval_cache: HashMap<ValId, ValId, FxBuildHasher>,
-        };
-        let mut old_caches: Option<OldCaches> = None;
-        let old_is_empty = self.is_empty();
-        for param in region.params().map(Value::into_val) {
+        let mut inline_params = None;
+        for (ix, param) in region.params().enumerate() {
             if let Some(value) = values.next() {
-                // Save old caches, if necessary
-                if !old_is_empty && old_caches.is_none() {
-                    old_caches = Some(OldCaches {
-                        eval_cache: self.eval_cache.clone(),
-                    });
-                }
-                // In case of error, restore old caches or clear caches if none
-                if let Err(err) = self.substitute_impl(param.clone(), value, true, false) {
-                    if let Some(old_caches) = old_caches {
-                        self.eval_cache = old_caches.eval_cache;
-                    } else {
-                        self.eval_cache.clear();
-                    }
-                    return Err(err);
-                }
+                self.substitute_impl(param.into_val(), value, true, true, false, false, false)?;
             } else if inline {
-                unimplemented!("Partial region substitution")
+                let inline_param = if let Some(inline_params) = &mut inline_params {
+                    inline_params
+                } else {
+                    let new_target_region = Region::with(
+                        region.param_tys().deref()[ix..]
+                            .iter()
+                            .map(|ty| ty.substitute_ty(self))
+                            .collect::<Result<Vec<_>, _>>()?
+                            .into(),
+                        self.target_region.clone(),
+                    )?;
+                    inline_params.get_or_insert(new_target_region.params())
+                }
+                .next()
+                .expect("Too few inline parameters");
+                self.substitute_impl(
+                    param.into_val(),
+                    inline_param.into_val(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                )
+                .expect("This should always succeed!");
             } else {
                 return Err(Error::NoInlineError);
             }
         }
-        if let Some(old_caches) = old_caches {
-            // Build up parent regions
-            while self.root_depth < region_depth - 1 {
-                self.parents.push_back(EvalCtx {
-                    eval_cache: old_caches.eval_cache.clone(),
-                    parents: self.parents.clone(),
-                    curr_region: region.ancestor(self.root_depth).clone_region(),
-                    root_depth: self.root_depth,
-                });
-                self.root_depth += 1;
-            }
-            self.parents.push_back(EvalCtx {
-                eval_cache: old_caches.eval_cache,
-                parents: self.parents.clone(),
-                curr_region: region.ancestor(self.root_depth).clone_region(),
-                root_depth: self.root_depth,
-            });
-            self.root_depth += 1;
+        if inline_params.is_none() {
+            Ok(None)
         } else {
-            // Just set the root depth directly
-            self.root_depth = region_depth
+            Ok(Some(self.target_region.clone()))
         }
-        // Set the current region
-        self.curr_region = region.clone();
-        Ok(None)
+    }
+    /// Register substitutes values for each value in a region, creating a new scope
+    ///
+    /// Return an error on a type/lifetime mismatch.
+    /// If `inline` is true, create a new region with any leftover parameters, and return it if made
+    /// If `inline` is false, return an error in this case.
+    pub fn substitute_region<I>(
+        &mut self,
+        region: &Region,
+        values: I,
+        inline: bool,
+    ) -> Result<Option<Region>, Error>
+    where
+        I: Iterator<Item = ValId>,
+    {
+        match self.domain_region.partial_cmp(region) {
+            None => return Err(Error::IncomparableRegions),
+            Some(Less) => {}
+            Some(Equal) => return Err(Error::InvalidRedef),
+            Some(Greater) => return Err(Error::DeepSub),
+        }
+        let old_self = if self.is_empty() {
+            self.root_depth = region.depth();
+            None
+        } else {
+            Some(self.clone())
+        };
+        self.domain_region = region.clone();
+        let result = self.substitute_region_body(region, values, inline);
+        if result.is_err() {
+            if let Some(old_self) = old_self {
+                *self = old_self
+            } else {
+                self.clear()
+            }
+        } else if let Some(old_self) = old_self {
+            self.parents.push_back(old_self)
+        }
+        result
     }
     /// Try to quickly evaluate a given value in the current scope. Return None on failure
     #[inline]
@@ -272,34 +292,5 @@ impl EvalCtx {
         debug_assert_eq!(root_depth, self.root_depth);
         debug_assert_eq!(depth, self.depth());
         result
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ctx_scopes_work() {
-        let mut new_empty = EvalCtx::new(30);
-        assert_eq!(new_empty.depth(), 30);
-        assert_eq!(new_empty.root_depth(), 30);
-        assert_eq!(new_empty.at_depth(30), Some(&new_empty));
-        assert!(new_empty.is_empty());
-        new_empty.push();
-        assert_eq!(new_empty.depth(), 31);
-        assert_eq!(new_empty.root_depth(), 31);
-        assert_eq!(new_empty.at_depth(31), Some(&new_empty));
-        assert_eq!(new_empty.at_depth(25), None);
-        assert_eq!(new_empty.at_depth(30), None);
-        assert_eq!(new_empty.at_depth(32), None);
-        assert_eq!(new_empty.parent(), None);
-        assert!(new_empty.is_empty());
-        new_empty.send_to_depth(5);
-        assert_eq!(new_empty.depth(), 5);
-        assert_eq!(new_empty.root_depth(), 5);
-        assert_eq!(new_empty.parent(), None);
-        assert_eq!(new_empty.at_depth(5), Some(&new_empty));
-        assert!(new_empty.is_empty());
     }
 }

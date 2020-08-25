@@ -60,4 +60,8 @@ pub enum Error {
     NullRegionSub,
     /// Tried to substitute a value whose region is too shallow
     ShallowSub,
+    /// Tried to use as substitution a value whose region is too deep
+    DeepSub,
+    /// A symbol has been re-defined in an evaluation
+    InvalidRedef,
 }

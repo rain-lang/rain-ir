@@ -153,7 +153,7 @@ impl Type for Pi {
         // Rename context
         let ctx_handle = ctx;
         // Initialize context
-        let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
+        let ctx = ctx_handle.get_or_insert_with(EvalCtx::default);
 
         // Substitute
         let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
