@@ -562,13 +562,10 @@ mod tests {
         );
 
         // Universal type application
-        //FIXME: partial type substitution
-        /*
         assert_eq!(
             base_family.applied(&[Bool.into_val()]).unwrap(),
             bool_family.into_val()
         );
-        */
 
         // Typed partial application
         //FIXME: partial application bug

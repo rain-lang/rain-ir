@@ -41,6 +41,48 @@ impl Default for EvalCtx {
     }
 }
 
+/// Configuration for a substitution in an evaluation context
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+pub struct SubCfg {
+    /// Whether to check types during this substitution
+    pub check_ty: bool,
+    /// Whether to update the target of the evaluation context during this substitution
+    pub update_target: bool,
+    /// Whether to check that the RHS is within the target of the evaluation context
+    pub check_target: bool,
+    /// Whether to check that the LHS is within the domain of the evaluation context
+    pub check_domain: bool,
+    /// Whether to allow re-definition of substitutions
+    pub allow_redef: bool,
+}
+
+impl SubCfg {
+    /// A fully unchecked substitution
+    pub const UNCHECKED: SubCfg = SubCfg {
+        check_ty: false,
+        update_target: false,
+        check_target: false,
+        check_domain: false,
+        allow_redef: false,
+    };
+    /// A fully checked substitution
+    pub const CHECKED: SubCfg = SubCfg {
+        check_ty: true,
+        update_target: false,
+        check_target: true,
+        check_domain: true,
+        allow_redef: true,
+    };
+    /// A fully unchecked substitution
+    pub fn unchecked() -> SubCfg {
+        Self::UNCHECKED
+    }
+    /// A fully checked substitution
+    pub fn checked() -> SubCfg {
+        Self::CHECKED
+    }
+}
+
 impl EvalCtx {
     /// Create a new, empty evaluation context *within* a given region
     #[inline]
@@ -92,27 +134,15 @@ impl EvalCtx {
         self.eval_cache.clear();
     }
     /// Register a substitution in the given scope. Return the re-defined value, if any.
-    ///
-    /// We pass in the following flags
-    /// - `check_ty`: if this is `true`, perform a type check. If false, assume the type is correct (it is a logic error if it is not).
-    /// - `update_target`: if this is `true`, potentially make the target region deeper as required by the `rhs`
-    /// - `check_target`: if this is `true`, checks the `rhs` lies within the target region. This happens pre-update in the case of updating targets
-    /// - `check_domain`: if this is `true`, checks that the `lhs` lies within the current region *and* has depth greater than the root depth
-    /// - `allow_redef`: if this is `true`, allow re-definition. If not, return an error
     #[inline]
-    #[allow(clippy::too_many_arguments)]
     pub fn substitute_impl(
         &mut self,
         lhs: ValId,
         rhs: ValId,
-        check_ty: bool,
-        update_target: bool,
-        check_target: bool,
-        check_domain: bool,
-        allow_redef: bool,
+        cfg: SubCfg,
     ) -> Result<Option<ValId>, Error> {
         // Typecheck
-        if check_ty && lhs != rhs {
+        if cfg.check_ty && lhs != rhs {
             let lhs_sub_ty = lhs.ty().substitute_ty(self)?;
             if lhs_sub_ty != rhs.ty() {
                 return Err(Error::TypeMismatch);
@@ -120,12 +150,12 @@ impl EvalCtx {
         }
 
         // Target check/update
-        if update_target || check_target {
+        if cfg.update_target || cfg.check_target {
             let rhs_region = rhs.region();
             match rhs_region.partial_cmp(&self.target_region) {
                 None => return Err(Error::IncomparableRegions),
                 Some(Greater) => {
-                    if update_target {
+                    if cfg.update_target {
                         self.target_region = rhs_region.clone_region();
                     } else {
                         return Err(Error::DeepSub);
@@ -151,7 +181,7 @@ RHS_REGION(depth = {}) <=> TARGET_REGION(depth = {}) = {:?}",
         }
 
         // Region check
-        if check_domain {
+        if cfg.check_domain {
             let lhs_region = lhs.region();
             match lhs_region.partial_cmp(&self.domain_region) {
                 None => return Err(Error::IncomparableRegions),
@@ -201,7 +231,7 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
             Entry::Occupied(mut o) => {
                 if *o.get() == rhs {
                     Ok(None)
-                } else if allow_redef {
+                } else if cfg.allow_redef {
                     Ok(Some(o.insert(rhs)))
                 } else {
                     Err(Error::InvalidRedef)
@@ -212,13 +242,12 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
     /// Register a substitution in the given scope, not checking anything!
     #[inline]
     pub fn substitute_unchecked(&mut self, lhs: ValId, rhs: ValId) -> Result<Option<ValId>, Error> {
-        self.substitute_impl(lhs, rhs, false, false, false, false, false)
+        self.substitute_impl(lhs, rhs, SubCfg::UNCHECKED)
     }
     /// Register a substitution in the given scope, checking everything
     #[inline]
     pub fn substitute(&mut self, lhs: ValId, rhs: ValId) -> Result<(), Error> {
-        self.substitute_impl(lhs, rhs, true, false, true, true, false)
-            .map(|_| ())
+        self.substitute_impl(lhs, rhs, SubCfg::CHECKED).map(|_| ())
     }
     /// The body of region substitution. Potentially leaves this context in an invalid state on error.
     fn substitute_region_body<I>(
@@ -233,7 +262,14 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
         let mut inline_params = None;
         for (ix, param) in region.params().enumerate() {
             if let Some(value) = values.next() {
-                self.substitute_impl(param.into_val(), value, true, true, false, false, false)?;
+                self.substitute_impl(
+                    param.into_val(),
+                    value,
+                    SubCfg {
+                        update_target: true,
+                        ..SubCfg::UNCHECKED
+                    },
+                )?;
             } else if inline {
                 let inline_param = if let Some(inline_params) = &mut inline_params {
                     inline_params
@@ -246,20 +282,13 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
                             .into(),
                         self.target_region.clone(),
                     )?;
-                    inline_params.get_or_insert(new_target_region.params())
+                    self.target_region = new_target_region.clone();
+                    inline_params.get_or_insert(new_target_region.into_params())
                 }
                 .next()
                 .expect("Too few inline parameters");
-                self.substitute_impl(
-                    param.into_val(),
-                    inline_param.into_val(),
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                )
-                .expect("This should always succeed!");
+                self.substitute_impl(param.into_val(), inline_param.into_val(), SubCfg::UNCHECKED)
+                    .expect("This should always succeed!");
             } else {
                 return Err(Error::NoInlineError);
             }
@@ -357,7 +386,11 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
     }
     /// Evaluate a value which is in a potentially deeper region
     #[inline]
-    pub fn evaluate_in_region(&mut self, value: &ValId, region: &Region) -> Result<(Region, ValId), Error> {
+    pub fn evaluate_in_region(
+        &mut self,
+        value: &ValId,
+        region: &Region,
+    ) -> Result<(Region, ValId), Error> {
         self.evaluate_parameterized(value, region, std::iter::empty())
     }
 }
