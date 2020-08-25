@@ -518,7 +518,7 @@ mod test {
         let family = Lambda::try_new(right_const.into(), left_region)
             .unwrap()
             .into_val();
-        assert!(PathInd::compute_refl_ty(domain, &family).is_ok());
+        let _refl_ty = PathInd::compute_refl_ty(domain, &family).expect("Refl type computation works");
     }
 
     #[test]

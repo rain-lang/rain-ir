@@ -293,4 +293,33 @@ impl EvalCtx {
         debug_assert_eq!(depth, self.depth());
         result
     }
+    /// Evaluate a value which is potentially within a deeper target region
+    #[inline]
+    pub fn evaluate_subvalue(&mut self, value: &ValId) -> Result<ValId, Error> {
+        let value_region = value.region();
+        match self.domain_region.partial_cmp(&value_region) {
+            None => return Err(Error::IncomparableRegions),
+            Some(Equal) | Some(Greater) => return self.evaluate(value),
+            Some(Less) if value_region.depth() != self.depth() + 1 => return Err(Error::DeepSub),
+            _ => {}
+        };
+        let new_target_region = Region::minimal_with(
+            value_region
+                .param_tys()
+                .iter()
+                .map(|ty| ty.substitute_ty(self))
+                .collect::<Result<Vec<_>, Error>>()?
+                .into(),
+            self.target_region.region(),
+        )?;
+        self.substitute_region(
+            value_region.as_region(),
+            new_target_region.params().map(Value::into_val),
+            false,
+        )
+        .expect("Substitution is valid!");
+        let result = self.evaluate(value);
+        self.pop();
+        result
+    }
 }

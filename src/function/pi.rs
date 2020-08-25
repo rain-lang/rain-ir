@@ -176,7 +176,10 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        let result = self.result.substitute_ty(ctx)?;
+        let result = ctx
+            .evaluate_subvalue(self.result.as_val())?
+            .try_into_ty()
+            .map_err(|_| Error::NotATypeError)?;
         let deps: ValSet = self
             .deps
             .iter()
