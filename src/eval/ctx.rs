@@ -134,7 +134,18 @@ impl EvalCtx {
                 _ => {}
             }
         } else {
-            debug_assert!(rhs.region() <= self.target_region);
+            debug_assert!(
+                rhs.region() <= self.target_region,
+                "Invalid release-unchecked substitution:
+                \nRHS = {}
+                \nLHS = {}
+                \nRHS_REGION(depth = {}) <=> TARGET_REGION(depth = {}) = {:?}",
+                rhs,
+                lhs,
+                rhs.depth(),
+                self.target_region.depth(),
+                rhs.region().partial_cmp(&self.target_region)
+            );
         }
 
         // Region check
