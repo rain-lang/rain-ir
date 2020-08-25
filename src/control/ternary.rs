@@ -55,7 +55,8 @@ impl Ternary {
             std::iter::once(BOOL_TY.clone_ty()).collect(),
             region.clone(),
         )?;
-        let ty = Self::switch_region_helper(high_ty, low_ty, unary_region).into_var();
+        let ty =
+            Self::switch_region_helper(high_ty, low_ty, unary_region, TernaryKind::Bool).into_var();
         Ok(Ternary {
             ty,
             region,
@@ -95,7 +96,8 @@ impl Ternary {
             region.clone(),
         )
         .expect("Switch region is always valid");
-        let ty = Self::switch_region_helper(high_ty, low_ty, switch_region).into_var();
+        let ty = Self::switch_region_helper(high_ty, low_ty, switch_region, TernaryKind::Switch)
+            .into_var();
         Ok(Ternary {
             ty,
             region,
@@ -103,7 +105,12 @@ impl Ternary {
             high,
         })
     }
-    fn switch_region_helper(high_ty: TypeRef, low_ty: TypeRef, switch_region: Region) -> Pi {
+    fn switch_region_helper(
+        high_ty: TypeRef,
+        low_ty: TypeRef,
+        switch_region: Region,
+        kind: TernaryKind,
+    ) -> Pi {
         let result_ty = if high_ty == low_ty {
             high_ty.clone_ty()
         } else if high_ty.is_kind() && low_ty.is_kind() {
@@ -116,9 +123,12 @@ impl Ternary {
                 .param(0)
                 .expect("Switch region has switch")
                 .into_val();
-            let type_switch = Ternary::switch(high_ty.clone_val(), low_ty.clone_val())
-                .expect("Type switch is valid")
-                .into_val();
+            let type_switch = match kind {
+                TernaryKind::Switch => Ternary::switch(high_ty.clone_val(), low_ty.clone_val()),
+                TernaryKind::Bool => Ternary::conditional(high_ty.clone_val(), low_ty.clone_val()),
+            }
+            .expect("Type switch is valid")
+            .into_val();
             type_switch
                 .applied(&[switch])
                 .expect("Type switch application is valid")
@@ -325,7 +335,21 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(ternary prettyprinting unimplemented)")
+            write!(fmt, "#gamma")?;
+            match self.ternary_kind() {
+                TernaryKind::Bool => write!(
+                    fmt,
+                    "|#bool| {{ #true => {}, #false => {} }}",
+                    self.high(),
+                    self.low()
+                ),
+                TernaryKind::Switch => write!(
+                    fmt,
+                    "|#finite(2)| {{ #ix[2](0) => {}, #ix[2](1) => {} }}",
+                    self.low(),
+                    self.high()
+                ),
+            }
         }
     }
 }
@@ -333,7 +357,11 @@ mod prettyprint_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitive::logical::unary_region;
+    use crate::primitive::{
+        logical::{unary_region, Bool},
+        Unit,
+    };
+    use crate::typing::primitive::Fin;
     use crate::value::expr::Sexpr;
 
     #[test]
@@ -531,5 +559,29 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn dependent_conditional() {
+        let nil_or_true = Ternary::conditional(().into(), true.into())
+            .unwrap()
+            .into_val();
+        let unit_or_bool = Ternary::conditional(Unit.into(), Bool.into())
+            .unwrap()
+            .into_val();
+        let unary_region = unary_region();
+        let always_finite = Pi::try_new(Fin.into_ty(), unary_region.clone())
+            .unwrap()
+            .into_ty();
+        assert_eq!(always_finite, unit_or_bool.ty());
+        let ap_unit_or_bool = unit_or_bool
+            .applied(&[unary_region.param(0).unwrap().into_val()])
+            .unwrap()
+            .try_into_ty()
+            .unwrap();
+        let pi_unit_or_bool = Pi::try_new(ap_unit_or_bool, unary_region)
+            .unwrap()
+            .into_ty();
+        assert_eq!(pi_unit_or_bool, nil_or_true.ty());
     }
 }
