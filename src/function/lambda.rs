@@ -188,7 +188,7 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
-        let result = ctx.evaluate_subvalue(self.result.as_val())?;
+        let result = ctx.evaluate_subvalue(&self.result)?;
         let ty: VarId<Pi> = self
             .ty
             .substitute(ctx)?
