@@ -583,5 +583,9 @@ mod tests {
             .unwrap()
             .into_ty();
         assert_eq!(pi_unit_or_bool, nil_or_true.ty());
+        assert_eq!(nil_or_true.applied(&[true.into()]).unwrap(), ().into_val());
+        assert_eq!(nil_or_true.applied(&[false.into()]).unwrap(), true.into_val());
+        assert_eq!(unit_or_bool.applied(&[true.into()]).unwrap(), Unit.into_val());
+        assert_eq!(unit_or_bool.applied(&[false.into()]).unwrap(), Bool.into_val());
     }
 }
