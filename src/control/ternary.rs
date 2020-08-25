@@ -9,8 +9,8 @@ use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::finite::Finite;
 use crate::primitive::logical::BOOL_TY;
 use crate::region::{Region, RegionBorrow, Regional};
-use crate::typing::{Type, Typed};
-use crate::value::{Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
+use crate::typing::{Kind, Type, Typed};
+use crate::value::{Error, KindRef, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{pretty_display, substitute_to_valid};
 use std::convert::TryInto;
 
@@ -55,11 +55,7 @@ impl Ternary {
             std::iter::once(BOOL_TY.clone_ty()).collect(),
             region.clone(),
         )?;
-        let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), unary_region)?.into()
-        } else {
-            unimplemented!("Dependently typed conditional: {} or {}", high, low);
-        };
+        let ty = Self::switch_region_helper(high_ty, low_ty, unary_region).into_var();
         Ok(Ternary {
             ty,
             region,
@@ -97,18 +93,39 @@ impl Ternary {
         let switch_region = Region::with(
             std::iter::once(Finite(2).into_ty()).collect(),
             region.clone(),
-        )?;
-        let ty = if high_ty == low_ty {
-            Pi::try_new(high_ty.clone_ty(), switch_region)?.into()
-        } else {
-            unimplemented!("Dependently typed conditional: {} or {}", high, low);
-        };
+        )
+        .expect("Switch region is always valid");
+        let ty = Self::switch_region_helper(high_ty, low_ty, switch_region).into_var();
         Ok(Ternary {
             ty,
             region,
             low,
             high,
         })
+    }
+    fn switch_region_helper(high_ty: TypeRef, low_ty: TypeRef, switch_region: Region) -> Pi {
+        let result_ty = if high_ty == low_ty {
+            high_ty.clone_ty()
+        } else if high_ty.is_kind() && low_ty.is_kind() {
+            let high_kind: KindRef = high_ty.coerce();
+            let low_kind: KindRef = low_ty.coerce();
+            let universe = high_kind.closure().max(low_kind.closure());
+            universe.into_ty()
+        } else {
+            let switch = switch_region
+                .param(0)
+                .expect("Switch region has switch")
+                .into_val();
+            let type_switch = Ternary::switch(high_ty.clone_val(), low_ty.clone_val())
+                .expect("Type switch is valid")
+                .into_val();
+            type_switch
+                .applied(&[switch])
+                .expect("Type switch application is valid")
+                .try_into_ty()
+                .expect("Type switch branches are types")
+        };
+        Pi::try_new(result_ty, switch_region).expect("Switch regions are valid")
     }
     /// Get the parameter type type of this ternary operation
     ///
@@ -401,12 +418,7 @@ mod tests {
                 .into_val(),
             high
         );
-        assert_eq!(
-            Sexpr::try_new(vec![ternary, ix0])
-                .unwrap()
-                .into_val(),
-            low
-        );
+        assert_eq!(Sexpr::try_new(vec![ternary, ix0]).unwrap().into_val(), low);
         //FIXME: this
         //assert!(Sexpr::try_new(vec![ternary, true.into()]).is_err());
     }
