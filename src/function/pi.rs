@@ -176,22 +176,14 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        let result = ctx
-            .evaluate_subvalue(self.result.as_val())?
-            .try_into_ty()
-            .map_err(|_| Error::NotATypeError)?;
+        let (def_region, result) =
+            ctx.evaluate_in_region(self.result.as_val(), self.def_region())?;
+        let result = result.try_into_ty().map_err(|_| Error::NotATypeError)?;
         let deps: ValSet = self
             .deps
             .iter()
             .map(|d| d.substitute(ctx))
             .collect::<Result<_, _>>()?;
-        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
-        let result_region = result.region();
-        let def_region = if dep_gcr < result_region {
-            result_region.clone_region()
-        } else {
-            Region::minimal_with(self.param_tys().clone(), dep_gcr)?
-        };
         Ok(Pi {
             result,
             deps,

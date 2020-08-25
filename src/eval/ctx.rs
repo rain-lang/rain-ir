@@ -333,33 +333,31 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
         debug_assert_eq!(depth, self.depth());
         result
     }
-    /// Evaluate a value which is potentially within a deeper target region
+    /// Evaluate a value which is in a potentially deeper region, with a set of arguments
     #[inline]
-    pub fn evaluate_subvalue(&mut self, value: &ValId) -> Result<ValId, Error> {
-        let value_region = value.region();
-        match self.domain_region.partial_cmp(&value_region) {
-            None => return Err(Error::IncomparableRegions),
-            Some(Equal) | Some(Greater) => return self.evaluate(value),
-            Some(Less) if value_region.depth() != self.depth() + 1 => return Err(Error::DeepSub),
-            _ => {}
-        };
-        let new_target_region = Region::minimal_with(
-            value_region
-                .param_tys()
-                .iter()
-                .map(|ty| ty.substitute_ty(self))
-                .collect::<Result<Vec<_>, Error>>()?
-                .into(),
-            self.target_region.region(),
-        )?;
-        self.substitute_region(
-            value_region.as_region(),
-            new_target_region.params().map(Value::into_val),
-            false,
-        )
-        .expect("Substitution is valid!");
+    pub fn evaluate_parameterized<I>(
+        &mut self,
+        value: &ValId,
+        region: &Region,
+        values: I,
+    ) -> Result<(Region, ValId), Error>
+    where
+        I: Iterator<Item = ValId>,
+    {
+        let target_region = self.substitute_region(region, values, true)?;
         let result = self.evaluate(value);
+        let target_region = if let Some(target_region) = target_region {
+            debug_assert_eq!(target_region, self.target_region);
+            target_region
+        } else {
+            self.target_region.clone()
+        };
         self.pop();
-        result
+        result.map(|value| (target_region, value))
+    }
+    /// Evaluate a value which is in a potentially deeper region
+    #[inline]
+    pub fn evaluate_in_region(&mut self, value: &ValId, region: &Region) -> Result<(Region, ValId), Error> {
+        self.evaluate_parameterized(value, region, std::iter::empty())
     }
 }

@@ -188,7 +188,7 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
-        let result = ctx.evaluate_subvalue(&self.result)?;
+        let (def_region, result) = ctx.evaluate_in_region(&self.result, self.def_region())?;
         let ty: VarId<Pi> = self
             .ty
             .substitute(ctx)?
@@ -199,13 +199,6 @@ impl Substitute for Lambda {
             .iter()
             .map(|d| d.substitute(ctx))
             .collect::<Result<_, _>>()?;
-        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
-        let result_region = result.region();
-        let def_region = if dep_gcr < result_region {
-            result_region.clone_region()
-        } else {
-            Region::minimal_with(self.ty.param_tys().clone(), dep_gcr)?
-        };
         Ok(Lambda {
             result,
             deps,
