@@ -1043,7 +1043,6 @@ mod tests {
     #[test]
     fn constant_bitvector_negation_works() {
         let test_cases: &[(u32, u128, u128)] = &[
-            // Basic test cases, with no underflow
             (4, 2, 14),
             (4, 0, 0),
             (10, 1, 1023), 
