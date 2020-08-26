@@ -62,6 +62,8 @@ pub enum Error {
     ShallowSub,
     /// Tried to use as substitution a value whose region is too deep
     DeepSub,
+    /// Tried to substitute into an incomparable region
+    IncomparableSub,
     /// A symbol has been re-defined in an evaluation
     InvalidRedef,
 }

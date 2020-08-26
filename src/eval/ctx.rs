@@ -153,7 +153,7 @@ impl EvalCtx {
         if cfg.update_target || cfg.check_target {
             let rhs_region = rhs.region();
             match rhs_region.partial_cmp(&self.target_region) {
-                None => return Err(Error::IncomparableRegions),
+                None => return Err(Error::IncomparableSub),
                 Some(Greater) => {
                     if cfg.update_target {
                         self.target_region = rhs_region.clone_region();
@@ -184,7 +184,7 @@ RHS_REGION(depth = {}) <=> TARGET_REGION(depth = {}) = {:?}",
         if cfg.check_domain {
             let lhs_region = lhs.region();
             match lhs_region.partial_cmp(&self.domain_region) {
-                None => return Err(Error::IncomparableRegions),
+                None => return Err(Error::IncomparableSub),
                 Some(Greater) => return Err(Error::DeepSub),
                 Some(Less) if lhs_region.depth() < self.root_depth() => {
                     return Err(Error::ShallowSub);
@@ -314,7 +314,7 @@ LHS_REGION(depth = {}) <=> DOMAIN_REGION(depth = {}) = {:?}",
         I: Iterator<Item = ValId>,
     {
         match self.domain_region.partial_cmp(region) {
-            None => return Err(Error::IncomparableRegions),
+            None => return Err(Error::IncomparableSub),
             Some(Less) => {}
             Some(Equal) => return Err(Error::InvalidRedef),
             Some(Greater) => return Err(Error::DeepSub),

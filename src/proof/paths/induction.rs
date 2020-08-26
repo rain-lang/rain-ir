@@ -455,7 +455,7 @@ mod test {
     use crate::value::Value;
     use std::iter::repeat;
 
-    fn manually_construct_binary_happly() -> VarId<Pi> {
+    fn manually_construct_binary_bool_ap_ty() -> VarId<Pi> {
         let binary_ty = binary_ty();
         let binary_region =
             Region::with(once(binary_ty.clone().into_ty()).collect(), Region::NULL).unwrap();
@@ -519,13 +519,14 @@ mod test {
         let family = Lambda::try_new(right_const.into(), left_region)
             .unwrap()
             .into_val();
-        let _refl_ty = PathInd::compute_refl_ty(domain, &family).expect("Refl type computation works");
+        let _refl_ty =
+            PathInd::compute_refl_ty(domain, &family).expect("Refl type computation works");
     }
 
     #[test]
     fn ap_helpers() {
         let binary_ty = binary_ty();
-        let manual_ap_type = manually_construct_binary_happly();
+        let manual_ap_type = manually_construct_binary_bool_ap_ty();
         let ap_const = ApConst::try_new_pi(binary_ty);
         let ap_type = ap_const.compute_ty();
         assert_eq!(ap_type, manual_ap_type);
