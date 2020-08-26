@@ -41,6 +41,10 @@ impl Typed for BitsKind {
     fn is_ty(&self) -> bool {
         true
     }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        true
+    }
 }
 
 impl Apply for BitsKind {}
