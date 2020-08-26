@@ -52,7 +52,7 @@ impl Ternary {
         let low_ty = low.ty();
         let region = low.gcr(&high)?.clone_region();
         let unary_region = Region::with(
-            std::iter::once(BOOL_TY.clone_ty()).collect(),
+            std::iter::once(BOOL_TY.clone_as_ty()).collect(),
             region.clone(),
         )?;
         let ty =
@@ -112,7 +112,7 @@ impl Ternary {
         kind: TernaryKind,
     ) -> Pi {
         let result_ty = if high_ty == low_ty {
-            high_ty.clone_ty()
+            high_ty.clone_as_ty()
         } else if high_ty.is_kind() && low_ty.is_kind() {
             let high_kind: KindRef = high_ty.coerce();
             let low_kind: KindRef = low_ty.coerce();
@@ -228,7 +228,7 @@ impl Apply for Ternary {
     ) -> Result<Application<'a>, Error> {
         // Empty application
         if args.is_empty() {
-            return Ok(Application::Symbolic(self.ty().clone_ty()));
+            return Ok(Application::Symbolic(self.clone_ty()));
         }
         match self.ternary_kind() {
             TernaryKind::Bool => {
@@ -604,7 +604,7 @@ mod tests {
         let binary = Finite(2).into_var();
         let zero = binary.ix(0).unwrap().into_var();
         let one = binary.ix(1).unwrap().into_var();
-        let unary_binary = Region::minimal(once(binary.clone_ty()).collect()).unwrap();
+        let unary_binary = Region::minimal(once(binary.clone_as_ty()).collect()).unwrap();
 
         let false_or_zero = Ternary::switch(false.into(), zero.clone_val())
             .unwrap()

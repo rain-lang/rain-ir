@@ -32,7 +32,7 @@ impl IdFamily {
     /// Get the pi type for a constructor family
     pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
-            once(kind.clone_ty()).collect(),
+            once(kind.clone_as_ty()).collect(),
             kind.clone_region(),
             kind.universe().clone_var(),
         );
@@ -52,7 +52,7 @@ impl IdFamily {
             base_ty.universe().clone_var(),
         );
         //TODO: proper target universe?
-        Pi::try_new(base_ty.ty_kind().clone_ty(), region).expect("Valid pi-type")
+        Pi::try_new(base_ty.clone_ty(), region).expect("Valid pi-type")
     }
 }
 

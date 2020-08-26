@@ -589,7 +589,7 @@ impl Apply for Logical {
     ) -> Result<Application<'a>, Error> {
         // Null evaluation
         if args.is_empty() {
-            return Ok(Application::Symbolic(self.ty().clone_ty()));
+            return Ok(Application::Symbolic(self.clone_ty()));
         }
         // Over-evaluation
         if args.len() > self.arity as usize {

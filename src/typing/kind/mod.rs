@@ -211,14 +211,14 @@ impl Ord for UniverseId {
 impl PartialOrd for UniverseRef<'_> {
     #[inline]
     fn partial_cmp(&self, other: &UniverseRef) -> Option<Ordering> {
-        Some(self.universe_cmp(other.as_arc()))
+        Some(self.universe_cmp(other.as_var()))
     }
 }
 
 impl Ord for UniverseRef<'_> {
     #[inline]
     fn cmp(&self, other: &UniverseRef) -> Ordering {
-        self.universe_cmp(other.as_arc())
+        self.universe_cmp(other.as_var())
     }
 }
 
@@ -232,6 +232,6 @@ impl PartialOrd<UniverseId> for UniverseRef<'_> {
 impl PartialOrd<UniverseRef<'_>> for UniverseId {
     #[inline]
     fn partial_cmp(&self, other: &UniverseRef) -> Option<Ordering> {
-        Some(self.universe_cmp(other.as_arc()))
+        Some(self.universe_cmp(other.as_var()))
     }
 }

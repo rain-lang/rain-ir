@@ -1,5 +1,4 @@
 use super::*;
-use crate::typing::TypePredicate;
 use std::hash::Hasher;
 use std::marker::PhantomData;
 
@@ -150,15 +149,6 @@ impl<P> ValId<P> {
     pub fn as_addr(&self) -> ValAddr {
         ValAddr(self.as_norm() as *const NormalValue as usize)
     }
-    /// Try to get this `ValId<P>` as a type
-    #[inline]
-    pub fn try_as_ty(&self) -> Result<&TypeId, &ValId<P>> {
-        if self.is_ty() {
-            Ok(self.coerce_ref())
-        } else {
-            Err(self)
-        }
-    }
     /// Borrow this `ValId<P>` as a `ValRef`
     pub fn borrow_val(&self) -> ValRef {
         ValRef {
@@ -217,13 +207,13 @@ impl<'a, P> ValRef<'a, P> {
         }
     }
     /// Get this `ValRef<P>` as a `ValId<P>`
-    pub fn as_arc(&self) -> &ValId<P> {
+    pub fn as_var(&self) -> &ValId<P> {
         let arc_ptr = self.ptr.as_arc();
         unsafe { &*(arc_ptr as *const _ as *const ValId<P>) }
     }
     /// Get this `ValRef<P>` as a `ValId`
     pub fn as_valid(&self) -> &ValId {
-        self.as_arc().as_val()
+        self.as_var().as_val()
     }
     /// Clone this `ValRef<P>` as a `ValId`
     pub fn clone_val(&self) -> ValId {
@@ -232,24 +222,7 @@ impl<'a, P> ValRef<'a, P> {
             variant: PhantomData,
         }
     }
-    /// Get this `ValRef` as a `TypeRef`
-    pub fn as_ty(&self) -> TypeRef<'a>
-    where
-        P: TypePredicate,
-    {
-        ValRef {
-            ptr: self.ptr,
-            variant: PhantomData,
-        }
-    }
-    /// Clone this `ValRef` as a `TypeId`
-    pub fn clone_ty(&self) -> TypeId
-    where
-        P: TypePredicate,
-    {
-        self.as_arc().clone_ty()
-    }
-    /// Clone this `ValRef` as a `ValId`
+    /// Clone this `ValRef<P>` as a `ValId<P>`
     pub fn clone_var(&self) -> ValId<P> {
         ValId {
             ptr: self.ptr.clone_arc(),
@@ -540,7 +513,7 @@ impl<P> Borrow<ValId> for ValRef<'_, P> {
 impl<P> Borrow<VarId<P>> for VarRef<'_, P> {
     #[inline]
     fn borrow(&self) -> &VarId<P> {
-        self.as_arc()
+        self.as_var()
     }
 }
 
