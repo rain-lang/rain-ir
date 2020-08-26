@@ -5,12 +5,12 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Region, Regional};
 use crate::typing::{
-    primitive::{Fin, Prop, SET},
+    primitive::{Fin, Prop, FIN, SET},
     Kind, Type, Typed, Universe,
 };
 use crate::value::{
-    Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, ValId, Value, ValueData, ValueEnum,
-    VarId, VarRef,
+    Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
+    ValueEnum, VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
 use lazy_static::lazy_static;
@@ -97,6 +97,9 @@ impl Kind for BitsKind {
     }
     fn closure(&self) -> UniverseId {
         Prop.into_universe()
+    }
+    fn try_closure(&self) -> Option<UniverseRef> {
+        Some(FIN.borrow_universe())
     }
 }
 
