@@ -5,11 +5,12 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Region, Regional};
 use crate::typing::{
-    primitive::{Fin, FIN, SET},
-    Type, Typed, Universe,
+    primitive::{Fin, Prop, FIN, SET},
+    Kind, Type, Typed, Universe,
 };
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef,
+    Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, ValId, Value, ValueData, ValueEnum,
+    VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
 use num::ToPrimitive;
@@ -82,6 +83,15 @@ impl Type for BitsKind {
     #[inline]
     fn is_relevant(&self) -> bool {
         false
+    }
+}
+
+impl Kind for BitsKind {
+    fn id_kind(&self) -> KindId {
+        Prop.into_kind()
+    }
+    fn closure(&self) -> UniverseId {
+        Prop.into_universe()
     }
 }
 
