@@ -5,7 +5,7 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Region, Regional};
 use crate::typing::{
-    primitive::{Fin, Prop, FIN, SET},
+    primitive::{Fin, Prop, SET},
     Kind, Type, Typed, Universe,
 };
 use crate::value::{
@@ -13,6 +13,7 @@ use crate::value::{
     VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
+use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
 
@@ -99,6 +100,11 @@ impl Kind for BitsKind {
     }
 }
 
+lazy_static! {
+    /// The kind of bits
+    pub static ref BITS_KIND: VarId<BitsKind> = VarId::direct_new(BitsKind);
+}
+
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
 #[repr(transparent)]
@@ -130,9 +136,8 @@ impl ValueData for BitsTy {}
 impl Typed for BitsTy {
     #[inline]
     fn ty(&self) -> TypeRef {
-        FIN.borrow_ty()
+        BITS_KIND.borrow_ty()
     }
-
     #[inline]
     fn is_ty(&self) -> bool {
         true
