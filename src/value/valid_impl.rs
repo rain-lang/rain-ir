@@ -187,20 +187,20 @@ impl<P> ValId<P> {
 
 impl<'a, P> ValRef<'a, P> {
     /// Get this `ValRef<P>` as a `NormalValue`
-    pub fn as_norm(&self) -> &'a NormalValue {
+    pub fn as_norm(self) -> &'a NormalValue {
         self.ptr.get()
     }
     /// Get this `ValRef<P>` as a `ValueEnum`
-    pub fn as_enum(&self) -> &'a ValueEnum {
+    pub fn as_enum(self) -> &'a ValueEnum {
         self.ptr.get()
     }
     /// Get this `ValRef<P>` as a `NormalValue<P>`
     #[inline]
-    pub fn as_pred(&self) -> &'a NormalValue<P> {
+    pub fn as_pred(self) -> &'a NormalValue<P> {
         self.ptr.get().coerce_ref()
     }
     /// Get this `ValRef<P>` as a `ValRef`
-    pub fn as_val(&self) -> ValRef<'a> {
+    pub fn as_val(self) -> ValRef<'a> {
         ValRef {
             ptr: self.ptr,
             variant: PhantomData,
@@ -216,14 +216,14 @@ impl<'a, P> ValRef<'a, P> {
         self.as_var().as_val()
     }
     /// Clone this `ValRef<P>` as a `ValId`
-    pub fn clone_val(&self) -> ValId {
+    pub fn clone_val(self) -> ValId {
         ValId {
             ptr: self.ptr.clone_arc(),
             variant: PhantomData,
         }
     }
     /// Clone this `ValRef<P>` as a `ValId<P>`
-    pub fn clone_var(&self) -> ValId<P> {
+    pub fn clone_var(self) -> ValId<P> {
         ValId {
             ptr: self.ptr.clone_arc(),
             variant: self.variant,
@@ -231,12 +231,12 @@ impl<'a, P> ValRef<'a, P> {
     }
     /// Get the pointer behind this `ValRef`
     #[inline]
-    pub fn as_ptr(&self) -> *const NormalValue {
+    pub fn as_ptr(self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
     }
     /// Get the address behind this `ValRef`
     #[inline]
-    pub fn as_addr(&self) -> ValAddr {
+    pub fn as_addr(self) -> ValAddr {
         ValAddr(self.as_norm() as *const NormalValue as usize)
     }
     /// Coerce this reference

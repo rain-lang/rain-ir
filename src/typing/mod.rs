@@ -4,8 +4,8 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     value::{
-        Error, KindRef, NormalValue, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value,
-        ValueEnum,
+        Error, KindId, KindRef, NormalValue, ReprId, ReprRef, TypeId, TypeRef, UniverseRef, ValId,
+        ValRef, Value, ValueEnum,
     },
 };
 use std::convert::TryInto;
@@ -37,6 +37,10 @@ pub trait Typed {
         debug_assert!(tyty.is_kind(), "The type of a type must be a kind!");
         tyty.coerce()
     }
+    /// Compute the kind of this `rain` value, cloning it
+    fn clone_kind(&self) -> KindId {
+        self.kind().clone_var()
+    }
     /// Compute the representation of this `rain` value, if any
     fn repr(&self) -> Option<ReprRef> {
         let tyty = self.ty().as_enum().ty();
@@ -45,6 +49,10 @@ pub trait Typed {
         } else {
             None
         }
+    }
+    /// Compute the representation of this `rain` value, if any, cloning it
+    fn clone_repr(&self) -> Option<ReprId> {
+        self.repr().map(ReprRef::clone_var)
     }
     /// Check whether this `rain` value is a type
     ///
