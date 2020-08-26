@@ -9,7 +9,7 @@ inspired by (and implemented in) Rust. The goal is to build a purely functional,
 representation with a strong, linear type system incorporating some of the latest developments in compiler
 design.
 
-Contributions, ideas and collaboration proposals are welcome: please make an issue or e-mail jad.ghalayini@mail.utoronto.ca.
+Contributions, ideas and collaboration proposals are welcome: please make an issue or e-mail [jad.ghalayini@gtc.ox.ac.uk](mailto:jad.ghalayini@gtc.ox.ac.uk).
 */
 #![forbid(missing_docs, missing_debug_implementations)]
 #![recursion_limit = "256"]
