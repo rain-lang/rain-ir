@@ -533,10 +533,13 @@ mod test {
             Lambda::try_new(().into(), left_region.clone()).expect("Refl proof construction works");
 
         // Checking it's type
-        let refl_ty = PathInd::compute_refl_ty(domain, &family)
+        let refl_ty = PathInd::compute_refl_ty(domain.clone(), &family)
             .expect("Refl type computation works")
             .into_var();
         assert_eq!(refl_proof.ty(), refl_ty);
+
+        // Creating an instance of path induction over the desired type family
+        let path_ind = PathInd::try_new(domain, Prop.into_kind());
     }
 
     #[test]
