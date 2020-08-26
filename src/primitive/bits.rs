@@ -131,6 +131,27 @@ impl BitsTy {
     }
 }
 
+impl VarId<BitsTy> {
+    /// Get a bitset into this type. Return an error if too many bits
+    pub fn data<I: ToPrimitive>(&self, data: I) -> Result<Bits, Error> {
+        let data = if let Some(data) = data.to_u128() {
+            data
+        } else {
+            return Err(Error::TooManyBits);
+        };
+        Bits::try_new(self.clone(), data)
+    }
+    /// Get a bitset into this type. Return an error if too many bits
+    pub fn into_data<I: ToPrimitive>(self, data: I) -> Result<Bits, Error> {
+        let data = if let Some(data) = data.to_u128() {
+            data
+        } else {
+            return Err(Error::TooManyBits);
+        };
+        Bits::try_new(self, data)
+    }
+}
+
 impl ValueData for BitsTy {}
 
 impl Typed for BitsTy {
@@ -998,6 +1019,17 @@ impl ValueData for Neg {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::typing::primitive::FIN;
+
+    #[test]
+    fn bits_types_and_kind_work() {
+        let bits_ty = BitsTy(72).into_var();
+        let bits = bits_ty.data(36).unwrap();
+        assert_eq!(bits.ty(), bits_ty);
+        assert_eq!(bits_ty.ty(), *BITS_KIND);
+        assert_eq!(bits.kind(), *BITS_KIND);
+        assert_eq!(bits_ty.universe(), *FIN);
+    }
     #[test]
     fn bitvector_construction_works() {
         let data_1 = BitsTy(2).data(1).unwrap();
