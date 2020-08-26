@@ -651,7 +651,7 @@ mod tests {
         );
 
         // Nested dependent ternary conditionals
-        let value_switch = Ternary::conditional(nil_or_true, false_or_zero)
+        let value_switch = Ternary::conditional(nil_or_true.clone_val(), false_or_zero.clone_val())
             .unwrap()
             .into_val();
         let type_switch =
@@ -665,6 +665,27 @@ mod tests {
             .try_into_ty()
             .unwrap();
         let pi_type_switch = Pi::try_new(ap_type_switch, unary_region)
+            .unwrap()
+            .into_var();
+        assert_eq!(value_switch.ty(), pi_type_switch);
+
+
+        
+        // Nested dependent ternary switches
+        let value_switch = Ternary::switch(nil_or_true, false_or_zero)
+            .unwrap()
+            .into_val();
+        let type_switch =
+            Ternary::switch(pi_unit_or_bool.clone_val(), pi_bool_or_binary.clone_val())
+                .unwrap()
+                .into_val();
+        assert_eq!(type_switch.ty(), always_finite_bin);
+        let ap_type_switch = type_switch
+            .applied(&[unary_binary.param(0).unwrap().into_val()])
+            .unwrap()
+            .try_into_ty()
+            .unwrap();
+        let pi_type_switch = Pi::try_new(ap_type_switch, unary_binary)
             .unwrap()
             .into_var();
         assert_eq!(value_switch.ty(), pi_type_switch);
