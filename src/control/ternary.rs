@@ -668,11 +668,13 @@ mod tests {
             .unwrap()
             .into_var();
         assert_eq!(value_switch.ty(), pi_type_switch);
+        assert_eq!(value_switch.applied(&[true.into_val()]).unwrap(), nil_or_true);
+        assert_eq!(value_switch.applied(&[false.into_val()]).unwrap(), false_or_zero);
 
 
-        
+
         // Nested dependent ternary switches
-        let value_switch = Ternary::switch(nil_or_true, false_or_zero)
+        let value_switch = Ternary::switch(nil_or_true.clone_val(), false_or_zero.clone_val())
             .unwrap()
             .into_val();
         let type_switch =
@@ -689,5 +691,7 @@ mod tests {
             .unwrap()
             .into_var();
         assert_eq!(value_switch.ty(), pi_type_switch);
+        assert_eq!(value_switch.applied(slice::from_ref(one.as_val())).unwrap(), nil_or_true);
+        assert_eq!(value_switch.applied(slice::from_ref(zero.as_val())).unwrap(), false_or_zero);
     }
 }
