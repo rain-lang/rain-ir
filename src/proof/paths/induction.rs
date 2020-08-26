@@ -530,7 +530,7 @@ mod test {
 
         // Constructing a reflective proof of the unit type family
         let refl_proof =
-            Lambda::try_new(().into(), left_region.clone()).expect("Refl proof construction works");
+            Lambda::try_new(().into(), left_region).expect("Refl proof construction works");
 
         // Checking it's type
         let refl_ty = PathInd::compute_refl_ty(domain.clone(), &family)
@@ -539,7 +539,11 @@ mod test {
         assert_eq!(refl_proof.ty(), refl_ty);
 
         // Creating an instance of path induction over the desired type family
-        let path_ind = PathInd::try_new(domain, Prop.into_kind());
+        let _path_ind = PathInd::try_new(domain, Prop.into_kind()).expect("Path induction into Prop is valid");
+
+        // Applying it to the family
+        //FIXME
+        //let _family_ind = path_ind.applied(&[family]).expect("Type family is valid");
     }
 
     #[test]
