@@ -508,7 +508,6 @@ mod test {
         assert_eq!(*left_region.parent(), base)
     }
 
-    //FIXME!
     #[test]
     fn family_refl_types_work() {
         let domain: TyArr = repeat(Bool.into_ty()).take(2).collect();
