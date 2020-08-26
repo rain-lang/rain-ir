@@ -363,6 +363,8 @@ mod tests {
     };
     use crate::typing::primitive::Fin;
     use crate::value::expr::Sexpr;
+    use std::iter::once;
+    use std::slice;
 
     #[test]
     fn basic_conditional_application() {
@@ -563,6 +565,7 @@ mod tests {
 
     #[test]
     fn dependent_conditional() {
+        // Ternary conditionals
         let nil_or_true = Ternary::conditional(().into(), true.into())
             .unwrap()
             .into_val();
@@ -597,21 +600,73 @@ mod tests {
             Bool.into_val()
         );
 
+        // Ternary switches
         let binary = Finite(2).into_var();
         let zero = binary.ix(0).unwrap().into_var();
-        let false_or_zero = Ternary::conditional(false.into(), zero.clone_val()).unwrap();
-        let bool_or_binary = Ternary::conditional(Bool.into(), binary.clone_val())
+        let one = binary.ix(1).unwrap().into_var();
+        let unary_binary = Region::minimal(once(binary.clone_ty()).collect()).unwrap();
+
+        let false_or_zero = Ternary::switch(false.into(), zero.clone_val())
             .unwrap()
-            .into_var();
-        assert_eq!(always_finite, bool_or_binary.ty());
+            .into_val();
+        let bool_or_binary = Ternary::switch(Bool.into(), binary.clone_val())
+            .unwrap()
+            .into_val();
+        let always_finite_bin = Pi::try_new(Fin.into_ty(), unary_binary.clone())
+            .unwrap()
+            .into_ty();
+        assert_eq!(always_finite_bin, bool_or_binary.ty());
         let ap_bool_or_binary = bool_or_binary
+            .applied(&[unary_binary.param(0).unwrap().into_val()])
+            .unwrap()
+            .try_into_ty()
+            .unwrap();
+        let pi_bool_or_binary = Pi::try_new(ap_bool_or_binary, unary_binary.clone())
+            .unwrap()
+            .into_ty();
+        assert_eq!(pi_bool_or_binary, false_or_zero.ty());
+        assert_eq!(
+            false_or_zero
+                .applied(slice::from_ref(zero.as_val()))
+                .unwrap(),
+            zero
+        );
+        assert_eq!(
+            false_or_zero
+                .applied(slice::from_ref(one.as_val()))
+                .unwrap(),
+            false.into_val()
+        );
+        assert_eq!(
+            bool_or_binary
+                .applied(slice::from_ref(one.as_val()))
+                .unwrap(),
+            Bool.into_val()
+        );
+        assert_eq!(
+            bool_or_binary
+                .applied(slice::from_ref(zero.as_val()))
+                .unwrap(),
+            binary
+        );
+
+        // Nested dependent ternary conditionals
+        let value_switch = Ternary::conditional(nil_or_true, false_or_zero)
+            .unwrap()
+            .into_val();
+        let type_switch =
+            Ternary::conditional(pi_unit_or_bool.clone_val(), pi_bool_or_binary.clone_val())
+                .unwrap()
+                .into_val();
+        assert_eq!(type_switch.ty(), always_finite);
+        let ap_type_switch = type_switch
             .applied(&[unary_region.param(0).unwrap().into_val()])
             .unwrap()
             .try_into_ty()
             .unwrap();
-        let pi_bool_or_binary = Pi::try_new(ap_bool_or_binary, unary_region)
-        .unwrap()
-        .into_ty();
-        assert_eq!(pi_bool_or_binary, false_or_zero.ty());
+        let pi_type_switch = Pi::try_new(ap_type_switch, unary_region)
+            .unwrap()
+            .into_var();
+        assert_eq!(value_switch.ty(), pi_type_switch);
     }
 }
