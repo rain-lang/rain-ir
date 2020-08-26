@@ -29,12 +29,13 @@ enum_convert! {
 impl Finite {
     /// Get an index into this type. Return an error if out of bounds
     pub fn ix<I: ToPrimitive>(self, ix: I) -> Result<Index, ()> {
-        let ix = if let Some(ix) = ix.to_u128() {
-            ix
-        } else {
-            return Err(());
-        };
-        Index::try_new(self, ix)
+        match ix.to_u128() {
+            Some(ix) if ix < self.0 => Ok(Index {
+                ty: self.into_var(),
+                ix,
+            }),
+            _ => Err(()),
+        }
     }
     /// Iterate over the members of this finite type
     pub fn iter(self) -> impl Iterator<Item = Index> + DoubleEndedIterator {
@@ -44,13 +45,21 @@ impl Finite {
 
 impl VarId<Finite> {
     /// Get an index into this type. Return an error if out of bounds
-    pub fn ix<I: ToPrimitive>(self, ix: I) -> Result<Index, ()> {
-        let ix = if let Some(ix) = ix.to_u128() {
-            ix
-        } else {
-            return Err(());
-        };
-        Index::try_new(self, ix)
+    pub fn into_ix<I: ToPrimitive>(self, ix: I) -> Result<Index, ()> {
+        match ix.to_u128() {
+            Some(ix) if ix < self.0 => Ok(Index { ty: self, ix }),
+            _ => Err(()),
+        }
+    }
+    /// Get an index into this type. Return an error if out of bounds
+    pub fn ix<I: ToPrimitive>(&self, ix: I) -> Result<Index, ()> {
+        match ix.to_u128() {
+            Some(ix) if ix < self.0 => Ok(Index {
+                ty: self.clone(),
+                ix,
+            }),
+            _ => Err(()),
+        }
     }
     /// Iterate over the members of this finite type
     pub fn iter(&self) -> impl Iterator<Item = Index> + '_ + DoubleEndedIterator {

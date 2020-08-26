@@ -368,7 +368,7 @@ mod tests {
     fn basic_conditional_application() {
         //let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(6).into();
-        let high = finite.clone().ix(3).unwrap().into_val();
+        let high = finite.ix(3).unwrap().into_val();
         let low = finite.ix(1).unwrap().into_val();
         let ternary = Ternary::conditional(high.clone(), low.clone()).unwrap();
         //let ix1 = finite2.clone().ix(1).unwrap().into_val();
@@ -414,10 +414,10 @@ mod tests {
     fn basic_switch_application() {
         let finite2: VarId<Finite> = Finite(2).into();
         let finite: VarId<Finite> = Finite(9).into();
-        let high = finite.clone().ix(4).unwrap().into_val();
+        let high = finite.ix(4).unwrap().into_val();
         let low = finite.ix(7).unwrap().into_val();
         let ternary = Ternary::switch(high.clone(), low.clone()).unwrap();
-        let ix1 = finite2.clone().ix(1).unwrap().into_val();
+        let ix1 = finite2.ix(1).unwrap().into_val();
         let ix0 = finite2.ix(0).unwrap().into_val();
         assert_eq!(
             ternary.apply(&[ix1.clone()]).unwrap(),
@@ -506,8 +506,8 @@ mod tests {
         let finite: VarId<Finite> = Finite(6).into();
         let ix = finite.ix(3).unwrap().into_val();
         let ternary = Ternary::switch(ix.clone(), ix.clone()).unwrap();
-        let ix1 = finite2.clone().ix(1).unwrap().into_val();
-        let ix0 = finite2.clone().ix(0).unwrap().into_val();
+        let ix1 = finite2.ix(1).unwrap().into_val();
+        let ix0 = finite2.ix(0).unwrap().into_val();
         let finite_region =
             Region::with(std::iter::once(finite2.into_ty()).collect(), Region::NULL).unwrap();
         let const_lambda = Lambda::try_new(ix.clone(), finite_region).unwrap();
@@ -579,13 +579,39 @@ mod tests {
             .unwrap()
             .try_into_ty()
             .unwrap();
-        let pi_unit_or_bool = Pi::try_new(ap_unit_or_bool, unary_region)
+        let pi_unit_or_bool = Pi::try_new(ap_unit_or_bool, unary_region.clone())
             .unwrap()
             .into_ty();
         assert_eq!(pi_unit_or_bool, nil_or_true.ty());
         assert_eq!(nil_or_true.applied(&[true.into()]).unwrap(), ().into_val());
-        assert_eq!(nil_or_true.applied(&[false.into()]).unwrap(), true.into_val());
-        assert_eq!(unit_or_bool.applied(&[true.into()]).unwrap(), Unit.into_val());
-        assert_eq!(unit_or_bool.applied(&[false.into()]).unwrap(), Bool.into_val());
+        assert_eq!(
+            nil_or_true.applied(&[false.into()]).unwrap(),
+            true.into_val()
+        );
+        assert_eq!(
+            unit_or_bool.applied(&[true.into()]).unwrap(),
+            Unit.into_val()
+        );
+        assert_eq!(
+            unit_or_bool.applied(&[false.into()]).unwrap(),
+            Bool.into_val()
+        );
+
+        let binary = Finite(2).into_var();
+        let zero = binary.ix(0).unwrap().into_var();
+        let false_or_zero = Ternary::conditional(false.into(), zero.clone_val()).unwrap();
+        let bool_or_binary = Ternary::conditional(Bool.into(), binary.clone_val())
+            .unwrap()
+            .into_var();
+        assert_eq!(always_finite, bool_or_binary.ty());
+        let ap_bool_or_binary = bool_or_binary
+            .applied(&[unary_region.param(0).unwrap().into_val()])
+            .unwrap()
+            .try_into_ty()
+            .unwrap();
+        let pi_bool_or_binary = Pi::try_new(ap_bool_or_binary, unary_region)
+        .unwrap()
+        .into_ty();
+        assert_eq!(pi_bool_or_binary, false_or_zero.ty());
     }
 }

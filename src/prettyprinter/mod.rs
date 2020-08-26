@@ -109,7 +109,7 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
         while let Some((top, mut ix)) = visit_stack.pop() {
             while ix < top.no_deps() {
                 let dep = top.as_norm().get_dep(ix);
-                if self.has_id(dep.borrow_val()) && dep.no_deps() > 0 {
+                if self.has_id(dep.borrow_val()) || dep.no_deps() == 0 {
                     // Note we avoid printing dependencies with no dependencies as `let` statements
                     ix += 1;
                 } else {
@@ -151,8 +151,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
                 }
                 // Print the correct number of tabs (corresponding to the current scope level)
                 self.print_tabs(fmt)?;
-                if !ty.is_kind() {
-                    // Only print the type of non-types, for now
+                if !ty.is_universe() {
+                    // Only print the type of non-universes, for now
                     write!(
                         fmt,
                         "{} {}{} {} {} ",
@@ -222,6 +222,8 @@ impl<I: Display + From<usize> + Sized> PrettyPrinter<I> {
     ) -> Result<usize, fmt::Error> {
         self.push_scope();
         let vals = self.prettyprint_deps(fmt, value)?;
+        //TODO: deal with case e.g. right after #pi
+        self.print_tabs(fmt)?;
         value.prettyprint(self, fmt)?;
         self.pop_scope(fmt)?;
         Ok(vals)
