@@ -285,7 +285,7 @@ mod tests {
     fn anchor_identity_works_properly() {
         let anchor = Tuple::const_anchor();
         let anchor_val = anchor.clone().into_val();
-        let anchor_ty = anchor.ty().clone_ty();
+        let anchor_ty = anchor.clone_ty();
         let id = Lambda::id(anchor_ty);
         let id_val = id.into_val();
         assert_eq!(

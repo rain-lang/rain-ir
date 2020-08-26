@@ -349,7 +349,7 @@ impl Apply for Add {
                     }
                     match left {
                         ValueEnum::BitsTy(b) if b.0 != self.len => {
-                            Ok(Application::Symbolic(left_ty.clone_ty()))
+                            Ok(Application::Symbolic(left_ty.clone_as_ty()))
                         }
                         _ => Err(Error::TypeMismatch),
                     }
@@ -526,7 +526,7 @@ impl Apply for Mul {
                     }
                     match left {
                         ValueEnum::BitsTy(b) if b.0 != self.len => {
-                            Ok(Application::Symbolic(left_ty.clone_ty()))
+                            Ok(Application::Symbolic(left_ty.clone_as_ty()))
                         }
                         _ => Err(Error::TypeMismatch),
                     }
@@ -696,7 +696,7 @@ impl Apply for Subtract {
                     }
                     match left {
                         ValueEnum::BitsTy(b) if b.0 != self.len => {
-                            Ok(Application::Symbolic(left_ty.clone_ty()))
+                            Ok(Application::Symbolic(left_ty.clone_as_ty()))
                         }
                         _ => Err(Error::TypeMismatch),
                     }

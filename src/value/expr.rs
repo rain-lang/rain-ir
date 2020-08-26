@@ -101,7 +101,7 @@ impl Sexpr {
         Sexpr {
             args: ValArr::EMPTY,
             region: Region::NULL,
-            ty: UNIT_TY.as_ty().clone(),
+            ty: UNIT_TY.clone_as_ty(),
         }
     }
     /// Create an S-expression corresponding to a singleton value
@@ -110,7 +110,7 @@ impl Sexpr {
             // Edge case
             return s.clone();
         }
-        let ty = value.ty().clone_ty();
+        let ty = value.clone_ty();
         let region = value.clone_region();
         Sexpr {
             args: valarr![value],

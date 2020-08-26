@@ -55,7 +55,7 @@ impl<V: Typed> Parametrized<V> {
     */
     #[inline]
     pub fn ty(&self) -> Parametrized<TypeId> {
-        let ty = self.value.ty().clone_ty();
+        let ty = self.value.clone_ty();
         Parametrized::try_new(ty, self.region.clone())
             //TODO: think about this...
             .expect("A type should never be in a region a value is not!")
