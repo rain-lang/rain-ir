@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Bits, BitsTy, Add, Mul, Subtract, Neg},
+    bits::{Add, Bits, BitsKind, BitsTy, Mul, Neg, Subtract},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -77,7 +77,9 @@ pub enum ValueEnum {
     Fin(Fin),
     /// An n-set
     Set(Set),
-    /// The type of Bits
+    /// The kind of bits types
+    BitsKind(BitsKind),
+    /// A bits type
     BitsTy(BitsTy),
     /// A bitset value
     Bits(Bits),
@@ -617,6 +619,7 @@ macro_rules! forv {
             ValueEnum::Id($i) => $e,
             ValueEnum::Refl($i) => $e,
             ValueEnum::IdFamily($i) => $e,
+            ValueEnum::BitsKind($i) => $e,
             ValueEnum::BitsTy($i) => $e,
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
@@ -731,6 +734,7 @@ normal_valid!(bool); //TODO
 normal_valid!(Finite); //TODO: unit + empty?
 normal_valid!(Index); //TODO: unit?
 normal_valid!(Pi);
+normal_valid!(BitsKind);
 normal_valid!(Lambda);
 normal_valid!(Parameter);
 normal_valid!(Phi);

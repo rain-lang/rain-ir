@@ -5,15 +5,108 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Region, Regional};
 use crate::typing::{
-    primitive::{Fin, FIN},
-    Type, Typed, Universe,
+    primitive::{Fin, Prop, FIN, SET},
+    Kind, Type, Typed, Universe,
 };
 use crate::value::{
-    Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef,
+    Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
+    ValueEnum, VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
+use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
+
+/// The type of types which are just a collection of bits, and hence can have bitwise operations performed on them
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct BitsKind;
+
+debug_from_display!(BitsKind);
+quick_pretty!(BitsKind, "#bitskind");
+trivial_substitute!(BitsKind);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for BitsKind {}
+    impl TryFrom<NormalValue> for BitsKind { as ValueEnum, }
+    impl TryFromRef<NormalValue> for BitsKind { as ValueEnum, }
+}
+
+impl ValueData for BitsKind {}
+
+impl Typed for BitsKind {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        SET.borrow_ty()
+    }
+
+    #[inline]
+    fn is_ty(&self) -> bool {
+        true
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        true
+    }
+}
+
+impl Apply for BitsKind {}
+
+impl Regional for BitsKind {}
+
+impl Value for BitsKind {
+    #[inline]
+    fn no_deps(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "Tried to get dependency #{} of bits kind, which has none",
+            ix
+        )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::BitsKind(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        NormalValue::assert_normal(ValueEnum::BitsKind(self))
+    }
+}
+
+impl From<BitsKind> for NormalValue {
+    fn from(b: BitsKind) -> NormalValue {
+        b.into_norm()
+    }
+}
+
+impl Type for BitsKind {
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
+}
+
+impl Kind for BitsKind {
+    fn id_kind(&self) -> KindId {
+        Prop.into_kind()
+    }
+    fn closure(&self) -> UniverseId {
+        Prop.into_universe()
+    }
+    fn try_closure(&self) -> Option<UniverseRef> {
+        Some(FIN.borrow_universe())
+    }
+}
+
+lazy_static! {
+    /// The kind of bits
+    pub static ref BITS_KIND: VarId<BitsKind> = VarId::direct_new(BitsKind);
+}
 
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
@@ -41,14 +134,34 @@ impl BitsTy {
     }
 }
 
+impl VarId<BitsTy> {
+    /// Get a bitset into this type. Return an error if too many bits
+    pub fn data<I: ToPrimitive>(&self, data: I) -> Result<Bits, Error> {
+        let data = if let Some(data) = data.to_u128() {
+            data
+        } else {
+            return Err(Error::TooManyBits);
+        };
+        Bits::try_new(self.clone(), data)
+    }
+    /// Get a bitset into this type. Return an error if too many bits
+    pub fn into_data<I: ToPrimitive>(self, data: I) -> Result<Bits, Error> {
+        let data = if let Some(data) = data.to_u128() {
+            data
+        } else {
+            return Err(Error::TooManyBits);
+        };
+        Bits::try_new(self, data)
+    }
+}
+
 impl ValueData for BitsTy {}
 
 impl Typed for BitsTy {
     #[inline]
     fn ty(&self) -> TypeRef {
-        FIN.borrow_ty()
+        BITS_KIND.borrow_ty()
     }
-
     #[inline]
     fn is_ty(&self) -> bool {
         true
@@ -261,7 +374,7 @@ impl Add {
         masked_add(self.len, left, right)
     }
     /// Get the bitwidth of this addition operator
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use rain_ir::primitive::bits::Add;
@@ -515,7 +628,7 @@ impl Apply for Mul {
                     if zero.len != self.len || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    let result = BitsTy{0:zero.len}.data(0).unwrap();
+                    let result = BitsTy { 0: zero.len }.data(0).unwrap();
                     Ok(Application::Success(&[], result.into_val()))
                 }
                 (left, right) => {
@@ -687,7 +800,7 @@ impl Apply for Subtract {
                         len: left.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
-                },
+                }
                 (left, right) => {
                     let left_ty = left.ty();
                     if left_ty != right.ty() {
@@ -807,7 +920,7 @@ impl Neg {
 
 /// Perform bitvector negation, discarding bits of order greater than `len`
 #[inline(always)]
-pub fn masked_neg(len: u32, b: u128,) -> u128 {
+pub fn masked_neg(len: u32, b: u128) -> u128 {
     mask(len, b.wrapping_neg())
 }
 
@@ -848,10 +961,10 @@ impl Apply for Neg {
                         len: b.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
-                },
+                }
                 ValueEnum::BitsTy(b) if b.0 == self.len => {
                     Ok(Application::Symbolic(b.ty().clone_ty()))
-                },
+                }
                 _ => Err(Error::TypeMismatch),
             }
         }
@@ -906,10 +1019,20 @@ impl Value for Neg {
 
 impl ValueData for Neg {}
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::typing::primitive::FIN;
+
+    #[test]
+    fn bits_types_and_kind_work() {
+        let bits_ty = BitsTy(72).into_var();
+        let bits = bits_ty.data(36).unwrap();
+        assert_eq!(bits.ty(), bits_ty);
+        assert_eq!(bits_ty.ty(), *BITS_KIND);
+        assert_eq!(bits.kind(), *BITS_KIND);
+        assert_eq!(bits_ty.universe(), *FIN);
+    }
     #[test]
     fn bitvector_construction_works() {
         let data_1 = BitsTy(2).data(1).unwrap();
@@ -1013,7 +1136,7 @@ mod tests {
             (14, 8848, 0, 8848),
             // underflow tests
             (4, 3, 4, 15),
-            (8, 253, 255, 254)
+            (8, 253, 255, 254),
         ];
         for (len, left, right, result) in test_cases.iter() {
             let left_data = BitsTy(*len).data(*left).expect("Left data is valid");
@@ -1042,11 +1165,7 @@ mod tests {
     }
     #[test]
     fn constant_bitvector_negation_works() {
-        let test_cases: &[(u32, u128, u128)] = &[
-            (4, 2, 14),
-            (4, 0, 0),
-            (10, 1, 1023), 
-        ];
+        let test_cases: &[(u32, u128, u128)] = &[(4, 2, 14), (4, 0, 0), (10, 1, 1023)];
         for (len, data, result) in test_cases.iter() {
             let op_data = BitsTy(*len).data(*data).expect("data is valid");
             let neg_struct = Neg::new(*len);
