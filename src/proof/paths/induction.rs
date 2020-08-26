@@ -452,6 +452,7 @@ mod test {
         logical::{binary_ty, Bool},
         Unit,
     };
+    use crate::typing::primitive::Prop;
     use crate::value::Value;
     use std::iter::repeat;
 
@@ -509,17 +510,33 @@ mod test {
     }
 
     #[test]
-    fn family_refl_types_work() {
+    fn unit_path_induction() {
         let domain: TyArr = repeat(Bool.into_ty()).take(2).collect();
+
+        // Constructing a unit type family
         let (left_region, right_region, id_region) =
             construct_arg_id_regions(domain.clone(), None, |_, _| {}).unwrap();
         let id_const = Lambda::try_new(Unit.into(), id_region).unwrap();
         let right_const = Lambda::try_new(id_const.into(), right_region).unwrap();
-        let family = Lambda::try_new(right_const.into(), left_region)
+        let family = Lambda::try_new(right_const.into(), left_region.clone())
             .unwrap()
             .into_val();
-        let _refl_ty =
-            PathInd::compute_refl_ty(domain, &family).expect("Refl type computation works");
+
+        // Checking it's type
+        let family_ty = PathInd::compute_family_ty(domain.clone(), Prop.into_kind())
+            .expect("Valid family type")
+            .into_ty();
+        assert_eq!(family.ty(), family_ty);
+
+        // Constructing a reflective proof of the unit type family
+        let refl_proof =
+            Lambda::try_new(().into(), left_region.clone()).expect("Refl proof construction works");
+
+        // Checking it's type
+        let refl_ty = PathInd::compute_refl_ty(domain, &family)
+            .expect("Refl type computation works")
+            .into_var();
+        assert_eq!(refl_proof.ty(), refl_ty);
     }
 
     #[test]
