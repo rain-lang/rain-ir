@@ -156,7 +156,7 @@ impl Type for Pi {
         let ctx = ctx_handle.get_or_insert_with(EvalCtx::default);
 
         // Substitute
-        let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
+        let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), true)?;
 
         // Evaluate the result type and lifetime
         let result = self.result.substitute_ty(ctx);

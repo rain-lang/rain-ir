@@ -557,21 +557,18 @@ mod tests {
             Application::Success(&[], truthy)
         );
         assert_eq!(
-            base_family.curried(&[Bool.into_val(), t, f]).unwrap(),
+            base_family.curried(&[Bool.into_val(), t.clone(), f.clone()]).unwrap(),
             Application::Success(&[], falsey)
         );
 
         // Universal type application
         assert_eq!(
             base_family.applied(&[Bool.into_val()]).unwrap(),
-            bool_family.into_val()
+            bool_family.clone().into_val()
         );
 
         // Typed partial application
-        //FIXME: partial application bug
-        /*
         let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
-        let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
-        */
+        let partial_bt = base_family.applied(&[Bool.into_val(), t]).expect("Valid partial application");
     }
 }
