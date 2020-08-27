@@ -1,5 +1,4 @@
 use super::*;
-use arrayvec::ArrayVec;
 use std::iter::once;
 
 lazy_static! {
@@ -24,23 +23,11 @@ impl Add {
         let bitwidth = region
             .param(0)
             .expect("First parameter")
-            .try_into_ty()
-            .expect("Member of bits kind is a type");
-        let variable_width_ty = Self::compute_ty_helper(bitwidth).into_ty();
+            .into_val()
+            .coerce();
+        let variable_width_ty = Pi::binary(bitwidth).into_ty();
         Pi::try_new(variable_width_ty, region)
             .expect("The type of the addition operator is always valid")
-    }
-    /// Get the pi type of the addition operator on a given bits type
-    fn compute_ty_helper(bits: TypeId) -> Pi {
-        let region = Region::with_unchecked(
-            ArrayVec::from([bits.clone_as_ty(), bits.clone_as_ty()])
-                .into_iter()
-                .collect(),
-            Region::NULL,
-            Fin.into_universe(),
-        );
-        Pi::try_new(bits.into_ty(), region)
-            .expect("The type of a fixed-width addition operator is always valid")
     }
 }
 
