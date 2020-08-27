@@ -104,6 +104,18 @@ impl Apply for Mul {
                     };
                     Ok(Application::Success(&[], result.into_val()))
                 }
+                (ValueEnum::Bits(one), x) if one.data == 1 => {
+                    if one.len != self.len || one.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    Ok(Application::Success(&[], args[0].clone()))
+                }
+                (x, ValueEnum::Bits(one)) if one.data == 1 => {
+                    if one.len != self.len || one.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    Ok(Application::Success(&[], args[1].clone()))
+                }
                 (ValueEnum::Bits(zero), x) | (x, ValueEnum::Bits(zero)) if zero.data == 0 => {
                     if zero.len != self.len || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
