@@ -3,19 +3,20 @@ Finite-valued types
 */
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::region::{Region, Regional};
+use crate::region::{Parameter, Region, Regional};
 use crate::typing::{
     primitive::{Fin, Prop, Set, FIN, SET},
     Kind, Type, Typed, Universe,
 };
 use crate::value::{
-    Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value, ValueData,
-    ValueEnum, VarId, VarRef,
+    arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
+    ValueData, ValueEnum, VarId, VarRef,
 };
 use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
 use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
+use std::iter::once;
 
 mod add;
 mod bits_impl;
@@ -35,11 +36,48 @@ pub use sub::*;
 lazy_static! {
     /// The kind of bits
     pub static ref BITS_KIND: VarId<BitsKind> = VarId::direct_new(BitsKind);
+    /// The type array containing only the bits kind
+    pub static ref BITS_ARR: TyArr = BitsKind::compute_bits_arr();
+    /// The region with a bits kind as paremeter
+    pub static ref BITS_REGION: Region = BitsKind::compute_bits_region();
+    /// The type parameter of the bits region
+    pub static ref BITS_PARAMS: VarId<Parameter> = BITS_REGION.param(0).unwrap().into_var();
+    /// The kind of binary operators on bits
+    pub static ref BITS_BINARY: VarId<Pi> = BitsKind::compute_binary_ty().into_var();
+    /// The kind of unary operators on bits
+    pub static ref BITS_UNARY: VarId<Pi> = BitsKind::compute_unary_ty().into_var();
 }
 
 /// The type of types which are just a collection of bits, and hence can have bitwise operations performed on them
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BitsKind;
+
+impl BitsKind {
+    /// Compute the bits array
+    fn compute_bits_arr() -> TyArr {
+        once(BITS_KIND.clone_as_ty()).collect()
+    }
+    /// Compute the bits region
+    fn compute_bits_region() -> Region {
+        Region::with_unchecked(
+            BITS_ARR.clone(),
+            Region::NULL,
+            Set::default().into_universe(),
+        )
+    }
+    /// Compute the type of unary operators parametric over `BitsKind`
+    fn compute_unary_ty() -> Pi {
+        let variable_width_ty = Pi::unary(BITS_PARAMS.clone().coerce()).into_ty();
+        Pi::try_new(variable_width_ty, BITS_REGION.clone())
+            .expect("The type of the addition operator is always valid")
+    }
+    /// Compute the type of binary operators parametric over `BitsKind`
+    fn compute_binary_ty() -> Pi {
+        let variable_width_ty = Pi::binary(BITS_PARAMS.clone().coerce()).into_ty();
+        Pi::try_new(variable_width_ty, BITS_REGION.clone())
+            .expect("The type of the addition operator is always valid")
+    }
+}
 
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
