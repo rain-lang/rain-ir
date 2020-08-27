@@ -18,6 +18,7 @@ use num::ToPrimitive;
 use ref_cast::RefCast;
 
 mod add;
+mod bits_impl;
 mod div;
 mod ext;
 mod modl;
@@ -305,8 +306,6 @@ impl From<Bits> for NormalValue {
         b.into_norm()
     }
 }
-
-
 
 /// The multiplication operator
 #[derive(Clone, Eq, PartialEq, Hash)]
