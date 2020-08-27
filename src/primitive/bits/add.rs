@@ -4,32 +4,11 @@ use std::iter::once;
 lazy_static! {
     /// The addition operator constant
     static ref ADD: VarId<Add> = VarId::direct_new(Add);
-    /// The type of the addition operator
-    static ref ADD_TY: VarId<Pi> = Add::compute_ty().into_var();
 }
 
 /// The addition operator
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Add;
-
-impl Add {
-    /// Get the pi type of the addition operator in general
-    pub fn compute_ty() -> Pi {
-        let region = Region::with_unchecked(
-            once(BitsKind.into_ty()).collect(),
-            Region::NULL,
-            Set::default().into_universe(),
-        );
-        let bitwidth = region
-            .param(0)
-            .expect("First parameter")
-            .into_val()
-            .coerce();
-        let variable_width_ty = Pi::binary(bitwidth).into_ty();
-        Pi::try_new(variable_width_ty, region)
-            .expect("The type of the addition operator is always valid")
-    }
-}
 
 /// Mask a bitvector, discarding bits of order greater than `len`
 #[inline(always)]
@@ -68,7 +47,7 @@ impl Apply for Add {
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.len() <= 2 {
-            ADD_TY.apply_ty_in(args, ctx).map(Application::Symbolic)
+            BITS_BINARY.apply_ty_in(args, ctx).map(Application::Symbolic)
         } else if args.len() > 3 {
             Err(Error::TooManyArgs)
         } else {
@@ -112,7 +91,7 @@ impl Apply for Add {
 impl Typed for Add {
     #[inline]
     fn ty(&self) -> TypeRef {
-        ADD_TY.borrow_ty()
+        BITS_BINARY.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {

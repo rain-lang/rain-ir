@@ -43,7 +43,7 @@ lazy_static! {
     /// The type parameter of the bits region
     pub static ref BITS_PARAM: VarId<Parameter> = BitsKind::compute_bits_param();
     /// The type parameter of the bits region as a guaranteed type
-    pub static ref BITS_PARAM_TY: TypeId = BITS_PARAM.try_into_ty().unwrap();
+    pub static ref BITS_PARAM_TY: TypeId = BITS_PARAM.clone().try_into_ty().unwrap();
     /// The kind of binary operators on bits
     pub static ref BITS_BINARY: VarId<Pi> = BitsKind::compute_binary_ty().into_var();
     /// The kind of unary operators on bits
