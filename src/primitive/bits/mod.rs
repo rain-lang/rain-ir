@@ -17,6 +17,14 @@ use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
 
+mod add;
+mod div;
+mod ext;
+mod modl;
+mod mul;
+mod sh;
+mod sub;
+
 /// The type of types which are just a collection of bits, and hence can have bitwise operations performed on them
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BitsKind;
