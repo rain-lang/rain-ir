@@ -41,7 +41,7 @@ lazy_static! {
     /// The region with a bits kind as paremeter
     pub static ref BITS_REGION: Region = BitsKind::compute_bits_region();
     /// The type parameter of the bits region
-    pub static ref BITS_PARAMS: VarId<Parameter> = BITS_REGION.param(0).unwrap().into_var();
+    pub static ref BITS_PARAM: VarId<Parameter> = BitsKind::compute_bits_param();
     /// The kind of binary operators on bits
     pub static ref BITS_BINARY: VarId<Pi> = BitsKind::compute_binary_ty().into_var();
     /// The kind of unary operators on bits
@@ -65,15 +65,19 @@ impl BitsKind {
             Set::default().into_universe(),
         )
     }
+    /// Compute the type parameter of the bits region
+    fn compute_bits_param() -> VarId<Parameter> {
+        BITS_REGION.param(0).unwrap().into_var()
+    }
     /// Compute the type of unary operators parametric over `BitsKind`
     fn compute_unary_ty() -> Pi {
-        let variable_width_ty = Pi::unary(BITS_PARAMS.clone().coerce()).into_ty();
+        let variable_width_ty = Pi::unary(BITS_PARAM.clone().coerce()).into_ty();
         Pi::try_new(variable_width_ty, BITS_REGION.clone())
             .expect("The type of the addition operator is always valid")
     }
     /// Compute the type of binary operators parametric over `BitsKind`
     fn compute_binary_ty() -> Pi {
-        let variable_width_ty = Pi::binary(BITS_PARAMS.clone().coerce()).into_ty();
+        let variable_width_ty = Pi::binary(BITS_PARAM.clone().coerce()).into_ty();
         Pi::try_new(variable_width_ty, BITS_REGION.clone())
             .expect("The type of the addition operator is always valid")
     }
