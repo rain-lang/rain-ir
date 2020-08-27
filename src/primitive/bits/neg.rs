@@ -95,10 +95,7 @@ impl Apply for Neg {
                     };
                     Ok(Application::Success(&[], result.into_val()))
                 }
-                ValueEnum::BitsTy(b) if b.0 == self.len => {
-                    Ok(Application::Symbolic(b.ty().clone_ty()))
-                }
-                _ => Err(Error::TypeMismatch),
+                _ => self.ty.apply_ty_in(args, ctx).map(Application::Symbolic),
             }
         }
     }
