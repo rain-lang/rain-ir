@@ -9,6 +9,7 @@ use crate::value::{
     Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
+use std::iter::once;
 
 /// A pi type
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -30,6 +31,36 @@ impl Pi {
             deps,
             def_region,
         })
+    }
+    /// Create a new pi type for a unary operator over a type
+    pub fn unary(ty: TypeId) -> Pi {
+        let def_region = Region::unary(ty.clone());
+        let deps = once(ty.clone_val()).collect();
+        Pi {
+            def_region,
+            result: ty,
+            deps,
+        }
+    }
+    /// Create a new pi type for a binary operator over a type
+    pub fn binary(ty: TypeId) -> Pi {
+        let def_region = Region::binary(ty.clone());
+        let deps = once(ty.clone_val()).collect();
+        Pi {
+            def_region,
+            result: ty,
+            deps,
+        }
+    }
+    /// Create a new pi type for an n-ary operator over a type
+    pub fn nary(ty: TypeId, n: usize) -> Pi {
+        let def_region = Region::nary(ty.clone(), n);
+        let deps = once(ty.clone_val()).collect();
+        Pi {
+            def_region,
+            result: ty,
+            deps,
+        }
     }
     /// Get the type associated with a parametrized `ValId`
     pub fn ty(param: &Parametrized<ValId>) -> Pi {
