@@ -5,7 +5,7 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Region, Regional};
 use crate::typing::{
-    primitive::{Fin, Prop, FIN, SET},
+    primitive::{Fin, Prop, Set, FIN, SET},
     Kind, Type, Typed, Universe,
 };
 use crate::value::{

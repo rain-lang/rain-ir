@@ -1,93 +1,46 @@
 use super::*;
+use arrayvec::ArrayVec;
+use std::iter::once;
 
-/// The add operator
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Add {
-    /// Type of the add operator
-    ty: VarId<Pi>,
-    /// The length of the bit vector,
-    len: u32,
+lazy_static! {
+    /// The addition operator constant
+    static ref ADD: VarId<Add> = VarId::direct_new(Add);
+    /// The type of the addition operator
+    static ref ADD_TY: VarId<Pi> = Add::compute_ty().into_var();
 }
 
-#[allow(clippy::len_without_is_empty)]
+/// The addition operator
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Add;
+
 impl Add {
-    /// Create an addition operator with bitwidth `len`
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use rain_ir::primitive::bits::Add;
-    /// let add32 = Add::new(32);
-    /// assert_eq!(add32.len(), 32);
-    /// assert_eq!(add32.masked_add(u32::MAX as u128, 1), 0);
-    /// assert_eq!(add32.masked_add(7, 1), 8);
-    /// assert_ne!(Add::new(64), add32);
-    /// ```
-    pub fn new(len: u32) -> Add {
-        Add {
-            ty: Self::compute_ty(len).into_var(),
-            len,
-        }
-    }
-    /// Get the pi type of the addition operator with bitwidth `len`
-    ///
-    /// Note that the result of this method called on `len` is always equal to the type of `Add::new(len)`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use rain_ir::primitive::bits::Add;
-    /// # use rain_ir::typing::Typed;
-    /// # use rain_ir::value::Value;
-    /// let add64 = Add::new(64);
-    /// assert_eq!(add64.ty(), Add::compute_ty(64).into_var());
-    /// ```
-    pub fn compute_ty(len: u32) -> Pi {
+    /// Get the pi type of the addition operator in general
+    pub fn compute_ty() -> Pi {
         let region = Region::with_unchecked(
-            tyarr![BitsTy{0: len}.into_ty(); 2],
+            once(BitsKind.into_ty()).collect(),
+            Region::NULL,
+            Set::default().into_universe(),
+        );
+        let bitwidth = region
+            .param(0)
+            .expect("First parameter")
+            .try_into_ty()
+            .expect("Member of bits kind is a type");
+        let variable_width_ty = Self::compute_ty_helper(bitwidth).into_ty();
+        Pi::try_new(variable_width_ty, region)
+            .expect("The type of the addition operator is always valid")
+    }
+    /// Get the pi type of the addition operator on a given bits type
+    fn compute_ty_helper(bits: TypeId) -> Pi {
+        let region = Region::with_unchecked(
+            ArrayVec::from([bits.clone_as_ty(), bits.clone_as_ty()])
+                .into_iter()
+                .collect(),
             Region::NULL,
             Fin.into_universe(),
         );
-        Pi::try_new(BitsTy(len).into_ty(), region)
-            .expect("The type of the addition operator is always valid")
-    }
-    /// Perform wrapping bitvector addition, discarding high order bits
-    ///
-    /// This method assumes both `left` and `right` are valid bitvectors for this addition operation, namely that they have length
-    /// less than or equal to `self.len()`. If this is not the case, this function will panic *in debug mode*, while in release mode,
-    /// the behaviour is unspecified but safe.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use rain_ir::primitive::bits::Add;
-    /// let add3 = Add::new(3);
-    /// assert_eq!(add3.masked_add(1, 2), 3);
-    /// assert_eq!(add3.masked_add(6, 1), 7);
-    /// assert_eq!(add3.masked_add(7, 1), 0);
-    /// ```
-    #[inline(always)]
-    pub fn masked_add(&self, left: u128, right: u128) -> u128 {
-        debug_assert_eq!(
-            left,
-            mask(self.len, left),
-            "Left bitvector has length greater than len"
-        );
-        debug_assert_eq!(
-            right,
-            mask(self.len, right),
-            "Right bitvector has length greater than len"
-        );
-        masked_add(self.len, left, right)
-    }
-    /// Get the bitwidth of this addition operator
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use rain_ir::primitive::bits::Add;
-    /// let add462 = Add::new(462);
-    /// assert_eq!(add462.len(), 462);
-    /// ```
-    #[inline(always)]
-    pub fn len(&self) -> u32 {
-        self.len
+        Pi::try_new(bits.into_ty(), region)
+            .expect("The type of a fixed-width addition operator is always valid")
     }
 }
 
@@ -127,48 +80,41 @@ impl Apply for Add {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        if args.len() <= 1 {
-            self.ty.apply_ty_in(args, ctx).map(Application::Symbolic)
-        } else if args.len() > 2 {
+        if args.len() <= 2 {
+            ADD_TY.apply_ty_in(args, ctx).map(Application::Symbolic)
+        } else if args.len() > 3 {
             Err(Error::TooManyArgs)
         } else {
-            let arg_0 = &args[0];
-            let arg_1 = &args[1];
-            match (arg_0.as_enum(), arg_1.as_enum()) {
-                (ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
-                    if left.len != right.len || left.len != self.len {
+            match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
+                    if left.len != right.len || left.len != ty.0 {
                         return Err(Error::TypeMismatch);
                     }
                     let result = Bits {
                         ty: left.ty.clone(),
-                        data: self.masked_add(left.data, right.data),
+                        data: masked_add(ty.0, left.data, right.data),
                         len: left.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
                 }
-                (ValueEnum::Bits(zero), x) if zero.data == 0 => {
-                    if zero.len != self.len || zero.ty != x.ty() {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     Ok(Application::Success(&[], args[0].clone()))
                 }
-                (x, ValueEnum::Bits(zero)) if zero.data == 0 => {
-                    if zero.len != self.len || zero.ty != x.ty() {
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     Ok(Application::Success(&[], args[1].clone()))
                 }
-                (left, right) => {
+                (ty, left, right) => {
                     let left_ty = left.ty();
-                    if left_ty != right.ty() {
-                        // Error
-                        return Err(Error::TypeMismatch);
-                    }
-                    match left {
-                        ValueEnum::BitsTy(b) if b.0 != self.len => {
-                            Ok(Application::Symbolic(left_ty.clone_as_ty()))
-                        }
-                        _ => Err(Error::TypeMismatch),
+                    if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
+                        Err(Error::TypeMismatch)
+                    } else {
+                        Ok(Application::Symbolic(args[0].clone().coerce()))
                     }
                 }
             }
@@ -179,7 +125,7 @@ impl Apply for Add {
 impl Typed for Add {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.ty.borrow_ty()
+        ADD_TY.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -240,19 +186,22 @@ mod tests {
             (8, 255, 1, 0),
         ];
         for (len, left, right, result) in test_cases.iter() {
-            let left_data = BitsTy(*len).data(*left).expect("Left data is valid");
-            let right_data = BitsTy(*len).data(*right).expect("Right data is valid");
-            let add_struct = Add::new(*len);
-            let data_arr = [left_data.into_val(), right_data.into_val()];
+            let bitwidth = BitsTy(*len).into_var();
+            let left_data = bitwidth.data(*left).expect("Left data is valid");
+            let right_data = bitwidth.data(*right).expect("Right data is valid");
+            let data_arr = [
+                bitwidth.into_val(),
+                left_data.into_val(),
+                right_data.into_val(),
+            ];
             let mut ctx = None;
-            match add_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
+            match Add.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
                         assert_eq!(b.len, *len);
                         assert_eq!(b.data, *result);
                         assert_eq!(b.data, mask(*len, left.wrapping_add(*right)));
                         assert_eq!(b.data, masked_add(*len, *left, *right));
-                        assert_eq!(b.data, add_struct.masked_add(*left, *right));
                     }
                     _ => panic!("Result should be a bitvector constant (ValueEnum::Bits)"),
                 },
