@@ -1,3 +1,7 @@
+/*!
+The addition operator and associated code
+*/
+
 use super::*;
 
 lazy_static! {
