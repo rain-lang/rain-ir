@@ -1,5 +1,4 @@
 use super::*;
-use std::iter::once;
 
 lazy_static! {
     /// The addition operator constant
