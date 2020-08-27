@@ -157,6 +157,14 @@ impl Bits {
     }
 }
 
+/// Mask a bitvector, discarding bits of order greater than `len`
+#[inline(always)]
+pub fn mask(len: u32, vector: u128) -> u128 {
+    let len = len.min(128);
+    vector.wrapping_shl(128 - len).wrapping_shr(128 - len)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

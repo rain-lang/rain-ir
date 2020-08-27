@@ -9,13 +9,6 @@ lazy_static! {
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Add;
 
-/// Mask a bitvector, discarding bits of order greater than `len`
-#[inline(always)]
-pub fn mask(len: u32, vector: u128) -> u128 {
-    let len = len.min(128);
-    vector.wrapping_shl(128 - len).wrapping_shr(128 - len)
-}
-
 /// Perform wrapping bitvector addition, discarding bits of order greater than `len`
 #[inline(always)]
 pub fn masked_add(len: u32, left: u128, right: u128) -> u128 {
