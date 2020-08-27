@@ -1,3 +1,7 @@
+/*!
+Bitvector multiplication
+*/
+
 use super::*;
 
 /// The multiplication operator

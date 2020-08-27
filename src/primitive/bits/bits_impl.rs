@@ -1,5 +1,8 @@
-use super::*;
+/*!
+Bitvector trait implementation
+*/
 
+use super::*;
 
 debug_from_display!(BitsKind);
 quick_pretty!(BitsKind, "#bitskind");

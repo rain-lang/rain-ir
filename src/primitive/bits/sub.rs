@@ -1,3 +1,7 @@
+/*!
+Bitvector subtraction
+*/
+
 use super::*;
 
 lazy_static! {

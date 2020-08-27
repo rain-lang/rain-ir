@@ -1,3 +1,7 @@
+/*!
+Bitvector negation
+*/
+
 use super::*;
 
 /// The negation operator

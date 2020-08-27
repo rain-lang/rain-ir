@@ -1,0 +1,3 @@
+/*!
+Bitvector extension and truncation
+*/

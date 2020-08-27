@@ -1,5 +1,5 @@
 /*!
-The addition operator and associated code
+Bitvector addition
 */
 
 use super::*;
