@@ -28,109 +28,31 @@ mod sub;
 
 pub use add::*;
 
-/// The type of types which are just a collection of bits, and hence can have bitwise operations performed on them
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BitsKind;
-
-debug_from_display!(BitsKind);
-quick_pretty!(BitsKind, "#bitskind");
-trivial_substitute!(BitsKind);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for BitsKind {}
-    impl TryFrom<NormalValue> for BitsKind { as ValueEnum, }
-    impl TryFromRef<NormalValue> for BitsKind { as ValueEnum, }
-}
-
-impl ValueData for BitsKind {}
-
-impl Typed for BitsKind {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        SET.borrow_ty()
-    }
-
-    #[inline]
-    fn is_ty(&self) -> bool {
-        true
-    }
-    #[inline]
-    fn is_kind(&self) -> bool {
-        true
-    }
-}
-
-impl Apply for BitsKind {}
-
-impl Regional for BitsKind {}
-
-impl Value for BitsKind {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        0
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Tried to get dependency #{} of bits kind, which has none",
-            ix
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::BitsKind(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::BitsKind(self))
-    }
-}
-
-impl From<BitsKind> for NormalValue {
-    fn from(b: BitsKind) -> NormalValue {
-        b.into_norm()
-    }
-}
-
-impl Type for BitsKind {
-    #[inline]
-    fn is_affine(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_relevant(&self) -> bool {
-        false
-    }
-}
-
-impl Kind for BitsKind {
-    fn id_kind(&self) -> KindId {
-        Prop.into_kind()
-    }
-    fn closure(&self) -> UniverseId {
-        Prop.into_universe()
-    }
-    fn try_closure(&self) -> Option<UniverseRef> {
-        Some(FIN.borrow_universe())
-    }
-}
-
 lazy_static! {
     /// The kind of bits
     pub static ref BITS_KIND: VarId<BitsKind> = VarId::direct_new(BitsKind);
 }
+
+/// The type of types which are just a collection of bits, and hence can have bitwise operations performed on them
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct BitsKind;
 
 /// A type with `n` values
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, RefCast)]
 #[repr(transparent)]
 pub struct BitsTy(pub u32);
 
-debug_from_display!(BitsTy);
-quick_pretty!(BitsTy, "Unimplemented!");
-trivial_substitute!(BitsTy);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for BitsTy {}
-    impl TryFrom<NormalValue> for BitsTy { as ValueEnum, }
-    impl TryFromRef<NormalValue> for BitsTy { as ValueEnum, }
+/// A bitvector constant
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct Bits {
+    /// The type of this bitvector
+    ty: VarId<BitsTy>,
+    /// This bitvector's data represented as a u128
+    ///
+    /// High order bits are assumed to be 0 by the hash-consing algorithm!
+    data: u128,
+    /// The length of this bitvector
+    len: u32,
 }
 
 impl BitsTy {
@@ -166,73 +88,6 @@ impl VarId<BitsTy> {
     }
 }
 
-impl ValueData for BitsTy {}
-
-impl Typed for BitsTy {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        BITS_KIND.borrow_ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        true
-    }
-}
-
-impl Apply for BitsTy {}
-
-impl Regional for BitsTy {}
-
-impl Value for BitsTy {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        0
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Tried to get dependency #{} of bits type {}, which has none",
-            ix, self
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::BitsTy(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::BitsTy(self))
-    }
-}
-
-impl From<BitsTy> for NormalValue {
-    fn from(b: BitsTy) -> NormalValue {
-        b.into_norm()
-    }
-}
-
-impl Type for BitsTy {
-    #[inline]
-    fn is_affine(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_relevant(&self) -> bool {
-        false
-    }
-}
-
-/// A bitset
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Bits {
-    /// The type this bitset is part of
-    ty: VarId<BitsTy>,
-    /// The data this bit set stores
-    data: u128,
-    /// The length of this bitvector
-    len: u32,
-}
-
 impl Bits {
     /// Try to construct a new bitset. Return an error if high bits are set.
     pub fn try_new<B: Into<VarId<BitsTy>>>(ty: B, data: u128) -> Result<Bits, Error> {
@@ -251,59 +106,6 @@ impl Bits {
     /// Get the (bits) type of this bitset
     pub fn get_ty(&self) -> VarRef<BitsTy> {
         self.ty.borrow_var()
-    }
-}
-
-debug_from_display!(Bits);
-quick_pretty!(Bits, "Unimplemented!");
-trivial_substitute!(Bits);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for Bits {}
-    impl TryFrom<NormalValue> for Bits { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Bits { as ValueEnum, }
-}
-
-impl Typed for Bits {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        self.ty.borrow_ty()
-    }
-
-    #[inline]
-    fn is_ty(&self) -> bool {
-        true
-    }
-}
-
-impl Apply for Bits {}
-
-impl Regional for Bits {}
-
-impl Value for Bits {
-    #[inline]
-    fn no_deps(&self) -> usize {
-        0
-    }
-    #[inline]
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Tried to get dependency #{} of bits {}, which has none",
-            ix, self
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::Bits(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::Bits(self))
-    }
-}
-
-impl From<Bits> for NormalValue {
-    fn from(b: Bits) -> NormalValue {
-        b.into_norm()
     }
 }
 
