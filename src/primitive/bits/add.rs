@@ -20,7 +20,7 @@ pub fn masked_add(len: u32, left: u128, right: u128) -> u128 {
 }
 
 debug_from_display!(Add);
-quick_pretty!(Add, "Add(Need to change this)");
+quick_pretty!(Add, "#add");
 trivial_substitute!(Add);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Add {}
