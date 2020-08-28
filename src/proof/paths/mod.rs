@@ -19,39 +19,20 @@ pub mod induction;
 /// The identity type family, either of a given type or in general
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct IdFamily {
-    /// The base type of this family, if any
-    base_ty: Option<TypeId>,
     /// The type of this family
     ty: VarId<Pi>,
-    /// The region of this family
-    region: Region,
 }
 
 impl IdFamily {
     /// Get the constructor for all identity type families within a given kind
     pub fn universal(kind: KindId) -> IdFamily {
         let ty = Self::universal_pi(&kind).into_var();
-        let region = kind.clone_region();
-        IdFamily {
-            ty,
-            region,
-            base_ty: None,
-        }
-    }
-    /// Get a given identity type family
-    pub fn family(base_ty: TypeId) -> IdFamily {
-        let ty = Self::family_pi(&base_ty).into_var();
-        let region = base_ty.clone_region();
-        IdFamily {
-            ty,
-            region,
-            base_ty: Some(base_ty),
-        }
+        IdFamily { ty }
     }
     /// Get the pi type for a constructor family
     pub fn universal_pi(kind: &KindId) -> Pi {
         let universal_region = Region::with_unchecked(
-            once(kind.clone_ty()).collect(),
+            once(kind.clone_as_ty()).collect(),
             kind.clone_region(),
             kind.universe().clone_var(),
         );
@@ -71,7 +52,7 @@ impl IdFamily {
             base_ty.universe().clone_var(),
         );
         //TODO: proper target universe?
-        Pi::try_new(base_ty.ty_kind().clone_ty(), region).expect("Valid pi-type")
+        Pi::try_new(base_ty.clone_ty(), region).expect("Valid pi-type")
     }
 }
 
@@ -93,7 +74,7 @@ impl Typed for IdFamily {
 impl Regional for IdFamily {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        self.region.region()
+        self.ty.region()
     }
 }
 
@@ -103,63 +84,31 @@ impl Apply for IdFamily {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        let base_ty_val = self.base_ty.as_ref().map(|ty| ty.as_val());
-        match (args, base_ty_val) {
-            ([], _) | ([_], Some(_)) => self.ty.apply_ty_in(args, ctx).map(Application::Symbolic),
-            ([left, right], Some(base)) | ([base, left, right], None) => {
-                if left.ty() != *base {
-                    return Err(Error::TypeMismatch);
+        if args.len() > 3 {
+            return Err(Error::TooManyArgs);
+        }
+        match args {
+            [ty, left, right] => {
+                if left.ty() != *ty {
+                    Err(Error::TypeMismatch)
+                } else {
+                    Id::try_new(left.clone(), right.clone())
+                        .map(|id| Application::Success(&[], id.into_val()))
                 }
-                let id = Id::try_new(left.clone(), right.clone())?;
-                Ok(Application::Success(&[], id.into_val()))
             }
-            ([base, _], None) | ([base], None) => {
-                let base_ty = Some(
-                    base.clone()
-                        .try_into_ty()
-                        .map_err(|_| Error::NotATypeError)?,
-                );
-                let ty = self.ty.apply_ty_in(&args[..1], ctx)?;
-                Ok(Application::Success(
-                    &args[1..],
-                    IdFamily {
-                        base_ty,
-                        region: ty.clone_region(),
-                        ty: ty
-                            .into_val()
-                            .try_into()
-                            .map_err(|_| Error::InvalidSubKind)?,
-                    }
-                    .into_val(),
-                ))
-            }
-            _ => Err(Error::TooManyArgs),
+            _ => self.ty.apply_ty_in(args, ctx).map(Application::Symbolic),
         }
     }
 }
 
 impl Substitute for IdFamily {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<IdFamily, Error> {
-        let base_ty = self
-            .base_ty
-            .as_ref()
-            .map(|ty| ty.substitute_ty(ctx))
-            .transpose()?;
         let ty: VarId<Pi> = self
             .ty
             .substitute(ctx)?
             .try_into()
             .map_err(|_| Error::InvalidSubKind)?;
-        let region = if let Some(base_ty) = &base_ty {
-            base_ty.gcr(&ty)?.clone_region()
-        } else {
-            ty.clone_region()
-        };
-        Ok(IdFamily {
-            base_ty,
-            ty,
-            region,
-        })
+        Ok(IdFamily { ty })
     }
 }
 
@@ -181,22 +130,11 @@ impl From<IdFamily> for NormalValue {
 impl Value for IdFamily {
     #[inline]
     fn no_deps(&self) -> usize {
-        if self.base_ty.is_none() {
-            0
-        } else {
-            1
-        }
+        0
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
-        match ix {
-            0 => self
-                .base_ty
-                .as_ref()
-                .expect("Invalid zero-index into id family without base type")
-                .as_val(),
-            ix => panic!("Invalid index into id family's dependencies: {}", ix),
-        }
+        panic!("Invalid index into id family's dependencies: {}", ix)
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
@@ -463,7 +401,7 @@ mod prettyprint_impl {
             _printer: &mut PrettyPrinter<I>,
             fmt: &mut Formatter,
         ) -> Result<(), fmt::Error> {
-            write!(fmt, "(identity family prettyprinting unimplemented)")
+            write!(fmt, "#id")
         }
     }
 
@@ -537,17 +475,6 @@ mod tests {
         assert_eq!(refl_true.ty(), truthy);
         assert_eq!(refl_true.region(), Region::NULL);
 
-        // Typed full application
-        let bool_family = IdFamily::family(Bool.into_ty());
-        assert_eq!(
-            bool_family.curried(&[t.clone(), t.clone()]).unwrap(),
-            Application::Success(&[], truthy.clone())
-        );
-        assert_eq!(
-            bool_family.curried(&[t.clone(), f.clone()]).unwrap(),
-            Application::Success(&[], falsey.clone())
-        );
-
         // Universal full application
         let base_family = IdFamily::universal(Fin.into_kind());
         assert_eq!(
@@ -557,24 +484,18 @@ mod tests {
             Application::Success(&[], truthy)
         );
         assert_eq!(
-            base_family.curried(&[Bool.into_val(), t, f]).unwrap(),
+            base_family
+                .curried(&[Bool.into_val(), t.clone(), f])
+                .unwrap(),
             Application::Success(&[], falsey)
         );
 
         // Universal type application
-        //FIXME: partial type substitution
-        /*
-        assert_eq!(
-            base_family.applied(&[Bool.into_val()]).unwrap(),
-            bool_family.into_val()
-        );
-        */
 
-        // Typed partial application
-        //FIXME: partial application bug
-        /*
-        let partial_t = bool_family.applied(&[t.clone()]).expect("Valid partial application");
-        let partial_bt = base_family.applied(&[Bool.into_val(), t.clone()]).expect("Valid partial application");
-        */
+        let partial_bt = base_family
+            .applied(&[Bool.into_val(), t.clone()])
+            .expect("Valid partial application");
+        //FIXME: should be equal to truthy, but sexpr currying is acting up...
+        partial_bt.applied(&[t]).expect("Valid completion");
     }
 }

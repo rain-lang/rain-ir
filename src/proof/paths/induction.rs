@@ -452,10 +452,11 @@ mod test {
         logical::{binary_ty, Bool},
         Unit,
     };
+    use crate::typing::primitive::Prop;
     use crate::value::Value;
     use std::iter::repeat;
 
-    fn manually_construct_binary_happly() -> VarId<Pi> {
+    fn manually_construct_binary_bool_ap_ty() -> VarId<Pi> {
         let binary_ty = binary_ty();
         let binary_region =
             Region::with(once(binary_ty.clone().into_ty()).collect(), Region::NULL).unwrap();
@@ -509,22 +510,46 @@ mod test {
     }
 
     #[test]
-    fn family_refl_types_work() {
+    fn unit_path_induction() {
         let domain: TyArr = repeat(Bool.into_ty()).take(2).collect();
+
+        // Constructing a unit type family
         let (left_region, right_region, id_region) =
             construct_arg_id_regions(domain.clone(), None, |_, _| {}).unwrap();
         let id_const = Lambda::try_new(Unit.into(), id_region).unwrap();
         let right_const = Lambda::try_new(id_const.into(), right_region).unwrap();
-        let family = Lambda::try_new(right_const.into(), left_region)
+        let family = Lambda::try_new(right_const.into(), left_region.clone())
             .unwrap()
             .into_val();
-        assert!(PathInd::compute_refl_ty(domain, &family).is_ok());
+
+        // Checking it's type
+        let family_ty = PathInd::compute_family_ty(domain.clone(), Prop.into_kind())
+            .expect("Valid family type")
+            .into_ty();
+        assert_eq!(family.ty(), family_ty);
+
+        // Constructing a reflective proof of the unit type family
+        let refl_proof =
+            Lambda::try_new(().into(), left_region).expect("Refl proof construction works");
+
+        // Checking it's type
+        let refl_ty = PathInd::compute_refl_ty(domain.clone(), &family)
+            .expect("Refl type computation works")
+            .into_var();
+        assert_eq!(refl_proof.ty(), refl_ty);
+
+        // Creating an instance of path induction over the desired type family
+        let _path_ind = PathInd::try_new(domain, Prop.into_kind()).expect("Path induction into Prop is valid");
+
+        // Applying it to the family
+        //FIXME
+        //let _family_ind = path_ind.applied(&[family]).expect("Type family is valid");
     }
 
     #[test]
     fn ap_helpers() {
         let binary_ty = binary_ty();
-        let manual_ap_type = manually_construct_binary_happly();
+        let manual_ap_type = manually_construct_binary_bool_ap_ty();
         let ap_const = ApConst::try_new_pi(binary_ty);
         let ap_type = ap_const.compute_ty();
         assert_eq!(ap_type, manual_ap_type);

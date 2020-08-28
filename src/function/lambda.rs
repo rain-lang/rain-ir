@@ -141,7 +141,7 @@ impl Apply for Lambda {
             ));
         }
 
-        let ctx = ctx.get_or_insert_with(|| EvalCtx::new(self.depth()));
+        let ctx = ctx.get_or_insert_with(EvalCtx::default);
 
         // Substitute
         let region = ctx.substitute_region(self.def_region(), args.iter().cloned(), false)?;
@@ -188,7 +188,7 @@ impl Value for Lambda {
 
 impl Substitute for Lambda {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Lambda, Error> {
-        let result = self.result.substitute(ctx)?;
+        let (def_region, result) = ctx.evaluate_in_region(&self.result, self.def_region())?;
         let ty: VarId<Pi> = self
             .ty
             .substitute(ctx)?
@@ -199,13 +199,6 @@ impl Substitute for Lambda {
             .iter()
             .map(|d| d.substitute(ctx))
             .collect::<Result<_, _>>()?;
-        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
-        let result_region = result.region();
-        let def_region = if dep_gcr < result_region {
-            result_region.clone_region()
-        } else {
-            Region::minimal_with(self.ty.param_tys().clone(), dep_gcr)?
-        };
         Ok(Lambda {
             result,
             deps,
@@ -292,7 +285,7 @@ mod tests {
     fn anchor_identity_works_properly() {
         let anchor = Tuple::const_anchor();
         let anchor_val = anchor.clone().into_val();
-        let anchor_ty = anchor.ty().clone_ty();
+        let anchor_ty = anchor.clone_ty();
         let id = Lambda::id(anchor_ty);
         let id_val = id.into_val();
         assert_eq!(

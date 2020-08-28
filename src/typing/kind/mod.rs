@@ -73,7 +73,9 @@ pub trait Universe: Kind {
     /// Substitute this value while preserving the fact that it is a kind
     fn substitute_universe(&self, ctx: &mut EvalCtx) -> Result<UniverseId, Error> {
         let value = self.substitute(ctx)?;
-        value.try_into_universe().map_err(|_| Error::NotAUniverseError)
+        value
+            .try_into_universe()
+            .map_err(|_| Error::NotAUniverseError)
     }
 }
 
@@ -136,6 +138,7 @@ impl<'a, P: KindPredicate> Kind for NormalValue<P> {
             ValueEnum::Prop(p) => p.id_kind(),
             ValueEnum::Fin(f) => f.id_kind(),
             ValueEnum::Set(s) => s.id_kind(),
+            ValueEnum::BitsKind(b) => b.id_kind(),
             ValueEnum::Sexpr(s) => unimplemented!("Sexpr kinds for {}", s),
             ValueEnum::Parameter(p) => unimplemented!("Parameter kinds for {}", p),
             v => panic!("{} is not a kind!", v),
@@ -147,6 +150,7 @@ impl<'a, P: KindPredicate> Kind for NormalValue<P> {
             ValueEnum::Prop(p) => p.try_closure(),
             ValueEnum::Fin(f) => f.try_closure(),
             ValueEnum::Set(s) => s.try_closure(),
+            ValueEnum::BitsKind(b) => b.try_closure(),
             ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
             ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
             v => panic!("{} is not a kind!", v),
@@ -158,6 +162,7 @@ impl<'a, P: KindPredicate> Kind for NormalValue<P> {
             ValueEnum::Prop(p) => p.closure(),
             ValueEnum::Fin(f) => f.closure(),
             ValueEnum::Set(s) => s.closure(),
+            ValueEnum::BitsKind(b) => b.closure(),
             ValueEnum::Sexpr(s) => unimplemented!("Sexpr kind closure for {}", s),
             ValueEnum::Parameter(p) => unimplemented!("Parameter kind closure for {}", p),
             v => panic!("{} is not a kind!", v),
@@ -178,6 +183,27 @@ impl<'a, U: UniversePredicate> Universe for ValRef<'a, U> {
     #[inline]
     fn universe_cmp(&self, other: &UniverseId) -> Ordering {
         self.as_pred().universe_cmp(other)
+    }
+}
+
+impl<U: UniversePredicate> ValId<U> {
+    /// Borrow this `ValId` as a universe
+    #[inline]
+    pub fn borrow_universe(&self) -> ValRef<IsUniverse> {
+        self.borrow_var().coerce()
+    }
+    /// Get this `ValId` as a universe
+    #[inline]
+    pub fn as_universe(&self) -> &ValId<IsUniverse> {
+        self.coerce_ref()
+    }
+}
+
+impl<'a, U: UniversePredicate> ValRef<'a, U> {
+    /// Get this `ValRef` as a universe
+    #[inline]
+    pub fn as_universe(self) -> ValRef<'a, IsUniverse> {
+        self.coerce()
     }
 }
 
@@ -211,14 +237,14 @@ impl Ord for UniverseId {
 impl PartialOrd for UniverseRef<'_> {
     #[inline]
     fn partial_cmp(&self, other: &UniverseRef) -> Option<Ordering> {
-        Some(self.universe_cmp(other.as_arc()))
+        Some(self.universe_cmp(other.as_var()))
     }
 }
 
 impl Ord for UniverseRef<'_> {
     #[inline]
     fn cmp(&self, other: &UniverseRef) -> Ordering {
-        self.universe_cmp(other.as_arc())
+        self.universe_cmp(other.as_var())
     }
 }
 
@@ -232,6 +258,6 @@ impl PartialOrd<UniverseId> for UniverseRef<'_> {
 impl PartialOrd<UniverseRef<'_>> for UniverseId {
     #[inline]
     fn partial_cmp(&self, other: &UniverseRef) -> Option<Ordering> {
-        Some(self.universe_cmp(other.as_arc()))
+        Some(self.universe_cmp(other.as_var()))
     }
 }

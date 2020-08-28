@@ -29,7 +29,7 @@ impl Tuple {
     #[inline]
     pub fn try_new(elems: ValArr) -> Result<Tuple, Error> {
         let region = Region::NULL.gcrs(elems.iter())?.clone_region();
-        let ty = Product::try_new(elems.iter().map(|elem| elem.ty().clone_ty()).collect())?.into();
+        let ty = Product::try_new(elems.iter().map(|elem| elem.clone_ty()).collect())?.into();
         Ok(Tuple { elems, region, ty })
     }
     /// Create the tuple corresponding to the element of the unit type
@@ -121,7 +121,7 @@ impl Apply for Tuple {
     ) -> Result<Application<'a>, Error> {
         // Check for a null application
         if args.is_empty() {
-            return Ok(Application::Symbolic(self.ty().clone_ty()));
+            return Ok(Application::Symbolic(self.clone_ty()));
         }
         // Do a type check
         match args[0].ty().as_enum() {
@@ -285,7 +285,7 @@ impl Product {
     /// TODO: consider caching this (or the tuple type) in an atomic, as it may need to be computed many times
     #[inline]
     pub fn tuple(&self) -> Tuple {
-        let ty_elems = self.elems.iter().map(|elem| elem.ty().clone_ty()).collect();
+        let ty_elems = self.elems.iter().map(|elem| elem.clone_ty()).collect();
         //TODO: think about this...
         let ty = Product::try_new(ty_elems).expect("Impossible").into();
         Tuple {
@@ -379,7 +379,7 @@ impl Type for Product {
     #[inline]
     fn apply_ty_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<TypeId, Error> {
         if args.is_empty() {
-            return Ok(self.ty().clone_ty());
+            return Ok(self.clone_ty());
         }
         match args[0].as_enum() {
             ValueEnum::Index(ix) => {

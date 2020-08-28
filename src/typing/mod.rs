@@ -4,8 +4,8 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     value::{
-        Error, KindRef, NormalValue, ReprRef, TypeId, TypeRef, UniverseRef, ValId, ValRef, Value,
-        ValueEnum,
+        Error, KindId, KindRef, NormalValue, ReprId, ReprRef, TypeId, TypeRef, UniverseRef, ValId,
+        ValRef, Value, ValueEnum,
     },
 };
 use std::convert::TryInto;
@@ -27,11 +27,19 @@ pub trait Typed {
     /// assert_eq!(false.ty(), bool_ty);
     /// ```
     fn ty(&self) -> TypeRef;
+    /// Compute the type of this `rain` value, cloning it
+    fn clone_ty(&self) -> TypeId {
+        self.ty().clone_var()
+    }
     /// Compute the kind of this `rain` value
     fn kind(&self) -> KindRef {
         let tyty = self.ty().as_enum().ty();
         debug_assert!(tyty.is_kind(), "The type of a type must be a kind!");
         tyty.coerce()
+    }
+    /// Compute the kind of this `rain` value, cloning it
+    fn clone_kind(&self) -> KindId {
+        self.kind().clone_var()
     }
     /// Compute the representation of this `rain` value, if any
     fn repr(&self) -> Option<ReprRef> {
@@ -41,6 +49,10 @@ pub trait Typed {
         } else {
             None
         }
+    }
+    /// Compute the representation of this `rain` value, if any, cloning it
+    fn clone_repr(&self) -> Option<ReprId> {
+        self.repr().map(ReprRef::clone_var)
     }
     /// Check whether this `rain` value is a type
     ///
@@ -388,6 +400,18 @@ impl<'a, P: TypePredicate> Type for NormalValue<P> {
     }
 }
 
+impl<P> ValId<P> {
+    /// Try to get this `ValId<P>` as a type
+    #[inline]
+    pub fn try_as_ty(&self) -> Result<&TypeId, &ValId<P>> {
+        if self.is_ty() {
+            Ok(self.coerce_ref())
+        } else {
+            Err(self)
+        }
+    }
+}
+
 impl<P: TypePredicate> ValId<P> {
     /// Get this `ValId` as a `TypeId`
     #[inline(always)]
@@ -396,12 +420,25 @@ impl<P: TypePredicate> ValId<P> {
     }
     /// Clone this `ValId` as a `TypeId`
     #[inline(always)]
-    pub fn clone_ty(&self) -> TypeId {
+    pub fn clone_as_ty(&self) -> TypeId {
         self.as_ty().clone()
     }
     /// Borrow this `ValId` as a `TypeRef`
     #[inline(always)]
     pub fn borrow_ty(&self) -> TypeRef {
         self.as_ty().borrow_var()
+    }
+}
+
+impl<'a, P: TypePredicate> ValRef<'a, P> {
+    /// Get this `ValId` as a `TypeId`
+    #[inline(always)]
+    pub fn as_ty(self) -> TypeRef<'a> {
+        self.coerce()
+    }
+    /// Clone this `ValId` as a `TypeId`
+    #[inline(always)]
+    pub fn clone_as_ty(self) -> TypeId {
+        self.as_var().clone_as_ty()
     }
 }

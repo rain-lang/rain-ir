@@ -153,10 +153,10 @@ impl Type for Pi {
         // Rename context
         let ctx_handle = ctx;
         // Initialize context
-        let ctx = ctx_handle.get_or_insert_with(|| EvalCtx::new(self.depth()));
+        let ctx = ctx_handle.get_or_insert_with(EvalCtx::default);
 
         // Substitute
-        let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), false)?;
+        let region = ctx.substitute_region(&self.def_region(), args.iter().cloned(), true)?;
 
         // Evaluate the result type and lifetime
         let result = self.result.substitute_ty(ctx);
@@ -176,19 +176,14 @@ impl Type for Pi {
 
 impl Substitute for Pi {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Pi, Error> {
-        let result = self.result.substitute_ty(ctx)?;
+        let (def_region, result) =
+            ctx.evaluate_in_region(self.result.as_val(), self.def_region())?;
+        let result = result.try_into_ty().map_err(|_| Error::NotATypeError)?;
         let deps: ValSet = self
             .deps
             .iter()
             .map(|d| d.substitute(ctx))
             .collect::<Result<_, _>>()?;
-        let dep_gcr = Region::NULL.gcrs(deps.iter())?;
-        let result_region = result.region();
-        let def_region = if dep_gcr < result_region {
-            result_region.clone_region()
-        } else {
-            Region::minimal_with(self.param_tys().clone(), dep_gcr)?
-        };
         Ok(Pi {
             result,
             deps,
