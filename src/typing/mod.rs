@@ -4,8 +4,8 @@ The `rain` type system
 use super::{
     eval::EvalCtx,
     value::{
-        Error, KindId, KindRef, NormalValue, ReprId, ReprRef, TypeId, TypeRef, UniverseRef, ValId,
-        ValRef, Value, ValueEnum,
+        Error, KindId, KindRef, NormalValue, ReprId, ReprRef, TypeId, TypeRef, UniverseId,
+        UniverseRef, ValId, ValRef, Value, ValueEnum,
     },
 };
 use std::convert::TryInto;
@@ -142,6 +142,11 @@ pub trait Type: Value {
     #[inline]
     fn universe(&self) -> UniverseRef {
         self.ty_kind().get_closure()
+    }
+    /// Clone the universe of this type
+    #[inline]
+    fn clone_universe(&self) -> UniverseId {
+        self.universe().clone_var()
     }
     /// Get the representation of this type, if any
     fn ty_repr(&self) -> Option<ReprRef> {

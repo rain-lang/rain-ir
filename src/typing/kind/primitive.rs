@@ -255,6 +255,13 @@ impl Universe for Fin {
     }
 }
 
+impl Default for Set {
+    #[inline]
+    fn default() -> Set {
+        Set::new(0)
+    }
+}
+
 impl Typed for Set {
     #[inline(always)]
     fn ty(&self) -> TypeRef {
