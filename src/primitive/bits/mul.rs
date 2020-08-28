@@ -41,6 +41,16 @@ impl Apply for Mul {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
+        if args.len() == 2 {
+            if let ValueEnum::Bits(b) = args[1].as_enum() {
+                if b.ty != args[0] {
+                    return Err(Error::TypeMismatch);
+                }
+                if b.data == 1 {
+                    return Ok(Application::Success(&[], Lambda::id(args[0].clone().coerce()).into_val()));
+                }
+            }
+        }
         if args.len() <= 2 {
             BITS_BINARY
                 .apply_ty_in(args, ctx)
