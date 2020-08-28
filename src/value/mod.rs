@@ -224,6 +224,22 @@ pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional {
         );
         Ok(success)
     }
+    /// Apply this value to a set of arguments, if possible
+    #[inline]
+    fn applied_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<ValId, Error>
+    where
+        Self: Clone,
+    {
+        let application = self.curried_in(args, ctx)?;
+        let (rest, success) = application.valid_to_success(self, args);
+        debug_assert!(
+            rest.is_empty(),
+            "Incomplete currying: {:?} left, got {:?}",
+            rest,
+            success
+        );
+        Ok(success)
+    }
     /// Convert a value into a `TypeId`, if it is a type, otherwise return it
     #[inline]
     fn try_into_ty(self) -> Result<TypeId, Self> {
