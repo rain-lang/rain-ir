@@ -6,6 +6,7 @@ use crate::typing::{primitive::Prop, Type, Universe};
 use crate::value::Error;
 use im::Vector;
 use std::hash::{Hash, Hasher};
+use std::iter::{once, repeat};
 
 /// The data composing a `rain` region
 #[derive(Debug, Clone, Eq)]
@@ -88,6 +89,54 @@ impl RegionData {
     #[inline]
     pub fn minimal(param_tys: TyArr) -> Result<RegionData, Error> {
         Self::minimal_with(param_tys, RegionBorrow::NULL)
+    }
+    /// Get the minimal region for a unary operator. Never fails
+    #[inline]
+    pub fn unary(ty: TypeId) -> RegionData {
+        let parent = ty.clone_region();
+        let universe = ty.clone_universe();
+        Self::with_unchecked(once(ty).collect(), parent, universe)
+    }
+    /// Get the minimal region for a unary operator with a given parent
+    #[inline]
+    pub fn unary_with(ty: TypeId, parent: Region) -> Result<RegionData, Error> {
+        if parent >= ty.region() {
+            let universe = ty.clone_universe();
+            Ok(Self::with_unchecked(once(ty).collect(), parent, universe))
+        } else {
+            Err(Error::IncomparableRegions)
+        }
+    }
+    /// Get the minimal region for an n-ary operator over a given type. Never fails
+    #[inline]
+    pub fn nary(ty: TypeId, n: usize) -> RegionData {
+        let parent = ty.clone_region();
+        let universe = ty.clone_universe();
+        Self::with_unchecked(repeat(ty).take(n).collect(), parent, universe)
+    }
+    /// Get the minimal region for an n-ary operator with a given parent
+    #[inline]
+    pub fn nary_with(ty: TypeId, n: usize, parent: Region) -> Result<RegionData, Error> {
+        if parent >= ty.region() {
+            let universe = ty.clone_universe();
+            Ok(Self::with_unchecked(
+                repeat(ty).take(n).collect(),
+                parent,
+                universe,
+            ))
+        } else {
+            Err(Error::IncomparableRegions)
+        }
+    }
+    /// Get the minimal region for a binary operator over a given type. Never fails
+    #[inline]
+    pub fn binary(ty: TypeId) -> RegionData {
+        Self::nary(ty, 2)
+    }
+    /// Get the minimal region for a binary operator with a given parent over a given type. Never fails
+    #[inline]
+    pub fn binary_with(ty: TypeId, parent: Region) -> Result<RegionData, Error> {
+        Self::nary_with(ty, 2, parent)
     }
     /// Create data for a new, empty region with an optional parent region
     #[inline]

@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Add, Bits, BitsKind, BitsTy, Mul, Neg, Subtract},
+    bits::{Add, Bits, BitsKind, BitsTy, Mul, Neg, Sub},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -114,7 +114,7 @@ pub enum ValueEnum {
     /// An unsigned multiplication operation on bitvectors
     Mul(Mul),
     /// An subtraction operation on bitvectors
-    Subtract(Subtract),
+    Sub(Sub),
     /// An negation operation on bitvectors
     Neg(Neg),
 }
@@ -625,7 +625,7 @@ macro_rules! forv {
             ValueEnum::PathInd($i) => $e,
             ValueEnum::Add($i) => $e,
             ValueEnum::Mul($i) => $e,
-            ValueEnum::Subtract($i) => $e,
+            ValueEnum::Sub($i) => $e,
             ValueEnum::Neg($i) => $e,
         }
     };
@@ -748,7 +748,7 @@ normal_valid!(Bits);
 normal_valid!(PathInd);
 normal_valid!(Add);
 normal_valid!(Mul);
-normal_valid!(Subtract);
+normal_valid!(Sub);
 normal_valid!(Neg);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
