@@ -5,14 +5,14 @@ use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
 use crate::region::{Parameter, Region, Regional};
 use crate::typing::{
-    primitive::{Fin, Prop, Set, FIN, SET},
+    primitive::{Prop, Set, FIN, SET},
     Kind, Type, Typed, Universe,
 };
 use crate::value::{
     arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, UniverseId, UniverseRef, ValId, Value,
     ValueData, ValueEnum, VarId, VarRef,
 };
-use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute, tyarr};
+use crate::{debug_from_display, enum_convert, quick_pretty, trivial_substitute};
 use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
