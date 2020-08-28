@@ -152,7 +152,7 @@ impl Type for BitsTy {
 }
 
 debug_from_display!(Bits);
-quick_pretty!(Bits, "Unimplemented!");
+quick_pretty!(Bits, b, fmt => write!(fmt, "{}'h{:x}", b.len, b.data));
 trivial_substitute!(Bits);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Bits {}
