@@ -63,7 +63,7 @@ impl Apply for Add {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    Ok(Application::Success(&[], args[0].clone()))
+                    Ok(Application::Success(&[], args[2].clone()))
                 }
                 (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
                     if zero.len != ty.0 || zero.ty != x.ty() {

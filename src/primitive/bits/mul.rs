@@ -1,64 +1,16 @@
 /*!
 Bitvector multiplication
 */
-
 use super::*;
+
+lazy_static! {
+    /// The multiplication operator constant
+    static ref ADD: VarId<Mul> = VarId::direct_new(Mul);
+}
 
 /// The multiplication operator
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Mul {
-    /// Type of the multiply operator
-    ty: VarId<Pi>,
-    /// The length of the bit vector,
-    len: u32,
-}
-
-#[allow(clippy::len_without_is_empty)]
-impl Mul {
-    /// Create a multiply operator with bitwidth `len`
-    pub fn new(len: u32) -> Mul {
-        Mul {
-            ty: Self::compute_ty(len).into_var(),
-            len,
-        }
-    }
-    /// Get the pi type of the multiplication operator with bitwidth `len`
-    ///
-    /// Note that the result of this method called on `len` is always equal to the type of `Mul::new(len)`.
-    pub fn compute_ty(len: u32) -> Pi {
-        let region = Region::with_unchecked(
-            tyarr![BitsTy{0: len}.into_ty(); 2],
-            Region::NULL,
-            Fin.into_universe(),
-        );
-        Pi::try_new(BitsTy(len).into_ty(), region)
-            .expect("The type of the multiplication operator is always valid")
-    }
-    /// Perform wrapping bitvector multiplication, discarding high order bits
-    ///
-    /// This method assumes both `left` and `right` are valid bitvectors for this multiplication operation, namely that they have length
-    /// less than or equal to `self.len()`. If this is not the case, this function will panic *in debug mode*, while in release mode,
-    /// the behaviour is unspecified but safe.
-    #[inline(always)]
-    pub fn masked_mul(&self, left: u128, right: u128) -> u128 {
-        debug_assert_eq!(
-            left,
-            mask(self.len, left),
-            "Left bitvector has length greater than len"
-        );
-        debug_assert_eq!(
-            right,
-            mask(self.len, right),
-            "Right bitvector has length greater than len"
-        );
-        masked_mul(self.len, left, right)
-    }
-    /// Get the bitwidth of this addition operator
-    #[inline(always)]
-    pub fn len(&self) -> u32 {
-        self.len
-    }
-}
+pub struct Mul;
 
 /// Perform wrapping bitvector multiplication, discarding bits of order greater than `len`
 #[inline(always)]
@@ -89,55 +41,57 @@ impl Apply for Mul {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
-        if args.len() <= 1 {
-            self.ty.apply_ty_in(args, ctx).map(Application::Symbolic)
-        } else if args.len() > 2 {
+        if args.len() <= 2 {
+            BITS_BINARY
+                .apply_ty_in(args, ctx)
+                .map(Application::Symbolic)
+        } else if args.len() > 3 {
             Err(Error::TooManyArgs)
         } else {
-            let arg_0 = &args[0];
-            let arg_1 = &args[1];
-            match (arg_0.as_enum(), arg_1.as_enum()) {
-                (ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
-                    if left.len != right.len || left.len != self.len {
+            match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
+                    if left.len != right.len || left.len != ty.0 {
                         return Err(Error::TypeMismatch);
                     }
                     let result = Bits {
                         ty: left.ty.clone(),
-                        data: self.masked_mul(left.data, right.data),
+                        data: masked_mul(ty.0, left.data, right.data),
                         len: left.len,
                     };
                     Ok(Application::Success(&[], result.into_val()))
                 }
-                (ValueEnum::Bits(one), x) if one.data == 1 => {
-                    if one.len != self.len || one.ty != x.ty() {
+                // Multiplication by zero yields zero
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    Ok(Application::Success(&[], args[0].clone()))
+                    Ok(Application::Success(&[], args[2].clone()))
                 }
-                (x, ValueEnum::Bits(one)) if one.data == 1 => {
-                    if one.len != self.len || one.ty != x.ty() {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     Ok(Application::Success(&[], args[1].clone()))
                 }
-                (ValueEnum::Bits(zero), x) | (x, ValueEnum::Bits(zero)) if zero.data == 0 => {
-                    if zero.len != self.len || zero.ty != x.ty() {
+                // Multiplication by one is the identity
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) if one.data == 1 => {
+                    if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    let result = BitsTy { 0: zero.len }.data(0).unwrap();
-                    Ok(Application::Success(&[], result.into_val()))
+                    Ok(Application::Success(&[], args[2].clone()))
                 }
-                (left, right) => {
-                    let left_ty = left.ty();
-                    if left_ty != right.ty() {
-                        // Error
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) if one.data == 1 => {
+                    if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    match left {
-                        ValueEnum::BitsTy(b) if b.0 != self.len => {
-                            Ok(Application::Symbolic(left_ty.clone_as_ty()))
-                        }
-                        _ => Err(Error::TypeMismatch),
+                    Ok(Application::Success(&[], args[1].clone()))
+                }
+                (ty, left, right) => {
+                    let left_ty = left.ty();
+                    if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
+                        Err(Error::TypeMismatch)
+                    } else {
+                        Ok(Application::Symbolic(args[0].clone().coerce()))
                     }
                 }
             }
@@ -148,7 +102,7 @@ impl Apply for Mul {
 impl Typed for Mul {
     #[inline]
     fn ty(&self) -> TypeRef {
-        self.ty.borrow_ty()
+        BITS_BINARY.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
@@ -177,7 +131,7 @@ impl Value for Mul {
     }
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!(
-            "Add operation {} has no dependencies (tried to get dep #{})",
+            "Mul operation {} has no dependencies (tried to get dep #{})",
             self, ix
         )
     }
@@ -211,19 +165,22 @@ mod tests {
             (14, 8848, 2, 1312),
         ];
         for (len, left, right, result) in test_cases.iter() {
-            let left_data = BitsTy(*len).data(*left).expect("Left data is valid");
-            let right_data = BitsTy(*len).data(*right).expect("Right data is valid");
-            let multiply_struct = Mul::new(*len);
-            let data_arr = [left_data.into_val(), right_data.into_val()];
+            let bitwidth = BitsTy(*len).into_var();
+            let left_data = bitwidth.data(*left).expect("Left data is valid");
+            let right_data = bitwidth.data(*right).expect("Right data is valid");
+            let data_arr = [
+                bitwidth.into_val(),
+                left_data.into_val(),
+                right_data.into_val(),
+            ];
             let mut ctx = None;
-            match multiply_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
+            match Mul.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
                         assert_eq!(b.len, *len);
                         assert_eq!(b.data, *result);
                         assert_eq!(b.data, mask(*len, left.wrapping_mul(*right)));
                         assert_eq!(b.data, masked_mul(*len, *left, *right));
-                        assert_eq!(b.data, multiply_struct.masked_mul(*left, *right));
                     }
                     _ => panic!("Result should be a bitvector constant (ValueEnum::Bits)"),
                 },
@@ -231,7 +188,7 @@ mod tests {
             };
             assert_eq!(
                 ctx, None,
-                "No evaluation context should be generated by direct addition of constants"
+                "No evaluation context should be generated by direct multiplication of constants"
             );
         }
     }
