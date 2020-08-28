@@ -19,7 +19,7 @@ pub fn masked_mul(len: u32, left: u128, right: u128) -> u128 {
 }
 
 debug_from_display!(Mul);
-quick_pretty!(Mul, "Mul(Need to change this)");
+quick_pretty!(Mul, "#mul");
 trivial_substitute!(Mul);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Mul {}
