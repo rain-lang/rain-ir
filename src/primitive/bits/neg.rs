@@ -15,7 +15,7 @@ pub fn masked_neg(len: u32, b: u128) -> u128 {
 }
 
 debug_from_display!(Neg);
-quick_pretty!(Neg, "Mul(Need to change this)");
+quick_pretty!(Neg, "#neg");
 trivial_substitute!(Neg);
 enum_convert! {
     impl InjectionRef<ValueEnum> for Neg {}
