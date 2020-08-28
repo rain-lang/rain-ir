@@ -803,3 +803,15 @@ mod prettyprint_impl {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn valid_is_a_nonnull() {
+        assert_eq!(size_of::<ValId>(), size_of::<*const u8>());
+        assert_eq!(size_of::<Option<ValId>>(), size_of::<*const u8>());
+    }
+}
