@@ -60,7 +60,7 @@ impl Apply for Neg {
 impl Typed for Neg {
     #[inline]
     fn ty(&self) -> TypeRef {
-        BITS_UNARY
+        BITS_UNARY.borrow_ty()
     }
     #[inline]
     fn is_ty(&self) -> bool {
