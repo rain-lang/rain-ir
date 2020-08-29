@@ -88,7 +88,7 @@ impl Apply for Add {
                 }
                 (ty, left, right) => {
                     if ty.ty() != *BITS_KIND {
-                        return Err(Error::TypeMismatch)
+                        return Err(Error::TypeMismatch);
                     }
                     let left_ty = left.ty();
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
@@ -195,4 +195,15 @@ mod tests {
             );
         }
     }
+
+    //FIXME: this!
+    /*
+    #[test]
+    fn bitvector_addition_does_not_accept_invalid_types() {
+        Add.applied(&[Bool.into_val()])
+            .expect_err("Booleans are not valid additive types");
+        Add.applied(&[Bool.into_val(), true.into_val(), false.into_val()])
+            .expect_err("Booleans are not valid additive types");
+    }
+    */
 }
