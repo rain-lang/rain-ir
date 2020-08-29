@@ -155,12 +155,12 @@ impl Type for BitsTy {
             [ix] => {
                 if let ValueEnum::Finite(ix) = ix.ty().as_enum() {
                     if ix.0 == self.0 as u128 {
-                        return Ok(Bool.into_ty())
+                        return Ok(Bool.into_ty());
                     }
                 }
                 Err(Error::TypeMismatch)
             }
-            [..] => Err(Error::TooManyArgs)
+            [..] => Err(Error::TooManyArgs),
         }
     }
 }
