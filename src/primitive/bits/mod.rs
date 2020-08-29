@@ -137,7 +137,7 @@ impl VarId<BitsTy> {
 }
 
 impl Bits {
-    /// Try to construct a new bitset. Return an error if high bits are set.
+    /// Try to construct a new bitvector. Return an error if high bits are set.
     pub fn try_new<B: Into<VarId<BitsTy>>>(ty: B, data: u128) -> Result<Bits, Error> {
         let ty: VarId<BitsTy> = ty.into();
         let len: u32 = ty.0;
@@ -147,13 +147,44 @@ impl Bits {
             Ok(Bits { ty, data, len })
         }
     }
-    /// Get this data
+    /// Get the data of this bitvector
+    #[inline(always)]
     pub fn data(&self) -> u128 {
         self.data
     }
-    /// Get the (bits) type of this bitset
+    /// Get the (bits) type of this bitvector
+    #[inline(always)]
     pub fn get_ty(&self) -> VarRef<BitsTy> {
         self.ty.borrow_var()
+    }
+    /// Get the `n`th bit of a bitvector. Return an error on out of bounds
+    #[inline(always)]
+    pub fn try_bit(&self, n: u32) -> Result<bool, ()> {
+        if n > self.len {
+            Err(())
+        } else {
+            Ok(self.data & 1u128.wrapping_shl(n) != 0)
+        }
+    }
+    /// Get the `n`th bit of a bitvector, panicking on out of bounds
+    #[inline(always)]
+    pub fn bit(&self, n: u32) -> bool {
+        self.try_bit(n).expect("Valid bit index")
+    }
+    /// Get the `n`th bit of a bitvector, zero extending on out of bounds
+    #[inline(always)]
+    pub fn bit_zext(&self, n: u32) -> bool {
+        self.data & 1u128.wrapping_shl(n) != 0
+    }
+    /// Get the length of a bitvector
+    #[inline(always)]
+    pub fn len(&self) -> u32 {
+        self.len
+    }
+    /// Get whether this bitvector is empty
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 
