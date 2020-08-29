@@ -218,6 +218,7 @@ pub fn mask(len: u32, vector: u128) -> u128 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitive::finite::Finite;
     use crate::typing::primitive::FIN;
 
     #[test]
@@ -230,7 +231,7 @@ mod tests {
         assert_eq!(bits_ty.universe(), *FIN);
     }
     #[test]
-    fn bitvector_construction_works() {
+    fn bitvector_construction_and_application_work() {
         let data_1 = BitsTy(2).data(1).unwrap();
         let data_2 = BitsTy(2).data(3).unwrap();
         assert!(BitsTy(2).data(4).is_err());
@@ -249,6 +250,14 @@ mod tests {
         assert_eq!(data_2.try_bit(2), Err(()));
         assert_eq!(data_1.len(), 2);
         assert_eq!(data_2.len(), 2);
+
+        let finite_2 = Finite(2).into_var();
+        let ix_0 = &[finite_2.ix(0).unwrap().into_val()][..];
+        let ix_1 = &[finite_2.ix(1).unwrap().into_val()][..];
+        assert_eq!(data_1.applied(ix_0), Ok(true.into_val()));
+        assert_eq!(data_1.applied(ix_1), Ok(false.into_val()));
+        assert_eq!(data_2.applied(ix_0), Ok(true.into_val()));
+        assert_eq!(data_2.applied(ix_1), Ok(true.into_val()));
 
         let data_3 = BitsTy(4).data(3).unwrap();
         assert!(BitsTy(4).data(16).is_err());
