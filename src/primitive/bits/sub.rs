@@ -48,12 +48,17 @@ impl Apply for Sub {
                     return Err(Error::TypeMismatch);
                 }
                 if b.data == 0 {
-                    return Ok(Application::Success(&[], Lambda::id(args[0].clone().coerce()).into_val()));
+                    return Ok(Application::Success(
+                        &[],
+                        Lambda::id(args[0].clone().coerce()).into_val(),
+                    ));
                 }
             }
         }
         if args.len() <= 2 {
-            BITS_BINARY.apply_ty_in(args, ctx).map(Application::Symbolic)
+            BITS_BINARY
+                .apply_ty_in(args, ctx)
+                .map(Application::Symbolic)
         } else if args.len() > 3 {
             Err(Error::TooManyArgs)
         } else {
@@ -67,26 +72,28 @@ impl Apply for Sub {
                         data: masked_sub(ty.0, left.data, right.data),
                         len: left.len,
                     };
-                    Ok(Application::Success(&[], result.into_val()))
+                    result.apply_in(&args[3..], ctx)
                 }
                 (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    Ok(Application::Success(&[], args[2].clone()))
+                    args[2].apply_in(&args[3..], ctx)
                 }
                 (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
-                    Ok(Application::Success(&[], args[1].clone()))
+                    args[1].apply_in(&args[3..], ctx)
                 }
                 (ty, left, right) => {
                     let left_ty = left.ty();
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
                         Err(Error::TypeMismatch)
                     } else {
-                        Ok(Application::Symbolic(args[0].clone().coerce()))
+                        left_ty
+                            .apply_ty_in(&args[3..], ctx)
+                            .map(Application::Symbolic)
                     }
                 }
             }
