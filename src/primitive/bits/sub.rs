@@ -59,8 +59,6 @@ impl Apply for Sub {
             BITS_BINARY
                 .apply_ty_in(args, ctx)
                 .map(Application::Symbolic)
-        } else if args.len() > 3 {
-            Err(Error::TooManyArgs)
         } else {
             match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
                 (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
