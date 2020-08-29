@@ -85,6 +85,9 @@ impl Apply for Sub {
                     args[1].apply_in(&args[3..], ctx)
                 }
                 (ty, left, right) => {
+                    if ty.ty() != *BITS_KIND {
+                        return Err(Error::TypeMismatch)
+                    }
                     let left_ty = left.ty();
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
                         Err(Error::TypeMismatch)
