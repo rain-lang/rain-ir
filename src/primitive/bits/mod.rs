@@ -160,7 +160,7 @@ impl Bits {
     /// Get the `n`th bit of a bitvector. Return an error on out of bounds
     #[inline(always)]
     pub fn try_bit(&self, n: u32) -> Result<bool, ()> {
-        if n > self.len {
+        if n >= self.len {
             Err(())
         } else {
             Ok(self.data & 1u128.wrapping_shl(n) != 0)
@@ -221,6 +221,16 @@ mod tests {
         let data_2 = BitsTy(2).data(3).unwrap();
         assert!(BitsTy(2).data(4).is_err());
         assert_ne!(data_1, data_2, "Bitvector equality sanity test");
+        assert!(data_1.bit(0));
+        assert!(!data_1.bit(1));
+        assert!(data_2.bit(0));
+        assert!(data_2.bit(1));
+        assert!(!data_1.bit_zext(2));
+        assert!(!data_2.bit_zext(2));
+        assert_eq!(data_1.try_bit(2), Err(()));
+        assert_eq!(data_2.try_bit(2), Err(()));
+        assert_eq!(data_1.len(), 2);
+        assert_eq!(data_2.len(), 2);
 
         let data_3 = BitsTy(4).data(3).unwrap();
         assert!(BitsTy(4).data(16).is_err());
