@@ -186,7 +186,32 @@ impl Typed for Bits {
     }
 }
 
-impl Apply for Bits {}
+impl Apply for Bits {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        _ctx: &mut Option<EvalCtx>,
+    ) -> Result<Application<'a>, Error> {
+        match args {
+            [] => Ok(Application::Success(&[], self.clone().into_val())),
+            [ix] => {
+                let ix = ix.as_enum();
+                match ix.ty().as_enum() {
+                    ValueEnum::Finite(f) if f.0 == self.len as u128 => {}
+                    _ => return Err(Error::TypeMismatch),
+                }
+                match ix {
+                    ValueEnum::Index(ix) => Ok(Application::Success(
+                        &[],
+                        self.bit_zext(ix.ix() as u32).into_val(),
+                    )),
+                    _ => Ok(Application::Symbolic(Bool.into_ty())),
+                }
+            }
+            [..] => Err(Error::TooManyArgs),
+        }
+    }
+}
 
 impl Regional for Bits {}
 
