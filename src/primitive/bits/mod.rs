@@ -17,6 +17,7 @@ use lazy_static::lazy_static;
 use num::ToPrimitive;
 use ref_cast::RefCast;
 use std::iter::once;
+use std::ops::Index;
 
 mod add;
 mod bits_impl;
@@ -188,6 +189,18 @@ impl Bits {
     }
 }
 
+impl Index<u32> for Bits {
+    type Output = bool;
+    #[inline(always)]
+    fn index(&self, n: u32) -> &bool {
+        if self.bit(n) {
+            &true
+        } else {
+            &false
+        }
+    }
+}
+
 /// Mask a bitvector, discarding bits of order greater than `len`
 ///
 /// # Examples
@@ -225,6 +238,10 @@ mod tests {
         assert!(!data_1.bit(1));
         assert!(data_2.bit(0));
         assert!(data_2.bit(1));
+        assert!(data_1[0]);
+        assert!(!data_1[1]);
+        assert!(data_2[0]);
+        assert!(data_2[1]);
         assert!(!data_1.bit_zext(2));
         assert!(!data_2.bit_zext(2));
         assert_eq!(data_1.try_bit(2), Err(()));
