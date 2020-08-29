@@ -258,6 +258,9 @@ mod tests {
         assert_eq!(data_1.applied(ix_1), Ok(false.into_val()));
         assert_eq!(data_2.applied(ix_0), Ok(true.into_val()));
         assert_eq!(data_2.applied(ix_1), Ok(true.into_val()));
+        assert!(data_1
+            .applied(std::slice::from_ref(finite_2.as_val()))
+            .is_err());
 
         let data_3 = BitsTy(4).data(3).unwrap();
         assert!(BitsTy(4).data(16).is_err());
