@@ -91,7 +91,9 @@ impl Apply for Add {
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
                         Err(Error::TypeMismatch)
                     } else {
-                        Ok(Application::Symbolic(args[0].clone().coerce()))
+                        left_ty
+                            .apply_ty_in(&args[3..], ctx)
+                            .map(Application::Symbolic)
                     }
                 }
             }
