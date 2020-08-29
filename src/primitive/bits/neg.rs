@@ -39,8 +39,6 @@ impl Apply for Neg {
     ) -> Result<Application<'a>, Error> {
         if args.len() <= 1 {
             self.ty().apply_ty_in(args, ctx).map(Application::Symbolic)
-        } else if args.len() > 2 {
-            Err(Error::TooManyArgs)
         } else {
             match args[1].as_enum() {
                 ValueEnum::Bits(b) if b.ty() == args[0] => {
@@ -49,7 +47,7 @@ impl Apply for Neg {
                         data: masked_neg(b.len, b.data),
                         len: b.len,
                     };
-                    Ok(Application::Success(&[], result.into_val()))
+                    result.apply_in(&args[2..], ctx)
                 }
                 _ => self.ty().apply_ty_in(args, ctx).map(Application::Symbolic),
             }
