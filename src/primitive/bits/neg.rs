@@ -40,7 +40,12 @@ impl Apply for Neg {
         if args.len() <= 1 {
             self.ty().apply_ty_in(args, ctx).map(Application::Symbolic)
         } else {
-            match args[1].as_enum() {
+            let operand = args[1].as_enum();
+            let operand_ty = operand.ty();
+            if operand_ty != args[0] || operand_ty.ty() != *BITS_KIND {
+                return Err(Error::TypeMismatch);
+            }
+            match operand {
                 ValueEnum::Bits(b) if b.ty() == args[0] => {
                     let result = Bits {
                         ty: b.ty.clone(),
@@ -49,7 +54,9 @@ impl Apply for Neg {
                     };
                     result.apply_in(&args[2..], ctx)
                 }
-                _ => self.ty().apply_ty_in(args, ctx).map(Application::Symbolic),
+                _ => operand_ty
+                    .apply_ty_in(&args[2..], ctx)
+                    .map(Application::Symbolic),
             }
         }
     }
