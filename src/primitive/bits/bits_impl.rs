@@ -1,7 +1,6 @@
 /*!
 Bitvector trait implementation
 */
-
 use super::*;
 
 debug_from_display!(BitsKind);
@@ -148,6 +147,21 @@ impl Type for BitsTy {
     #[inline]
     fn is_relevant(&self) -> bool {
         false
+    }
+    #[inline]
+    fn apply_ty(&self, args: &[ValId]) -> Result<TypeId, Error> {
+        match args {
+            [] => Ok(self.into_ty()),
+            [ix] => {
+                if let ValueEnum::Finite(ix) = ix.ty().as_enum() {
+                    if ix.0 == self.0 as u128 {
+                        return Ok(Bool.into_ty())
+                    }
+                }
+                Err(Error::TypeMismatch)
+            }
+            [..] => Err(Error::TooManyArgs)
+        }
     }
 }
 

@@ -3,6 +3,7 @@ Finite-valued types
 */
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::{lambda::Lambda, pi::Pi};
+use crate::primitive::logical::Bool;
 use crate::region::{Parameter, Region, Regional};
 use crate::typing::{
     primitive::{Prop, Set, FIN, SET},
