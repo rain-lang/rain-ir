@@ -73,7 +73,7 @@ pub enum ValueEnum {
     Product(Product),
     /// A mere proposition
     Prop(Prop),
-    /// A finite type
+    /// The kind of finite types
     Fin(Fin),
     /// An n-set
     Set(Set),
