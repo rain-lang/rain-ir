@@ -3,10 +3,10 @@ Bitvector multiplication
 */
 use super::*;
 
-lazy_static! {
-    /// The multiplication operator constant
-    static ref ADD: VarId<Mul> = VarId::direct_new(Mul);
-}
+// lazy_static! {
+//     /// The multiplication operator constant
+//     static ref ADD: VarId<Mul> = VarId::direct_new(Mul);
+// }
 
 /// The multiplication operator
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -21,17 +21,17 @@ pub fn masked_mul(len: u32, left: u128, right: u128) -> u128 {
 debug_from_display!(Mul);
 quick_pretty!(Mul, "#mul");
 trivial_substitute!(Mul);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for Mul {}
-    impl TryFrom<NormalValue> for Mul { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Mul { as ValueEnum, }
-}
+// enum_convert! {
+//     impl InjectionRef<ValueEnum> for Mul {}
+//     impl TryFrom<NormalValue> for Mul { as ValueEnum, }
+//     impl TryFromRef<NormalValue> for Mul { as ValueEnum, }
+// }
 
-impl From<Mul> for NormalValue {
-    fn from(a: Mul) -> NormalValue {
-        a.into_norm()
-    }
-}
+// impl From<Mul> for NormalValue {
+//     fn from(a: Mul) -> NormalValue {
+//         a.into_norm()
+//     }
+// }
 
 impl Regional for Mul {}
 
@@ -130,38 +130,38 @@ impl Typed for Mul {
     }
 }
 
-impl Type for Mul {
-    #[inline]
-    fn is_affine(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_relevant(&self) -> bool {
-        false
-    }
-}
+// impl Type for Mul {
+//     #[inline]
+//     fn is_affine(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_relevant(&self) -> bool {
+//         false
+//     }
+// }
 
-impl Value for Mul {
-    fn no_deps(&self) -> usize {
-        0
-    }
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Mul operation {} has no dependencies (tried to get dep #{})",
-            self, ix
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::Mul(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::Mul(self))
-    }
-}
-
-impl ValueData for Mul {}
+// impl Value for Mul {
+//     fn no_deps(&self) -> usize {
+//         0
+//     }
+//     fn get_dep(&self, ix: usize) -> &ValId {
+//         panic!(
+//             "Mul operation {} has no dependencies (tried to get dep #{})",
+//             self, ix
+//         )
+//     }
+//     #[inline]
+//     fn into_enum(self) -> ValueEnum {
+//         ValueEnum::Mul(self)
+//     }
+//     #[inline]
+//     fn into_norm(self) -> NormalValue {
+//         NormalValue::assert_normal(ValueEnum::Mul(self))
+//     }
+// }
+// 
+// impl ValueData for Mul {}
 
 #[cfg(test)]
 mod tests {

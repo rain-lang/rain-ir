@@ -4,10 +4,10 @@ Bitvector subtraction
 
 use super::*;
 
-lazy_static! {
-    /// The subtraction operator constant
-    static ref ADD: VarId<Sub> = VarId::direct_new(Sub);
-}
+// lazy_static! {
+//     /// The subtraction operator constant
+//     static ref ADD: VarId<Sub> = VarId::direct_new(Sub);
+// }
 
 /// The subtraction operator
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -22,17 +22,17 @@ pub fn masked_sub(len: u32, left: u128, right: u128) -> u128 {
 debug_from_display!(Sub);
 quick_pretty!(Sub, "Sub(Need to change this)");
 trivial_substitute!(Sub);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for Sub {}
-    impl TryFrom<NormalValue> for Sub { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Sub { as ValueEnum, }
-}
+// enum_convert! {
+//     impl InjectionRef<ValueEnum> for Sub {}
+//     impl TryFrom<NormalValue> for Sub { as ValueEnum, }
+//     impl TryFromRef<NormalValue> for Sub { as ValueEnum, }
+// }
 
-impl From<Sub> for NormalValue {
-    fn from(a: Sub) -> NormalValue {
-        a.into_norm()
-    }
-}
+// impl From<Sub> for NormalValue {
+//     fn from(a: Sub) -> NormalValue {
+//         a.into_norm()
+//     }
+// }
 
 impl Regional for Sub {}
 
@@ -117,38 +117,38 @@ impl Typed for Sub {
     }
 }
 
-impl Type for Sub {
-    #[inline]
-    fn is_affine(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_relevant(&self) -> bool {
-        false
-    }
-}
+// impl Type for Sub {
+//     #[inline]
+//     fn is_affine(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_relevant(&self) -> bool {
+//         false
+//     }
+// }
 
-impl Value for Sub {
-    fn no_deps(&self) -> usize {
-        0
-    }
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Sub operation {} has no dependencies (tried to get dep #{})",
-            self, ix
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::Sub(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::Sub(self))
-    }
-}
+// impl Value for Sub {
+//     fn no_deps(&self) -> usize {
+//         0
+//     }
+//     fn get_dep(&self, ix: usize) -> &ValId {
+//         panic!(
+//             "Sub operation {} has no dependencies (tried to get dep #{})",
+//             self, ix
+//         )
+//     }
+//     #[inline]
+//     fn into_enum(self) -> ValueEnum {
+//         ValueEnum::Sub(self)
+//     }
+//     #[inline]
+//     fn into_norm(self) -> NormalValue {
+//         NormalValue::assert_normal(ValueEnum::Sub(self))
+//     }
+// }
 
-impl ValueData for Sub {}
+// impl ValueData for Sub {}
 
 #[cfg(test)]
 mod tests {

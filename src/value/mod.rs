@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Add, Bits, BitsKind, BitsTy, Mul, Neg, Sub},
+    bits::{Add, Bits, BitsKind, BitsTy, BitsOp, Mul, Neg, Sub},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -109,12 +109,8 @@ pub enum ValueEnum {
     IdFamily(IdFamily),
     /// An instance of the path induction axiom
     PathInd(PathInd),
-    /// An unsigned addition operation on bitvectors
-    Add(Add),
-    /// An unsigned multiplication operation on bitvectors
-    Mul(Mul),
-    /// An subtraction operation on bitvectors
-    Sub(Sub),
+    /// A binary bits operation
+    BitsOp(BitsOp),
     /// An negation operation on bitvectors
     Neg(Neg),
 }
@@ -639,9 +635,7 @@ macro_rules! forv {
             ValueEnum::BitsTy($i) => $e,
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
-            ValueEnum::Add($i) => $e,
-            ValueEnum::Mul($i) => $e,
-            ValueEnum::Sub($i) => $e,
+            ValueEnum::BitsOp($i) => $e,
             ValueEnum::Neg($i) => $e,
         }
     };
@@ -762,9 +756,11 @@ normal_valid!(IdFamily);
 normal_valid!(BitsTy);
 normal_valid!(Bits);
 normal_valid!(PathInd);
-normal_valid!(Add);
-normal_valid!(Mul);
-normal_valid!(Sub);
+// This should probably be removed when the refactor is done
+// normal_valid!(Add);
+// normal_valid!(Mul);
+// normal_valid!(Sub);
+normal_valid!(BitsOp);
 normal_valid!(Neg);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect

@@ -4,10 +4,10 @@ Bitvector addition
 
 use super::*;
 
-lazy_static! {
-    /// The addition operator constant
-    static ref ADD: VarId<Add> = VarId::direct_new(Add);
-}
+// lazy_static! {
+//     /// The addition operator constant
+//     static ref ADD: VarId<Add> = VarId::direct_new(Add);
+// }
 
 /// The addition operator
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -22,17 +22,17 @@ pub fn masked_add(len: u32, left: u128, right: u128) -> u128 {
 debug_from_display!(Add);
 quick_pretty!(Add, "#add");
 trivial_substitute!(Add);
-enum_convert! {
-    impl InjectionRef<ValueEnum> for Add {}
-    impl TryFrom<NormalValue> for Add { as ValueEnum, }
-    impl TryFromRef<NormalValue> for Add { as ValueEnum, }
-}
+// enum_convert! {
+//     impl InjectionRef<ValueEnum> for Add {}
+//     impl TryFrom<NormalValue> for Add { as ValueEnum, }
+//     impl TryFromRef<NormalValue> for Add { as ValueEnum, }
+// }
 
-impl From<Add> for NormalValue {
-    fn from(a: Add) -> NormalValue {
-        a.into_norm()
-    }
-}
+// impl From<Add> for NormalValue {
+//     fn from(a: Add) -> NormalValue {
+//         a.into_norm()
+//     }
+// }
 
 impl Regional for Add {}
 
@@ -119,38 +119,38 @@ impl Typed for Add {
     }
 }
 
-impl Type for Add {
-    #[inline]
-    fn is_affine(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_relevant(&self) -> bool {
-        false
-    }
-}
+// impl Type for Add {
+//     #[inline]
+//     fn is_affine(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_relevant(&self) -> bool {
+//         false
+//     }
+// }
 
-impl Value for Add {
-    fn no_deps(&self) -> usize {
-        0
-    }
-    fn get_dep(&self, ix: usize) -> &ValId {
-        panic!(
-            "Add operation {} has no dependencies (tried to get dep #{})",
-            self, ix
-        )
-    }
-    #[inline]
-    fn into_enum(self) -> ValueEnum {
-        ValueEnum::Add(self)
-    }
-    #[inline]
-    fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::Add(self))
-    }
-}
+// impl Value for Add {
+//     fn no_deps(&self) -> usize {
+//         0
+//     }
+//     fn get_dep(&self, ix: usize) -> &ValId {
+//         panic!(
+//             "Add operation {} has no dependencies (tried to get dep #{})",
+//             self, ix
+//         )
+//     }
+//     #[inline]
+//     fn into_enum(self) -> ValueEnum {
+//         ValueEnum::Add(self)
+//     }
+//     #[inline]
+//     fn into_norm(self) -> NormalValue {
+//         NormalValue::assert_normal(ValueEnum::Add(self))
+//     }
+// }
 
-impl ValueData for Add {}
+// impl ValueData for Add {}
 
 #[cfg(test)]
 mod tests {

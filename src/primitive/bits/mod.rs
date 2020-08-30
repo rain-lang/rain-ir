@@ -202,6 +202,86 @@ impl Index<u32> for Bits {
     }
 }
 
+/// Kinds of binary bits operations
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub enum BitsOp {
+    /// An addition operation
+    Add(Add),
+    /// A subtraction operation
+    Sub(Sub),
+    /// A modulo operation
+    // Mod,
+    /// A multiplication operation
+    Mul(Mul),
+}
+
+debug_from_display!(BitsOp);
+quick_pretty!(BitsOp, "#BitsOp");
+trivial_substitute!(BitsOp);
+enum_convert! {
+    impl InjectionRef<ValueEnum> for BitsOp {}
+    impl TryFrom<NormalValue> for BitsOp { as ValueEnum, }
+    impl TryFromRef<NormalValue> for BitsOp { as ValueEnum, }
+}
+
+impl From<BitsOp> for NormalValue {
+    fn from(a: BitsOp) -> NormalValue {
+        a.into_norm()
+    }
+}
+
+impl Regional for BitsOp {}
+
+impl Apply for BitsOp {}
+
+impl Typed for BitsOp {
+    #[inline]
+    fn ty(&self) -> TypeRef {
+        BITS_BINARY.borrow_ty()
+    }
+    #[inline]
+    fn is_ty(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_kind(&self) -> bool {
+        false
+    }
+}
+
+impl Type for BitsOp {
+    #[inline]
+    fn is_affine(&self) -> bool {
+        false
+    }
+    #[inline]
+    fn is_relevant(&self) -> bool {
+        false
+    }
+}
+
+impl Value for BitsOp {
+    fn no_deps(&self) -> usize {
+        0
+    }
+    fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "BitsOp operation {} has no dependencies (tried to get dep #{})",
+            self, ix
+        )
+    }
+    #[inline]
+    fn into_enum(self) -> ValueEnum {
+        ValueEnum::BitsOp(self)
+    }
+    #[inline]
+    fn into_norm(self) -> NormalValue {
+        NormalValue::assert_normal(ValueEnum::BitsOp(self))
+    }
+}
+
+impl ValueData for BitsOp {}
+
 /// Mask a bitvector, discarding bits of order greater than `len`
 ///
 /// # Examples
