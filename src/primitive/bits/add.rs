@@ -9,9 +9,9 @@ use super::*;
 //     static ref ADD: VarId<Add> = VarId::direct_new(Add);
 // }
 
-/// The addition operator
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Add;
+// /// The addition operator
+// #[derive(Clone, Eq, PartialEq, Hash)]
+// pub struct Add;
 
 /// Perform wrapping bitvector addition, discarding bits of order greater than `len`
 #[inline(always)]
@@ -19,9 +19,9 @@ pub fn masked_add(len: u32, left: u128, right: u128) -> u128 {
     mask(len, left.wrapping_add(right))
 }
 
-debug_from_display!(Add);
-quick_pretty!(Add, "#add");
-trivial_substitute!(Add);
+// debug_from_display!(Add);
+// quick_pretty!(Add, "#add");
+// trivial_substitute!(Add);
 // enum_convert! {
 //     impl InjectionRef<ValueEnum> for Add {}
 //     impl TryFrom<NormalValue> for Add { as ValueEnum, }
@@ -34,91 +34,91 @@ trivial_substitute!(Add);
 //     }
 // }
 
-impl Regional for Add {}
+// impl Regional for Add {}
 
-impl Apply for Add {
-    fn apply_in<'a>(
-        &self,
-        args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<Application<'a>, Error> {
-        panic!("FUCKED in Add");
-        // if args.len() == 2 {
-        //     if let ValueEnum::Bits(b) = args[1].as_enum() {
-        //         if b.ty != args[0] {
-        //             return Err(Error::TypeMismatch);
-        //         }
-        //         if b.data == 0 {
-        //             return Ok(Application::Success(
-        //                 &[],
-        //                 Lambda::id(args[0].clone().coerce()).into_val(),
-        //             ));
-        //         }
-        //     }
-        // }
-        // if args.len() <= 2 {
-        //     BITS_BINARY
-        //         .apply_ty_in(args, ctx)
-        //         .map(Application::Symbolic)
-        // } else {
-        //     match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
-        //         (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
-        //             if left.len != right.len || left.len != ty.0 {
-        //                 return Err(Error::TypeMismatch);
-        //             }
-        //             let result = Bits {
-        //                 ty: left.ty.clone(),
-        //                 data: masked_add(ty.0, left.data, right.data),
-        //                 len: left.len,
-        //             };
-        //             result.apply_in(&args[3..], ctx)
-        //         }
-        //         (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
-        //             if zero.len != ty.0 || zero.ty != x.ty() {
-        //                 return Err(Error::TypeMismatch);
-        //             }
-        //             // Potential optimization opportunity: switch between x and args[2]
-        //             args[2].apply_in(&args[3..], ctx)
-        //         }
-        //         (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
-        //             if zero.len != ty.0 || zero.ty != x.ty() {
-        //                 return Err(Error::TypeMismatch);
-        //             }
-        //             // Potential optimization opportunity: switch between x and args[1]
-        //             args[1].apply_in(&args[3..], ctx)
-        //         }
-        //         (ty, left, right) => {
-        //             if ty.ty() != *BITS_KIND {
-        //                 return Err(Error::TypeMismatch);
-        //             }
-        //             let left_ty = left.ty();
-        //             if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
-        //                 Err(Error::TypeMismatch)
-        //             } else {
-        //                 left_ty
-        //                     .apply_ty_in(&args[3..], ctx)
-        //                     .map(Application::Symbolic)
-        //             }
-        //         }
-        //     }
-        // }
-    }
-}
+// impl Apply for Add {
+//     fn apply_in<'a>(
+//         &self,
+//         args: &'a [ValId],
+//         ctx: &mut Option<EvalCtx>,
+//     ) -> Result<Application<'a>, Error> {
+//         panic!("FUCKED in Add");
+//         // if args.len() == 2 {
+//         //     if let ValueEnum::Bits(b) = args[1].as_enum() {
+//         //         if b.ty != args[0] {
+//         //             return Err(Error::TypeMismatch);
+//         //         }
+//         //         if b.data == 0 {
+//         //             return Ok(Application::Success(
+//         //                 &[],
+//         //                 Lambda::id(args[0].clone().coerce()).into_val(),
+//         //             ));
+//         //         }
+//         //     }
+//         // }
+//         // if args.len() <= 2 {
+//         //     BITS_BINARY
+//         //         .apply_ty_in(args, ctx)
+//         //         .map(Application::Symbolic)
+//         // } else {
+//         //     match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
+//         //         (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
+//         //             if left.len != right.len || left.len != ty.0 {
+//         //                 return Err(Error::TypeMismatch);
+//         //             }
+//         //             let result = Bits {
+//         //                 ty: left.ty.clone(),
+//         //                 data: masked_add(ty.0, left.data, right.data),
+//         //                 len: left.len,
+//         //             };
+//         //             result.apply_in(&args[3..], ctx)
+//         //         }
+//         //         (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
+//         //             if zero.len != ty.0 || zero.ty != x.ty() {
+//         //                 return Err(Error::TypeMismatch);
+//         //             }
+//         //             // Potential optimization opportunity: switch between x and args[2]
+//         //             args[2].apply_in(&args[3..], ctx)
+//         //         }
+//         //         (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
+//         //             if zero.len != ty.0 || zero.ty != x.ty() {
+//         //                 return Err(Error::TypeMismatch);
+//         //             }
+//         //             // Potential optimization opportunity: switch between x and args[1]
+//         //             args[1].apply_in(&args[3..], ctx)
+//         //         }
+//         //         (ty, left, right) => {
+//         //             if ty.ty() != *BITS_KIND {
+//         //                 return Err(Error::TypeMismatch);
+//         //             }
+//         //             let left_ty = left.ty();
+//         //             if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
+//         //                 Err(Error::TypeMismatch)
+//         //             } else {
+//         //                 left_ty
+//         //                     .apply_ty_in(&args[3..], ctx)
+//         //                     .map(Application::Symbolic)
+//         //             }
+//         //         }
+//         //     }
+//         // }
+//     }
+// }
 
-impl Typed for Add {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        BITS_BINARY.borrow_ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_kind(&self) -> bool {
-        false
-    }
-}
+// impl Typed for Add {
+//     #[inline]
+//     fn ty(&self) -> TypeRef {
+//         BITS_BINARY.borrow_ty()
+//     }
+//     #[inline]
+//     fn is_ty(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_kind(&self) -> bool {
+//         false
+//     }
+// }
 
 // impl Type for Add {
 //     #[inline]

@@ -10,8 +10,8 @@ use super::*;
 // }
 
 /// The subtraction operator
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Sub;
+// #[derive(Clone, Eq, PartialEq, Hash)]
+// pub struct Sub;
 
 /// Perform wrapping bitvector subtraction, discarding bits of order greater than `len`
 #[inline(always)]
@@ -19,9 +19,9 @@ pub fn masked_sub(len: u32, left: u128, right: u128) -> u128 {
     mask(len, left.wrapping_sub(right))
 }
 
-debug_from_display!(Sub);
-quick_pretty!(Sub, "Sub(Need to change this)");
-trivial_substitute!(Sub);
+// debug_from_display!(Sub);
+// quick_pretty!(Sub, "Sub(Need to change this)");
+// trivial_substitute!(Sub);
 // enum_convert! {
 //     impl InjectionRef<ValueEnum> for Sub {}
 //     impl TryFrom<NormalValue> for Sub { as ValueEnum, }
@@ -34,15 +34,15 @@ trivial_substitute!(Sub);
 //     }
 // }
 
-impl Regional for Sub {}
+// impl Regional for Sub {}
 
-impl Apply for Sub {
-    fn apply_in<'a>(
-        &self,
-        args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<Application<'a>, Error> {
-        panic!("FUCKED in sub");
+// impl Apply for Sub {
+//     fn apply_in<'a>(
+//         &self,
+//         args: &'a [ValId],
+//         ctx: &mut Option<EvalCtx>,
+//     ) -> Result<Application<'a>, Error> {
+//         panic!("FUCKED in sub");
         // if args.len() == 2 {
         //     if let ValueEnum::Bits(b) = args[1].as_enum() {
         //         if b.ty != args[0] {
@@ -100,23 +100,23 @@ impl Apply for Sub {
         //         }
         //     }
         // }
-    }
-}
+//     }
+// }
 
-impl Typed for Sub {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        BITS_BINARY.borrow_ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_kind(&self) -> bool {
-        false
-    }
-}
+// impl Typed for Sub {
+//     #[inline]
+//     fn ty(&self) -> TypeRef {
+//         BITS_BINARY.borrow_ty()
+//     }
+//     #[inline]
+//     fn is_ty(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_kind(&self) -> bool {
+//         false
+//     }
+// }
 
 // impl Type for Sub {
 //     #[inline]

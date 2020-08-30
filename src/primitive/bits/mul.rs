@@ -9,8 +9,8 @@ use super::*;
 // }
 
 /// The multiplication operator
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Mul;
+// #[derive(Clone, Eq, PartialEq, Hash)]
+// pub struct Mul;
 
 /// Perform wrapping bitvector multiplication, discarding bits of order greater than `len`
 #[inline(always)]
@@ -18,9 +18,9 @@ pub fn masked_mul(len: u32, left: u128, right: u128) -> u128 {
     mask(len, left.wrapping_mul(right))
 }
 
-debug_from_display!(Mul);
-quick_pretty!(Mul, "#mul");
-trivial_substitute!(Mul);
+// debug_from_display!(Mul);
+// quick_pretty!(Mul, "#mul");
+// trivial_substitute!(Mul);
 // enum_convert! {
 //     impl InjectionRef<ValueEnum> for Mul {}
 //     impl TryFrom<NormalValue> for Mul { as ValueEnum, }
@@ -33,15 +33,15 @@ trivial_substitute!(Mul);
 //     }
 // }
 
-impl Regional for Mul {}
+// impl Regional for Mul {}
 
-impl Apply for Mul {
-    fn apply_in<'a>(
-        &self,
-        args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>,
-    ) -> Result<Application<'a>, Error> {
-        panic!("FUCKED in Mul");
+// impl Apply for Mul {
+//     fn apply_in<'a>(
+//         &self,
+//         args: &'a [ValId],
+//         ctx: &mut Option<EvalCtx>,
+//     ) -> Result<Application<'a>, Error> {
+//         panic!("FUCKED in Mul");
         // if args.len() == 2 {
         //     if let ValueEnum::Bits(b) = args[1].as_enum() {
         //         if b.ty != args[0] {
@@ -113,23 +113,23 @@ impl Apply for Mul {
         //         }
         //     }
         // }
-    }
-}
+//     }
+// }
 
-impl Typed for Mul {
-    #[inline]
-    fn ty(&self) -> TypeRef {
-        BITS_BINARY.borrow_ty()
-    }
-    #[inline]
-    fn is_ty(&self) -> bool {
-        false
-    }
-    #[inline]
-    fn is_kind(&self) -> bool {
-        false
-    }
-}
+// impl Typed for Mul {
+//     #[inline]
+//     fn ty(&self) -> TypeRef {
+//         BITS_BINARY.borrow_ty()
+//     }
+//     #[inline]
+//     fn is_ty(&self) -> bool {
+//         false
+//     }
+//     #[inline]
+//     fn is_kind(&self) -> bool {
+//         false
+//     }
+// }
 
 // impl Type for Mul {
 //     #[inline]
