@@ -829,5 +829,9 @@ mod test {
     fn valid_is_a_nonnull() {
         assert_eq!(size_of::<ValId>(), size_of::<*const u8>());
         assert_eq!(size_of::<Option<ValId>>(), size_of::<*const u8>());
+        // 64-bit check
+        if size_of::<*const u8>() == 8 {
+            assert_eq!(size_of::<ValueEnum>(), 8 * 5);
+        }
     }
 }
