@@ -206,14 +206,27 @@ impl Index<u32> for Bits {
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum BitsOp {
     /// An addition operation
-    Add(Add),
+    Add,
     /// A subtraction operation
-    Sub(Sub),
+    Sub,
     /// A modulo operation
-    // Mod,
+    Mod,
     /// A multiplication operation
-    Mul(Mul),
+    Mul,
 }
+
+// impl BitsOp {
+//     /// Return the identity operand of this operation
+//     /// FIX THIS
+//     // pub fn identity(&self) -> u128 {
+//     //     match self {
+//     //         BitsOp::Add(_) => BitsTy(self.len).data(0),
+//     //         BitsOp::Sub(_) => BitsTy(self.len).data(0),
+//     //         BitsOp::Mod => BitsTy(self.len).data(0),
+//     //         BitsOp::Mul(_) => BitsTy(self.len).data(1),
+//     //     }
+//     // }
+// }
 
 debug_from_display!(BitsOp);
 quick_pretty!(BitsOp, "#BitsOp");
@@ -238,10 +251,82 @@ impl Apply for BitsOp {
         args: &'a [ValId],
         ctx: &mut Option<EvalCtx>
     ) -> Result<Application<'a>, Error> {
-        match self {
-            BitsOp::Add(a) => a.apply_in(args, ctx),
-            BitsOp::Sub(s) => s.apply_in(args, ctx),
-            BitsOp::Mul(m) => m.apply_in(args, ctx), 
+        if args.len() == 2 {
+            if let ValueEnum::Bits(b) = args[1].as_enum() {
+                if b.ty != args[0] {
+                    return Err(Error::TypeMismatch);
+                }
+                if b.data == 1 {
+                    return Ok(Application::Success(
+                        &[],
+                        Lambda::id(args[0].clone().coerce()).into_val(),
+                    ));
+                }
+            }
+        }
+        if args.len() <= 2 {
+            BITS_BINARY
+                .apply_ty_in(args, ctx)
+                .map(Application::Symbolic)
+        } else {
+            match (args[0].as_enum(), args[1].as_enum(), args[2].as_enum()) {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(left), ValueEnum::Bits(right)) => {
+                    if left.len != right.len || left.len != ty.0 {
+                        return Err(Error::TypeMismatch);
+                    }
+                    let data = match self {
+                        BitsOp::Add => masked_add(ty.0, left.data, right.data),
+                        BitsOp::Sub => masked_sub(ty.0, left.data, right.data),
+                        BitsOp::Mod => unimplemented!("Modulo is nor implemented"),
+                        BitsOp::Mul => masked_mul(ty.0, left.data, right.data),
+                    };
+                    let result = Bits {
+                        ty: left.ty.clone(),
+                        data,
+                        len: left.len,
+                    };
+                    result.apply_in(&args[3..], ctx)
+                }
+                // // Multiplication by zero yields zero
+                // (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
+                //     if zero.len != ty.0 || zero.ty != x.ty() {
+                //         return Err(Error::TypeMismatch);
+                //     }
+                //     args[2].apply_in(&args[3..], ctx)
+                // }
+                // (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
+                //     if zero.len != ty.0 || zero.ty != x.ty() {
+                //         return Err(Error::TypeMismatch);
+                //     }
+                //     args[1].apply_in(&args[3..], ctx)
+                // }
+                // // Multiplication by one is the identity
+                // (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) if one.data == 1 => {
+                //     if one.len != ty.0 || one.ty != x.ty() {
+                //         return Err(Error::TypeMismatch);
+                //     }
+                //     args[2].apply_in(&args[3..], ctx)
+                // }
+                // (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) if one.data == 1 => {
+                //     if one.len != ty.0 || one.ty != x.ty() {
+                //         return Err(Error::TypeMismatch);
+                //     }
+                //     args[1].apply_in(&args[3..], ctx)
+                // }
+                (ty, left, right) => {
+                    if ty.ty() != *BITS_KIND {
+                        return Err(Error::TypeMismatch)
+                    }
+                    let left_ty = left.ty();
+                    if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
+                        Err(Error::TypeMismatch)
+                    } else {
+                        left_ty
+                            .apply_ty_in(&args[3..], ctx)
+                            .map(Application::Symbolic)
+                    }
+                }
+            }
         }
     }
 }
