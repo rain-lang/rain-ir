@@ -177,7 +177,8 @@ mod tests {
                 right_data.into_val(),
             ];
             let mut ctx = None;
-            match Add.apply_in(&data_arr[..], &mut ctx).unwrap() {
+            let op_struct = BitsOp::Add(Add);
+            match op_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
                         assert_eq!(b.len, *len);

@@ -232,7 +232,19 @@ impl From<BitsOp> for NormalValue {
 
 impl Regional for BitsOp {}
 
-impl Apply for BitsOp {}
+impl Apply for BitsOp {
+    fn apply_in<'a>(
+        &self,
+        args: &'a [ValId],
+        ctx: &mut Option<EvalCtx>
+    ) -> Result<Application<'a>, Error> {
+        match self {
+            BitsOp::Add(a) => a.apply_in(args, ctx),
+            BitsOp::Sub(s) => s.apply_in(args, ctx),
+            BitsOp::Mul(m) => m.apply_in(args, ctx), 
+        }
+    }
+}
 
 impl Typed for BitsOp {
     #[inline]
