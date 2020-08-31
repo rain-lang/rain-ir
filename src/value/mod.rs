@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Bits, BitsKind, BitsTy, BitsOp, Neg},
+    bits::{BinOp, Bits, BitsKind, BitsTy, Neg},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -110,7 +110,7 @@ pub enum ValueEnum {
     /// An instance of the path induction axiom
     PathInd(PathInd),
     /// A binary bits operation
-    BitsOp(BitsOp),
+    BinOp(BinOp),
     /// An negation operation on bitvectors
     Neg(Neg),
 }
@@ -635,7 +635,7 @@ macro_rules! forv {
             ValueEnum::BitsTy($i) => $e,
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
-            ValueEnum::BitsOp($i) => $e,
+            ValueEnum::BinOp($i) => $e,
             ValueEnum::Neg($i) => $e,
         }
     };
@@ -760,7 +760,7 @@ normal_valid!(PathInd);
 // normal_valid!(Add);
 // normal_valid!(Mul);
 // normal_valid!(Sub);
-normal_valid!(BitsOp);
+normal_valid!(BinOp);
 normal_valid!(Neg);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect

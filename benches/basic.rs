@@ -48,7 +48,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let in_low: bool = rng.gen();
         let in_sel: bool = rng.gen();
         b.iter(|| {
-            let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), Region::NULL).unwrap();
+            let region = Region::with(
+                vec![Bool.into(), Bool.into(), Bool.into()].into(),
+                Region::NULL,
+            )
+            .unwrap();
             let select: ValId = region.param(0).unwrap().into();
             let high = region.param(1).unwrap();
             let low = region.param(2).unwrap();
@@ -87,7 +91,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             in_low.clone()
         };
         let in_sel: ValId = in_sel.into();
-        let region = Region::with(vec![Bool.into(), Bool.into(), Bool.into()].into(), Region::NULL).unwrap();
+        let region = Region::with(
+            vec![Bool.into(), Bool.into(), Bool.into()].into(),
+            Region::NULL,
+        )
+        .unwrap();
         let select: ValId = region.param(0).unwrap().into();
         let high = region.param(1).unwrap();
         let low = region.param(2).unwrap();

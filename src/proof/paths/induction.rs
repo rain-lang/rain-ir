@@ -539,7 +539,8 @@ mod test {
         assert_eq!(refl_proof.ty(), refl_ty);
 
         // Creating an instance of path induction over the desired type family
-        let _path_ind = PathInd::try_new(domain, Prop.into_kind()).expect("Path induction into Prop is valid");
+        let _path_ind =
+            PathInd::try_new(domain, Prop.into_kind()).expect("Path induction into Prop is valid");
 
         // Applying it to the family
         //FIXME

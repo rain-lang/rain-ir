@@ -198,7 +198,7 @@ impl Index<u32> for Bits {
 
 /// Bitvector operations
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub enum BitsOp {
+pub enum BinOp {
     /// Bitvector addition
     Add,
     /// Bitvector subtraction
@@ -209,64 +209,62 @@ pub enum BitsOp {
     Mul,
 }
 
-impl BitsOp {
+impl BinOp {
     /// Return the right identity of this operation
     fn right_identity(&self) -> Option<u128> {
         match self {
-            BitsOp::Add
-            | BitsOp::Sub
-            | BitsOp::Mod => Some(0),
-            BitsOp::Mul => Some(1),
+            BinOp::Add | BinOp::Sub | BinOp::Mod => Some(0),
+            BinOp::Mul => Some(1),
         }
     }
     /// Return the right identity of this operation
     fn left_identity(&self) -> Option<u128> {
         match self {
-            BitsOp::Add => Some(0),
-            BitsOp::Sub => None,
-            BitsOp::Mod => None,
-            BitsOp::Mul => Some(1),
+            BinOp::Add => Some(0),
+            BinOp::Sub => None,
+            BinOp::Mod => None,
+            BinOp::Mul => Some(1),
         }
     }
     /// Return the right opreand for which the result is always 0
     fn right_sink(&self) -> Option<u128> {
         match self {
-            BitsOp::Add | BitsOp::Sub => None,
-            BitsOp::Mod => Some(1),
-            BitsOp::Mul => Some(0),
+            BinOp::Add | BinOp::Sub => None,
+            BinOp::Mod => Some(1),
+            BinOp::Mul => Some(0),
         }
     }
     /// Return the left opreand for which the result is always 0
     fn left_sink(&self) -> Option<u128> {
         match self {
-            BitsOp::Mul | BitsOp::Mod => Some(0),
-            _ => None
+            BinOp::Mul | BinOp::Mod => Some(0),
+            _ => None,
         }
     }
 }
 
-debug_from_display!(BitsOp);
-quick_pretty!(BitsOp, "#BitsOp");
-trivial_substitute!(BitsOp);
+debug_from_display!(BinOp);
+quick_pretty!(BinOp, "#BinOp");
+trivial_substitute!(BinOp);
 enum_convert! {
-    impl InjectionRef<ValueEnum> for BitsOp {}
-    impl TryFrom<NormalValue> for BitsOp { as ValueEnum, }
-    impl TryFromRef<NormalValue> for BitsOp { as ValueEnum, }
+    impl InjectionRef<ValueEnum> for BinOp {}
+    impl TryFrom<NormalValue> for BinOp { as ValueEnum, }
+    impl TryFromRef<NormalValue> for BinOp { as ValueEnum, }
 }
 
-impl From<BitsOp> for NormalValue {
-    fn from(a: BitsOp) -> NormalValue {
+impl From<BinOp> for NormalValue {
+    fn from(a: BinOp) -> NormalValue {
         a.into_norm()
     }
 }
 
-impl Regional for BitsOp {}
+impl Regional for BinOp {}
 
-impl Apply for BitsOp {
+impl Apply for BinOp {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.len() == 2 {
             if let ValueEnum::Bits(b) = args[1].as_enum() {
@@ -292,10 +290,10 @@ impl Apply for BitsOp {
                         return Err(Error::TypeMismatch);
                     }
                     let data = match self {
-                        BitsOp::Add => masked_add(ty.0, left.data, right.data),
-                        BitsOp::Sub => masked_sub(ty.0, left.data, right.data),
-                        BitsOp::Mod => unimplemented!("Modulo is nor implemented"),
-                        BitsOp::Mul => masked_mul(ty.0, left.data, right.data),
+                        BinOp::Add => masked_add(ty.0, left.data, right.data),
+                        BinOp::Sub => masked_sub(ty.0, left.data, right.data),
+                        BinOp::Mod => unimplemented!("Modulo is nor implemented"),
+                        BinOp::Mul => masked_mul(ty.0, left.data, right.data),
                     };
                     let result = Bits {
                         ty: left.ty.clone(),
@@ -305,32 +303,38 @@ impl Apply for BitsOp {
                     result.apply_in(&args[3..], ctx)
                 }
                 // Right sinks to zero
-                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) 
-                if self.right_sink().is_some() && zero.data == self.right_sink().unwrap() => {
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero))
+                    if self.right_sink().is_some() && zero.data == self.right_sink().unwrap() =>
+                {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[2].apply_in(&args[3..], ctx)
                 }
                 // Left sinks to zero
-                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) 
-                if self.left_sink().is_some() && zero.data == self.left_sink().unwrap() => {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x)
+                    if self.left_sink().is_some() && zero.data == self.left_sink().unwrap() =>
+                {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[1].apply_in(&args[3..], ctx)
                 }
                 // Left identity
-                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) 
-                if self.left_identity().is_some() && one.data == self.left_identity().unwrap() => {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x)
+                    if self.left_identity().is_some()
+                        && one.data == self.left_identity().unwrap() =>
+                {
                     if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[2].apply_in(&args[3..], ctx)
                 }
                 // Right identity
-                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) 
-                if self.right_identity().is_some() && one.data == self.right_identity().unwrap() => {
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one))
+                    if self.right_identity().is_some()
+                        && one.data == self.right_identity().unwrap() =>
+                {
                     if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
@@ -338,7 +342,7 @@ impl Apply for BitsOp {
                 }
                 (ty, left, right) => {
                     if ty.ty() != *BITS_KIND {
-                        return Err(Error::TypeMismatch)
+                        return Err(Error::TypeMismatch);
                     }
                     let left_ty = left.ty();
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {
@@ -354,7 +358,7 @@ impl Apply for BitsOp {
     }
 }
 
-impl Typed for BitsOp {
+impl Typed for BinOp {
     #[inline]
     fn ty(&self) -> TypeRef {
         BITS_BINARY.borrow_ty()
@@ -369,7 +373,7 @@ impl Typed for BitsOp {
     }
 }
 
-impl Type for BitsOp {
+impl Type for BinOp {
     #[inline]
     fn is_affine(&self) -> bool {
         false
@@ -380,27 +384,27 @@ impl Type for BitsOp {
     }
 }
 
-impl Value for BitsOp {
+impl Value for BinOp {
     fn no_deps(&self) -> usize {
         0
     }
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!(
-            "BitsOp operation {} has no dependencies (tried to get dep #{})",
+            "BinOp operation {} has no dependencies (tried to get dep #{})",
             self, ix
         )
     }
     #[inline]
     fn into_enum(self) -> ValueEnum {
-        ValueEnum::BitsOp(self)
+        ValueEnum::BinOp(self)
     }
     #[inline]
     fn into_norm(self) -> NormalValue {
-        NormalValue::assert_normal(ValueEnum::BitsOp(self))
+        NormalValue::assert_normal(ValueEnum::BinOp(self))
     }
 }
 
-impl ValueData for BitsOp {}
+impl ValueData for BinOp {}
 
 /// Mask a bitvector, discarding bits of order greater than `len`
 ///
@@ -512,7 +516,7 @@ mod tests {
                 right_data.into_val(),
             ];
             let mut ctx = None;
-            let op_struct = BitsOp::Sub;
+            let op_struct = BinOp::Sub;
             match op_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
@@ -553,7 +557,7 @@ mod tests {
                 right_data.into_val(),
             ];
             let mut ctx = None;
-            let op_struct = BitsOp::Add;
+            let op_struct = BinOp::Add;
             match op_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
                     ValueEnum::Bits(b) => {
@@ -607,7 +611,7 @@ mod tests {
                 right_data.into_val(),
             ];
             let mut ctx = None;
-            let op_struct = BitsOp::Mul;
+            let op_struct = BinOp::Mul;
             // Complete application
             match op_struct.apply_in(&data_arr[..], &mut ctx).unwrap() {
                 Application::Success(&[], v) => match v.as_enum() {
