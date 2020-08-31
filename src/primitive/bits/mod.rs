@@ -228,7 +228,7 @@ impl BitsOp {
             BitsOp::Mul => Some(1),
         }
     }
-    /// Return the right opreand wo which the result is always 0
+    /// Return the right opreand for which the result is always 0
     fn right_sink(&self) -> Option<u128> {
         match self {
             BitsOp::Add | BitsOp::Sub => None,
@@ -236,7 +236,7 @@ impl BitsOp {
             BitsOp::Mul => Some(0),
         }
     }
-    /// Return the left opreand of which the result is always 0
+    /// Return the left opreand for which the result is always 0
     fn left_sink(&self) -> Option<u128> {
         match self {
             BitsOp::Mul | BitsOp::Mod => Some(0),
