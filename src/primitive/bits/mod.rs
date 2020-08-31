@@ -215,18 +215,41 @@ pub enum BitsOp {
     Mul,
 }
 
-// impl BitsOp {
-//     /// Return the identity operand of this operation
-//     /// FIX THIS
-//     // pub fn identity(&self) -> u128 {
-//     //     match self {
-//     //         BitsOp::Add(_) => BitsTy(self.len).data(0),
-//     //         BitsOp::Sub(_) => BitsTy(self.len).data(0),
-//     //         BitsOp::Mod => BitsTy(self.len).data(0),
-//     //         BitsOp::Mul(_) => BitsTy(self.len).data(1),
-//     //     }
-//     // }
-// }
+impl BitsOp {
+    /// Return the right identity of this operation
+    fn right_identity(&self) -> Option<u128> {
+        match self {
+            BitsOp::Add
+            | BitsOp::Sub
+            | BitsOp::Mod => Some(0),
+            BitsOp::Mul => Some(1),
+        }
+    }
+    /// Return the right identity of this operation
+    fn left_identity(&self) -> Option<u128> {
+        match self {
+            BitsOp::Add => Some(0),
+            BitsOp::Sub => None,
+            BitsOp::Mod => None,
+            BitsOp::Mul => Some(1),
+        }
+    }
+    /// Return the right opreand wo which the result is always 0
+    fn right_sink(&self) -> Option<u128> {
+        match self {
+            BitsOp::Add | BitsOp::Sub => None,
+            BitsOp::Mod => Some(1),
+            BitsOp::Mul => Some(0),
+        }
+    }
+    /// Return the left opreand of which the result is always 0
+    fn left_sink(&self) -> Option<u128> {
+        match self {
+            BitsOp::Mul | BitsOp::Mod => Some(0),
+            _ => None
+        }
+    }
+}
 
 debug_from_display!(BitsOp);
 quick_pretty!(BitsOp, "#BitsOp");
@@ -287,32 +310,38 @@ impl Apply for BitsOp {
                     };
                     result.apply_in(&args[3..], ctx)
                 }
-                // // Multiplication by zero yields zero
-                // (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) if zero.data == 0 => {
-                //     if zero.len != ty.0 || zero.ty != x.ty() {
-                //         return Err(Error::TypeMismatch);
-                //     }
-                //     args[2].apply_in(&args[3..], ctx)
-                // }
-                // (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) if zero.data == 0 => {
-                //     if zero.len != ty.0 || zero.ty != x.ty() {
-                //         return Err(Error::TypeMismatch);
-                //     }
-                //     args[1].apply_in(&args[3..], ctx)
-                // }
-                // // Multiplication by one is the identity
-                // (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) if one.data == 1 => {
-                //     if one.len != ty.0 || one.ty != x.ty() {
-                //         return Err(Error::TypeMismatch);
-                //     }
-                //     args[2].apply_in(&args[3..], ctx)
-                // }
-                // (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) if one.data == 1 => {
-                //     if one.len != ty.0 || one.ty != x.ty() {
-                //         return Err(Error::TypeMismatch);
-                //     }
-                //     args[1].apply_in(&args[3..], ctx)
-                // }
+                // Right sinks to zero
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) 
+                if self.right_sink().is_some() && zero.data == self.right_sink().unwrap() => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    args[2].apply_in(&args[3..], ctx)
+                }
+                // Left sinks to zero
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) 
+                if self.left_sink().is_some() && zero.data == self.left_sink().unwrap() => {
+                    if zero.len != ty.0 || zero.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    args[1].apply_in(&args[3..], ctx)
+                }
+                // Left identity
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) 
+                if self.left_identity().is_some() && one.data == self.left_identity().unwrap() => {
+                    if one.len != ty.0 || one.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    args[2].apply_in(&args[3..], ctx)
+                }
+                // Right identity
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) 
+                if self.right_identity().is_some() && one.data == self.right_identity().unwrap() => {
+                    if one.len != ty.0 || one.ty != x.ty() {
+                        return Err(Error::TypeMismatch);
+                    }
+                    args[1].apply_in(&args[3..], ctx)
+                }
                 (ty, left, right) => {
                     if ty.ty() != *BITS_KIND {
                         return Err(Error::TypeMismatch)
