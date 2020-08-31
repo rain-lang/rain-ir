@@ -196,16 +196,16 @@ impl Index<u32> for Bits {
     }
 }
 
-/// Kinds of binary bits operations
+/// Bitvector operations
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum BitsOp {
-    /// An addition operation
+    /// Bitvector addition
     Add,
-    /// A subtraction operation
+    /// Bitvector subtraction
     Sub,
-    /// A modulo operation
+    /// Bitvector modulo, where we take n % 0 = n
     Mod,
-    /// A multiplication operation
+    /// Bitvector multiplication
     Mul,
 }
 
