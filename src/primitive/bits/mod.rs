@@ -213,9 +213,7 @@ impl BinOp {
     /// Return the right identity of this operation
     fn right_identity(&self) -> Option<u128> {
         match self {
-            BinOp::Add
-            | BinOp::Sub
-            | BinOp::Mod => Some(0),
+            BinOp::Add | BinOp::Sub | BinOp::Mod => Some(0),
             BinOp::Mul => Some(1),
         }
     }
@@ -240,7 +238,7 @@ impl BinOp {
     fn left_sink(&self) -> Option<u128> {
         match self {
             BinOp::Mul | BinOp::Mod => Some(0),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -266,7 +264,7 @@ impl Apply for BinOp {
     fn apply_in<'a>(
         &self,
         args: &'a [ValId],
-        ctx: &mut Option<EvalCtx>
+        ctx: &mut Option<EvalCtx>,
     ) -> Result<Application<'a>, Error> {
         if args.len() == 2 {
             if let ValueEnum::Bits(b) = args[1].as_enum() {
@@ -305,32 +303,38 @@ impl Apply for BinOp {
                     result.apply_in(&args[3..], ctx)
                 }
                 // Right sinks to zero
-                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero)) 
-                if self.right_sink().is_some() && zero.data == self.right_sink().unwrap() => {
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(zero))
+                    if self.right_sink().is_some() && zero.data == self.right_sink().unwrap() =>
+                {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[2].apply_in(&args[3..], ctx)
                 }
                 // Left sinks to zero
-                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x) 
-                if self.left_sink().is_some() && zero.data == self.left_sink().unwrap() => {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(zero), x)
+                    if self.left_sink().is_some() && zero.data == self.left_sink().unwrap() =>
+                {
                     if zero.len != ty.0 || zero.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[1].apply_in(&args[3..], ctx)
                 }
                 // Left identity
-                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x) 
-                if self.left_identity().is_some() && one.data == self.left_identity().unwrap() => {
+                (ValueEnum::BitsTy(ty), ValueEnum::Bits(one), x)
+                    if self.left_identity().is_some()
+                        && one.data == self.left_identity().unwrap() =>
+                {
                     if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
                     args[2].apply_in(&args[3..], ctx)
                 }
                 // Right identity
-                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one)) 
-                if self.right_identity().is_some() && one.data == self.right_identity().unwrap() => {
+                (ValueEnum::BitsTy(ty), x, ValueEnum::Bits(one))
+                    if self.right_identity().is_some()
+                        && one.data == self.right_identity().unwrap() =>
+                {
                     if one.len != ty.0 || one.ty != x.ty() {
                         return Err(Error::TypeMismatch);
                     }
@@ -338,7 +342,7 @@ impl Apply for BinOp {
                 }
                 (ty, left, right) => {
                     if ty.ty() != *BITS_KIND {
-                        return Err(Error::TypeMismatch)
+                        return Err(Error::TypeMismatch);
                     }
                     let left_ty = left.ty();
                     if left_ty != right.ty() || left_ty != args[0] || ty.ty() != *BITS_KIND {

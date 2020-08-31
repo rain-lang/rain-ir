@@ -13,7 +13,7 @@ pub struct Sum {
     /// The variants of this sum type
     variants: ValArr,
     /// The type of this sum type
-    ty: KindId
+    ty: KindId,
 }
 
 /// A union type
@@ -24,7 +24,7 @@ pub struct Union {
     /// The members of this union
     members: ValSet,
     /// The type of this union
-    ty: KindId
+    ty: KindId,
 }
 
 /// An injection into a sum type

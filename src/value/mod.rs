@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Bits, BitsKind, BitsTy, BinOp, Neg},
+    bits::{BinOp, Bits, BitsKind, BitsTy, Neg},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };

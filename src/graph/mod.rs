@@ -16,7 +16,7 @@ pub struct SearchResult<F, R> {
     /// What to add to the search frontier, if anything
     pub frontier: Option<F>,
     /// What to yield from the iterator, if anything
-    pub result: Option<R>
+    pub result: Option<R>,
 }
 
 /// A filter for `ValId`s
