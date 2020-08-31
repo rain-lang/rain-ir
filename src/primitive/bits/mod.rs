@@ -20,20 +20,14 @@ use ref_cast::RefCast;
 use std::iter::once;
 use std::ops::Index;
 
-mod add;
 mod bits_impl;
 mod div;
 mod ext;
 mod modl;
-mod mul;
 mod neg;
 mod sh;
-mod sub;
 
-pub use add::*;
-pub use mul::*;
 pub use neg::*;
-pub use sub::*;
 
 lazy_static! {
     /// The kind of bits
