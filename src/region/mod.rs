@@ -250,6 +250,36 @@ impl Region {
     pub fn minimal_with(param_tys: TyArr, parent: RegionBorrow) -> Result<Region, Error> {
         RegionData::minimal_with(param_tys, parent).map(Region::new)
     }
+    /// Get the minimal region for a unary operator. Never fails
+    #[inline]
+    pub fn unary(ty: TypeId) -> Region {
+        Region::new(RegionData::unary(ty))
+    }
+    /// Get the minimal region for a unary operator with a given parent
+    #[inline]
+    pub fn unary_with(ty: TypeId, parent: Region) -> Result<Region, Error> {
+        RegionData::unary_with(ty, parent).map(Region::new)
+    }
+    /// Get the minimal region for an n-ary operator over a given type. Never fails
+    #[inline]
+    pub fn nary(ty: TypeId, n: usize) -> Region {
+        Region::new(RegionData::nary(ty, n))
+    }
+    /// Get the minimal region for an n-ary operator with a given parent
+    #[inline]
+    pub fn nary_with(ty: TypeId, n: usize, parent: Region) -> Result<Region, Error> {
+        RegionData::nary_with(ty, n, parent).map(Region::new)
+    }
+    /// Get the minimal region for a binary operator over a given type. Never fails
+    #[inline]
+    pub fn binary(ty: TypeId) -> Region {
+        Region::new(RegionData::binary(ty))
+    }
+    /// Get the minimal region for a binary operator with a given parent over a given type. Never fails
+    #[inline]
+    pub fn binary_with(ty: TypeId, parent: Region) -> Result<Region, Error> {
+        RegionData::binary_with(ty, parent).map(Region::new)
+    }
     /// Create a new region with a given parent region, having no parameters
     ///
     /// This is a bit useless now, but eventually when termination typing comes around this may come in handy.

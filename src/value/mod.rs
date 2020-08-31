@@ -5,7 +5,7 @@ use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
 use crate::primitive::{
-    bits::{Add, Bits, BitsKind, BitsTy, Mul, Neg, Subtract},
+    bits::{Bits, BitsKind, BitsTy, BitsOp, Neg},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
@@ -73,7 +73,7 @@ pub enum ValueEnum {
     Product(Product),
     /// A mere proposition
     Prop(Prop),
-    /// A finite type
+    /// The kind of finite types
     Fin(Fin),
     /// An n-set
     Set(Set),
@@ -109,12 +109,8 @@ pub enum ValueEnum {
     IdFamily(IdFamily),
     /// An instance of the path induction axiom
     PathInd(PathInd),
-    /// An unsigned addition operation on bitvectors
-    Add(Add),
-    /// An unsigned multiplication operation on bitvectors
-    Mul(Mul),
-    /// An subtraction operation on bitvectors
-    Subtract(Subtract),
+    /// A binary bits operation
+    BitsOp(BitsOp),
     /// An negation operation on bitvectors
     Neg(Neg),
 }
@@ -215,6 +211,22 @@ pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional {
         Self: Clone,
     {
         let application = self.curried(args)?;
+        let (rest, success) = application.valid_to_success(self, args);
+        debug_assert!(
+            rest.is_empty(),
+            "Incomplete currying: {:?} left, got {:?}",
+            rest,
+            success
+        );
+        Ok(success)
+    }
+    /// Apply this value to a set of arguments, if possible
+    #[inline]
+    fn applied_in(&self, args: &[ValId], ctx: &mut Option<EvalCtx>) -> Result<ValId, Error>
+    where
+        Self: Clone,
+    {
+        let application = self.curried_in(args, ctx)?;
         let (rest, success) = application.valid_to_success(self, args);
         debug_assert!(
             rest.is_empty(),
@@ -623,9 +635,7 @@ macro_rules! forv {
             ValueEnum::BitsTy($i) => $e,
             ValueEnum::Bits($i) => $e,
             ValueEnum::PathInd($i) => $e,
-            ValueEnum::Add($i) => $e,
-            ValueEnum::Mul($i) => $e,
-            ValueEnum::Subtract($i) => $e,
+            ValueEnum::BitsOp($i) => $e,
             ValueEnum::Neg($i) => $e,
         }
     };
@@ -746,9 +756,11 @@ normal_valid!(IdFamily);
 normal_valid!(BitsTy);
 normal_valid!(Bits);
 normal_valid!(PathInd);
-normal_valid!(Add);
-normal_valid!(Mul);
-normal_valid!(Subtract);
+// This should probably be removed when the refactor is done
+// normal_valid!(Add);
+// normal_valid!(Mul);
+// normal_valid!(Sub);
+normal_valid!(BitsOp);
 normal_valid!(Neg);
 
 /// Implement `From<T>` for TypeValue using the `From<T>` implementation of `NormalValue`, in effect
@@ -800,6 +812,22 @@ mod prettyprint_impl {
             } else {
                 self.deref().prettyprint(printer, fmt)
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn valid_is_a_nonnull() {
+        assert_eq!(size_of::<ValId>(), size_of::<*const u8>());
+        assert_eq!(size_of::<Option<ValId>>(), size_of::<*const u8>());
+        // 64-bit check
+        if size_of::<*const u8>() == 8 {
+            assert_eq!(size_of::<ValueEnum>(), 8 * 5);
         }
     }
 }

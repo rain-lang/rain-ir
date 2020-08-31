@@ -1,0 +1,3 @@
+/*!
+Bitvector shifting and rotation
+*/
