@@ -173,7 +173,7 @@ impl LifetimeCtx {
             debug_assert_eq!(valid, node);
             if node_data.consumer.is_some() && consumer.is_some() {
                 //TODO: more specific...
-                return Err(Error::AffineUsed);
+                return Err(Error::AffineBranched);
             }
             if node_data.consumer.is_none() {
                 node_data.consumer = consumer
