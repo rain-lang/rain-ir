@@ -141,7 +141,7 @@ impl LifetimeCtx {
         consumer: Option<Owner>,
         lifetime: LifetimeParams,
     ) -> Result<NodeId, Error> {
-        let (ix, node) = match self.nodes.entry(node) {
+        let ix = match self.nodes.entry(node) {
             Entry::Occupied(o) => {
                 // Fix this...
                 return Err(Error::AffineUsed);
@@ -153,7 +153,8 @@ impl LifetimeCtx {
                     borrowers: SmallVec::new(),
                 };
                 let ix = v.index();
-                (ix, v.insert(data))
+                v.insert(data);
+                ix
             }
         };
         Ok(NodeId(ix))
