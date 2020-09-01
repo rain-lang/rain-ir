@@ -280,6 +280,21 @@ impl NodeData {
         self.borrowers.dedup();
         self.borrowers.shrink_to_fit();
     }
+    /// Register a direct borrower for this node
+    #[inline]
+    pub fn register_direct_borrower(&mut self, borrower: NodeId) {
+        self.register_borrower(borrower.into())
+    }
+    /// Register a group borrower for this node
+    #[inline]
+    pub fn register_group_borrower(&mut self, borrower: GroupId) {
+        self.register_borrower(borrower.into())
+    }
+    /// Register a borrower for this node
+    #[inline]
+    pub fn register_borrower(&mut self, borrower: LifetimeId) {
+        self.borrowers.push(borrower)
+    }
 }
 
 impl LifetimeId {
