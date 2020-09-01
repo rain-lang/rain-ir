@@ -8,9 +8,12 @@ use indexmap::IndexMap;
 use itertools::{EitherOrBoth, Itertools};
 use smallvec::SmallVec;
 use std::iter::Copied;
+use std::ops::Deref;
 
 mod group;
 pub use group::*;
+mod params;
+pub use params::*;
 
 /// A system of `rain` lifetimes
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -19,6 +22,46 @@ pub struct LifetimeCtx {
     groups: IndexMap<Lenders, GroupData, FxBuildHasher>,
     /// The nodes in this system
     nodes: IndexMap<ValId, NodeData, FxBuildHasher>,
+}
+
+/// A node ID
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct NodeId(usize);
+
+/// An ID which is either a node ID or a group ID
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct LifetimeId(usize);
+
+/// A node in a lifetime graph
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Node<'a> {
+    /// The `ValRef` of this node
+    pub value: ValRef<'a>,
+    /// The data of this node
+    pub data: &'a NodeData,
+}
+
+/// The data associated with a node in a lifetime graph
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct NodeData {
+    /// The owner of this node
+    ///
+    /// TODO: field borrows
+    owner: NodeOwnership,
+    /// The lifetime-vector of this node
+    lifetime: LifetimeParams,
+    /// The nodes and lifetimes borrowing from this node
+    borrowers: SmallVec<[LifetimeId; NodeData::SMALL_BORROWERS]>,
+}
+
+/// The ownership status of a node in a lifetime graph
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum NodeOwnership {
+    /// This node is completely owned by another node
+    Owned(NodeId),
+    /// This node is completely borrowed from a lifetime or another node
+    Borrowed(LifetimeId),
+    //TODO: field owners, etc.
 }
 
 impl LifetimeCtx {
@@ -52,15 +95,6 @@ impl LifetimeCtx {
     }
 }
 
-/// A node in a lifetime graph
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Node<'a> {
-    /// The `ValRef` of this node
-    pub value: ValRef<'a>,
-    /// The data of this node
-    pub data: &'a NodeData,
-}
-
 impl<'a> Node<'a> {
     /// Iterate over the borrowers of this node within a given context
     pub fn borrowers(self, ctx: &'a LifetimeCtx) -> Borrowers<'a> {
@@ -70,35 +104,6 @@ impl<'a> Node<'a> {
             ctx,
         }
     }
-}
-
-/// The size of a small vector of lifetime parameters
-pub const SMALL_LIFETIME_PARAMS: usize = 2;
-
-/// The size of a small vector of borrowers
-const SMALL_BORROWERS: usize = 2;
-
-/// The data associated with a node in a lifetime graph
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct NodeData {
-    /// The owner of this node
-    ///
-    /// TODO: field borrows
-    owner: NodeOwnership,
-    /// The lifetime-vector of this node
-    lifetime: SmallVec<[LifetimeId; SMALL_LIFETIME_PARAMS]>,
-    /// The nodes and lifetimes borrowing from this node
-    borrowers: SmallVec<[LifetimeId; SMALL_BORROWERS]>,
-}
-
-/// The ownership status of a node in a lifetime graph
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum NodeOwnership {
-    /// This node is completely owned by another node
-    Owned(NodeId),
-    /// This node is completely borrowed from a lifetime or another node
-    Borrowed(LifetimeId),
-    //TODO: field owners, etc.
 }
 
 /// An iterator over the borrowers of a node
@@ -130,6 +135,8 @@ impl Iterator for Borrowers<'_> {
 }
 
 impl NodeData {
+    /// The size of a small vector of borrowers
+    const SMALL_BORROWERS: usize = 2;
     /// Tidy node data, deduplicating and sorting the borrower list, etc.
     pub fn tidy(&mut self) {
         self.borrowers.sort();
@@ -137,14 +144,6 @@ impl NodeData {
         self.borrowers.shrink_to_fit();
     }
 }
-
-/// A node ID
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct NodeId(usize);
-
-/// An ID which is either a lifetime ID or a node ID
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct LifetimeId(usize);
 
 impl LifetimeId {
     /// Check whether this `LifetimeId` is a node
