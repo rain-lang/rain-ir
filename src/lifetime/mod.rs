@@ -131,6 +131,30 @@ impl LifetimeCtx {
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
     }
+    /// Register a node as a borrower of a lifetime
+    #[inline]
+    pub fn register_borrower(&mut self, borrower: NodeId, lender: LifetimeId) {
+        self.register_enum_borrower(borrower, lender.into())
+    }
+    /// Register a node as a borrower of a lifetime
+    #[inline]
+    pub fn register_enum_borrower(&mut self, borrower: NodeId, id: IdEnum) {
+        match id {
+            IdEnum::Node(lender) => self.register_node_borrower(borrower, lender),
+            IdEnum::Group(lender) => self.register_group_borrower(borrower, lender),
+            _ => {}
+        }
+    }
+    /// Register a node as a borrower of another node
+    #[inline]
+    pub fn register_node_borrower(&mut self, borrower: NodeId, lender: NodeId) {
+        unimplemented!()
+    }
+    /// Register a node as a borrower of a group
+    #[inline]
+    pub fn register_group_borrower(&mut self, borrower: NodeId, lender: GroupId) {
+        unimplemented!()
+    }
     /// Insert the given node into the table with the given lifetime parameters. Return an error if this value has already been inserted.
     ///
     /// Return an error on an incompatible consumer
