@@ -9,11 +9,14 @@ use itertools::{EitherOrBoth, Itertools};
 use smallvec::SmallVec;
 use std::iter::Copied;
 
+mod group;
+pub use group::*;
+
 /// A system of `rain` lifetimes
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LifetimeCtx {
     /// The compound lifetimes in this system
-    lifetimes: IndexMap<Lenders, GroupData, FxBuildHasher>,
+    groups: IndexMap<Lenders, GroupData, FxBuildHasher>,
     /// The nodes in this system
     nodes: IndexMap<ValId, NodeData, FxBuildHasher>,
 }
@@ -22,7 +25,7 @@ impl LifetimeCtx {
     /// Get the group at a given ID
     #[inline]
     pub fn group(&self, id: GroupId) -> Group {
-        let (lenders, data) = self.lifetimes.get_index(id.0).unwrap();
+        let (lenders, data) = self.groups.get_index(id.0).unwrap();
         Group { lenders, data }
     }
     /// Get the node at a given ID
@@ -62,8 +65,8 @@ impl<'a> Node<'a> {
     /// Iterate over the borrowers of this node within a given context
     pub fn borrowers(self, ctx: &'a LifetimeCtx) -> Borrowers<'a> {
         Borrowers {
-            abstract_borrowers: self.data.borrowers.iter(),
-            lifetime_borrowers: [].iter(),
+            borrowers: self.data.borrowers.iter(),
+            group_borrowers: [].iter(),
             ctx,
         }
     }
@@ -101,8 +104,8 @@ pub enum NodeOwnership {
 /// An iterator over the borrowers of a node
 #[derive(Debug, Clone)]
 pub struct Borrowers<'a> {
-    abstract_borrowers: std::slice::Iter<'a, LifetimeId>,
-    lifetime_borrowers: std::slice::Iter<'a, NodeId>,
+    borrowers: std::slice::Iter<'a, LifetimeId>,
+    group_borrowers: std::slice::Iter<'a, NodeId>,
     ctx: &'a LifetimeCtx,
 }
 
@@ -111,15 +114,15 @@ impl Iterator for Borrowers<'_> {
     #[inline]
     fn next(&mut self) -> Option<NodeId> {
         loop {
-            let next_from_curr = self.lifetime_borrowers.next();
+            let next_from_curr = self.group_borrowers.next();
             if let Some(next) = next_from_curr {
                 return Some(*next);
             }
-            let next_abstract = *self.abstract_borrowers.next()?;
+            let next_abstract = *self.borrowers.next()?;
             match next_abstract.to_either() {
                 Either::Left(node) => return Some(node),
-                Either::Right(lifetime) => {
-                    self.lifetime_borrowers = self.ctx.group(lifetime).data.borrowers.iter()
+                Either::Right(group) => {
+                    self.group_borrowers = self.ctx.group(group).data.borrowers().iter()
                 }
             }
         }
@@ -132,47 +135,6 @@ impl NodeData {
         self.borrowers.sort();
         self.borrowers.dedup();
         self.borrowers.shrink_to_fit();
-    }
-}
-
-/// A group of objects borrowed from simultaneously, forming a `rain` lifetime
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Group<'a> {
-    /// The lenders of this lifetime
-    pub lenders: &'a Lenders,
-    /// The data of this lifetime
-    pub data: &'a GroupData,
-}
-
-/// The data associated with a lifetime
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct GroupData {
-    /// The borrowers of this lifetime
-    borrowers: Vec<NodeId>,
-}
-
-impl GroupData {
-    /// Tidy lifetime data, deduplicating and sorting the borrower list, etc.
-    pub fn tidy(&mut self) {
-        self.borrowers.sort();
-        self.borrowers.dedup();
-        self.borrowers.shrink_to_fit();
-    }
-}
-
-/// A lifetime ID
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct GroupId(usize);
-
-impl GroupId {
-    /// The ID of the static lifetime
-    pub const STATIC: GroupId = GroupId(usize::MAX);
-}
-
-impl Default for GroupId {
-    #[inline]
-    fn default() -> GroupId {
-        GroupId::STATIC
     }
 }
 
@@ -243,63 +205,5 @@ impl From<GroupId> for LifetimeId {
     fn from(lifetime: GroupId) -> LifetimeId {
         // Wrapping shl + 1 because `Group::STATIC` is usize::MAX
         LifetimeId(lifetime.0.wrapping_shl(1) + 1)
-    }
-}
-
-/// A set of lenders, represented as a sorted list of `usize` indices
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct Lenders(Box<[NodeId]>);
-
-impl Lenders {
-    /// Directly create a new set of lenders from a sorted and deduplicated list of lenders.
-    ///
-    /// It is a logic error if this list is not sorted and deduplicated!
-    #[inline]
-    pub fn new_unchecked(data: Box<[NodeId]>) -> Lenders {
-        Lenders(data)
-    }
-    /// Create a new set of lenders from a list of lenders not known to be sorted or deduplicated
-    #[inline]
-    pub fn new(mut data: Vec<NodeId>) -> Lenders {
-        data.sort_unstable();
-        data.dedup();
-        data.shrink_to_fit();
-        Self::new_unchecked(data.into_boxed_slice())
-    }
-    /// Check whether a node ID is in a set of lenders
-    #[inline]
-    pub fn is_lender(&self, node: NodeId) -> bool {
-        self.0.binary_search(&node).is_ok()
-    }
-    /// Iterate over this set of lenders in sorted order
-    #[inline]
-    pub fn iter(&self) -> Copied<std::slice::Iter<NodeId>> {
-        self.0.iter().copied()
-    }
-    /// Take the union of two sets of lenders
-    #[inline]
-    pub fn union(&self, other: &Lenders) -> Lenders {
-        Self::new_unchecked(
-            self.iter()
-                .merge(other.iter())
-                .dedup()
-                .collect_vec()
-                .into_boxed_slice(),
-        )
-    }
-    /// Take the intersection of two sets of lenders
-    #[inline]
-    pub fn intersect(&self, other: &Lenders) -> Lenders {
-        Self::new_unchecked(
-            self.iter()
-                .merge_join_by(other.iter(), Ord::cmp)
-                .filter_map(|eob| match eob {
-                    EitherOrBoth::Both(node, _) => Some(node),
-                    _ => None,
-                })
-                .dedup()
-                .collect_vec()
-                .into_boxed_slice(),
-        )
     }
 }
