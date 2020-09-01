@@ -131,7 +131,7 @@ impl LifetimeCtx {
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
     }
-    /// Insert the given node into the table with the given lifetime parameters, overwriting any old lifetime parameters and/or consumers for this node.
+    /// Insert the given node into the table with the given lifetime parameters. Return an error if this value has already been inserted.
     ///
     /// Return an error on an incompatible consumer
     #[inline]
@@ -140,19 +140,11 @@ impl LifetimeCtx {
         node: ValId,
         consumer: Option<Owner>,
         lifetime: LifetimeParams,
-    ) -> Result<(NodeId, bool), Error> {
-        match self.nodes.entry(node) {
-            Entry::Occupied(mut o) => {
-                let node_data = o.get_mut();
-                if node_data.consumer.is_some() && consumer.is_some() {
-                    //TODO: more specific...
-                    return Err(Error::AffineUsed);
-                }
-                if node_data.consumer.is_none() {
-                    node_data.consumer = consumer
-                }
-                node_data.lifetime = lifetime;
-                Ok((NodeId(o.index()), false))
+    ) -> Result<NodeId, Error> {
+        let (ix, node) = match self.nodes.entry(node) {
+            Entry::Occupied(o) => {
+                // Fix this...
+                return Err(Error::AffineUsed);
             }
             Entry::Vacant(v) => {
                 let data = NodeData {
@@ -161,10 +153,10 @@ impl LifetimeCtx {
                     borrowers: SmallVec::new(),
                 };
                 let ix = v.index();
-                v.insert(data);
-                Ok((NodeId(ix), true))
+                (ix, v.insert(data))
             }
-        }
+        };
+        Ok(NodeId(ix))
     }
     /// Insert the given node into the table if it is not already present, with the given lifetime computation function and optional consumer.
     #[inline]
@@ -189,7 +181,11 @@ impl LifetimeCtx {
             return Ok((NodeId(ix), false));
         }
         let lifetime = compute_lifetime(self, node);
-        self.force_insert(node.clone(), consumer, lifetime)
+        Ok((
+            self.force_insert(node.clone(), consumer, lifetime)
+                .expect("No entry for this node exists in the node map"),
+            true,
+        ))
     }
 }
 
