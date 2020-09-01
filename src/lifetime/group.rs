@@ -58,6 +58,11 @@ impl GroupData {
     pub fn borrowers(&self) -> &[NodeId] {
         &self.borrowers[..]
     }
+    /// Register a borrower of this group
+    #[inline]
+    pub fn register_borrower(&mut self, borrower: NodeId) {
+        self.borrowers.push(borrower)
+    }
 }
 
 /// A set of lenders, represented as a sorted list of `usize` indices
