@@ -148,7 +148,11 @@ impl LifetimeCtx {
     /// Register a node as a borrower of another node
     #[inline]
     pub fn register_node_borrower(&mut self, borrower: NodeId, lender: NodeId) {
-        unimplemented!()
+        self.nodes
+            .get_index_mut(lender.0)
+            .expect("A valid lender-node index")
+            .1
+            .register_direct_borrower(borrower)
     }
     /// Register a node as a borrower of a group
     #[inline]
