@@ -41,6 +41,11 @@ impl LifetimeCtx {
             Either::Right(id) => Either::Right(self.lifetime(id)),
         }
     }
+    /// Iterate over the borrowers of a given node
+    #[inline]
+    pub fn borrowers(&self, node: NodeId) -> Borrowers {
+        self.node(node).borrowers(self)
+    }
 }
 
 /// A node in a lifetime graph
@@ -50,6 +55,17 @@ pub struct Node<'a> {
     value: ValRef<'a>,
     /// The data of this node
     data: &'a NodeData,
+}
+
+impl<'a> Node<'a> {
+    /// Iterate over the borrowers of this node within a given context
+    pub fn borrowers(self, ctx: &'a LifetimeCtx) -> Borrowers<'a> {
+        Borrowers {
+            abstract_borrowers: self.data.borrowers.iter(),
+            lifetime_borrowers: [].iter(),
+            ctx,
+        }
+    }
 }
 
 /// The data associated with a node in a lifetime graph
