@@ -131,6 +131,22 @@ impl LifetimeCtx {
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
     }
+    /// Register the consumer of a node
+    #[inline]
+    pub fn register_consumer(&mut self, node: NodeId, consumer: Owner) -> Result<(), Error> {
+        let node_data = &mut self
+            .nodes
+            .get_index_mut(node.0)
+            .expect("A valid node ID for consumer registration")
+            .1;
+        if node_data.consumer.is_none() {
+            node_data.consumer = Some(consumer)
+        } else {
+            //TODO: better error
+            return Err(Error::AffineBranched)
+        }
+        Ok(())
+    }
     /// Register a node as a borrower of a lifetime
     #[inline]
     pub fn register_borrower(&mut self, borrower: NodeId, lender: LifetimeId) {
@@ -185,7 +201,7 @@ impl LifetimeCtx {
             Entry::Vacant(v) => {
                 let data = NodeData {
                     lifetime,
-                    consumer,
+                    consumer: None,
                     borrowers: SmallVec::new(),
                 };
                 let ix = v.index();
@@ -194,6 +210,10 @@ impl LifetimeCtx {
             }
         };
         let node = NodeId(ix);
+        if let Some(consumer) = consumer {
+            self.register_consumer(node, consumer)
+                .expect("Registering a consumer for an un-consumed node always succeeds");
+        }
         for ix in 0..lenders {
             // Avoid cloning the lifetime array by directly accessing it every time instead
             let lender = self.node(node).data.lifetime[ix];
@@ -212,16 +232,13 @@ impl LifetimeCtx {
     where
         L: FnMut(&LifetimeCtx, &ValId) -> LifetimeParams,
     {
-        if let Some((ix, valid, node_data)) = self.nodes.get_full_mut(node) {
+        if let Some((ix, valid, _node_data)) = self.nodes.get_full_mut(node) {
             debug_assert_eq!(valid, node);
-            if node_data.consumer.is_some() && consumer.is_some() {
-                //TODO: more specific...
-                return Err(Error::AffineBranched);
+            let node = NodeId(ix);
+            if let Some(consumer) = consumer {
+                self.register_consumer(node, consumer)?
             }
-            if node_data.consumer.is_none() {
-                node_data.consumer = consumer
-            }
-            return Ok((NodeId(ix), false));
+            return Ok((node, false));
         }
         let lifetime = compute_lifetime(self, node);
         Ok((
