@@ -1,7 +1,7 @@
 use super::*;
 
 /// A lifetime ID
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct GroupId(pub(super) usize);
 
 impl GroupId {

@@ -16,19 +16,36 @@ mod params;
 pub use params::*;
 
 /// A system of `rain` lifetimes
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LifetimeCtx {
     /// The compound lifetimes in this system
     groups: IndexMap<Lenders, GroupData, FxBuildHasher>,
     /// The nodes in this system
     nodes: IndexMap<ValId, NodeData, FxBuildHasher>,
+    /// The current number of abstract identifiers
+    abstract_ids: usize,
 }
 
 /// A node ID
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct NodeId(usize);
 
-/// An ID which is either a node ID or a group ID
+/// An abstract lifetime
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct AbstractId(pub usize);
+
+/// An enum of possible ID kinds
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum IdEnum {
+    /// A node ID
+    Node(NodeId),
+    /// An abstract ID
+    Abstract(AbstractId),
+    /// A group ID
+    Group(GroupId),
+}
+
+/// An ID which is either a node ID, abstract ID or group ID
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct LifetimeId(usize);
 
@@ -39,6 +56,17 @@ pub struct Node<'a> {
     pub value: ValRef<'a>,
     /// The data of this node
     pub data: &'a NodeData,
+}
+
+/// An enum of possible lifetime kinds
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum LifetimeEnum<'a> {
+    /// A node
+    Node(Node<'a>),
+    /// An abstract lifetime
+    Abstract(AbstractId),
+    /// A group ID
+    Group(Group<'a>),
 }
 
 /// The data associated with a node in a lifetime graph
@@ -61,14 +89,20 @@ pub enum NodeOwnership {
     Owned(NodeId),
     /// This node is completely borrowed from a lifetime or another node
     Borrowed(LifetimeId),
+    /// This node is not consumed or borrowed
+    Drop,
     //TODO: field owners, etc.
 }
 
 impl LifetimeCtx {
     /// Create a new, empty system of lifetimes
-    #[inline(always)]
-    pub fn new() -> LifetimeCtx {
-        LifetimeCtx::default()
+    #[inline]
+    pub fn new(abstract_ids: usize) -> LifetimeCtx {
+        LifetimeCtx {
+            groups: IndexMap::default(),
+            nodes: IndexMap::default(),
+            abstract_ids,
+        }
     }
     /// Get the group at a given ID
     #[inline]
@@ -97,6 +131,13 @@ impl LifetimeCtx {
     #[inline]
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
+    }
+}
+
+impl Default for LifetimeCtx {
+    #[inline]
+    fn default() -> LifetimeCtx {
+        LifetimeCtx::new(0)
     }
 }
 
@@ -154,12 +195,17 @@ impl LifetimeId {
     /// Check whether this `LifetimeId` is a node
     #[inline]
     pub fn is_node(self) -> bool {
-        self.0 % 2 == 0
+        self.0 % 4 == 0b00
+    }
+    /// Chech whether this `LifetimeId` is abstract
+    #[inline]
+    pub fn is_abstract(self) -> bool {
+        self.0 % 4 == 0b01
     }
     /// Check whether this `LifetimeId` is a lifetime
     #[inline]
     pub fn is_group(self) -> bool {
-        self.0 % 2 == 1
+        self.0 % 4 == 0b11
     }
     #[inline]
     fn to_ix(self) -> usize {
@@ -183,6 +229,15 @@ impl LifetimeId {
             None
         }
     }
+    /// Try to get this `LifetimeId` as an abstract ID. guaranteed to succeed if `is_abstract` returns `true`.
+    #[inline]
+    pub fn try_abstract(self) -> Option<AbstractId> {
+        if self.is_abstract() {
+            Some(AbstractId(self.to_ix()))
+        } else {
+            None
+        }
+    }
     /// Try to get this `LifetimeId` as a lifetime. Guaranteed to succeed if `is_lifetime` returns `true`.
     #[inline]
     pub fn try_group(self) -> Option<GroupId> {
@@ -201,13 +256,40 @@ impl LifetimeId {
 
 impl From<NodeId> for LifetimeId {
     fn from(node: NodeId) -> LifetimeId {
-        LifetimeId(node.0 << 1)
+        LifetimeId(node.0 << 2)
+    }
+}
+
+impl From<AbstractId> for LifetimeId {
+    fn from(node: AbstractId) -> LifetimeId {
+        LifetimeId((node.0 << 2) + 1)
     }
 }
 
 impl From<GroupId> for LifetimeId {
     fn from(lifetime: GroupId) -> LifetimeId {
         // Wrapping shl + 1 because `Group::STATIC` is usize::MAX
-        LifetimeId(lifetime.0.wrapping_shl(1) + 1)
+        LifetimeId(lifetime.0.wrapping_shl(2) + 0b11)
+    }
+}
+
+impl From<IdEnum> for LifetimeId {
+    fn from(id: IdEnum) -> LifetimeId {
+        match id {
+            IdEnum::Node(n) => n.into(),
+            IdEnum::Abstract(a) => a.into(),
+            IdEnum::Group(g) => g.into(),
+        }
+    }
+}
+
+impl From<LifetimeId> for IdEnum {
+    fn from(lt: LifetimeId) -> IdEnum {
+        match lt.0 % 4 {
+            0 => IdEnum::Node(NodeId(lt.to_ix())),
+            1 => IdEnum::Abstract(AbstractId(lt.to_ix())),
+            3 => IdEnum::Group(GroupId(lt.to_ix())),
+            _ => unreachable!("Invalid lifetime discriminant!"),
+        }
     }
 }
