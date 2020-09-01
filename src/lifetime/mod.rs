@@ -1,6 +1,7 @@
 /*!
 The `rain` lifetime system
 */
+use crate::value::Error;
 use crate::value::{ValId, ValRef};
 use fxhash::FxBuildHasher;
 use indexmap::IndexMap;
@@ -71,10 +72,10 @@ pub enum LifetimeEnum<'a> {
 /// The data associated with a node in a lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct NodeData {
-    /// The owner of this node
+    /// The consumer of this node, if any
     ///
     /// TODO: field borrows
-    owner: NodeOwnership,
+    consumer: Option<Owner>,
     /// The lifetime-vector of this node
     lifetime: LifetimeParams,
     /// The nodes and lifetimes borrowing from this node
@@ -83,13 +84,11 @@ pub struct NodeData {
 
 /// The ownership status of a node in a lifetime graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum NodeOwnership {
+pub enum Owner {
     /// This node is completely owned by another node
     Owned(NodeId),
     /// This node is completely borrowed from a lifetime or another node
     Borrowed(LifetimeId),
-    /// This node is not consumed or borrowed
-    Drop,
     //TODO: field owners, etc.
 }
 
@@ -131,6 +130,38 @@ impl LifetimeCtx {
     #[inline]
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
+    }
+    /// Insert the given node into the table if it is not already present, with the given lifetime computation function and optional consumer.
+    #[inline]
+    pub fn insert<L>(
+        &mut self,
+        node: &ValId,
+        consumer: Option<Owner>,
+        mut compute_lifetime: L,
+    ) -> Result<(NodeId, bool), Error>
+    where
+        L: FnMut(&LifetimeCtx, &ValId) -> LifetimeParams,
+    {
+        if let Some((ix, valid, node_data)) = self.nodes.get_full_mut(node) {
+            debug_assert_eq!(valid, node);
+            if node_data.consumer.is_some() && consumer.is_some() {
+                //TODO: more specific...
+                return Err(Error::AffineUsed);
+            }
+            if node_data.consumer.is_none() {
+                node_data.consumer = consumer
+            }
+            return Ok((NodeId(ix), false));
+        }
+        let lifetime = compute_lifetime(self, node);
+        let data = NodeData {
+            lifetime,
+            consumer,
+            borrowers: SmallVec::new(),
+        };
+        let (ix, old_data) = self.nodes.insert_full(node.clone(), data);
+        debug_assert!(old_data.is_none());
+        Ok((NodeId(ix), true))
     }
 }
 
