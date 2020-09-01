@@ -6,7 +6,7 @@ pub struct GroupId(pub(super) usize);
 
 impl GroupId {
     /// The ID of the static lifetime
-    pub const STATIC: GroupId = GroupId(usize::MAX);
+    pub const STATIC: GroupId = GroupId(usize::MAX >> LifetimeId::BITS_SHIFTED);
 }
 
 impl Default for GroupId {

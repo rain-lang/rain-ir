@@ -2,7 +2,6 @@
 The `rain` lifetime system
 */
 use crate::value::{ValId, ValRef};
-use either::Either;
 use fxhash::FxBuildHasher;
 use indexmap::IndexMap;
 use itertools::{EitherOrBoth, Itertools};
@@ -121,10 +120,11 @@ impl LifetimeCtx {
     }
     /// Get the node or group at a given abstract ID
     #[inline]
-    pub fn lifetime(&self, id: LifetimeId) -> Either<Node, Group> {
-        match id.to_either() {
-            Either::Left(id) => Either::Left(self.node(id)),
-            Either::Right(id) => Either::Right(self.group(id)),
+    pub fn lifetime(&self, id: LifetimeId) -> LifetimeEnum {
+        match id.to_enum() {
+            IdEnum::Node(id) => LifetimeEnum::Node(self.node(id)),
+            IdEnum::Abstract(id) => LifetimeEnum::Abstract(id),
+            IdEnum::Group(id) => LifetimeEnum::Group(self.group(id)),
         }
     }
     /// Iterate over the borrowers of a given node
@@ -169,11 +169,15 @@ impl Iterator for Borrowers<'_> {
             if let Some(next) = next_from_curr {
                 return Some(*next);
             }
-            let next_abstract = *self.borrowers.next()?;
-            match next_abstract.to_either() {
-                Either::Left(node) => return Some(node),
-                Either::Right(group) => {
-                    self.group_borrowers = self.ctx.group(group).data.borrowers().iter()
+            loop {
+                let next_abstract = *self.borrowers.next()?;
+                match next_abstract.to_enum() {
+                    IdEnum::Node(node) => return Some(node),
+                    IdEnum::Abstract(_) => {}
+                    IdEnum::Group(group) => {
+                        self.group_borrowers = self.ctx.group(group).data.borrowers().iter();
+                        break;
+                    }
                 }
             }
         }
@@ -192,32 +196,45 @@ impl NodeData {
 }
 
 impl LifetimeId {
+    /// The static lifetime
+    pub const STATIC: LifetimeId = LifetimeId((usize::MAX & !Self::BITMASK) + Self::GROUP_DISC);
+    /// The discriminant for nodes
+    const NODE_DISC: usize = 0;
+    /// The discriminant for abstract nodes
+    const ABSTRACT_DISC: usize = 1;
+    /// The discriminant for groups
+    const GROUP_DISC: usize = 2;
+    /// The number of bits shifted
+    const BITS_SHIFTED: u32 = 2;
+    /// The bitmask used
+    const BITMASK: usize = (1 << Self::BITS_SHIFTED) - 1;
     /// Check whether this `LifetimeId` is a node
     #[inline]
     pub fn is_node(self) -> bool {
-        self.0 % 4 == 0b00
+        self.0 & Self::BITMASK == Self::NODE_DISC
     }
     /// Chech whether this `LifetimeId` is abstract
     #[inline]
     pub fn is_abstract(self) -> bool {
-        self.0 % 4 == 0b01
+        self.0 & Self::BITMASK == Self::ABSTRACT_DISC
     }
     /// Check whether this `LifetimeId` is a lifetime
     #[inline]
     pub fn is_group(self) -> bool {
-        self.0 % 4 == 0b11
+        self.0 % Self::BITMASK == Self::GROUP_DISC
     }
     #[inline]
     fn to_ix(self) -> usize {
         self.0 >> 2
     }
-    /// Get this `LifetimeId` as either a `NodeId` or `GroupId`
+    /// Get this `LifetimeId` as an `IdEnum`
     #[inline]
-    pub fn to_either(self) -> Either<NodeId, GroupId> {
-        if self.is_node() {
-            Either::Left(NodeId(self.to_ix()))
-        } else {
-            Either::Right(GroupId(self.to_ix()))
+    pub fn to_enum(self) -> IdEnum {
+        match self.0 & Self::BITMASK {
+            Self::NODE_DISC => IdEnum::Node(NodeId(self.to_ix())),
+            Self::ABSTRACT_DISC => IdEnum::Abstract(AbstractId(self.to_ix())),
+            Self::GROUP_DISC => IdEnum::Group(GroupId(self.to_ix())),
+            discriminant => unreachable!("Invalid lifetime discriminant {}!", discriminant),
         }
     }
     /// Try to get this `LifetimeId` as a node. Guaranteed to succeed if `is_node` returns `true`.
@@ -250,26 +267,26 @@ impl LifetimeId {
     /// Check whether this `LifetimeId` is the static lifetime
     #[inline]
     pub fn is_static(self) -> bool {
-        self.0 == usize::MAX
+        self == Self::STATIC
     }
 }
 
 impl From<NodeId> for LifetimeId {
     fn from(node: NodeId) -> LifetimeId {
-        LifetimeId(node.0 << 2)
+        LifetimeId((node.0 << LifetimeId::BITS_SHIFTED) + LifetimeId::NODE_DISC)
     }
 }
 
 impl From<AbstractId> for LifetimeId {
     fn from(node: AbstractId) -> LifetimeId {
-        LifetimeId((node.0 << 2) + 1)
+        LifetimeId((node.0 << LifetimeId::BITS_SHIFTED) + LifetimeId::ABSTRACT_DISC)
     }
 }
 
 impl From<GroupId> for LifetimeId {
     fn from(lifetime: GroupId) -> LifetimeId {
         // Wrapping shl + 1 because `Group::STATIC` is usize::MAX
-        LifetimeId(lifetime.0.wrapping_shl(2) + 0b11)
+        LifetimeId((lifetime.0 << LifetimeId::BITS_SHIFTED) + LifetimeId::GROUP_DISC)
     }
 }
 
@@ -303,12 +320,7 @@ impl From<IdEnum> for LifetimeId {
 
 impl From<LifetimeId> for IdEnum {
     fn from(lt: LifetimeId) -> IdEnum {
-        match lt.0 % 4 {
-            0 => IdEnum::Node(NodeId(lt.to_ix())),
-            1 => IdEnum::Abstract(AbstractId(lt.to_ix())),
-            3 => IdEnum::Group(GroupId(lt.to_ix())),
-            _ => unreachable!("Invalid lifetime discriminant!"),
-        }
+        lt.to_enum()
     }
 }
 
@@ -328,30 +340,16 @@ mod test {
             let en_node_id = IdEnum::from(node_id);
             let en_abstract_id = IdEnum::from(abstract_id);
             let en_group_id = IdEnum::from(group_id);
-            assert_eq!(
-                lt_node_id,
-                LifetimeId::from(en_node_id)
-            );
-            assert_eq!(
-                IdEnum::from(lt_node_id),
-                en_node_id
-            );
-            assert_eq!(
-                lt_abstract_id,
-                LifetimeId::from(en_abstract_id)
-            );
-            assert_eq!(
-                IdEnum::from(lt_abstract_id),
-                en_abstract_id
-            );
-            assert_eq!(
-                lt_group_id,
-                LifetimeId::from(en_group_id)
-            );
-            assert_eq!(
-                IdEnum::from(lt_group_id),
-                en_group_id
-            );
+            assert_eq!(lt_node_id, LifetimeId::from(en_node_id));
+            assert_eq!(IdEnum::from(lt_node_id), en_node_id);
+            assert_eq!(lt_abstract_id, LifetimeId::from(en_abstract_id));
+            assert_eq!(IdEnum::from(lt_abstract_id), en_abstract_id);
+            assert_eq!(lt_group_id, LifetimeId::from(en_group_id));
+            assert_eq!(IdEnum::from(lt_group_id), en_group_id);
         }
+        assert!(LifetimeId::STATIC.is_group());
+        assert_eq!(LifetimeId::STATIC.try_group(), Some(GroupId::STATIC));
+        assert_eq!(LifetimeId::STATIC.try_node(), None);
+        assert_eq!(LifetimeId::STATIC.try_abstract(), None);
     }
 }
