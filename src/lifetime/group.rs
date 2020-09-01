@@ -111,4 +111,37 @@ impl Lenders {
                 .into_boxed_slice(),
         )
     }
+    /// Take the union of an iterator of lenders
+    #[inline]
+    pub fn unions<'a, L>(lenders: L) -> Lenders
+    where
+        L: IntoIterator<Item = &'a Lenders>,
+    {
+        Self::new_unchecked(
+            lenders
+                .into_iter()
+                .kmerge()
+                .dedup()
+                .collect_vec()
+                .into_boxed_slice(),
+        )
+    }
+}
+
+impl IntoIterator for Lenders {
+    type Item = NodeId;
+    type IntoIter = std::vec::IntoIter<NodeId>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_vec().into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Lenders {
+    type Item = NodeId;
+    type IntoIter = Copied<std::slice::Iter<'a, NodeId>>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
 }
