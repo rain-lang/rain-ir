@@ -134,6 +134,10 @@ impl LifetimeCtx {
     /// Register a node as a borrower of a lifetime
     #[inline]
     pub fn register_borrower(&mut self, borrower: NodeId, lender: LifetimeId) {
+        // Quick static check!
+        if lender.is_static() {
+            return
+        }
         self.register_enum_borrower(borrower, lender.into())
     }
     /// Register a node as a borrower of a lifetime
