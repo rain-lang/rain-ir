@@ -142,7 +142,7 @@ impl LifetimeCtx {
         lifetime: LifetimeParams,
     ) -> Result<NodeId, Error> {
         let ix = match self.nodes.entry(node) {
-            Entry::Occupied(o) => {
+            Entry::Occupied(_) => {
                 // Fix this...
                 return Err(Error::AffineUsed);
             }
