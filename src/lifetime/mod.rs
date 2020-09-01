@@ -16,7 +16,7 @@ mod params;
 pub use params::*;
 
 /// A system of `rain` lifetimes
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct LifetimeCtx {
     /// The compound lifetimes in this system
     groups: IndexMap<Lenders, GroupData, FxBuildHasher>,
@@ -65,6 +65,11 @@ pub enum NodeOwnership {
 }
 
 impl LifetimeCtx {
+    /// Create a new, empty system of lifetimes
+    #[inline(always)]
+    pub fn new() -> LifetimeCtx {
+        LifetimeCtx::default()
+    }
     /// Get the group at a given ID
     #[inline]
     pub fn group(&self, id: GroupId) -> Group {
