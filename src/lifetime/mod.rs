@@ -58,6 +58,19 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
+    /// The value corresponding to this node
+    #[inline]
+    pub fn value(self) -> ValRef<'a> {
+        self.value
+    }
+    /// The data corresponding to this node
+    #[inline]
+    pub fn data(self) -> &'a NodeData {
+        self.data
+    }
+}
+
+impl<'a> Node<'a> {
     /// Iterate over the borrowers of this node within a given context
     pub fn borrowers(self, ctx: &'a LifetimeCtx) -> Borrowers<'a> {
         Borrowers {
