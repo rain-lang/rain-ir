@@ -13,17 +13,17 @@ use std::iter::Copied;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LifetimeCtx {
     /// The compound lifetimes in this system
-    lifetimes: IndexMap<Lenders, LifetimeData, FxBuildHasher>,
+    lifetimes: IndexMap<Lenders, GroupData, FxBuildHasher>,
     /// The nodes in this system
     nodes: IndexMap<ValId, NodeData, FxBuildHasher>,
 }
 
 impl LifetimeCtx {
-    /// Get the lifetime at a given ID
+    /// Get the group at a given ID
     #[inline]
-    pub fn lifetime(&self, id: LifetimeId) -> Lifetime {
+    pub fn group(&self, id: GroupId) -> Group {
         let (lenders, data) = self.lifetimes.get_index(id.0).unwrap();
-        Lifetime { lenders, data }
+        Group { lenders, data }
     }
     /// Get the node at a given ID
     #[inline]
@@ -34,12 +34,12 @@ impl LifetimeCtx {
             data,
         }
     }
-    /// Get the node or lifetime at a given abstract ID
+    /// Get the node or group at a given abstract ID
     #[inline]
-    pub fn object(&self, id: AbstractId) -> Either<Node, Lifetime> {
+    pub fn lifetime(&self, id: LifetimeId) -> Either<Node, Group> {
         match id.to_either() {
             Either::Left(id) => Either::Left(self.node(id)),
-            Either::Right(id) => Either::Right(self.lifetime(id)),
+            Either::Right(id) => Either::Right(self.group(id)),
         }
     }
     /// Iterate over the borrowers of a given node
@@ -85,7 +85,7 @@ pub struct NodeData {
     /// The lifetime-vector of this node
     lifetime: SmallVec<[LifetimeId; SMALL_LIFETIME_PARAMS]>,
     /// The nodes and lifetimes borrowing from this node
-    borrowers: SmallVec<[AbstractId; SMALL_BORROWERS]>,
+    borrowers: SmallVec<[LifetimeId; SMALL_BORROWERS]>,
 }
 
 /// The ownership status of a node in a lifetime graph
@@ -94,14 +94,14 @@ pub enum NodeOwnership {
     /// This node is completely owned by another node
     Owned(NodeId),
     /// This node is completely borrowed from a lifetime or another node
-    Borrowed(AbstractId),
+    Borrowed(LifetimeId),
     //TODO: field owners, etc.
 }
 
 /// An iterator over the borrowers of a node
 #[derive(Debug, Clone)]
 pub struct Borrowers<'a> {
-    abstract_borrowers: std::slice::Iter<'a, AbstractId>,
+    abstract_borrowers: std::slice::Iter<'a, LifetimeId>,
     lifetime_borrowers: std::slice::Iter<'a, NodeId>,
     ctx: &'a LifetimeCtx,
 }
@@ -119,7 +119,7 @@ impl Iterator for Borrowers<'_> {
             match next_abstract.to_either() {
                 Either::Left(node) => return Some(node),
                 Either::Right(lifetime) => {
-                    self.lifetime_borrowers = self.ctx.lifetime(lifetime).data.borrowers.iter()
+                    self.lifetime_borrowers = self.ctx.group(lifetime).data.borrowers.iter()
                 }
             }
         }
@@ -135,23 +135,23 @@ impl NodeData {
     }
 }
 
-/// A `rain` lifetime
+/// A group of objects borrowed from simultaneously, forming a `rain` lifetime
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Lifetime<'a> {
+pub struct Group<'a> {
     /// The lenders of this lifetime
     pub lenders: &'a Lenders,
     /// The data of this lifetime
-    pub data: &'a LifetimeData,
+    pub data: &'a GroupData,
 }
 
 /// The data associated with a lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct LifetimeData {
+pub struct GroupData {
     /// The borrowers of this lifetime
     borrowers: Vec<NodeId>,
 }
 
-impl LifetimeData {
+impl GroupData {
     /// Tidy lifetime data, deduplicating and sorting the borrower list, etc.
     pub fn tidy(&mut self) {
         self.borrowers.sort();
@@ -162,17 +162,17 @@ impl LifetimeData {
 
 /// A lifetime ID
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct LifetimeId(usize);
+pub struct GroupId(usize);
 
-impl LifetimeId {
+impl GroupId {
     /// The ID of the static lifetime
-    pub const STATIC: LifetimeId = LifetimeId(usize::MAX);
+    pub const STATIC: GroupId = GroupId(usize::MAX);
 }
 
-impl Default for LifetimeId {
+impl Default for GroupId {
     #[inline]
-    fn default() -> LifetimeId {
-        LifetimeId::STATIC
+    fn default() -> GroupId {
+        GroupId::STATIC
     }
 }
 
@@ -182,33 +182,33 @@ pub struct NodeId(usize);
 
 /// An ID which is either a lifetime ID or a node ID
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct AbstractId(usize);
+pub struct LifetimeId(usize);
 
-impl AbstractId {
-    /// Check whether this `AbstractId` is a node
+impl LifetimeId {
+    /// Check whether this `LifetimeId` is a node
     #[inline]
     pub fn is_node(self) -> bool {
         self.0 % 2 == 0
     }
-    /// Check whether this `AbstractId` is a lifetime
+    /// Check whether this `LifetimeId` is a lifetime
     #[inline]
-    pub fn is_lifetime(self) -> bool {
+    pub fn is_group(self) -> bool {
         self.0 % 2 == 1
     }
     #[inline]
     fn to_ix(self) -> usize {
         self.0 >> 2
     }
-    /// Get this `AbstractId` as either a `NodeId` or `LifetimeId`
+    /// Get this `LifetimeId` as either a `NodeId` or `GroupId`
     #[inline]
-    pub fn to_either(self) -> Either<NodeId, LifetimeId> {
+    pub fn to_either(self) -> Either<NodeId, GroupId> {
         if self.is_node() {
             Either::Left(NodeId(self.to_ix()))
         } else {
-            Either::Right(LifetimeId(self.to_ix()))
+            Either::Right(GroupId(self.to_ix()))
         }
     }
-    /// Try to get this `AbstractId` as a node. Guaranteed to succeed if `is_node` returns `true`.
+    /// Try to get this `LifetimeId` as a node. Guaranteed to succeed if `is_node` returns `true`.
     #[inline]
     pub fn try_node(self) -> Option<NodeId> {
         if self.is_node() {
@@ -217,32 +217,32 @@ impl AbstractId {
             None
         }
     }
-    /// Try to get this `AbstractId` as a lifetime. Guaranteed to succeed if `is_lifetime` returns `true`.
+    /// Try to get this `LifetimeId` as a lifetime. Guaranteed to succeed if `is_lifetime` returns `true`.
     #[inline]
-    pub fn try_lifetime(self) -> Option<LifetimeId> {
-        if self.is_lifetime() {
-            Some(LifetimeId(self.to_ix()))
+    pub fn try_group(self) -> Option<GroupId> {
+        if self.is_group() {
+            Some(GroupId(self.to_ix()))
         } else {
             None
         }
     }
-    /// Check whether this `AbstractId` is the static lifetime
+    /// Check whether this `LifetimeId` is the static lifetime
     #[inline]
     pub fn is_static(self) -> bool {
         self.0 == usize::MAX
     }
 }
 
-impl From<NodeId> for AbstractId {
-    fn from(node: NodeId) -> AbstractId {
-        AbstractId(node.0 << 1)
+impl From<NodeId> for LifetimeId {
+    fn from(node: NodeId) -> LifetimeId {
+        LifetimeId(node.0 << 1)
     }
 }
 
-impl From<LifetimeId> for AbstractId {
-    fn from(lifetime: LifetimeId) -> AbstractId {
-        // Wrapping shl + 1 because `Lifetime::STATIC` is usize::MAX
-        AbstractId(lifetime.0.wrapping_shl(1) + 1)
+impl From<GroupId> for LifetimeId {
+    fn from(lifetime: GroupId) -> LifetimeId {
+        // Wrapping shl + 1 because `Group::STATIC` is usize::MAX
+        LifetimeId(lifetime.0.wrapping_shl(1) + 1)
     }
 }
 
