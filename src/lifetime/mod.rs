@@ -176,6 +176,7 @@ impl LifetimeCtx {
         consumer: Option<Owner>,
         lifetime: LifetimeParams,
     ) -> Result<NodeId, Error> {
+        let lenders = lifetime.len();
         let ix = match self.nodes.entry(node) {
             Entry::Occupied(_) => {
                 // Fix this...
@@ -192,7 +193,13 @@ impl LifetimeCtx {
                 ix
             }
         };
-        Ok(NodeId(ix))
+        let node = NodeId(ix);
+        for ix in 0..lenders {
+            // Avoid cloning the lifetime array by directly accessing it every time instead
+            let lender = self.node(node).data.lifetime[ix];
+            self.register_borrower(node, lender);
+        }
+        Ok(node)
     }
     /// Insert the given node into the table if it is not already present, with the given lifetime computation function and optional consumer.
     #[inline]
