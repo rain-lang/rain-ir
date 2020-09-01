@@ -143,7 +143,11 @@ impl LifetimeCtx {
             node_data.consumer = Some(consumer)
         } else {
             //TODO: better error
-            return Err(Error::AffineBranched)
+            return Err(Error::AffineBranched);
+        }
+        match consumer {
+            Owner::Owned(_) => {}
+            Owner::Borrowed(lender) => self.register_borrower(node, lender),
         }
         Ok(())
     }
