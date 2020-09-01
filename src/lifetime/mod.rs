@@ -157,6 +157,9 @@ impl LifetimeCtx {
     /// Register a node as a borrower of a group
     #[inline]
     pub fn register_group_borrower(&mut self, borrower: NodeId, lender: GroupId) {
+        if lender.is_static() {
+            return
+        }
         unimplemented!()
     }
     /// Insert the given node into the table with the given lifetime parameters. Return an error if this value has already been inserted.

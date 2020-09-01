@@ -7,6 +7,11 @@ pub struct GroupId(pub(super) usize);
 impl GroupId {
     /// The ID of the static lifetime
     pub const STATIC: GroupId = GroupId(usize::MAX >> LifetimeId::BITS_SHIFTED);
+    /// Check whether a group ID is static
+    #[inline]
+    pub fn is_static(self) -> bool {
+        self == Self::STATIC
+    }
 }
 
 impl Default for GroupId {
