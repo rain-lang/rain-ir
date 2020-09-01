@@ -6,6 +6,7 @@ use either::Either;
 use fxhash::FxBuildHasher;
 use indexmap::IndexMap;
 use itertools::{EitherOrBoth, Itertools};
+use smallvec::SmallVec;
 use std::iter::Copied;
 
 /// A system of `rain` lifetimes
@@ -52,22 +53,9 @@ impl LifetimeCtx {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Node<'a> {
     /// The `ValRef` of this node
-    value: ValRef<'a>,
+    pub value: ValRef<'a>,
     /// The data of this node
-    data: &'a NodeData,
-}
-
-impl<'a> Node<'a> {
-    /// The value corresponding to this node
-    #[inline]
-    pub fn value(self) -> ValRef<'a> {
-        self.value
-    }
-    /// The data corresponding to this node
-    #[inline]
-    pub fn data(self) -> &'a NodeData {
-        self.data
-    }
+    pub data: &'a NodeData,
 }
 
 impl<'a> Node<'a> {
@@ -81,19 +69,33 @@ impl<'a> Node<'a> {
     }
 }
 
+/// The size of a small vector of lifetime parameters
+pub const SMALL_LIFETIME_PARAMS: usize = 2;
+
+/// The size of a small vector of borrowers
+const SMALL_BORROWERS: usize = 2;
+
 /// The data associated with a node in a lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct NodeData {
     /// The owner of this node
     ///
     /// TODO: field borrows
-    owner: NodeId,
-    /// The lifetime of this node
-    ///
-    /// TODO: field lifetimes?
-    lifetime: LifetimeId,
+    owner: NodeOwnership,
+    /// The lifetime-vector of this node
+    lifetime: SmallVec<[LifetimeId; SMALL_LIFETIME_PARAMS]>,
     /// The nodes and lifetimes borrowing from this node
-    borrowers: Vec<AbstractId>,
+    borrowers: SmallVec<[AbstractId; SMALL_BORROWERS]>,
+}
+
+/// The ownership status of a node in a lifetime graph
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum NodeOwnership {
+    /// This node is completely owned by another node
+    Owned(NodeId),
+    /// This node is completely borrowed from a lifetime or another node
+    Borrowed(AbstractId),
+    //TODO: field owners, etc.
 }
 
 /// An iterator over the borrowers of a node
@@ -137,22 +139,9 @@ impl NodeData {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Lifetime<'a> {
     /// The lenders of this lifetime
-    lenders: &'a Lenders,
+    pub lenders: &'a Lenders,
     /// The data of this lifetime
-    data: &'a LifetimeData,
-}
-
-impl<'a> Lifetime<'a> {
-    /// Get the lenders of this lifetime
-    #[inline(always)]
-    pub fn lenders(self) -> &'a Lenders {
-        self.lenders
-    }
-    /// Get the data of this lifetime
-    #[inline(always)]
-    pub fn data(self) -> &'a LifetimeData {
-        self.data
-    }
+    pub data: &'a LifetimeData,
 }
 
 /// The data associated with a lifetime
