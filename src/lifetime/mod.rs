@@ -4,7 +4,7 @@ The `rain` lifetime system
 use crate::value::Error;
 use crate::value::{ValId, ValRef};
 use fxhash::FxBuildHasher;
-use indexmap::IndexMap;
+use indexmap::{map::Entry, IndexMap};
 use itertools::{EitherOrBoth, Itertools};
 use smallvec::SmallVec;
 use std::iter::Copied;
@@ -131,6 +131,41 @@ impl LifetimeCtx {
     pub fn borrowers(&self, node: NodeId) -> Borrowers {
         self.node(node).borrowers(self)
     }
+    /// Insert the given node into the table with the given lifetime parameters, overwriting any old lifetime parameters and/or consumers for this node.
+    ///
+    /// Return an error on an incompatible consumer
+    #[inline]
+    pub fn force_insert(
+        &mut self,
+        node: ValId,
+        consumer: Option<Owner>,
+        lifetime: LifetimeParams,
+    ) -> Result<(NodeId, bool), Error> {
+        match self.nodes.entry(node) {
+            Entry::Occupied(mut o) => {
+                let node_data = o.get_mut();
+                if node_data.consumer.is_some() && consumer.is_some() {
+                    //TODO: more specific...
+                    return Err(Error::AffineUsed);
+                }
+                if node_data.consumer.is_none() {
+                    node_data.consumer = consumer
+                }
+                node_data.lifetime = lifetime;
+                Ok((NodeId(o.index()), false))
+            }
+            Entry::Vacant(v) => {
+                let data = NodeData {
+                    lifetime,
+                    consumer,
+                    borrowers: SmallVec::new(),
+                };
+                let ix = v.index();
+                v.insert(data);
+                Ok((NodeId(ix), true))
+            }
+        }
+    }
     /// Insert the given node into the table if it is not already present, with the given lifetime computation function and optional consumer.
     #[inline]
     pub fn insert<L>(
@@ -154,14 +189,7 @@ impl LifetimeCtx {
             return Ok((NodeId(ix), false));
         }
         let lifetime = compute_lifetime(self, node);
-        let data = NodeData {
-            lifetime,
-            consumer,
-            borrowers: SmallVec::new(),
-        };
-        let (ix, old_data) = self.nodes.insert_full(node.clone(), data);
-        debug_assert!(old_data.is_none());
-        Ok((NodeId(ix), true))
+        self.force_insert(node.clone(), consumer, lifetime)
     }
 }
 
