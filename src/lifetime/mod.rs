@@ -273,6 +273,24 @@ impl From<GroupId> for LifetimeId {
     }
 }
 
+impl From<NodeId> for IdEnum {
+    fn from(node: NodeId) -> IdEnum {
+        IdEnum::Node(node)
+    }
+}
+
+impl From<AbstractId> for IdEnum {
+    fn from(node: AbstractId) -> IdEnum {
+        IdEnum::Abstract(node)
+    }
+}
+
+impl From<GroupId> for IdEnum {
+    fn from(lifetime: GroupId) -> IdEnum {
+        IdEnum::Group(lifetime)
+    }
+}
+
 impl From<IdEnum> for LifetimeId {
     fn from(id: IdEnum) -> LifetimeId {
         match id {
@@ -290,6 +308,50 @@ impl From<LifetimeId> for IdEnum {
             1 => IdEnum::Abstract(AbstractId(lt.to_ix())),
             3 => IdEnum::Group(GroupId(lt.to_ix())),
             _ => unreachable!("Invalid lifetime discriminant!"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn lifetime_id_construction() {
+        let sample_numbers = [0, 1, 2, 3, 6, 62, 4567354];
+        for number in sample_numbers.iter().copied() {
+            let node_id = NodeId(number);
+            let abstract_id = AbstractId(number);
+            let group_id = GroupId(number);
+            let lt_node_id = LifetimeId::from(node_id);
+            let lt_abstract_id = LifetimeId::from(abstract_id);
+            let lt_group_id = LifetimeId::from(group_id);
+            let en_node_id = IdEnum::from(node_id);
+            let en_abstract_id = IdEnum::from(abstract_id);
+            let en_group_id = IdEnum::from(group_id);
+            assert_eq!(
+                lt_node_id,
+                LifetimeId::from(en_node_id)
+            );
+            assert_eq!(
+                IdEnum::from(lt_node_id),
+                en_node_id
+            );
+            assert_eq!(
+                lt_abstract_id,
+                LifetimeId::from(en_abstract_id)
+            );
+            assert_eq!(
+                IdEnum::from(lt_abstract_id),
+                en_abstract_id
+            );
+            assert_eq!(
+                lt_group_id,
+                LifetimeId::from(en_group_id)
+            );
+            assert_eq!(
+                IdEnum::from(lt_group_id),
+                en_group_id
+            );
         }
     }
 }
