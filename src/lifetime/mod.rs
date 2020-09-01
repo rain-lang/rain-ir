@@ -129,6 +129,19 @@ pub struct Lifetime<'a> {
     data: &'a LifetimeData,
 }
 
+impl<'a> Lifetime<'a> {
+    /// Get the lenders of this lifetime
+    #[inline(always)]
+    pub fn lenders(self) -> &'a Lenders {
+        self.lenders
+    }
+    /// Get the data of this lifetime
+    #[inline(always)]
+    pub fn data(self) -> &'a LifetimeData {
+        self.data
+    }
+}
+
 /// The data associated with a lifetime
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct LifetimeData {
