@@ -444,9 +444,6 @@ impl From<LifetimeId> for IdEnum {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::region::Region;
-    use crate::typing::Type;
-    use crate::value::{tuple::Product, Value};
 
     #[test]
     fn lifetime_id_construction() {
