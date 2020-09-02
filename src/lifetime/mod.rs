@@ -190,11 +190,7 @@ impl LifetimeCtx {
     ///
     /// Return an error on an incompatible consumer
     #[inline]
-    pub fn force_insert(
-        &mut self,
-        node: ValId,
-        lifetime: LifetimeParams,
-    ) -> Result<NodeId, Error> {
+    pub fn force_insert(&mut self, node: ValId, lifetime: LifetimeParams) -> Result<NodeId, Error> {
         let lenders = lifetime.len();
         let ix = match self.nodes.entry(node) {
             Entry::Occupied(_) => {
@@ -222,25 +218,21 @@ impl LifetimeCtx {
     }
     /// Insert the given node into the table if it is not already present, with the given lifetime computation function and optional consumer.
     #[inline]
-    pub fn insert<L>(
-        &mut self,
-        node: &ValId,
-        mut compute_lifetime: L,
-    ) -> Result<(NodeId, bool), Error>
+    pub fn insert<L>(&mut self, node: &ValId, mut compute_lifetime: L) -> (NodeId, bool)
     where
         L: FnMut(&mut LifetimeCtx, &ValId) -> LifetimeParams,
     {
         if let Some((ix, valid, _node_data)) = self.nodes.get_full_mut(node) {
             debug_assert_eq!(valid, node);
             let node = NodeId(ix);
-            return Ok((node, false));
+            return (node, false);
         }
         let lifetime = compute_lifetime(self, node);
-        Ok((
+        (
             self.force_insert(node.clone(), lifetime)
                 .expect("No entry for this node exists in the node map"),
             true,
-        ))
+        )
     }
 }
 
@@ -454,7 +446,7 @@ mod test {
     use super::*;
     use crate::region::Region;
     use crate::typing::Type;
-    use crate::value::tuple::Product;
+    use crate::value::{tuple::Product, Value};
 
     #[test]
     fn lifetime_id_construction() {
@@ -483,10 +475,13 @@ mod test {
     }
 
     #[test]
-    fn affine_branch_checking_works() {
-        let _ctx = LifetimeCtx::default();
+    fn affine_use_checking_works() {
+        let mut ctx = LifetimeCtx::default();
         let anchor_ty = Product::anchor_ty().into_ty();
         let region = Region::unary(anchor_ty);
-        let _anchor = region.param(0).unwrap();
+        let anchor = region.param(0).unwrap().into_val();
+        let (anchor_ix, anchor_inserted) = ctx.insert(&anchor, |_, _| LifetimeParams::default());
+        assert!(anchor_inserted);
+        assert_eq!(anchor_ix, NodeId(0));
     }
 }

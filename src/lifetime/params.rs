@@ -4,7 +4,7 @@ use super::*;
 pub const SMALL_LIFETIME_PARAMS: usize = 2;
 
 /// A vector of lifetime parameters
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct LifetimeParams(pub SmallVec<[LifetimeId; SMALL_LIFETIME_PARAMS]>);
 
 impl Deref for LifetimeParams {
