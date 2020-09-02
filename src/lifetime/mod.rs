@@ -193,7 +193,6 @@ impl LifetimeCtx {
     pub fn force_insert(
         &mut self,
         node: ValId,
-        consumer: Option<Owner>,
         lifetime: LifetimeParams,
     ) -> Result<NodeId, Error> {
         let lenders = lifetime.len();
@@ -214,10 +213,6 @@ impl LifetimeCtx {
             }
         };
         let node = NodeId(ix);
-        if let Some(consumer) = consumer {
-            self.register_consumer(node, consumer)
-                .expect("Registering a consumer for an un-consumed node always succeeds");
-        }
         for ix in 0..lenders {
             // Avoid cloning the lifetime array by directly accessing it every time instead
             let lender = self.node(node).data.lifetime[ix];
@@ -230,23 +225,19 @@ impl LifetimeCtx {
     pub fn insert<L>(
         &mut self,
         node: &ValId,
-        consumer: Option<Owner>,
         mut compute_lifetime: L,
     ) -> Result<(NodeId, bool), Error>
     where
-        L: FnMut(&LifetimeCtx, &ValId) -> LifetimeParams,
+        L: FnMut(&mut LifetimeCtx, &ValId) -> LifetimeParams,
     {
         if let Some((ix, valid, _node_data)) = self.nodes.get_full_mut(node) {
             debug_assert_eq!(valid, node);
             let node = NodeId(ix);
-            if let Some(consumer) = consumer {
-                self.register_consumer(node, consumer)?
-            }
             return Ok((node, false));
         }
         let lifetime = compute_lifetime(self, node);
         Ok((
-            self.force_insert(node.clone(), consumer, lifetime)
+            self.force_insert(node.clone(), lifetime)
                 .expect("No entry for this node exists in the node map"),
             true,
         ))
