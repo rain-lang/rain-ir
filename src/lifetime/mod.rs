@@ -461,6 +461,10 @@ impl From<LifetimeId> for IdEnum {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::region::Region;
+    use crate::typing::Type;
+    use crate::value::tuple::Product;
+
     #[test]
     fn lifetime_id_construction() {
         let sample_numbers = [0, 1, 2, 3, 6, 62, 4567354];
@@ -485,5 +489,13 @@ mod test {
         assert_eq!(LifetimeId::STATIC.try_group(), Some(GroupId::STATIC));
         assert_eq!(LifetimeId::STATIC.try_node(), None);
         assert_eq!(LifetimeId::STATIC.try_abstract(), None);
+    }
+
+    #[test]
+    fn affine_branch_checking_works() {
+        let _ctx = LifetimeCtx::default();
+        let anchor_ty = Product::anchor_ty().into_ty();
+        let region = Region::unary(anchor_ty);
+        let _anchor = region.param(0).unwrap();
     }
 }
