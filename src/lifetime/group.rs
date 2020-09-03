@@ -24,7 +24,7 @@ impl Group {
 impl From<MultiGroup> for Group {
     #[inline]
     fn from(group: MultiGroup) -> Group {
-        Group(UnionAlign::right(group.0))
+        Group(UnionAlign::right(group.into()))
     }
 }
 
@@ -52,7 +52,9 @@ impl Hash for Group {
 impl Drop for Group {
     #[inline]
     fn drop(&mut self) {
-        self.0.with_a(|a| VALUE_CACHE.try_gc_global(a));
+        self.0.with_a(|val| VALUE_CACHE.try_gc_global(val));
+        self.0
+            .with_b(|mgt| Thin::with(mgt, |mg| MULTIGROUP_CACHE.try_gc_global(mg)));
     }
 }
 
@@ -61,4 +63,19 @@ pub type GSArc = Arc<SliceWithHeader<(), Group>>;
 
 /// A group of more than one value being borrowed from
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct MultiGroup(Thin<GSArc>);
+
+impl From<MultiGroup> for Thin<GSArc> {
+    #[inline]
+    fn from(mg: MultiGroup) -> Thin<GSArc> {
+        unsafe { std::mem::transmute(mg) }
+    }
+}
+
+impl Drop for MultiGroup {
+    #[inline]
+    fn drop(&mut self) {
+        Thin::with(&self.0, |mg| MULTIGROUP_CACHE.try_gc_global(mg));
+    }
+}
