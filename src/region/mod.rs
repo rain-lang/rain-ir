@@ -228,6 +228,20 @@ impl Region {
     pub fn new(data: RegionData) -> Region {
         Region(Some(REGION_CACHE.cache(data)))
     }
+    /// Deduplicate an `Arc<RegionData>` into a `Region`
+    #[inline]
+    pub fn dedup(data: Arc<RegionData>) -> Region {
+        Region(Some(REGION_CACHE.cache(data)))
+    }
+    /// Coerce an `Option<Arc<RegionData>>` into a `Region`.
+    ///
+    /// It is a logic error if there is a `Region` with the same `RegionData` and different underlying `Arc`.
+    /// Due to this, this method can generally only be safely used with a clone of the result of `self.get_arc()`
+    /// or the result of `self.into_arc()`.
+    #[inline]
+    pub fn coerce(data: Option<Arc<RegionData>>) -> Region {
+        Region(data)
+    }
     /// Create data for a new region with a given parameter type vector and a parent region
     ///
     /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
@@ -293,11 +307,14 @@ impl Region {
         RegionBorrow(self.0.as_ref().map(Arc::borrow_arc))
     }
     /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
-    ///
-    /// TODO: add an `into_arc` method?
     #[inline]
     pub fn get_arc(&self) -> Option<&Arc<RegionData>> {
         self.0.as_ref()
+    }
+    /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
+    #[inline]
+    pub fn into_arc(self) -> Option<Arc<RegionData>> {
+        self.0
     }
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
