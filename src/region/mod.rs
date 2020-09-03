@@ -228,6 +228,19 @@ impl Region {
     pub fn new(data: RegionData) -> Region {
         Region(Some(REGION_CACHE.cache(data)))
     }
+    /// Deduplicate an `Arc<RegionData>` into a `Region`
+    #[inline]
+    pub fn dedup(data: Arc<RegionData>) -> Region {
+        Region(Some(REGION_CACHE.cache(data)))
+    }
+    /// Coerce an `Option<Arc<RegionData>>` into a `Region`.
+    ///
+    /// It is a logic error if there is a `Region` with the same `RegionData` and different underlying `Arc`.
+    /// Due to this, this method can generally only be safely used with a clone of the result of `self.get_arc()`
+    #[inline]
+    pub fn coerce(data: Option<Arc<RegionData>>) -> Region {
+        Region(data)
+    }
     /// Create data for a new region with a given parameter type vector and a parent region
     ///
     /// This constructor does not check whether all parameter types lie within the given parent region, but it is a *logic error* if they do not!
