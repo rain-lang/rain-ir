@@ -26,13 +26,41 @@ pub use params::*;
 #[derive(Debug, Clone, Eq, Default)]
 pub struct Lifetime(Option<Union2<Arc<RegionData>, Arc<LifetimeData>>>);
 
+/// A borrow of a `rain` lifetime
+#[derive(Debug, Clone, Eq, Default)]
+pub struct LifetimeBorrow<'a>(
+    Option<Union2<ArcBorrow<'a, RegionData>, ArcBorrow<'a, LifetimeData>>>,
+);
+
 impl Lifetime {
     /// The static `rain` lifetime
     pub const STATIC: Lifetime = Lifetime(None);
     /// Get a pointer to the data underlying this lifetime
     #[inline]
     pub fn as_ptr(&self) -> Option<ErasedPtr> {
-        self.0.as_ref().map(|ptr| ptr.as_untagged_ptr())
+        self.0.as_ref().map(Union2::as_untagged_ptr)
+    }
+    /// Borrow this lifetime
+    #[inline]
+    pub fn borrow_lifetime(&self) -> LifetimeBorrow {
+        unsafe { std::mem::transmute_copy(self) }
+    }
+}
+
+impl<'a> LifetimeBorrow<'a> {
+    /// The static `rain` lifetime
+    pub const STATIC: LifetimeBorrow<'static> = LifetimeBorrow(None);
+    /// Get a pointer to the data underlying this lifetime
+    #[inline]
+    pub fn as_ptr(&self) -> Option<ErasedPtr> {
+        self.0.as_ref().map(Union2::as_untagged_ptr)
+    }
+}
+
+impl Deref for LifetimeBorrow<'_> {
+    type Target = Lifetime;
+    fn deref(&self) -> &Lifetime {
+        unsafe { &*(self as *const _ as *const Lifetime) }
     }
 }
 
@@ -54,7 +82,35 @@ impl PartialEq for Lifetime {
     }
 }
 
+impl<'a> PartialEq<LifetimeBorrow<'a>> for Lifetime {
+    #[inline]
+    fn eq(&self, other: &LifetimeBorrow<'a>) -> bool {
+        self.as_ptr() == other.as_ptr()
+    }
+}
+
 impl Hash for Lifetime {
+    #[inline]
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.as_ptr().hash(hasher)
+    }
+}
+
+impl<'a> PartialEq for LifetimeBorrow<'a> {
+    #[inline]
+    fn eq(&self, other: &LifetimeBorrow) -> bool {
+        self.as_ptr() == other.as_ptr()
+    }
+}
+
+impl<'a> PartialEq<Lifetime> for LifetimeBorrow<'a> {
+    #[inline]
+    fn eq(&self, other: &Lifetime) -> bool {
+        self.as_ptr() == other.as_ptr()
+    }
+}
+
+impl<'a> Hash for LifetimeBorrow<'a> {
     #[inline]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.as_ptr().hash(hasher)
@@ -94,8 +150,9 @@ impl Drop for Lifetime {
 mod tests {
     use super::*;
     #[test]
-    fn lifetime_is_one_pointer() {
+    fn lifetime_layout() {
         use std::mem::size_of;
-        assert_eq!(size_of::<Lifetime>(), size_of::<*const u8>())
+        assert_eq!(size_of::<Lifetime>(), size_of::<*const u8>());
+        assert_eq!(size_of::<LifetimeBorrow>(), size_of::<*const u8>());
     }
 }
