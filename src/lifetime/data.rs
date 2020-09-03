@@ -2,8 +2,6 @@
 Data describing a `rain` lifetime
 */
 use super::*;
-use dashcache::DashCache;
-use lazy_static::lazy_static;
 
 lazy_static! {
     /// The global cache of constructed nontrivial lifetimes

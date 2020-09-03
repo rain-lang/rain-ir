@@ -60,3 +60,12 @@ impl Hash for Lifetime {
         self.as_ptr().hash(hasher)
     }
 }
+
+impl Drop for Lifetime {
+    #[inline]
+    fn drop(&mut self) {
+        if let Some(ptr) = &self.0 {
+            ptr.with_b(|ltd| LIFETIME_CACHE.try_gc_global(ltd));
+        }
+    }
+}
