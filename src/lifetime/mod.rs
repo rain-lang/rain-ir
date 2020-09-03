@@ -66,6 +66,7 @@ impl Regional for Lifetime {
     fn region(&self) -> RegionBorrow {
         if let Some(data) = &self.0 {
             if let Some(region) = data.with_a(|ard| {
+                // This is evil and bad but I can't think of a better way...
                 let ptr = Arc::as_ptr(ard);
                 let borrow = unsafe { ArcBorrow::from_raw(ptr) };
                 RegionBorrow::coerce(Some(borrow))
