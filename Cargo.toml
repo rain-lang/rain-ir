@@ -30,7 +30,8 @@ im-rc = "^15"
 rand = { version = "^0.7", optional = true }
 arrayvec = "^0.5"
 indexmap = "^1.5"
-ptr-union = "2.1.0"
+ptr-union = "^2.1.0"
+erasable = "^1.2.1"
 
 [dev-dependencies]
 pretty_assertions = "^0.6"
