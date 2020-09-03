@@ -24,10 +24,12 @@ pub use params::*;
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
+#[repr(transparent)]
 pub struct Lifetime(Option<Union2<Arc<RegionData>, Arc<LifetimeData>>>);
 
 /// A borrow of a `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
+#[repr(transparent)]
 pub struct LifetimeBorrow<'a>(
     Option<Union2<ArcBorrow<'a, RegionData>, ArcBorrow<'a, LifetimeData>>>,
 );
