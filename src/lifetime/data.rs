@@ -18,3 +18,20 @@ pub struct LifetimeData {
     /// The lifetime parameters of this value, if any
     lt_params: LifetimeParams,
 }
+
+impl LifetimeData {
+    /// Check if lifetime data is trivial, i.e. consists only of region data
+    #[inline]
+    pub fn is_trivial(&self) -> bool {
+        self.lender.is_none() && self.lt_params.is_empty()
+    }
+    /// Try to cast this lifetime into a nontrivial lifetime. On failure, return it's region
+    #[inline]
+    pub fn into_nontrivial(self) -> Result<LifetimeData, Region> {
+        if self.is_trivial() {
+            Err(self.region)
+        } else {
+            Ok(self)
+        }
+    }
+}
