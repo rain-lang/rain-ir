@@ -144,6 +144,17 @@ impl<P> ValId<P> {
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
     }
+    /// Get the `Arc` underlying this `ValId<P>`, if any
+    ///
+    /// # Implementation notes
+    /// Currently, a `ValId` is always behind an `Arc`, but we might use stowaway/union techniques later to improve performance.
+    /// In this case, it makes sense. Furthermore, if this is *not* converted to a `ValId` or explicitly dropped within the
+    /// `VALUE_CACHE`, there may be a resource leak until the same value is destroyed again (which may require it being created
+    /// again if this was the last reference outside the `VALUE_CACHE`).
+    #[inline]
+    pub fn into_arc(self) -> Option<Arc<NormalValue>> {
+        Some(unsafe { std::mem::transmute(self) })
+    }
     /// Get the address behind this `ValId`
     #[inline]
     pub fn as_addr(&self) -> ValAddr {
