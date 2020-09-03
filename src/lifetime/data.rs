@@ -20,6 +20,15 @@ pub struct LifetimeData {
 }
 
 impl LifetimeData {
+    /// Construct a new trivial lifetime from a region
+    #[inline]
+    pub fn trivial(region: Region) -> LifetimeData {
+        LifetimeData {
+            region,
+            lender: None,
+            lt_params: LifetimeParams::default(),
+        }
+    }
     /// Check if lifetime data is trivial, i.e. consists only of region data
     #[inline]
     pub fn is_trivial(&self) -> bool {
@@ -33,5 +42,19 @@ impl LifetimeData {
         } else {
             Ok(self)
         }
+    }
+}
+
+impl From<Region> for LifetimeData {
+    #[inline]
+    fn from(region: Region) -> LifetimeData {
+        LifetimeData::trivial(region)
+    }
+}
+
+impl Regional for LifetimeData {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.region.region()
     }
 }

@@ -2,11 +2,11 @@
 The `rain` lifetime system
 */
 
-use crate::region::{data::RegionData, Region};
+use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
 use crate::value::{NormalValue, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
-use elysees::Arc;
 use elysees::UnionAlign;
+use elysees::{Arc, ArcBorrow};
 use erasable::{ErasedPtr, Thin};
 use lazy_static::lazy_static;
 use ptr_union::Union2;
@@ -58,6 +58,25 @@ impl Hash for Lifetime {
     #[inline]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.as_ptr().hash(hasher)
+    }
+}
+
+impl Regional for Lifetime {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        if let Some(data) = &self.0 {
+            if let Some(region) = data.with_a(|ard| {
+                let ptr = Arc::as_ptr(ard);
+                let borrow = unsafe { ArcBorrow::from_raw(ptr) };
+                RegionBorrow::coerce(Some(borrow))
+            }) {
+                region
+            } else {
+                data.b().expect("Data is either A or B...").region()
+            }
+        } else {
+            RegionBorrow::NULL
+        }
     }
 }
 

@@ -469,6 +469,14 @@ impl<'a> RegionBorrow<'a> {
     pub fn get_borrow(&self) -> Option<ArcBorrow<'a, RegionData>> {
         self.0
     }
+    /// Coerce an `Option<ArcBorrow<RegionData>>` into a `RegionBorrow`.
+    ///
+    /// It is a logic error if there is a `Region` with the same `RegionData` and different underlying `Arc`.
+    /// Due to this, this method can generally only be safely used with the result of `self.get_borrow()`.
+    #[inline]
+    pub fn coerce(data: Option<ArcBorrow<'a, RegionData>>) -> RegionBorrow<'a> {
+        RegionBorrow(data)
+    }
     /// Get the data behind this `Region`, if any
     #[inline]
     pub fn data(&self) -> Option<&'a RegionData> {
