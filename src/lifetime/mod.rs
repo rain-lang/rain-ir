@@ -3,28 +3,21 @@ The `rain` lifetime system
 */
 
 use crate::region::{data::RegionData, Region};
-use crate::value::Error;
-use crate::value::{ValId, ValRef};
+use crate::value::ValueEnum;
 use elysees::Arc;
 use elysees::UnionAlign;
 use erasable::ErasedPtr;
-use fxhash::FxBuildHasher;
-use indexmap::{map::Entry, IndexMap};
-use itertools::{EitherOrBoth, Itertools};
 use ptr_union::Union2;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
-use std::iter::Copied;
 use std::ops::Deref;
 
 mod group;
 pub use group::*;
-mod params;
-pub use params::*;
-mod ctx;
-pub use ctx::*;
 mod data;
 pub use data::*;
+mod params;
+pub use params::*;
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
