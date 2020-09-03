@@ -66,6 +66,14 @@ pub type GSArc = Arc<SliceWithHeader<(), Group>>;
 #[repr(transparent)]
 pub struct MultiGroup(Thin<GSArc>);
 
+impl Deref for MultiGroup {
+    type Target = [Group];
+    #[inline]
+    fn deref(&self) -> &[Group] {
+        &self.0.slice
+    }
+}
+
 impl From<MultiGroup> for Thin<GSArc> {
     #[inline]
     fn from(mg: MultiGroup) -> Thin<GSArc> {

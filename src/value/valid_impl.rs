@@ -144,6 +144,17 @@ impl<P> ValId<P> {
     pub fn as_ptr(&self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
     }
+    /// Coerce a pointer into a `ValId`
+    ///
+    /// # Safety
+    /// This function can only be called with the result of `into_ptr` for `ValId`
+    #[inline]
+    pub unsafe fn from_raw(ptr: *const NormalValue) -> ValId<P> {
+        ValId {
+            ptr: Arc::from_raw(ptr),
+            variant: PhantomData,
+        }
+    }
     /// Get the `Arc` underlying this `ValId<P>`, if any
     ///
     /// # Implementation notes
@@ -244,6 +255,18 @@ impl<'a, P> ValRef<'a, P> {
     #[inline]
     pub fn as_ptr(self) -> *const NormalValue {
         self.as_norm() as *const NormalValue
+    }
+    /// Coerce a pointer into a `ValRef`
+    ///
+    /// # Safety
+    /// This function can only be called with the result of `as_ptr` for `ValId` or `ValRef`, or
+    /// `into_ptr` for `ValId`.
+    #[inline]
+    pub unsafe fn from_raw(ptr: *const NormalValue) -> ValRef<'a, P> {
+        ValRef {
+            ptr: ArcBorrow::from_raw(ptr),
+            variant: PhantomData,
+        }
     }
     /// Get the address behind this `ValRef`
     #[inline]
