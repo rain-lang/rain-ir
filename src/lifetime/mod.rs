@@ -89,3 +89,13 @@ impl Drop for Lifetime {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn lifetime_is_one_pointer() {
+        use std::mem::size_of;
+        assert_eq!(size_of::<Lifetime>(), size_of::<*const u8>())
+    }
+}
