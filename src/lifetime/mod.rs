@@ -4,9 +4,11 @@ The `rain` lifetime system
 
 use crate::region::{data::RegionData, Region};
 use crate::value::ValueEnum;
+use dashcache::DashCache;
 use elysees::Arc;
 use elysees::UnionAlign;
 use erasable::ErasedPtr;
+use lazy_static::lazy_static;
 use ptr_union::Union2;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
