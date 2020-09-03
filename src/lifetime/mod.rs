@@ -9,7 +9,7 @@ use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};
 use erasable::{ErasedPtr, Thin};
 use lazy_static::lazy_static;
-use ptr_union::Union2;
+use ptr_union::{Enum2, Union2};
 use slice_dst::SliceWithHeader;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
@@ -54,6 +54,25 @@ impl<'a> LifetimeBorrow<'a> {
     #[inline]
     pub fn as_ptr(&self) -> Option<ErasedPtr> {
         self.0.as_ref().map(Union2::as_untagged_ptr)
+    }
+    /// Get the region underlying this lifetime data
+    #[inline]
+    pub fn get_region(&self) -> RegionBorrow<'a> {
+        if let Some(ptr) = self.0.clone() {
+            match ptr.unpack() {
+                Enum2::A(region) => RegionBorrow::coerce(Some(region)),
+                Enum2::B(lifetime) => lifetime.get().region(),
+            }
+        } else {
+            RegionBorrow::NULL
+        }
+    }
+}
+
+impl Regional for LifetimeBorrow<'_> {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.get_region()
     }
 }
 
@@ -120,20 +139,7 @@ impl<'a> Hash for LifetimeBorrow<'a> {
 impl Regional for Lifetime {
     #[inline]
     fn region(&self) -> RegionBorrow {
-        if let Some(data) = &self.0 {
-            if let Some(region) = data.with_a(|ard| {
-                // This is evil and bad but I can't think of a better way...
-                let ptr = Arc::as_ptr(ard);
-                let borrow = unsafe { ArcBorrow::from_raw(ptr) };
-                RegionBorrow::coerce(Some(borrow))
-            }) {
-                region
-            } else {
-                data.b().expect("Data is either A or B...").region()
-            }
-        } else {
-            RegionBorrow::NULL
-        }
+        self.borrow_lifetime().get_region()
     }
 }
 
@@ -154,5 +160,13 @@ mod tests {
         use std::mem::size_of;
         assert_eq!(size_of::<Lifetime>(), size_of::<*const u8>());
         assert_eq!(size_of::<LifetimeBorrow>(), size_of::<*const u8>());
+        let null_lifetime = Lifetime::from(Region::NULL);
+        let null_borrow = null_lifetime.borrow_lifetime();
+        assert_eq!(null_lifetime, Lifetime::STATIC);
+        assert_eq!(null_lifetime, null_borrow);
+        assert_eq!(null_borrow, LifetimeBorrow::STATIC);
+        assert_eq!(null_lifetime, LifetimeBorrow::STATIC);
+        assert_eq!(null_lifetime.region(), Region::NULL);
+        assert_eq!(null_borrow.region(), Region::NULL);
     }
 }
