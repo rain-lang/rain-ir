@@ -237,6 +237,7 @@ impl Region {
     ///
     /// It is a logic error if there is a `Region` with the same `RegionData` and different underlying `Arc`.
     /// Due to this, this method can generally only be safely used with a clone of the result of `self.get_arc()`
+    /// or the result of `self.into_arc()`.
     #[inline]
     pub fn coerce(data: Option<Arc<RegionData>>) -> Region {
         Region(data)
@@ -306,11 +307,14 @@ impl Region {
         RegionBorrow(self.0.as_ref().map(Arc::borrow_arc))
     }
     /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
-    ///
-    /// TODO: add an `into_arc` method?
     #[inline]
     pub fn get_arc(&self) -> Option<&Arc<RegionData>> {
         self.0.as_ref()
+    }
+    /// Get the underlying `elysees::Arc` of this [`Region`](Region), if any
+    #[inline]
+    pub fn into_arc(self) -> Option<Arc<RegionData>> {
+        self.0
     }
     /// Get the `ix`th parameter of this [`Region`](Region). Return an error on index out of bounds.
     #[inline]
