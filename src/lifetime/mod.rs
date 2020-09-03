@@ -3,8 +3,8 @@ The `rain` lifetime system
 */
 
 use crate::region::{data::RegionData, Region};
-use crate::value::{NormalValue, ValId};
-use dashcache::DashCache;
+use crate::value::{NormalValue, ValId, VALUE_CACHE};
+use dashcache::{DashCache, GlobalCache};
 use elysees::Arc;
 use elysees::UnionAlign;
 use erasable::{ErasedPtr, Thin};

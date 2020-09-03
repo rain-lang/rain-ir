@@ -49,6 +49,13 @@ impl Hash for Group {
     }
 }
 
+impl Drop for Group {
+    #[inline]
+    fn drop(&mut self) {
+        self.0.with_a(|a| VALUE_CACHE.try_gc_global(a));
+    }
+}
+
 /// An arc to a slice of groups
 pub type GSArc = Arc<SliceWithHeader<(), Group>>;
 
