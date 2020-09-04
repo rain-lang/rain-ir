@@ -4,13 +4,14 @@
 use crate::control::{phi::Phi, ternary::Ternary};
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::{
     bits::{BinOp, Bits, BitsKind, BitsTy, Neg},
     finite::{Finite, Index},
     logical::{Bool, Logical},
 };
 use crate::proof::paths::{induction::PathInd, Id, IdFamily, Refl};
-use crate::region::{Parameter, RegionBorrow, Regional};
+use crate::region::{Parameter, Regional};
 use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
 use crate::{debug_from_display, forv, pretty_display};
@@ -162,7 +163,7 @@ pub type VarRef<'a, V> = ValRef<'a, Is<V>>;
 // The `Value` trait:
 
 /// A trait implemented by all `rain` values
-pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional {
+pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional + Live {
     /// Get the number of dependencies of this value
     ///
     /// Note that this does *not* include the type: as all `rain` values have exactly one type, this is counted
@@ -543,14 +544,10 @@ impl<P> Value for NormalValue<P> {
     }
 }
 
-impl<P> Regional for NormalValue<P> {
+impl<P> Live for NormalValue<P> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.value.region()
-    }
-    #[inline]
-    fn depth(&self) -> usize {
-        self.value.depth()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.value.lifetime()
     }
 }
 
@@ -653,17 +650,11 @@ pretty_display!(ValueEnum, v, fmt => forv! {
     match (v) { v => write!(fmt, "{}", v), }
 });
 
-impl Regional for ValueEnum {
+impl Live for ValueEnum {
     #[inline]
-    fn region(&self) -> RegionBorrow {
+    fn lifetime(&self) -> LifetimeBorrow {
         forv!(match (self) {
-            s => s.region(),
-        })
-    }
-    #[inline]
-    fn depth(&self) -> usize {
-        forv!(match (self) {
-            s => s.depth(),
+            s => s.lifetime(),
         })
     }
 }

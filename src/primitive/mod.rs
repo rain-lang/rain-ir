@@ -3,9 +3,9 @@ Primitive `rain` values and associated value descriptors
 */
 use super::{
     eval::Apply,
-    region::Regional,
     typing::{Type, Typed},
 };
+use crate::lifetime::Live;
 use crate::value::{
     expr::Sexpr,
     tuple::{Product, Tuple},
@@ -143,7 +143,7 @@ impl From<()> for ValId {
     }
 }
 
-impl Regional for () {}
+impl Live for () {}
 
 impl Typed for () {
     #[inline]
@@ -208,7 +208,7 @@ impl Typed for Unit {
     }
 }
 
-impl Regional for Unit {}
+impl Live for Unit {}
 
 impl Type for Unit {
     #[inline]

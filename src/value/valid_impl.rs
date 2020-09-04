@@ -439,25 +439,17 @@ impl<P> Substitute<ValId> for ValRef<'_, P> {
     }
 }
 
-impl<P> Regional for ValId<P> {
+impl<P> Live for ValId<P> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.as_norm().region()
-    }
-    #[inline]
-    fn depth(&self) -> usize {
-        self.as_norm().depth()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.as_norm().lifetime()
     }
 }
 
-impl<P> Regional for ValRef<'_, P> {
+impl<P> Live for ValRef<'_, P> {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.as_norm().region()
-    }
-    #[inline]
-    fn depth(&self) -> usize {
-        self.as_norm().depth()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.as_norm().lifetime()
     }
 }
 

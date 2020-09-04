@@ -6,8 +6,9 @@ use super::{
     Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum,
 };
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::{Lifetime, LifetimeBorrow, Live};
 use crate::primitive::{Unit, UNIT, UNIT_TY};
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{Region, Regional};
 use crate::typing::{primitive::Prop, Kind, Type, Typed};
 use crate::{debug_from_display, enum_convert, pretty_display, substitute_to_valid};
 use std::convert::TryInto;
@@ -18,8 +19,8 @@ use std::ops::Deref;
 pub struct Tuple {
     /// The elements of this tuple
     elems: ValArr,
-    /// The (cached) region of this tuple
-    region: Region,
+    /// The (cached) lifetime of this tuple
+    lifetime: Lifetime,
     /// The (cached) type of this tuple
     ty: TypeId,
 }
@@ -30,14 +31,19 @@ impl Tuple {
     pub fn try_new(elems: ValArr) -> Result<Tuple, Error> {
         let region = Region::NULL.gcrs(elems.iter())?.clone_region();
         let ty = Product::try_new(elems.iter().map(|elem| elem.clone_ty()).collect())?.into();
-        Ok(Tuple { elems, region, ty })
+        //FIXME: not region, lifetime!
+        Ok(Tuple {
+            elems,
+            lifetime: region.into(),
+            ty,
+        })
     }
     /// Create the tuple corresponding to the element of the unit type
     #[inline]
     pub fn unit() -> Tuple {
         Tuple {
             elems: ValArr::EMPTY,
-            region: Region::NULL,
+            lifetime: Lifetime::STATIC,
             ty: UNIT_TY.as_ty().clone(),
         }
     }
@@ -46,7 +52,7 @@ impl Tuple {
     pub fn const_anchor() -> Tuple {
         Tuple {
             elems: ValArr::EMPTY,
-            region: Region::NULL,
+            lifetime: Lifetime::STATIC,
             ty: Product::anchor_ty().into(),
         }
     }
@@ -60,9 +66,10 @@ impl Tuple {
     }
 }
 
-impl Regional for Tuple {
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+impl Live for Tuple {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.lifetime()
     }
 }
 
@@ -146,7 +153,7 @@ impl Apply for Tuple {
 impl Substitute for Tuple {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Tuple, Error> {
         //FIXME!!!
-        let region = self.region.clone_region();
+        let lifetime = self.lifetime.clone();
         let elems = self
             .elems
             .iter()
@@ -155,7 +162,7 @@ impl Substitute for Tuple {
             .collect::<Result<_, _>>()?;
         Ok(Tuple {
             elems,
-            region,
+            lifetime,
             ty: self.ty.substitute_ty(ctx)?,
         })
     }
@@ -221,8 +228,8 @@ const FLAG_FLARE: u8 = 0b00001000;
 pub struct Product {
     /// The elements of this product type
     elems: TyArr,
-    /// The (cached) region of this product type
-    region: Region,
+    /// The (cached) lifetime of this product type
+    lifetime: Lifetime,
     /// The (cached) type of this product type
     ty: KindId,
     /// The flags on this product type
@@ -248,9 +255,10 @@ impl Product {
             .max()
             .map(Kind::into_kind)
             .unwrap_or_else(|| Prop.into_kind());
+        //FIXME: compute lifetime here!!!
         Ok(Product {
             elems,
-            region,
+            lifetime: region.into(),
             ty,
             flags,
         })
@@ -265,7 +273,7 @@ impl Product {
     pub fn unit_ty() -> Product {
         Product {
             elems: TyArr::EMPTY,
-            region: Region::NULL,
+            lifetime: Lifetime::STATIC,
             ty: Prop.into_kind(),
             flags: ProductFlags(0),
         }
@@ -275,7 +283,7 @@ impl Product {
     pub fn anchor_ty() -> Product {
         Product {
             elems: TyArr::EMPTY,
-            region: Region::NULL,
+            lifetime: Lifetime::STATIC,
             ty: Prop.into_kind(),
             flags: ProductFlags(FLAG_AFFIN | FLAG_ANCHR),
         }
@@ -290,7 +298,7 @@ impl Product {
         let ty = Product::try_new(ty_elems).expect("Impossible").into();
         Tuple {
             elems: self.elems.as_vals().clone(),
-            region: self.region.clone(),
+            lifetime: self.lifetime.clone(),
             ty,
         }
     }
@@ -314,8 +322,6 @@ enum_convert! {
 
 impl Substitute for Product {
     fn substitute(&self, ctx: &mut EvalCtx) -> Result<Product, Error> {
-        //FIXME!!!
-        let region = self.region.clone_region();
         let elems: TyArr = self
             .elems
             .iter()
@@ -325,9 +331,10 @@ impl Substitute for Product {
         let affine = self.is_anchor() || elems.iter().any(|t| t.is_affine());
         let relevant = self.is_flare() || elems.iter().any(|t| t.is_affine());
         let flags = ProductFlags::new(affine, self.is_anchor(), relevant, self.is_flare());
+        //FIXME: compute lifetimes properly!!!
         Ok(Product {
             elems,
-            region,
+            lifetime: self.lifetime.clone(),
             ty: self.ty.substitute(ctx)?.try_into().expect("Impossible"),
             flags,
         })
@@ -336,9 +343,10 @@ impl Substitute for Product {
 
 substitute_to_valid!(Product);
 
-impl Regional for Product {
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+impl Live for Product {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.lifetime.lifetime()
     }
 }
 

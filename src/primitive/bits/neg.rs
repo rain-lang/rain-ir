@@ -29,7 +29,7 @@ impl From<Neg> for NormalValue {
     }
 }
 
-impl Regional for Neg {}
+impl Live for Neg {}
 
 impl Apply for Neg {
     fn apply_in<'a>(

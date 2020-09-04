@@ -117,10 +117,10 @@ impl Typed for PathInd {
     }
 }
 
-impl Regional for PathInd {
+impl Live for PathInd {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.ty.region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.ty.lifetime()
     }
 }
 

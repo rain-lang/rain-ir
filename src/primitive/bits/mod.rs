@@ -3,8 +3,9 @@ Finite-valued types
 */
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::{lambda::Lambda, pi::Pi};
+use crate::lifetime::Live;
 use crate::primitive::logical::Bool;
-use crate::region::{Parameter, Region, Regional};
+use crate::region::{Parameter, Region};
 use crate::typing::{
     primitive::{Prop, Set, FIN, SET},
     Kind, Type, Typed, Universe,
@@ -258,7 +259,7 @@ impl From<BinOp> for NormalValue {
     }
 }
 
-impl Regional for BinOp {}
+impl Live for BinOp {}
 
 impl Apply for BinOp {
     fn apply_in<'a>(

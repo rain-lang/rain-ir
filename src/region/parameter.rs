@@ -1,9 +1,10 @@
 /*!
 Parameters to a `rain` region
 */
-use super::{Region, RegionBorrow, Regional};
+use super::Region;
 use crate::enum_convert;
 use crate::eval::Apply;
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::Typed;
 use crate::value::{Error, NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::{quick_pretty, trivial_substitute};
@@ -21,7 +22,10 @@ pub struct Parameter {
     ix: usize,
 }
 
-quick_pretty!(Parameter, s, fmt => write!(fmt, "#param(d={}, ix={}, r={:?})", s.depth(), s.ix(), s.region.data_ptr()));
+quick_pretty!(Parameter, s, fmt => {
+    use crate::region::Regional;
+    write!(fmt, "#param(d={}, ix={}, r={:?})", s.depth(), s.ix(), s.region.data_ptr())
+});
 trivial_substitute!(Parameter);
 
 enum_convert! {
@@ -86,14 +90,9 @@ impl Parameter {
     }
 }
 
-impl Regional for Parameter {
-    fn region(&self) -> RegionBorrow {
-        self.region.borrow_region()
-    }
-    fn depth(&self) -> usize {
-        let depth = self.get_region().depth();
-        debug_assert!(depth > 0);
-        depth
+impl Live for Parameter {
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.region.borrow_region().into()
     }
 }
 

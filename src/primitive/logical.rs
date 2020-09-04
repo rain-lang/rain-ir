@@ -3,7 +3,8 @@ Boolean types and logical operations
 */
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::region::{Region, Regional};
+use crate::lifetime::Live;
+use crate::region::Region;
 use crate::tokens::*;
 use crate::typing::{
     primitive::{Fin, FIN},
@@ -39,7 +40,7 @@ lazy_static! {
 debug_from_display!(Bool);
 quick_pretty!(Bool, "{}", KEYWORD_BOOL);
 
-impl Regional for Bool {}
+impl Live for Bool {}
 
 impl Typed for Bool {
     #[inline]
@@ -94,7 +95,7 @@ impl Type for Bool {
     }
 }
 
-impl Regional for bool {}
+impl Live for bool {}
 
 impl Typed for bool {
     #[inline]
@@ -666,7 +667,7 @@ impl Value for Logical {
 
 impl ValueData for Logical {}
 
-impl Regional for Logical {}
+impl Live for Logical {}
 
 debug_from_display!(Logical);
 display_pretty!(Logical);
@@ -710,7 +711,7 @@ macro_rules! make_logical {
                 false
             }
         }
-        impl Regional for $t {}
+        impl Live for $t {}
         trivial_substitute!($t);
         normal_valid!($t);
         impl Apply for $t {

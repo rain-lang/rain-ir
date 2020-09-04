@@ -4,7 +4,8 @@ Identity types and path induction
 use crate::eval::Substitute;
 use crate::eval::{Application, Apply, EvalCtx};
 use crate::function::pi::Pi;
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::lifetime::{LifetimeBorrow, Live};
+use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
 use crate::value::{
     arr::TyArr, Error, KindId, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId,
@@ -71,10 +72,10 @@ impl Typed for IdFamily {
     }
 }
 
-impl Regional for IdFamily {
+impl Live for IdFamily {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.ty.region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.ty.lifetime()
     }
 }
 
@@ -218,10 +219,11 @@ impl Typed for Id {
     }
 }
 
-impl Regional for Id {
+impl Live for Id {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        //FIXME: this!!!
+        self.region.region().into()
     }
 }
 
@@ -334,10 +336,10 @@ impl Typed for Refl {
     }
 }
 
-impl Regional for Refl {
+impl Live for Refl {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.region.region().into()
     }
 }
 

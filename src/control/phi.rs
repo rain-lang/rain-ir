@@ -3,7 +3,7 @@ Phi nodes, describing general recursion
 */
 
 use crate::eval::{Apply, EvalCtx, Substitute};
-use crate::region::{RegionBorrow, Regional};
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::typing::Typed;
 use crate::value::{
     arr::{ValArr, ValSet},
@@ -25,9 +25,9 @@ pub struct Phi {
     ty: VarId<Product>,
 }
 
-impl Regional for Phi {
-    fn region(&self) -> RegionBorrow {
-        self.values[0].region().parent().region()
+impl Live for Phi {
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::STATIC
     }
 }
 
