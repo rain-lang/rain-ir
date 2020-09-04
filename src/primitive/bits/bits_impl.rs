@@ -32,7 +32,7 @@ impl Typed for BitsKind {
 
 impl Apply for BitsKind {}
 
-impl Regional for BitsKind {}
+impl Live for BitsKind {}
 
 impl Value for BitsKind {
     #[inline]
@@ -109,7 +109,7 @@ impl Typed for BitsTy {
 
 impl Apply for BitsTy {}
 
-impl Regional for BitsTy {}
+impl Live for BitsTy {}
 
 impl Value for BitsTy {
     #[inline]
@@ -213,7 +213,7 @@ impl Apply for Bits {
     }
 }
 
-impl Regional for Bits {}
+impl Live for Bits {}
 
 impl Value for Bits {
     #[inline]

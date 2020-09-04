@@ -4,8 +4,9 @@
 use super::{arr::ValArr, Error, NormalValue, TypeId, TypeRef, ValId, Value, ValueData, ValueEnum};
 use crate::enum_convert;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::UNIT_TY;
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{Region, Regional};
 use crate::typing::Typed;
 use crate::{debug_from_display, pretty_display, substitute_to_valid, valarr};
 use std::ops::Deref;
@@ -122,9 +123,10 @@ impl Sexpr {
 
 impl ValueData for Sexpr {}
 
-impl Regional for Sexpr {
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+impl Live for Sexpr {
+    fn lifetime(&self) -> LifetimeBorrow {
+        //FIXME: this
+        self.region.region().into()
     }
 }
 

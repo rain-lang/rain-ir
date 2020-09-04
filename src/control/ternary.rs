@@ -6,9 +6,10 @@ utilities for working with ternary operations.
 */
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
 use crate::function::{lambda::Lambda, pi::Pi};
+use crate::lifetime::{LifetimeBorrow, Live};
 use crate::primitive::finite::Finite;
 use crate::primitive::logical::BOOL_TY;
-use crate::region::{Region, RegionBorrow, Regional};
+use crate::region::{Region, Regional};
 use crate::typing::{Kind, Type, Typed};
 use crate::value::{Error, KindRef, NormalValue, TypeId, TypeRef, ValId, Value, ValueEnum, VarId};
 use crate::{pretty_display, substitute_to_valid};
@@ -213,10 +214,10 @@ impl Typed for Ternary {
     }
 }
 
-impl Regional for Ternary {
+impl Live for Ternary {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.region.region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.region.region().into()
     }
 }
 

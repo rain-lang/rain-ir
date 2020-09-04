@@ -3,7 +3,8 @@ Lambda functions
 */
 use super::pi::Pi;
 use crate::eval::{Application, Apply, EvalCtx, Substitute};
-use crate::region::{Parameter, Parametrized, Region, RegionBorrow, Regional};
+use crate::lifetime::{LifetimeBorrow, Live};
+use crate::region::{Parameter, Parametrized, Region, Regional};
 use crate::typing::{Type, Typed};
 use crate::value::{
     arr::{TySet, ValSet},
@@ -112,10 +113,10 @@ impl Typed for Lambda {
     }
 }
 
-impl Regional for Lambda {
+impl Live for Lambda {
     #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.def_region.parent().borrow_region()
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.def_region.parent().borrow_region().into()
     }
 }
 

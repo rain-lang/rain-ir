@@ -2,7 +2,7 @@
 The primitive hierarchy of kinds
 */
 use crate::eval::Apply;
-use crate::region::Regional;
+use crate::lifetime::Live;
 use crate::typing::{Kind, Type, Typed, Universe};
 use crate::value::{KindId, NormalValue, TypeRef, UniverseId, ValId, Value, ValueEnum, VarId};
 use crate::{enum_convert, trivial_substitute};
@@ -111,7 +111,7 @@ impl Typed for Prop {
     }
 }
 
-impl Regional for Prop {}
+impl Live for Prop {}
 
 trivial_substitute!(Prop);
 
@@ -190,7 +190,7 @@ impl Typed for Fin {
     }
 }
 
-impl Regional for Fin {}
+impl Live for Fin {}
 
 trivial_substitute!(Fin);
 
@@ -283,7 +283,7 @@ impl Typed for Set {
     }
 }
 
-impl Regional for Set {}
+impl Live for Set {}
 
 trivial_substitute!(Set);
 

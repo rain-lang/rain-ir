@@ -2,7 +2,7 @@
 Finite-valued types
 */
 use crate::eval::Apply;
-use crate::region::Regional;
+use crate::lifetime::Live;
 use crate::tokens::*;
 use crate::typing::{primitive::FIN, Type, Typed};
 use crate::value::{NormalValue, TypeRef, ValId, Value, ValueData, ValueEnum, VarId, VarRef};
@@ -71,7 +71,7 @@ impl VarId<Finite> {
     }
 }
 
-impl Regional for Finite {}
+impl Live for Finite {}
 
 impl Typed for Finite {
     #[inline]
@@ -160,7 +160,7 @@ enum_convert! {
     impl TryFromRef<NormalValue> for Index { as ValueEnum, }
 }
 
-impl Regional for Index {}
+impl Live for Index {}
 
 impl Index {
     /// Try to make a new index into a finite type. Return an error if out of bounds

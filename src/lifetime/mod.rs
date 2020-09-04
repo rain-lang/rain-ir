@@ -148,6 +148,13 @@ impl From<LifetimeData> for Lifetime {
     }
 }
 
+impl<'a> From<RegionBorrow<'a>> for LifetimeBorrow<'a> {
+    #[inline]
+    fn from(region: RegionBorrow<'a>) -> LifetimeBorrow<'a> {
+        LifetimeBorrow(region.get_borrow().map(UnionAlign::left))
+    }
+}
+
 impl PartialEq for Lifetime {
     #[inline]
     fn eq(&self, other: &Lifetime) -> bool {
