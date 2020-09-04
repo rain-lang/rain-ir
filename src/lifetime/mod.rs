@@ -34,6 +34,20 @@ pub struct LifetimeBorrow<'a>(
     Option<Union2<ArcBorrow<'a, RegionData>, ArcBorrow<'a, LifetimeData>>>,
 );
 
+/// An object with a lifetime
+pub trait Live {
+    /// Get the lifetime of this object
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        LifetimeBorrow::STATIC
+    }
+    /// Clone the lifetime of this object
+    #[inline]
+    fn clone_lifetime(&self) -> Lifetime {
+        self.lifetime().clone_lifetime()
+    }
+}
+
 impl Lifetime {
     /// The static `rain` lifetime
     pub const STATIC: Lifetime = Lifetime(None);
@@ -63,6 +77,13 @@ impl Lifetime {
     }
 }
 
+impl Live for Lifetime {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.borrow_lifetime()
+    }
+}
+
 impl<'a> LifetimeBorrow<'a> {
     /// The static `rain` lifetime
     pub const STATIC: LifetimeBorrow<'static> = LifetimeBorrow(None);
@@ -82,6 +103,17 @@ impl<'a> LifetimeBorrow<'a> {
         } else {
             RegionBorrow::NULL
         }
+    }
+}
+
+impl<'a> Live for LifetimeBorrow<'a> {
+    #[inline]
+    fn lifetime(&self) -> LifetimeBorrow {
+        self.clone()
+    }
+    #[inline]
+    fn clone_lifetime(&self) -> Lifetime {
+        self.deref().clone()
     }
 }
 
