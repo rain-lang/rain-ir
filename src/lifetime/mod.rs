@@ -117,13 +117,6 @@ impl<'a> Live for LifetimeBorrow<'a> {
     }
 }
 
-impl Regional for LifetimeBorrow<'_> {
-    #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.get_region()
-    }
-}
-
 impl Deref for LifetimeBorrow<'_> {
     type Target = Lifetime;
     fn deref(&self) -> &Lifetime {
@@ -197,19 +190,19 @@ impl<'a> Hash for LifetimeBorrow<'a> {
     }
 }
 
-impl Regional for Lifetime {
-    #[inline]
-    fn region(&self) -> RegionBorrow {
-        self.borrow_lifetime().get_region()
-    }
-}
-
 impl Drop for Lifetime {
     #[inline]
     fn drop(&mut self) {
         if let Some(ptr) = &self.0 {
             ptr.with_b(|ltd| LIFETIME_CACHE.try_gc_global(ltd));
         }
+    }
+}
+
+impl<T: Live> Regional for T {
+    #[inline]
+    fn region(&self) -> RegionBorrow {
+        self.lifetime().get_region()
     }
 }
 
