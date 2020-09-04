@@ -5,12 +5,12 @@ pub const SMALL_LIFETIME_PARAMS: usize = 2;
 
 /// A vector of lifetime parameters
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
-pub struct LifetimeParams(pub SmallVec<[LifetimeId; SMALL_LIFETIME_PARAMS]>);
+pub struct LifetimeParams(pub SmallVec<[Group; SMALL_LIFETIME_PARAMS]>);
 
 impl Deref for LifetimeParams {
-    type Target = [LifetimeId];
+    type Target = [Group];
     #[inline(always)]
-    fn deref(&self) -> &[LifetimeId] {
+    fn deref(&self) -> &[Group] {
         &self.0[..]
     }
 }

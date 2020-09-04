@@ -12,8 +12,7 @@ license = "MIT/Apache-2.0"
 rain-ast = { git = "https://gitlab.com/rain-lang/rain-ast.git", default-features = false }
 ahash = "^0.4"
 smallvec = "^1.4"
-elysees = "^0.2.0"
-dashmap = "^3"
+elysees = { version = "^0.2.0", features = ["ptr-union"] }
 lazy_static = "^1.4"
 ref-cast = "^1"
 once_cell = "^1.4"
@@ -22,14 +21,16 @@ num = "^0.3"
 fxhash = "^0.2"
 itertools = "^0.9"
 is_sorted = "^0.1"
-thin-dst = "^1.1.0"
-dashcache = "^0.2.0"
+dashcache = "^0.2.2"
 im = "^15"
 hayami = "^0.3"
 im-rc = "^15"
 rand = { version = "^0.7", optional = true }
 arrayvec = "^0.5"
 indexmap = "^1.5"
+ptr-union = "^2.1.0"
+erasable = "^1.2.1"
+slice-dst = "1.5.1"
 
 [dev-dependencies]
 pretty_assertions = "^0.6"
