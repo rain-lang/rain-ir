@@ -47,6 +47,20 @@ impl Lifetime {
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
         unsafe { std::mem::transmute_copy(self) }
     }
+    /// Check if this lifetime is trivial, i.e. is a region only
+    #[inline]
+    pub fn is_trivial(&self) -> bool {
+        if let Some(ptr) = &self.0 {
+            ptr.is_a()
+        } else {
+            true
+        }
+    }
+    /// Check if this lifetime is the static lifetime, i.e. only the null region
+    #[inline]
+    pub fn is_static(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 impl<'a> LifetimeBorrow<'a> {
@@ -92,6 +106,19 @@ impl From<Region> for Lifetime {
             Lifetime(Some(UnionAlign::left(arc)))
         } else {
             Lifetime::STATIC
+        }
+    }
+}
+
+impl From<LifetimeData> for Lifetime {
+    #[inline]
+    fn from(lifetime: LifetimeData) -> Lifetime {
+        match lifetime.into_nontrivial() {
+            Ok(lifetime) => {
+                let arc = LIFETIME_CACHE.cache(lifetime);
+                Lifetime(Some(UnionAlign::right(arc)))
+            }
+            Err(region) => Lifetime(region.into_arc().map(UnionAlign::left)),
         }
     }
 }
@@ -157,12 +184,17 @@ impl Drop for Lifetime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitive::logical::Bool;
+    use crate::typing::Type;
+
     #[test]
     fn lifetime_layout() {
         use std::mem::size_of;
         assert_eq!(size_of::<Lifetime>(), size_of::<*const u8>());
         assert_eq!(size_of::<LifetimeBorrow>(), size_of::<*const u8>());
         let null_lifetime = Lifetime::from(Region::NULL);
+        assert!(null_lifetime.is_static());
+        assert!(null_lifetime.is_trivial());
         let null_borrow = null_lifetime.borrow_lifetime();
         assert_eq!(null_lifetime, Lifetime::STATIC);
         assert_eq!(null_lifetime, null_borrow);
@@ -170,5 +202,15 @@ mod tests {
         assert_eq!(null_lifetime, LifetimeBorrow::STATIC);
         assert_eq!(null_lifetime.region(), Region::NULL);
         assert_eq!(null_borrow.region(), Region::NULL);
+    }
+
+    #[test]
+    fn lifetime_construction() {
+        let region = Region::binary(Bool.into_ty());
+        let region_lt = Lifetime::from(region.clone());
+        assert!(region_lt.is_trivial());
+        assert!(!region_lt.is_static());
+        let direct_region_lt = Lifetime::from(LifetimeData::from(region));
+        assert_eq!(direct_region_lt, region_lt);
     }
 }
