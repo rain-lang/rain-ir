@@ -1,12 +1,14 @@
 /*!
 Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
-use crate::lifetime::GroupAddr;
 
-/// A trait for data structures which have a known `GroupAddr`
+/// A trait for data structures which have a known lookup address
 pub trait HasAddr {
-    /// Get the group address of this value
-    fn group_addr(&self) -> GroupAddr;
+    /// Get the lookup address of this value
+    #[inline(always)]
+    fn addr(&self) -> usize {
+        self as *const _ as usize
+    }
 }
 
 /// Quickly implement `Display` using a given function or format string
