@@ -22,6 +22,17 @@ pub trait AddrLookup<T> {
     fn lookup_addr(&self, addr: usize) -> Option<&T>;
 }
 
+/// A trait for data structures which can be mutably looked up by address
+pub trait AddrLookupMut<T> {
+    /// Lookup a value by address
+    #[inline]
+    fn lookup_mut<A: HasAddr>(&mut self, value: &A) -> Option<&mut T> {
+        self.lookup_addr_mut(value.addr())
+    }
+    /// Lookup an address
+    fn lookup_addr_mut(&mut self, addr: usize) -> Option<&mut T>;
+}
+
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
 macro_rules! quick_display {
