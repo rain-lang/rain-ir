@@ -122,6 +122,7 @@ impl Deref for MultiGroup {
 impl From<MultiGroup> for Thin<GSArc> {
     #[inline]
     fn from(mg: MultiGroup) -> Thin<GSArc> {
+        //TODO: this might cause table leaks. Warn?
         unsafe { std::mem::transmute(mg) }
     }
 }
