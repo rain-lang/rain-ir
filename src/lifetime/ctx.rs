@@ -2,8 +2,8 @@
 A `rain` lifetime context.
 */
 use super::*;
-use indexmap::IndexMap;
 use fxhash::FxBuildHasher;
+use hashbrown::HashMap;
 
 /**
 A `rain` lifetime context graph
@@ -18,12 +18,11 @@ Handles:
 */
 #[derive(Debug, Clone)]
 pub struct LifetimeCtx {
-    values: IndexMap<ValId, NodeData, FxBuildHasher>
+    /// The values in this lifetime context
+    values: HashMap<ValId, NodeData, FxBuildHasher>,
+    /// The groups in this lifetime context
+    groups: HashMap<GroupId, NodeData, FxBuildHasher>,
 }
-
-/// The ID of a value in a `rain` lifetime context graph
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct ValueId(pub usize);
 
 /// The ID of a group in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -39,19 +38,19 @@ pub struct NodeData {
     /// The consumer of this node, if any
     consumer: Option<Consumer>,
     /// The temporal edges leading to this node, if any
-    temporal: Vec<NodeId>
+    temporal: Vec<NodeId>,
 }
 
 /// The consumer of a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Consumer {
     /// This node is owned by the listed source node
-    /// 
+    ///
     /// This implies it must happen *before* the listed source node, but this is already handled by the dependency graph.
     Owner(NodeId),
     /// This node is borrowed from the listed source lender
-    /// 
+    ///
     /// This implies it must happen *after* the listed source node, but this is already handled by the dependency graph.
     /// More importantly, however, this also implies it must happen *before* the *owner* of the listed source node, if any.
-    Lender(NodeId)
+    Lender(NodeId),
 }
