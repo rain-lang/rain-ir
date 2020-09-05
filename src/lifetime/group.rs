@@ -17,6 +17,13 @@ pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct GroupAddr(pub usize);
 
+impl From<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn from(val: ValAddr) -> GroupAddr {
+        GroupAddr(val.0)
+    }
+}
+
 impl PartialEq<ValAddr> for GroupAddr {
     #[inline(always)]
     fn eq(&self, other: &ValAddr) -> bool {
