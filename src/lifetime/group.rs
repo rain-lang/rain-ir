@@ -1,7 +1,6 @@
 /*!
 Lifetime borrow-groups
 */
-
 use super::*;
 
 lazy_static! {
@@ -49,6 +48,13 @@ impl PartialOrd<GroupAddr> for ValAddr {
     #[inline(always)]
     fn partial_cmp(&self, other: &GroupAddr) -> Option<Ordering> {
         self.0.partial_cmp(&other.0)
+    }
+}
+
+impl HasAddr for GroupAddr {
+    #[inline(always)]
+    fn addr(&self) -> usize {
+        self.0
     }
 }
 
