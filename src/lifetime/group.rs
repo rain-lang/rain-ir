@@ -13,11 +13,21 @@ lazy_static! {
 #[derive(Debug, Clone, Eq)]
 pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 
+/// The address of a non-empty group of values
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct GroupAddr(pub usize);
+
 impl Group {
     /// Get the pointer to the underlying data of this group
     #[inline]
     pub fn as_ptr(&self) -> ErasedPtr {
         self.0.as_untagged_ptr()
+    }
+    /// Get the address of the underlying data of this group
+    #[inline]
+    pub fn addr(&self) -> GroupAddr {
+        let unerased = unsafe { NonNull::<()>::unerase(self.0.as_untagged_ptr()) };
+        GroupAddr(unerased.as_ptr() as usize)
     }
 }
 

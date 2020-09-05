@@ -7,13 +7,14 @@ use crate::value::{NormalValue, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};
-use erasable::{ErasedPtr, Thin};
+use erasable::{Erasable, ErasedPtr, Thin};
 use lazy_static::lazy_static;
 use ptr_union::{Enum2, Union2};
 use slice_dst::SliceWithHeader;
 use smallvec::SmallVec;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::ptr::NonNull;
 
 mod group;
 pub use group::*;
