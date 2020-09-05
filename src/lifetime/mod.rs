@@ -21,6 +21,8 @@ mod data;
 pub use data::*;
 mod params;
 pub use params::*;
+mod ctx;
+pub use ctx::*;
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
