@@ -11,6 +11,17 @@ pub trait HasAddr {
     }
 }
 
+/// A trait for data structures which can be looked up by address
+pub trait AddrLookup<T> {
+    /// Lookup a value by address
+    #[inline]
+    fn lookup<A: HasAddr>(&self, value: &A) -> Option<&T> {
+        self.lookup_addr(value.addr())
+    }
+    /// Lookup an address
+    fn lookup_addr(&self, addr: usize) -> Option<&T>;
+}
+
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
 macro_rules! quick_display {
