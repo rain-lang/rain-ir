@@ -17,6 +17,34 @@ pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct GroupAddr(pub usize);
 
+impl PartialEq<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn eq(&self, other: &ValAddr) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl PartialEq<GroupAddr> for ValAddr {
+    #[inline(always)]
+    fn eq(&self, other: &GroupAddr) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl PartialOrd<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &ValAddr) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl PartialOrd<GroupAddr> for ValAddr {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &GroupAddr) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
 impl Group {
     /// Get the pointer to the underlying data of this group
     #[inline]

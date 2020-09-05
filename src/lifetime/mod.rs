@@ -3,7 +3,7 @@ The `rain` lifetime system
 */
 
 use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
-use crate::value::{NormalValue, ValId, VALUE_CACHE};
+use crate::value::{NormalValue, ValAddr, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};
@@ -12,6 +12,7 @@ use lazy_static::lazy_static;
 use ptr_union::{Enum2, Union2};
 use slice_dst::SliceWithHeader;
 use smallvec::SmallVec;
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::ptr::NonNull;
