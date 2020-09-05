@@ -18,6 +18,13 @@ impl<T: HasAddr> HasAddr for &T {
     }
 }
 
+impl<T: HasAddr> HasAddr for &mut T {
+    #[inline(always)]
+    fn addr(&self) -> usize {
+        (*self).addr()
+    }
+}
+
 /// A trait for data structures which can be looked up by address
 pub trait AddrLookup<T> {
     /// Lookup a value by address
