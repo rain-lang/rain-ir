@@ -18,30 +18,28 @@ Handles:
 */
 #[derive(Debug, Clone)]
 pub struct LifetimeCtx {
-    nodes: IndexMap<ValId, NodeData, FxBuildHasher>
+    values: IndexMap<ValId, NodeData, FxBuildHasher>
 }
 
-/// The ID of a node in a `rain` lifetime context graph
+/// The ID of a value in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct NodeId(pub usize);
+pub struct ValueId(pub usize);
 
 /// The ID of a group in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct GroupId(pub usize);
 
-/// The ID of an abstract `rain` node, carrying no data
+/// The ID of a node in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct AbstractId(pub usize);
-
-/// The ID of a lender in a `rain` lifetime context graph
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct LenderId(pub usize);
+pub struct NodeId(pub usize);
 
 /// The data associated with a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct NodeData {
     /// The consumer of this node, if any
-    consumer: Option<Consumer>
+    consumer: Option<Consumer>,
+    /// The temporal edges leading to this node, if any
+    temporal: Vec<NodeId>
 }
 
 /// The consumer of a node in a `rain` lifetime graph
@@ -50,10 +48,10 @@ pub enum Consumer {
     /// This node is owned by the listed source node
     /// 
     /// This implies it must happen *before* the listed source node, but this is already handled by the dependency graph.
-    Owner(LenderId),
+    Owner(NodeId),
     /// This node is borrowed from the listed source lender
     /// 
     /// This implies it must happen *after* the listed source node, but this is already handled by the dependency graph.
     /// More importantly, however, this also implies it must happen *before* the *owner* of the listed source node, if any.
-    Lender(LenderId)
+    Lender(NodeId)
 }
