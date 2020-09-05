@@ -54,15 +54,15 @@ impl PartialOrd<GroupAddr> for ValAddr {
 
 impl HasAddr for GroupAddr {
     #[inline(always)]
-    fn addr(&self) -> usize {
+    fn raw_addr(&self) -> usize {
         self.0
     }
 }
 
 impl HasAddr for Group {
     #[inline(always)]
-    fn addr(&self) -> usize {
-        self.get_addr().0
+    fn raw_addr(&self) -> usize {
+        self.addr().0
     }
 }
 
@@ -74,7 +74,7 @@ impl Group {
     }
     /// Get the address of the underlying data of this group
     #[inline]
-    pub fn get_addr(&self) -> GroupAddr {
+    pub fn addr(&self) -> GroupAddr {
         unsafe { std::mem::transmute_copy(self) }
     }
 }

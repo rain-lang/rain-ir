@@ -6,22 +6,22 @@ Miscellaneous utilities and data structures used throughout the `rain` compiler
 pub trait HasAddr {
     /// Get the lookup address of this value
     #[inline(always)]
-    fn addr(&self) -> usize {
+    fn raw_addr(&self) -> usize {
         self as *const _ as *const u8 as usize
     }
 }
 
 impl<T: HasAddr> HasAddr for &T {
     #[inline(always)]
-    fn addr(&self) -> usize {
-        (**self).addr()
+    fn raw_addr(&self) -> usize {
+        (**self).raw_addr()
     }
 }
 
 impl<T: HasAddr> HasAddr for &mut T {
     #[inline(always)]
-    fn addr(&self) -> usize {
-        (**self).addr()
+    fn raw_addr(&self) -> usize {
+        (**self).raw_addr()
     }
 }
 
@@ -30,7 +30,7 @@ pub trait AddrLookup<T> {
     /// Lookup a value by address
     #[inline]
     fn lookup<A: HasAddr>(&self, value: &A) -> Option<&T> {
-        self.lookup_addr(value.addr())
+        self.lookup_addr(value.raw_addr())
     }
     /// Lookup an address
     fn lookup_addr(&self, addr: usize) -> Option<&T>;
@@ -41,7 +41,7 @@ pub trait AddrLookupMut<T> {
     /// Lookup a value by address
     #[inline]
     fn lookup_mut<A: HasAddr>(&mut self, value: &A) -> Option<&mut T> {
-        self.lookup_addr_mut(value.addr())
+        self.lookup_addr_mut(value.raw_addr())
     }
     /// Lookup an address
     fn lookup_addr_mut(&mut self, addr: usize) -> Option<&mut T>;

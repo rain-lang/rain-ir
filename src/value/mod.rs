@@ -330,7 +330,7 @@ impl From<&'_ ValueEnum> for ValAddr {
 
 impl HasAddr for ValAddr {
     #[inline(always)]
-    fn addr(&self) -> usize {
+    fn raw_addr(&self) -> usize {
         self.0
     }
 }
