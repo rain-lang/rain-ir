@@ -335,6 +335,13 @@ impl HasAddr for ValAddr {
     }
 }
 
+impl<P> HasAddr for ValId<P> {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.as_addr().0
+    }
+}
+
 /// The dependencies of a value
 #[derive(Debug, Copy, Clone, RefCast)]
 #[repr(transparent)]
