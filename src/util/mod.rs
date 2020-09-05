@@ -14,14 +14,14 @@ pub trait HasAddr {
 impl<T: HasAddr> HasAddr for &T {
     #[inline(always)]
     fn addr(&self) -> usize {
-        (*self).addr()
+        (**self).addr()
     }
 }
 
 impl<T: HasAddr> HasAddr for &mut T {
     #[inline(always)]
     fn addr(&self) -> usize {
-        (*self).addr()
+        (**self).addr()
     }
 }
 
