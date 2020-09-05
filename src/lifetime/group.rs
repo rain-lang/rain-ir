@@ -59,6 +59,13 @@ impl HasAddr for GroupAddr {
     }
 }
 
+impl HasAddr for Group {
+    #[inline(always)]
+    fn addr(&self) -> usize {
+        self.get_addr().0
+    }
+}
+
 impl Group {
     /// Get the pointer to the underlying data of this group
     #[inline]
@@ -67,7 +74,7 @@ impl Group {
     }
     /// Get the address of the underlying data of this group
     #[inline]
-    pub fn addr(&self) -> GroupAddr {
+    pub fn get_addr(&self) -> GroupAddr {
         unsafe { std::mem::transmute_copy(self) }
     }
 }
