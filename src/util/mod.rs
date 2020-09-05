@@ -7,7 +7,7 @@ pub trait HasAddr {
     /// Get the lookup address of this value
     #[inline(always)]
     fn addr(&self) -> usize {
-        self as *const _ as usize
+        self as *const _ as *const u8 as usize
     }
 }
 
