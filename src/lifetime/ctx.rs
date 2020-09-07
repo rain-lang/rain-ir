@@ -49,6 +49,13 @@ impl NodeId {
     }
 }
 
+impl From<ValAddr> for NodeId {
+    #[inline(always)]
+    fn from(valaddr: ValAddr) -> NodeId {
+        NodeId(valaddr.0)
+    }
+}
+
 /// The data associated with a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct NodeData {
