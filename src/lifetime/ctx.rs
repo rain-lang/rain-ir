@@ -2,8 +2,6 @@
 A `rain` lifetime context.
 */
 use super::*;
-use fxhash::FxBuildHasher;
-use hashbrown::HashMap;
 
 /**
 A `rain` lifetime context graph
@@ -24,6 +22,17 @@ pub struct LifetimeCtx {
     groups: HashMap<GroupId, NodeData, FxBuildHasher>,
 }
 
+impl LifetimeCtx {
+    /// Set the owner of a value in this lifetime context
+    ///
+    /// Return an error if this value is already owned or borrowed
+    pub fn set_owner(&mut self, owner: &ValId, _owned: &ValId) -> Result<(), Error> {
+        //TODO: fun ValAddr tricks to avoid unnecessary clones...
+        let _node_data = self.values.entry(owner.clone()).or_default();
+        Ok(())
+    }
+}
+
 /// The ID of a group in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct GroupId(pub usize);
@@ -31,6 +40,14 @@ pub struct GroupId(pub usize);
 /// The ID of a node in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct NodeId(pub usize);
+
+impl NodeId {
+    /// Get the node ID corresponding to a value ID
+    #[inline(always)]
+    pub fn valid(valid: &ValId) -> NodeId {
+        NodeId(valid.raw_addr())
+    }
+}
 
 /// The data associated with a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]

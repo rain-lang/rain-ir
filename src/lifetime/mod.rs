@@ -4,11 +4,13 @@ The `rain` lifetime system
 
 use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
 use crate::util::HasAddr;
-use crate::value::{NormalValue, ValAddr, ValId, VALUE_CACHE};
+use crate::value::{Error, NormalValue, ValAddr, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};
 use erasable::{ErasedPtr, Thin};
+use fxhash::FxBuildHasher;
+use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use ptr_union::{Enum2, Union2};
 use slice_dst::SliceWithHeader;
