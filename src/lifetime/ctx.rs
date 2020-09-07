@@ -33,7 +33,7 @@ pub struct GroupId(pub usize);
 pub struct NodeId(pub usize);
 
 /// The data associated with a node in a `rain` lifetime graph
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct NodeData {
     /// The consumer of this node, if any
     consumer: Option<Consumer>,
