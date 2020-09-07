@@ -45,7 +45,7 @@ impl NodeId {
     /// Get the node ID corresponding to a value ID
     #[inline(always)]
     pub fn valid(valid: &ValId) -> NodeId {
-        NodeId(valid.raw_addr())
+        valid.as_addr().into()
     }
 }
 
