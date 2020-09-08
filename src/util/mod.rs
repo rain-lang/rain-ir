@@ -16,6 +16,13 @@ impl HasAddr for () {
     fn raw_addr(&self) -> usize { 0 }
 }
 
+impl<T: HasAddr> HasAddr for Option<T> {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.as_ref().map(HasAddr::raw_addr).unwrap_or_default()
+    }
+}
+
 impl<T: HasAddr> HasAddr for &T {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
