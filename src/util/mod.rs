@@ -10,6 +10,12 @@ pub trait HasAddr {
     fn raw_addr(&self) -> usize;
 }
 
+// Null address (null pointer)
+impl HasAddr for () {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize { 0 }
+}
+
 impl<T: HasAddr> HasAddr for &T {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
