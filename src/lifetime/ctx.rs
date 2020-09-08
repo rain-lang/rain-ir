@@ -46,6 +46,8 @@ pub struct GroupId(pub usize);
 pub struct NodeId(pub usize);
 
 impl NodeId {
+    /// Get the discriminant corresponding to a `ValAddr`
+    pub const VALID_DISC: usize = 0;
     /// Get the node ID corresponding to a value ID
     #[inline(always)]
     pub fn valid(valid: &ValId) -> NodeId {
@@ -56,7 +58,7 @@ impl NodeId {
 impl From<ValAddr> for NodeId {
     #[inline(always)]
     fn from(valaddr: ValAddr) -> NodeId {
-        NodeId(valaddr.0)
+        NodeId(valaddr.0 | NodeId::VALID_DISC)
     }
 }
 
