@@ -9,10 +9,10 @@ pub trait HasAddr {
     /// Get the lookup address of this value
     fn raw_addr(&self) -> usize;
     /// Get the hash of this value's address
-    fn addr_hash<S: BuildHasher>(&self, hash_builder: &S) {
+    fn addr_hash<S: BuildHasher>(&self, hash_builder: &S) -> usize {
         let mut hasher = hash_builder.build_hasher();
         self.hash_addr(&mut hasher);
-        let hash = hasher.finish();
+        hasher.finish()
     }
     /// Hash this value's address
     fn hash_addr<H: Hasher>(&self, hasher: &mut H) {
