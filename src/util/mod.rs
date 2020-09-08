@@ -3,6 +3,7 @@ Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
 use crate::value::ValId;
 use hashbrown::HashMap;
+use std::hash::{BuildHasher, Hash, Hasher};
 
 /// A trait for data structures which have a known lookup address, *and are hashed by this address only*
 pub trait HasAddr {
@@ -25,35 +26,41 @@ impl<T: HasAddr> HasAddr for &mut T {
 }
 
 /// A trait for data structures which can be looked up by address
-pub trait AddrLookup<T> {
+pub trait AddrLookup<K, V> {
     /// Lookup a value by address
     #[inline]
-    fn lookup<A: HasAddr>(&self, value: &A) -> Option<&T> {
+    fn lookup<A: HasAddr>(&self, value: &A) -> Option<(&K, &V)> {
         self.lookup_addr(value.raw_addr())
     }
     /// Lookup an address
-    fn lookup_addr(&self, addr: usize) -> Option<&T>;
+    fn lookup_addr(&self, addr: usize) -> Option<(&K, &V)>;
 }
 
-impl<T> AddrLookup<T> for HashMap<ValId, T> {
-    fn lookup_addr(&self, _addr: usize) -> Option<&T> {
-        unimplemented!()
+impl<A: HasAddr, T, S: BuildHasher> AddrLookup<A, T> for HashMap<A, T, S> {
+    #[inline]
+    fn lookup_addr(&self, addr: usize) -> Option<(&A, &T)> {
+        let mut hasher = self.hasher().build_hasher();
+        addr.hash(&mut hasher);
+        let hash = hasher.finish();
+        self.raw_entry()
+            .from_hash(hash, |value| value.raw_addr() == addr)
     }
 }
 
 /// A trait for data structures which can be mutably looked up by address
-pub trait AddrLookupMut<T> {
+pub trait AddrLookupMut<K, V> {
     /// Lookup a value by address
     #[inline]
-    fn lookup_mut<A: HasAddr>(&mut self, value: &A) -> Option<&mut T> {
+    fn lookup_mut<A: HasAddr>(&mut self, value: &A) -> Option<(&K, &mut V)> {
         self.lookup_addr_mut(value.raw_addr())
     }
     /// Lookup an address
-    fn lookup_addr_mut(&mut self, addr: usize) -> Option<&mut T>;
+    fn lookup_addr_mut(&mut self, addr: usize) -> Option<(&K, &mut V)>;
 }
 
-impl<T> AddrLookupMut<T> for HashMap<ValId, T> {
-    fn lookup_addr_mut(&mut self, _addr: usize) -> Option<&mut T> {
+impl<A: HasAddr, T, S: BuildHasher> AddrLookupMut<A, T> for HashMap<A, T, S> {
+    #[inline]
+    fn lookup_addr_mut(&mut self, _addr: usize) -> Option<(&A, &mut T)> {
         unimplemented!()
     }
 }
