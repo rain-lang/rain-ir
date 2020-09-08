@@ -3,7 +3,7 @@ The `rain` lifetime system
 */
 
 use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
-use crate::util::HasAddr;
+use crate::util::{AddrLookupMut, HasAddr};
 use crate::value::{Error, NormalValue, ValAddr, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
@@ -84,12 +84,16 @@ impl Lifetime {
     /// Get the transient component of this lifetime, if any
     #[inline]
     pub fn is_transient(&self) -> bool {
-        self.lt_data().map(LifetimeData::is_transient).unwrap_or(true)
+        self.lt_data()
+            .map(LifetimeData::is_transient)
+            .unwrap_or(true)
     }
     /// Get the transient component of this lifetime, if any
     #[inline]
     pub fn is_concrete(&self) -> bool {
-        self.lt_data().map(LifetimeData::is_concrete).unwrap_or(true)
+        self.lt_data()
+            .map(LifetimeData::is_concrete)
+            .unwrap_or(true)
     }
     /// Get the lender of this lifetime, if any
     #[inline]

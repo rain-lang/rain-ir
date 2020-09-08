@@ -26,10 +26,13 @@ impl LifetimeCtx {
     /// Set the owner of a value in this lifetime context
     ///
     /// Return an error if this value is already owned or borrowed
-    pub fn set_owner(&mut self, owner: &ValId, _owned: &ValId) -> Result<(), Error> {
+    pub fn set_owner(&mut self, owner: &ValId, owned: &ValId) -> Result<(), Error> {
         //TODO: fun ValAddr tricks to avoid unnecessary clones...
-        let _node_data = self.values.entry(owner.clone()).or_default();
-        Ok(())
+        let (_, node_data) = self
+            .values
+            .lookup_mut(owner, || Some((owned.clone(), NodeData::default())))
+            .expect("Node data is either present or inserted");
+        unimplemented!()
     }
 }
 
