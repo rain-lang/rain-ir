@@ -14,6 +14,10 @@ pub trait HasAddr {
         addr.hash(&mut hasher);
         let hash = hasher.finish();
     }
+    /// Hash this value's address
+    fn hash_addr<H: Hasher>(&self, hasher: &mut H) {
+        self.raw_addr().hash(hasher);
+    }
 }
 
 // Null address (null pointer)
