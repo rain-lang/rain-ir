@@ -64,6 +64,13 @@ impl From<ValAddr> for NodeId {
     }
 }
 
+impl From<GroupAddr> for NodeId {
+    #[inline(always)]
+    fn from(group_addr: GroupAddr) -> NodeId {
+        NodeId(group_addr.0 | NodeId::GROUP_DISC)
+    }
+}
+
 /// The data associated with a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct NodeData {
