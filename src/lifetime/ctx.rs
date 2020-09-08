@@ -23,15 +23,16 @@ pub struct LifetimeCtx {
 }
 
 impl LifetimeCtx {
+    /// Mutably get the data associated with a given `ValId`, inserting it if necessary
+    pub fn valid_data_mut(&mut self, val: &ValId) -> Option<&mut NodeData> {
+        self.values
+            .lookup_mut(val, || Some((val.clone(), NodeData::default())))
+            .map(|(_, data)| data)
+    }
     /// Set the owner of a value in this lifetime context
     ///
     /// Return an error if this value is already owned or borrowed
-    pub fn set_owner(&mut self, owner: &ValId, owned: &ValId) -> Result<(), Error> {
-        //TODO: fun ValAddr tricks to avoid unnecessary clones...
-        let (_, node_data) = self
-            .values
-            .lookup_mut(owner, || Some((owned.clone(), NodeData::default())))
-            .expect("Node data is either present or inserted");
+    pub fn set_owner(&mut self, _owner: &ValId, _owned: &ValId) -> Result<(), Error> {
         unimplemented!()
     }
 }
