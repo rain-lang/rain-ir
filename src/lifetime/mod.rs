@@ -67,6 +67,11 @@ impl Lifetime {
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
         unsafe { std::mem::transmute_copy(self) }
     }
+    /// Get the lifetime data behind this lifetime, if any
+    #[inline]
+    pub fn lt_data(&self) -> Option<&LifetimeData> {
+        self.0.as_ref().map(Union2::b).flatten()
+    }
     /// Check if this lifetime is trivial, i.e. is a region only
     #[inline]
     pub fn is_trivial(&self) -> bool {
@@ -75,6 +80,31 @@ impl Lifetime {
         } else {
             true
         }
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn is_transient(&self) -> bool {
+        self.lt_data().map(LifetimeData::is_transient).unwrap_or(true)
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn is_concrete(&self) -> bool {
+        self.lt_data().map(LifetimeData::is_concrete).unwrap_or(true)
+    }
+    /// Get the lender of this lifetime, if any
+    #[inline]
+    pub fn lender(&self) -> Option<&Group> {
+        self.lt_data().map(LifetimeData::lender).flatten()
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn transient(&self) -> Option<&Group> {
+        self.lt_data().map(LifetimeData::transient).flatten()
+    }
+    /// Get the lifetime parameters of this lifetime
+    #[inline]
+    pub fn params(&self) -> Option<&LifetimeParams> {
+        self.lt_data().map(LifetimeData::params)
     }
     /// Check if this lifetime is the static lifetime, i.e. only the null region
     #[inline]
@@ -233,6 +263,8 @@ mod tests {
         let null_lifetime = Lifetime::from(Region::NULL);
         assert!(null_lifetime.is_static());
         assert!(null_lifetime.is_trivial());
+        assert!(null_lifetime.is_transient());
+        assert!(null_lifetime.is_concrete());
         let null_borrow = null_lifetime.borrow_lifetime();
         assert_eq!(null_lifetime, Lifetime::STATIC);
         assert_eq!(null_lifetime, null_borrow);
@@ -248,6 +280,8 @@ mod tests {
         let region_lt = Lifetime::from(region.clone());
         assert!(region_lt.is_trivial());
         assert!(!region_lt.is_static());
+        assert!(region_lt.is_transient());
+        assert!(region_lt.is_concrete());
         let direct_region_lt = Lifetime::from(LifetimeData::from(region));
         assert_eq!(direct_region_lt, region_lt);
     }
