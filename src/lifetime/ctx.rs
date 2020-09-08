@@ -114,6 +114,10 @@ impl NodeData {
     pub fn set_owner(&mut self, owner: NodeId) -> Result<(), Error> {
         self.set_consumer(Consumer::Owner(owner))
     }
+    /// Draw a temporal node to this node
+    pub fn push_temporal(&mut self, source: NodeId) {
+        self.temporal.push(source)
+    }
 }
 
 /// The consumer of a node in a `rain` lifetime graph
