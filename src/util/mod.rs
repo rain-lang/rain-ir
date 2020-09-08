@@ -324,9 +324,11 @@ macro_rules! enum_convert {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::primitive::logical::BOOL_TY;
 
     #[test]
     fn basic_hasaddr_properties() {
         assert_eq!(().raw_addr(), 0x0);
+        assert_ne!(BOOL_TY.raw_addr(), 0x0);
     }
 }
