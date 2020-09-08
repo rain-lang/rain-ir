@@ -19,12 +19,12 @@ pub struct LifetimeCtx {
     /// The values in this lifetime context
     values: HashMap<ValId, NodeData, FxBuildHasher>,
     /// The groups in this lifetime context
-    groups: HashMap<GroupId, NodeData, FxBuildHasher>,
+    groups: HashMap<Group, NodeData, FxBuildHasher>,
 }
 
 impl LifetimeCtx {
     /// Mutably get the data associated with a given `ValId`, inserting it if necessary
-    pub fn valid_data_mut(&mut self, val: &ValId) -> Option<&mut NodeData> {
+    pub fn valid_data_or_insert(&mut self, val: &ValId) -> Option<&mut NodeData> {
         self.values
             .lookup_mut(val, || Some((val.clone(), NodeData::default())))
             .map(|(_, data)| data)
@@ -33,6 +33,7 @@ impl LifetimeCtx {
     pub fn node_data_mut(&mut self, id: NodeId) -> Option<&mut NodeData> {
         match id.disc() {
             NodeId::VALID_DISC => self.values.lookup_mut(&id, || None).map(|(_, data)| data),
+            NodeId::GROUP_DISC => self.groups.lookup_mut(&id, || None).map(|(_, data)| data),
             _ => None,
         }
     }
@@ -43,10 +44,6 @@ impl LifetimeCtx {
         unimplemented!()
     }
 }
-
-/// The ID of a group in a `rain` lifetime context graph
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct GroupId(pub usize);
 
 /// The ID of a node in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
