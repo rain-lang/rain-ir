@@ -100,12 +100,12 @@ pub struct NodeData {
 
 impl NodeData {
     /// Attempt to set a consumer of this node, returning an error if it already has an incompatible consumer
-    pub fn set_consumer(&mut self, _consumer: Consumer) -> Result<(), Error> {
+    pub fn set_consumer(&mut self, consumer: Consumer) -> Result<(), Error> {
         if self.consumer.is_none() {
             self.consumer = Some(consumer);
             Ok(())
         } else {
-            unimplemented!("Error type...")
+            Err(Error::AffineBranched)
         }
     }
     /// Attempt to set an owner for this node, returning an error if it already has an incompatible consumer
