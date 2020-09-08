@@ -320,3 +320,13 @@ macro_rules! enum_convert {
         )+
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn basic_hasaddr_properties() {
+        assert_eq!(().raw_addr(), 0x0);
+    }
+}
