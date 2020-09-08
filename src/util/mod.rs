@@ -1,6 +1,8 @@
 /*!
 Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
+use crate::value::ValId;
+use hashbrown::HashMap;
 
 /// A trait for data structures which have a known lookup address
 pub trait HasAddr {
@@ -36,6 +38,12 @@ pub trait AddrLookup<T> {
     fn lookup_addr(&self, addr: usize) -> Option<&T>;
 }
 
+impl<T> AddrLookup<T> for HashMap<ValId, T> {
+    fn lookup_addr(&self, _addr: usize) -> Option<&T> {
+        unimplemented!()
+    }
+}
+
 /// A trait for data structures which can be mutably looked up by address
 pub trait AddrLookupMut<T> {
     /// Lookup a value by address
@@ -46,6 +54,13 @@ pub trait AddrLookupMut<T> {
     /// Lookup an address
     fn lookup_addr_mut(&mut self, addr: usize) -> Option<&mut T>;
 }
+
+impl<T> AddrLookupMut<T> for HashMap<ValId, T> {
+    fn lookup_addr_mut(&mut self, _addr: usize) -> Option<&mut T> {
+        unimplemented!()
+    }
+}
+
 
 /// Quickly implement `Display` using a given function or format string
 #[macro_export]
