@@ -40,8 +40,10 @@ impl LifetimeCtx {
     /// Set the owner of a value in this lifetime context
     ///
     /// Return an error if this value is already owned or borrowed
-    pub fn set_owner(&mut self, _owner: &ValId, _owned: &ValId) -> Result<(), Error> {
-        unimplemented!()
+    pub fn set_owner(&mut self, owned: &ValId, owner: NodeId) -> Result<(), Error> {
+        self.valid_data_or_insert(owned)
+            .expect("Always works...")
+            .set_owner(owner)
     }
 }
 
