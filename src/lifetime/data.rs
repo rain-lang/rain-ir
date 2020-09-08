@@ -35,7 +35,17 @@ impl LifetimeData {
     /// Check if lifetime data is trivial, i.e. consists only of region data
     #[inline]
     pub fn is_trivial(&self) -> bool {
+        self.lender.is_none() && self.transient.is_none() && self.lt_params.is_empty()
+    }
+    /// Check if this lifetime is purely transient
+    #[inline]
+    pub fn is_transient(&self) -> bool {
         self.lender.is_none() && self.lt_params.is_empty()
+    }
+    /// Check if this lifetime is purely concrete
+    #[inline]
+    pub fn is_concrete(&self) -> bool {
+        self.transient.is_none()
     }
     /// Try to cast this lifetime into a nontrivial lifetime. On failure, return it's region
     #[inline]
