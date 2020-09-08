@@ -56,6 +56,10 @@ pub trait AddrLookupMut<K, V> {
     {
         self.lookup_addr_mut(value.raw_addr(), on_empty)
     }
+    /// Lookup an address or insert
+    fn lookup_addr_or_insert<F>(&mut self, addr: usize, on_empty: F) -> (&K, &mut V) where F: FnOnce() -> (K, V) {
+        self.lookup_addr_mut(addr, || Some(on_empty())).expect("Insertion always succeeds")
+    }
     /// Lookup an address
     fn lookup_addr_mut<F>(&mut self, addr: usize, on_empty: F) -> Option<(&K, &mut V)>
     where
