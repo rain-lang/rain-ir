@@ -27,7 +27,7 @@ impl LifetimeCtx {
     pub fn valid_data_or_insert(&mut self, val: &ValId) -> &mut NodeData {
         let (_, data) = self
             .values
-            .lookup_addr_or_insert(val.raw_addr(), || (val.clone(), NodeData::default()));
+            .lookup_or_insert(val, || (val.clone(), NodeData::default()));
         data
     }
     /// Mutably get the data associated with a given `NodeId` if it already exists
