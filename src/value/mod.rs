@@ -342,10 +342,6 @@ impl<P> HasAddr for ValId<P> {
     }
 }
 
-impl HasAddr for ValueEnum {}
-
-impl<P> HasAddr for NormalValue<P> {}
-
 /// The dependencies of a value
 #[derive(Debug, Copy, Clone, RefCast)]
 #[repr(transparent)]
