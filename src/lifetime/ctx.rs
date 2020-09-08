@@ -103,6 +103,10 @@ impl NodeData {
     pub fn set_consumer(&mut self, _consumer: Consumer) -> Result<(), Error> {
         unimplemented!()
     }
+    /// Attempt to set an owner for this node, returning an error if it already has an incompatible consumer
+    pub fn set_owner(&mut self, owner: NodeId) -> Result<(), Error> {
+        self.set_consumer(Consumer::Owner(owner))
+    }
 }
 
 /// The consumer of a node in a `rain` lifetime graph
