@@ -31,7 +31,10 @@ impl LifetimeCtx {
     }
     /// Mutably get the data associated with a given `NodeId` if it already exists
     pub fn node_data_mut(&mut self, id: NodeId) -> Option<&mut NodeData> {
-        self.values.lookup_mut(&id, || None).map(|(_, data)| data)
+        match id.disc() {
+            NodeId::VALID_DISC => self.values.lookup_mut(&id, || None).map(|(_, data)| data),
+            _ => None,
+        }
     }
     /// Set the owner of a value in this lifetime context
     ///
