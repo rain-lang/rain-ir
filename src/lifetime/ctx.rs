@@ -29,6 +29,10 @@ impl LifetimeCtx {
             .lookup_mut(val, || Some((val.clone(), NodeData::default())))
             .map(|(_, data)| data)
     }
+    /// Mutably get the data associated with a given `NodeId` if it already exists
+    pub fn node_data_mut(&mut self, id: NodeId) -> Option<&mut NodeData> {
+        self.values.lookup_mut(&id, || None).map(|(_, data)| data)
+    }
     /// Set the owner of a value in this lifetime context
     ///
     /// Return an error if this value is already owned or borrowed
@@ -50,6 +54,8 @@ impl NodeId {
     pub const VALID_DISC: usize = 0b0;
     /// Get the discriminant corresponding to a `GroupAddr`
     pub const GROUP_DISC: usize = 0b1;
+    /// Get the mask to remove discriminants
+    pub const DISC_MASK: usize = 0b11;
     /// Get the node ID corresponding to a value ID
     #[inline(always)]
     pub fn valid(valid: &ValId) -> NodeId {
@@ -68,6 +74,13 @@ impl From<GroupAddr> for NodeId {
     #[inline(always)]
     fn from(group_addr: GroupAddr) -> NodeId {
         NodeId(group_addr.0 | NodeId::GROUP_DISC)
+    }
+}
+
+impl HasAddr for NodeId {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.0 & !Self::DISC_MASK
     }
 }
 
