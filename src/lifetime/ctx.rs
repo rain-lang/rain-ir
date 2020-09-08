@@ -98,6 +98,13 @@ pub struct NodeData {
     temporal: Vec<NodeId>,
 }
 
+impl NodeData {
+    /// Attempt to set a consumer of this node, returning an error if it already has an incompatible consumer
+    pub fn set_consumer(&mut self, _consumer: Consumer) -> Result<(), Error> {
+        unimplemented!()
+    }
+}
+
 /// The consumer of a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Consumer {
