@@ -1,8 +1,7 @@
 /*!
 Miscellaneous utilities and data structures used throughout the `rain` compiler
 */
-use crate::value::ValId;
-use hashbrown::HashMap;
+use hashbrown::{hash_map::RawEntryMut, HashMap};
 use std::hash::{BuildHasher, Hash, Hasher};
 
 /// A trait for data structures which have a known lookup address, *and are hashed by this address only*
@@ -51,17 +50,38 @@ impl<A: HasAddr, T, S: BuildHasher> AddrLookup<A, T> for HashMap<A, T, S> {
 pub trait AddrLookupMut<K, V> {
     /// Lookup a value by address
     #[inline]
-    fn lookup_mut<A: HasAddr>(&mut self, value: &A) -> Option<(&K, &mut V)> {
-        self.lookup_addr_mut(value.raw_addr())
+    fn lookup_mut<A: HasAddr, F>(&mut self, value: &A, on_empty: F) -> Option<(&K, &mut V)>
+    where
+        F: FnOnce() -> Option<(K, V)>,
+    {
+        self.lookup_addr_mut(value.raw_addr(), on_empty)
     }
     /// Lookup an address
-    fn lookup_addr_mut(&mut self, addr: usize) -> Option<(&K, &mut V)>;
+    fn lookup_addr_mut<F>(&mut self, addr: usize, on_empty: F) -> Option<(&K, &mut V)>
+    where
+        F: FnOnce() -> Option<(K, V)>;
 }
 
-impl<A: HasAddr, T, S: BuildHasher> AddrLookupMut<A, T> for HashMap<A, T, S> {
+impl<A: HasAddr + Hash + Eq, T, S: BuildHasher> AddrLookupMut<A, T> for HashMap<A, T, S> {
     #[inline]
-    fn lookup_addr_mut(&mut self, _addr: usize) -> Option<(&A, &mut T)> {
-        unimplemented!()
+    fn lookup_addr_mut<F>(&mut self, addr: usize, on_empty: F) -> Option<(&A, &mut T)>
+    where
+        F: FnOnce() -> Option<(A, T)>,
+    {
+        let mut hasher = self.hasher().build_hasher();
+        addr.hash(&mut hasher);
+        let hash = hasher.finish();
+        let (key, value) = match self
+            .raw_entry_mut()
+            .from_hash(hash, |value| value.raw_addr() == addr)
+        {
+            RawEntryMut::Occupied(o) => o.into_key_value(),
+            RawEntryMut::Vacant(v) => {
+                let (key, value) = on_empty()?;
+                v.insert_hashed_nocheck(hash, key, value)
+            }
+        };
+        Some((key, value))
     }
 }
 
