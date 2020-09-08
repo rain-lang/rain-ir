@@ -15,6 +15,8 @@ pub struct LifetimeData {
     region: Region,
     /// The lender of this value, if any
     lender: Option<Group>,
+    /// The transient component of this lifetime, if any
+    transient: Option<Group>,
     /// The lifetime parameters of this value, if any
     lt_params: LifetimeParams,
 }
@@ -26,6 +28,7 @@ impl LifetimeData {
         LifetimeData {
             region,
             lender: None,
+            transient: None,
             lt_params: LifetimeParams::default(),
         }
     }
@@ -42,6 +45,21 @@ impl LifetimeData {
         } else {
             Ok(self)
         }
+    }
+    /// Get the lender of this lifetime, if any
+    #[inline]
+    pub fn lender(&self) -> Option<&Group> {
+        self.lender.as_ref()
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn transient(&self) -> Option<&Group> {
+        self.transient.as_ref()
+    }
+    /// Get the lifetime parameters of this lifetime
+    #[inline]
+    pub fn params(&self) -> &LifetimeParams {
+        &self.lt_params
     }
 }
 
