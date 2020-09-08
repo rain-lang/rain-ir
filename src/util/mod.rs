@@ -8,6 +8,12 @@ use std::hash::{BuildHasher, Hash, Hasher};
 pub trait HasAddr {
     /// Get the lookup address of this value
     fn raw_addr(&self) -> usize;
+    /// Get the hash of this value's address
+    fn hash_addr<S: BuildHasher>(&self, hash_builder: &S) {
+        let hasher = hash_builder.build_hasher();
+        addr.hash(&mut hasher);
+        let hash = hasher.finish();
+    }
 }
 
 // Null address (null pointer)
