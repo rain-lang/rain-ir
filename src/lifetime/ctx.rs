@@ -61,6 +61,11 @@ impl NodeId {
     pub fn valid(valid: &ValId) -> NodeId {
         valid.as_addr().into()
     }
+    /// Get the discriminant of this ID
+    #[inline(always)]
+    pub fn disc(self) -> usize {
+        self.0 & Self::DISC_MASK
+    }
 }
 
 impl From<ValAddr> for NodeId {
