@@ -144,6 +144,7 @@ pub struct NodeData {
 
 impl NodeData {
     /// Attempt to set a consumer of this node, returning an error if it already has an incompatible consumer
+    #[inline]
     pub fn set_consumer(&mut self, consumer: Consumer) -> Result<(), Error> {
         if self.consumer.is_none() {
             self.consumer = Some(consumer);
@@ -152,11 +153,18 @@ impl NodeData {
             Err(Error::AffineBranched)
         }
     }
+    /// Check whether this node has a consumer
+    #[inline]
+    pub fn has_consumer(&self) -> bool {
+        self.consumer.is_some()
+    }
     /// Attempt to set an owner for this node, returning an error if it already has an incompatible consumer
+    #[inline]
     pub fn set_owner(&mut self, owner: NodeId) -> Result<(), Error> {
         self.set_consumer(Consumer::Owner(owner))
     }
     /// Draw a temporal node to this node
+    #[inline]
     pub fn push_temporal(&mut self, source: NodeId) {
         self.temporal.push(source)
     }
