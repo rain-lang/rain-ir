@@ -42,8 +42,7 @@ impl LifetimeCtx {
     ///
     /// Return an error if this value is already owned or borrowed
     pub fn set_owner(&mut self, owned: &ValId, owner: NodeId) -> Result<(), Error> {
-        self.valid_data_or_insert(owned)
-            .set_owner(owner)
+        self.valid_data_or_insert(owned).set_owner(owner)
     }
 }
 
@@ -117,6 +116,11 @@ impl NodeData {
     /// Draw a temporal node to this node
     pub fn push_temporal(&mut self, source: NodeId) {
         self.temporal.push(source)
+    }
+    /// Cleanup this temporal node's data, sorting and deduplicating it's temporal dependencies
+    pub fn cleanup(&mut self) {
+        self.temporal.sort_unstable();
+        self.temporal.dedup();
     }
 }
 
