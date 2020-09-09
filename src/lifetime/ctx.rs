@@ -30,6 +30,10 @@ impl LifetimeCtx {
             graph: LifetimeGraph::default(),
         }
     }
+    /// Access the graph of this lifetime context
+    pub fn graph(&self) -> &LifetimeGraph {
+        &self.graph
+    }
 }
 
 /// A lifetime graph
