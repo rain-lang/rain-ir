@@ -24,6 +24,7 @@ pub struct LifetimeCtx {
 
 impl LifetimeCtx {
     /// Create a new lifetime context within a given region
+    #[inline]
     pub fn new(region: Region) -> LifetimeCtx {
         LifetimeCtx {
             region,
@@ -31,8 +32,14 @@ impl LifetimeCtx {
         }
     }
     /// Access the graph of this lifetime context
+    #[inline]
     pub fn graph(&self) -> &LifetimeGraph {
         &self.graph
+    }
+    /// Get the region of this lifetime context
+    #[inline]
+    pub fn region(&self) -> &Region {
+        &self.region
     }
 }
 
