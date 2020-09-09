@@ -306,6 +306,10 @@ impl Value for Ternary {
         true
     }
     #[inline]
+    fn is_branching(&self) -> bool {
+        true
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
     }

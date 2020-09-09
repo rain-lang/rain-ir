@@ -180,6 +180,11 @@ pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional + Live {
     /// The result of this function is unspecified if the `dep` index is out of bounds, though it will always either
     /// return a boolean or panic. This function must never panic if the `dep` index is in bounds.
     fn dep_owned(&self, dep: usize) -> bool;
+    /// Whether this value's dependencies are branching
+    #[inline]
+    fn is_branching(&self) -> bool {
+        false
+    }
     /// Get the dependencies of this value
     #[inline]
     fn deps(&self) -> &Deps<Self> {
@@ -563,6 +568,10 @@ impl<P> Value for NormalValue<P> {
         self.value.dep_owned(ix)
     }
     #[inline]
+    fn is_branching(&self) -> bool {
+        self.value.is_branching()
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.coerce()
     }
@@ -617,6 +626,13 @@ impl Value for ValueEnum {
         forv! {
             match(self) {
                 v => v.dep_owned(ix),
+            }
+        }
+    }
+    fn is_branching(&self) -> bool {
+        forv! {
+            match(self) {
+                v => v.is_branching(),
             }
         }
     }
