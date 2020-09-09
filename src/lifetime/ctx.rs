@@ -22,7 +22,20 @@ pub struct LifetimeCtx {
     groups: HashMap<Group, NodeData, FxBuildHasher>,
 }
 
+impl Default for LifetimeCtx {
+    fn default() -> LifetimeCtx {
+        LifetimeCtx::new()
+    }
+}
+
 impl LifetimeCtx {
+    /// Create a new, empty lifetime graph
+    pub fn new() -> LifetimeCtx {
+        LifetimeCtx {
+            values: HashMap::default(),
+            groups: HashMap::default(),
+        }
+    }
     /// Mutably get the data associated with a given `ValId`, inserting it if necessary
     pub fn valid_data_or_insert(&mut self, val: &ValId) -> &mut NodeData {
         let (_, data) = self
@@ -136,4 +149,45 @@ pub enum Consumer {
     /// This implies it must happen *after* the listed source node, but this is already handled by the dependency graph.
     /// More importantly, however, this also implies it must happen *before* the *owner* of the listed source node, if any.
     Lender(NodeId),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::typing::Type;
+    use crate::value::{
+        tuple::{Product, Tuple},
+        Value,
+    };
+    use arrayvec::ArrayVec;
+
+    #[test]
+    fn setting_two_owners_fails() {
+        let anchored_region = Region::unary(Product::anchor_ty().into_ty());
+        let anchor = anchored_region.param(0).unwrap().into_val();
+        let anchor_tuple = Tuple::try_new(
+            ArrayVec::from([anchor.clone(), anchor.clone()])
+                .into_iter()
+                .collect(),
+        )
+        .unwrap()
+        .into_val();
+        let anchor_and_bool = Tuple::try_new(
+            ArrayVec::from([anchor.clone(), true.into_val()])
+                .into_iter()
+                .collect(),
+        )
+        .unwrap()
+        .into_val();
+        let mut graph = LifetimeCtx::new();
+        graph
+            .set_owner(&anchor, NodeId::valid(&anchor_tuple))
+            .expect("Setting first owner works");
+        graph
+            .set_owner(&anchor, NodeId::valid(&anchor_and_bool))
+            .expect_err("Setting second owner fails");
+        graph
+            .set_owner(&anchor, NodeId::valid(&anchor_tuple))
+            .expect_err("Setting first owner again fails");
+    }
 }
