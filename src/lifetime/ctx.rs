@@ -16,22 +16,41 @@ Handles:
 */
 #[derive(Debug, Clone)]
 pub struct LifetimeCtx {
+    /// The underlying lifetime graph of this context
+    graph: LifetimeGraph,
+    /// The implicit region of this context
+    region: Region,
+}
+
+impl LifetimeCtx {
+    /// Create a new lifetime context within a given region
+    pub fn new(region: Region) -> LifetimeCtx {
+        LifetimeCtx {
+            region,
+            graph: LifetimeGraph::default(),
+        }
+    }
+}
+
+/// A lifetime graph
+#[derive(Debug, Clone)]
+pub struct LifetimeGraph {
     /// The values in this lifetime context
     values: HashMap<ValId, NodeData, FxBuildHasher>,
     /// The groups in this lifetime context
     groups: HashMap<Group, NodeData, FxBuildHasher>,
 }
 
-impl Default for LifetimeCtx {
-    fn default() -> LifetimeCtx {
-        LifetimeCtx::new()
+impl Default for LifetimeGraph {
+    fn default() -> LifetimeGraph {
+        LifetimeGraph::new()
     }
 }
 
-impl LifetimeCtx {
+impl LifetimeGraph {
     /// Create a new, empty lifetime graph
-    pub fn new() -> LifetimeCtx {
-        LifetimeCtx {
+    pub fn new() -> LifetimeGraph {
+        LifetimeGraph {
             values: HashMap::default(),
             groups: HashMap::default(),
         }
@@ -179,7 +198,7 @@ mod tests {
         )
         .unwrap()
         .into_val();
-        let mut graph = LifetimeCtx::new();
+        let mut graph = LifetimeGraph::new();
         graph
             .set_owner(&anchor, NodeId::valid(&anchor_tuple))
             .expect("Setting first owner works");
