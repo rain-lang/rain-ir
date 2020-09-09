@@ -138,6 +138,13 @@ impl Value for IdFamily {
         panic!("Invalid index into id family's dependencies: {}", ix)
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
     }
@@ -278,6 +285,10 @@ impl Value for Id {
         }
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        false
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
     }
@@ -380,6 +391,10 @@ impl Value for Refl {
             0 => &self.value,
             ix => panic!("Invalid index into refl's dependencies: {}", ix),
         }
+    }
+    #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        false
     }
     #[inline]
     fn into_norm(self) -> NormalValue {

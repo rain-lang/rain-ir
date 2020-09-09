@@ -175,6 +175,13 @@ impl Value for () {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         ().into()
     }
@@ -342,6 +349,13 @@ impl Value for Unit {
         panic!(
             "Attempted to get dependency {} of the unit type, but `Unit` has no dependencies!",
             ix
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
         )
     }
     #[inline]

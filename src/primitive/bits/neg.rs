@@ -99,6 +99,13 @@ impl Value for Neg {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Neg(self)
     }

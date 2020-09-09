@@ -47,6 +47,13 @@ impl Value for BitsKind {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::BitsKind(self)
     }
@@ -121,6 +128,13 @@ impl Value for BitsTy {
         panic!(
             "Tried to get dependency #{} of bits type {}, which has none",
             ix, self
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
         )
     }
     #[inline]
@@ -225,6 +239,13 @@ impl Value for Bits {
         panic!(
             "Tried to get dependency #{} of bits {}, which has none",
             ix, self
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
         )
     }
     #[inline]

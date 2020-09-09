@@ -396,6 +396,13 @@ impl Value for BinOp {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::BinOp(self)
     }

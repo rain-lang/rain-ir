@@ -130,6 +130,13 @@ impl Value for Prop {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_val(self) -> ValId {
         PROP.clone_val()
     }
@@ -203,6 +210,13 @@ impl Value for Fin {
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
         panic!(
             "{:?} has no dependencies, but attempted to get no #{}",
             self, ix
@@ -296,6 +310,13 @@ impl Value for Set {
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
         panic!(
             "{:?} has no dependencies, but attempted to get no #{}",
             self, ix

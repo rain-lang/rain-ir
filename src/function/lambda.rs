@@ -174,6 +174,11 @@ impl Value for Lambda {
         &self.result.deps()[ix]
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        //TODO: fixme
+        true
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Lambda(self)
     }

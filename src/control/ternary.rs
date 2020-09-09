@@ -285,7 +285,12 @@ substitute_to_valid!(Ternary);
 impl Value for Ternary {
     #[inline]
     fn no_deps(&self) -> usize {
-        2
+        //TODO: think about this
+        if self.low == self.high {
+            1
+        } else {
+            2
+        }
     }
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
@@ -294,6 +299,15 @@ impl Value for Ternary {
             1 => &self.high,
             _ => panic!("Invalid dependency index {}", ix),
         }
+    }
+    #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        //TODO: fixme
+        true
+    }
+    #[inline]
+    fn is_branching(&self) -> bool {
+        true
     }
     #[inline]
     fn into_norm(self) -> NormalValue {

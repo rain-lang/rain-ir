@@ -103,6 +103,13 @@ impl Value for Finite {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Finite(self)
     }
@@ -221,6 +228,13 @@ impl Value for Index {
         panic!(
             "Tried to get dependency #{} of finite index {}, which has none",
             ix, self
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
         )
     }
     #[inline]
