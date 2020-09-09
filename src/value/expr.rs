@@ -165,6 +165,11 @@ impl Value for Sexpr {
         &self[ix]
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        //TODO: generalize once pi nodes are fixed
+        true
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Sexpr(self)
     }

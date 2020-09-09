@@ -62,6 +62,11 @@ impl Value for Phi {
         &self.deps[ix]
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        //TODO: fixme
+        true
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Phi(self)
     }

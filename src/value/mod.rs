@@ -175,6 +175,11 @@ pub trait Value: Sized + Typed + Apply + Substitute<ValId> + Regional + Live {
     /// The result of this function is unspecified if the `dep` index is out of bounds, though it will always either
     /// return a valid [`&ValId`](ValId) or panic. This function must never panic if the `dep` index is in bounds.
     fn get_dep(&self, dep: usize) -> &ValId;
+    /// Get whether a given dependency of this value is owned.
+    ///
+    /// The result of this function is unspecified if the `dep` index is out of bounds, though it will always either
+    /// return a boolean or panic. This function must never panic if the `dep` index is in bounds.
+    fn dep_owned(&self, dep: usize) -> bool;
     /// Get the dependencies of this value
     #[inline]
     fn deps(&self) -> &Deps<Self> {
@@ -554,6 +559,10 @@ impl<P> Value for NormalValue<P> {
         self.value.get_dep(ix)
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        self.value.dep_owned(ix)
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.coerce()
     }
@@ -601,6 +610,13 @@ impl Value for ValueEnum {
         forv! {
             match(self) {
                 v => v.get_dep(ix),
+            }
+        }
+    }
+    fn dep_owned(&self, ix: usize) -> bool {
+        forv! {
+            match(self) {
+                v => v.dep_owned(ix),
             }
         }
     }

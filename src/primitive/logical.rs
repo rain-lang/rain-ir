@@ -69,6 +69,13 @@ impl Value for Bool {
         panic!("Bool has no dependencies (asked for dependency #{})", ix)
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::BoolTy(self)
     }
@@ -219,6 +226,13 @@ impl Value for bool {
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!(
             "Boolean #{} has no dependencies (asked for dependency #{})",
+            self, ix
+        )
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
             self, ix
         )
     }
@@ -656,6 +670,13 @@ impl Value for Logical {
         )
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Logical(self)
     }
@@ -730,6 +751,13 @@ macro_rules! make_logical {
             fn get_dep(&self, ix: usize) -> &ValId {
                 panic!(
                     "Logical operation {} has no dependencies (tried to get dep #{})",
+                    self, ix
+                )
+            }
+            #[inline]
+            fn dep_owned(&self, ix: usize) -> bool {
+                panic!(
+                    "{:?} has no dependencies, but attempted to get no #{}",
                     self, ix
                 )
             }

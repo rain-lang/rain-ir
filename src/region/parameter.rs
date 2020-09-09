@@ -126,6 +126,13 @@ impl Value for Parameter {
     fn get_dep(&self, ix: usize) -> &ValId {
         panic!("Attempted to get dependency {} of parameter #{} of a region, but parameters have no deps!", ix, self.ix)
     }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Parameter(self)
     }

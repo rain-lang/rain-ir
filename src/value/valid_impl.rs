@@ -295,6 +295,10 @@ impl<P> Value for ValId<P> {
         self.as_norm().get_dep(ix)
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        self.as_norm().dep_owned(ix)
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         self.as_enum().clone()
     }
@@ -316,6 +320,10 @@ impl<P> Value for ValRef<'_, P> {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         self.as_norm().get_dep(ix)
+    }
+    #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        self.as_norm().dep_owned(ix)
     }
     #[inline]
     fn into_enum(self) -> ValueEnum {

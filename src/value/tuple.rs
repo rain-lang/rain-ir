@@ -106,6 +106,10 @@ impl Value for Tuple {
         &self[ix]
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        true
+    }
+    #[inline]
     fn into_enum(self) -> ValueEnum {
         ValueEnum::Tuple(self)
     }
@@ -428,6 +432,10 @@ impl Value for Product {
     #[inline]
     fn get_dep(&self, ix: usize) -> &ValId {
         (&self[ix]).into()
+    }
+    #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        false
     }
     #[inline]
     fn into_enum(self) -> ValueEnum {

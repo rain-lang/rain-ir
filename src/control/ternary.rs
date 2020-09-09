@@ -296,6 +296,11 @@ impl Value for Ternary {
         }
     }
     #[inline]
+    fn dep_owned(&self, _ix: usize) -> bool {
+        //TODO: fixme
+        true
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         self.into()
     }

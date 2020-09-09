@@ -165,6 +165,13 @@ impl Value for PathInd {
         panic!("Invalid dependency {} for path induction", ix)
     }
     #[inline]
+    fn dep_owned(&self, ix: usize) -> bool {
+        panic!(
+            "{:?} has no dependencies, but attempted to get no #{}",
+            self, ix
+        )
+    }
+    #[inline]
     fn into_norm(self) -> NormalValue {
         NormalValue::assert_normal(ValueEnum::PathInd(self))
     }
