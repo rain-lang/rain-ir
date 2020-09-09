@@ -14,6 +14,7 @@ use crate::proof::paths::{induction::PathInd, Id, IdFamily, Refl};
 use crate::region::{Parameter, Regional};
 use crate::typing::primitive::{Fin, Prop, Set};
 use crate::typing::{IsKind, IsRepr, IsType, IsUniverse, Typed};
+use crate::util::HasAddr;
 use crate::{debug_from_display, forv, pretty_display};
 use dashcache::{DashCache, GlobalCache};
 use elysees::{Arc, ArcBorrow};
@@ -324,6 +325,20 @@ impl From<&'_ ValueEnum> for ValAddr {
     #[inline(always)]
     fn from(addr: &ValueEnum) -> ValAddr {
         ValAddr(addr as *const _ as usize)
+    }
+}
+
+impl HasAddr for ValAddr {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.0
+    }
+}
+
+impl<P> HasAddr for ValId<P> {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.as_addr().0
     }
 }
 

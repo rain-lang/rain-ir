@@ -3,15 +3,19 @@ The `rain` lifetime system
 */
 
 use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
-use crate::value::{NormalValue, ValId, VALUE_CACHE};
+use crate::util::{AddrLookupMut, HasAddr};
+use crate::value::{Error, NormalValue, ValAddr, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};
 use erasable::{ErasedPtr, Thin};
+use fxhash::FxBuildHasher;
+use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use ptr_union::{Enum2, Union2};
 use slice_dst::SliceWithHeader;
 use smallvec::SmallVec;
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
@@ -21,6 +25,8 @@ mod data;
 pub use data::*;
 mod params;
 pub use params::*;
+mod ctx;
+pub use ctx::*;
 
 /// A `rain` lifetime
 #[derive(Debug, Clone, Eq, Default)]
@@ -61,6 +67,11 @@ impl Lifetime {
     pub fn borrow_lifetime(&self) -> LifetimeBorrow {
         unsafe { std::mem::transmute_copy(self) }
     }
+    /// Get the lifetime data behind this lifetime, if any
+    #[inline]
+    pub fn lt_data(&self) -> Option<&LifetimeData> {
+        self.0.as_ref().map(Union2::b).flatten()
+    }
     /// Check if this lifetime is trivial, i.e. is a region only
     #[inline]
     pub fn is_trivial(&self) -> bool {
@@ -69,6 +80,35 @@ impl Lifetime {
         } else {
             true
         }
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn is_transient(&self) -> bool {
+        self.lt_data()
+            .map(LifetimeData::is_transient)
+            .unwrap_or(true)
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn is_concrete(&self) -> bool {
+        self.lt_data()
+            .map(LifetimeData::is_concrete)
+            .unwrap_or(true)
+    }
+    /// Get the lender of this lifetime, if any
+    #[inline]
+    pub fn lender(&self) -> Option<&Group> {
+        self.lt_data().map(LifetimeData::lender).flatten()
+    }
+    /// Get the transient component of this lifetime, if any
+    #[inline]
+    pub fn transient(&self) -> Option<&Group> {
+        self.lt_data().map(LifetimeData::transient).flatten()
+    }
+    /// Get the lifetime parameters of this lifetime
+    #[inline]
+    pub fn params(&self) -> Option<&LifetimeParams> {
+        self.lt_data().map(LifetimeData::params)
     }
     /// Check if this lifetime is the static lifetime, i.e. only the null region
     #[inline]
@@ -227,6 +267,8 @@ mod tests {
         let null_lifetime = Lifetime::from(Region::NULL);
         assert!(null_lifetime.is_static());
         assert!(null_lifetime.is_trivial());
+        assert!(null_lifetime.is_transient());
+        assert!(null_lifetime.is_concrete());
         let null_borrow = null_lifetime.borrow_lifetime();
         assert_eq!(null_lifetime, Lifetime::STATIC);
         assert_eq!(null_lifetime, null_borrow);
@@ -242,6 +284,8 @@ mod tests {
         let region_lt = Lifetime::from(region.clone());
         assert!(region_lt.is_trivial());
         assert!(!region_lt.is_static());
+        assert!(region_lt.is_transient());
+        assert!(region_lt.is_concrete());
         let direct_region_lt = Lifetime::from(LifetimeData::from(region));
         assert_eq!(direct_region_lt, region_lt);
     }

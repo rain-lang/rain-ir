@@ -1,7 +1,6 @@
 /*!
 Lifetime borrow-groups
 */
-
 use super::*;
 
 lazy_static! {
@@ -13,11 +12,70 @@ lazy_static! {
 #[derive(Debug, Clone, Eq)]
 pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 
+/// The address of a non-empty group of values
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[repr(transparent)]
+pub struct GroupAddr(pub usize);
+
+impl From<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn from(val: ValAddr) -> GroupAddr {
+        GroupAddr(val.0)
+    }
+}
+
+impl PartialEq<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn eq(&self, other: &ValAddr) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl PartialEq<GroupAddr> for ValAddr {
+    #[inline(always)]
+    fn eq(&self, other: &GroupAddr) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl PartialOrd<ValAddr> for GroupAddr {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &ValAddr) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl PartialOrd<GroupAddr> for ValAddr {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &GroupAddr) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl HasAddr for GroupAddr {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.0
+    }
+}
+
+impl HasAddr for Group {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        self.addr().0
+    }
+}
+
 impl Group {
     /// Get the pointer to the underlying data of this group
     #[inline]
     pub fn as_ptr(&self) -> ErasedPtr {
         self.0.as_untagged_ptr()
+    }
+    /// Get the address of the underlying data of this group
+    #[inline]
+    pub fn addr(&self) -> GroupAddr {
+        unsafe { std::mem::transmute_copy(self) }
     }
 }
 
@@ -77,6 +135,7 @@ impl Deref for MultiGroup {
 impl From<MultiGroup> for Thin<GSArc> {
     #[inline]
     fn from(mg: MultiGroup) -> Thin<GSArc> {
+        //TODO: this might cause table leaks. Warn?
         unsafe { std::mem::transmute(mg) }
     }
 }

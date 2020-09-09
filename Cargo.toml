@@ -31,6 +31,7 @@ indexmap = "^1.5"
 ptr-union = "^2.1.0"
 erasable = "^1.2.1"
 slice-dst = "1.5.1"
+hashbrown = "^0.9"
 
 [dev-dependencies]
 pretty_assertions = "^0.6"
