@@ -20,6 +20,8 @@ pub struct LifetimeCtx {
     graph: LifetimeGraph,
     /// The implicit region of this context
     region: Region,
+    /// The value dependencies of this context, with ownership flags
+    deps: Vec<(ValId, bool)>,
 }
 
 impl LifetimeCtx {
@@ -29,6 +31,7 @@ impl LifetimeCtx {
         LifetimeCtx {
             region,
             graph: LifetimeGraph::default(),
+            deps: Vec::new(),
         }
     }
     /// Access the graph of this lifetime context
@@ -154,7 +157,5 @@ impl NodeData {
     }
 }
 
-
 #[cfg(test)]
-mod tests {
-}
+mod tests {}
