@@ -23,7 +23,9 @@ pub trait HasAddr {
 // Null address (null pointer)
 impl HasAddr for () {
     #[inline(always)]
-    fn raw_addr(&self) -> usize { 0 }
+    fn raw_addr(&self) -> usize {
+        0
+    }
 }
 
 impl<T: HasAddr> HasAddr for Option<T> {
@@ -334,11 +336,18 @@ macro_rules! enum_convert {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::primitive::logical::BOOL_TY;
+    use crate::primitive::logical::{BOOL_TY, FALSE, TRUE};
+    use crate::value::Value;
 
     #[test]
     fn basic_hasaddr_properties() {
         assert_eq!(().raw_addr(), 0x0);
         assert_ne!(BOOL_TY.raw_addr(), 0x0);
+        let mut map = HashMap::new();
+        map.insert(true.into_val(), 73);
+        map.insert(false.into_val(), 53);
+        assert_eq!(map.lookup(&*TRUE), Some((TRUE.as_val(), &73)));
+        assert_eq!(map.lookup(&*FALSE), Some((FALSE.as_val(), &53)));
+        assert_eq!(map.lookup(&*BOOL_TY), None);
     }
 }
