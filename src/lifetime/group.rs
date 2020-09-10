@@ -13,14 +13,6 @@ lazy_static! {
 pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 
 impl Group {
-    /// Attempt to compute the Least Common Region of this group with respect to a base region, if any
-    pub fn lcr(&self, base_region: RegionBorrow) -> Result<RegionBorrow, Error> {
-        unimplemented!("Group lcr, base = {:?}", base_region)
-    }
-    /// Attempt to consume the Greatest Common Region of this group with respect to a base region, if any
-    pub fn gcr(&self, base_region: RegionBorrow) -> Result<RegionBorrow, Error> {
-        unimplemented!("Group gcr, base = {:?}", base_region)
-    }
     /// Get the pointer to the underlying data of this group
     #[inline]
     pub fn as_ptr(&self) -> ErasedPtr {
