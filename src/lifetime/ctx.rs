@@ -20,7 +20,13 @@ pub struct LifetimeCtx {
     graph: LifetimeGraph,
     /// The implicit region of this context
     region: Region,
-    /// The strong dependencies of this context with ownershop flags
+    /// The strong dependencies of this context with ownership flags
+    ///
+    /// TODO: potential unsafe optimization: the owned variant can be a raw poiner
+    /// (avoiding double atomic reference count updates) as long as owned externals
+    /// are guaranteed to get an entry in the lifetime graph (to hold their owners).
+    /// This is currently, however, wrong, since there is no affinity check in the
+    /// lifetime graph yet.
     deps: Vec<Union2<Arc<NormalValue>, Arc<NormalValue>>>,
 }
 
@@ -43,6 +49,20 @@ impl LifetimeCtx {
     #[inline]
     pub fn region(&self) -> &Region {
         &self.region
+    }
+    /// Get a dependency of this lifetime context
+    #[inline]
+    pub fn get_dep(&self, ix: usize) -> ValRef {
+        let ptr = self.deps[ix].as_untagged_ptr();
+        unsafe {
+            let normal_ptr: std::ptr::NonNull<NormalValue> = Erasable::unerase(ptr);
+            ValRef::from_raw(normal_ptr.as_ptr())
+        }
+    }
+    /// Get whether a dependency of this lifetime context is owned by the graph
+    #[inline]
+    pub fn is_owned(&self, ix: usize) -> bool {
+        self.deps[ix].is_b()
     }
 }
 
