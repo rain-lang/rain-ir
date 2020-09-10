@@ -67,10 +67,17 @@ impl LifetimeGraph {
         }
     }
     /// Mutably get the data associated with a given `ValId`, inserting it if necessary
-    pub fn valid_data_or_insert(&mut self, val: &ValId) -> &mut NodeData {
+    pub fn valid_entry(&mut self, val: &ValId) -> &mut NodeData {
         let (_, data) = self
             .values
             .lookup_or_insert(val, || (val.clone(), NodeData::default()));
+        data
+    }
+    /// Mutably get the data associated with a given `Group`, inserting it if necessary
+    pub fn group_entry(&mut self, grp: &Group) -> &mut NodeData {
+        let (_, data) = self
+            .groups
+            .lookup_or_insert(grp, || (grp.clone(), NodeData::default()));
         data
     }
     /// Mutably get the data associated with a given `NodeId` if it already exists
