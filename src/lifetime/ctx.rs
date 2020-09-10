@@ -81,12 +81,6 @@ impl LifetimeGraph {
             _ => None,
         }
     }
-    /// Set the owner of a value in this lifetime context
-    ///
-    /// Return an error if this value is already owned or borrowed
-    pub fn set_owner(&mut self, owned: &ValId, owner: NodeId) -> Result<(), Error> {
-        self.valid_data_or_insert(owned).set_owner(owner)
-    }
 }
 
 /// The ID of a node in a `rain` lifetime context graph
@@ -136,33 +130,11 @@ impl HasAddr for NodeId {
 /// The data associated with a node in a `rain` lifetime graph
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub struct NodeData {
-    /// The consumer of this node, if any
-    consumer: Option<Consumer>,
     /// The temporal edges leading to this node, if any
     temporal: Vec<NodeId>,
 }
 
 impl NodeData {
-    /// Attempt to set a consumer of this node, returning an error if it already has an incompatible consumer
-    #[inline]
-    pub fn set_consumer(&mut self, consumer: Consumer) -> Result<(), Error> {
-        if self.consumer.is_none() {
-            self.consumer = Some(consumer);
-            Ok(())
-        } else {
-            Err(Error::AffineBranched)
-        }
-    }
-    /// Check whether this node has a consumer
-    #[inline]
-    pub fn has_consumer(&self) -> bool {
-        self.consumer.is_some()
-    }
-    /// Attempt to set an owner for this node, returning an error if it already has an incompatible consumer
-    #[inline]
-    pub fn set_owner(&mut self, owner: NodeId) -> Result<(), Error> {
-        self.set_consumer(Consumer::Owner(owner))
-    }
     /// Draw a temporal node to this node
     #[inline]
     pub fn push_temporal(&mut self, source: NodeId) {
@@ -175,57 +147,7 @@ impl NodeData {
     }
 }
 
-/// The consumer of a node in a `rain` lifetime graph
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Consumer {
-    /// This node is owned by the listed source node
-    ///
-    /// This implies it must happen *before* the listed source node, but this is already handled by the dependency graph.
-    Owner(NodeId),
-    /// This node is borrowed from the listed source lender
-    ///
-    /// This implies it must happen *after* the listed source node, but this is already handled by the dependency graph.
-    /// More importantly, however, this also implies it must happen *before* the *owner* of the listed source node, if any.
-    Lender(NodeId),
-}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::typing::Type;
-    use crate::value::{
-        tuple::{Product, Tuple},
-        Value,
-    };
-    use arrayvec::ArrayVec;
-
-    #[test]
-    fn setting_two_owners_fails() {
-        let anchored_region = Region::unary(Product::anchor_ty().into_ty());
-        let anchor = anchored_region.param(0).unwrap().into_val();
-        let anchor_tuple = Tuple::try_new(
-            ArrayVec::from([anchor.clone(), anchor.clone()])
-                .into_iter()
-                .collect(),
-        )
-        .unwrap()
-        .into_val();
-        let anchor_and_bool = Tuple::try_new(
-            ArrayVec::from([anchor.clone(), true.into_val()])
-                .into_iter()
-                .collect(),
-        )
-        .unwrap()
-        .into_val();
-        let mut graph = LifetimeGraph::new();
-        graph
-            .set_owner(&anchor, NodeId::valid(&anchor_tuple))
-            .expect("Setting first owner works");
-        graph
-            .set_owner(&anchor, NodeId::valid(&anchor_and_bool))
-            .expect_err("Setting second owner fails");
-        graph
-            .set_owner(&anchor, NodeId::valid(&anchor_tuple))
-            .expect_err("Setting first owner again fails");
-    }
 }
