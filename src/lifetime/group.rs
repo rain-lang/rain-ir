@@ -13,13 +13,23 @@ lazy_static! {
 pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 
 impl Group {
-    /// Attempt to compute the Least Common Region of this group, if any
-    pub fn lcr(&self) -> Result<RegionBorrow, Error> {
-        unimplemented!("Group lcr")
+    /// Attempt to compute the Least Common Region of this group with respect to a base region, if any
+    pub fn lcr(&self, base_region: RegionBorrow) -> Result<RegionBorrow, Error> {
+        unimplemented!("Group lcr, base = {:?}", base_region)
     }
-    /// Attempt to consume the Greatest Common Region of this group, if any
-    pub fn gcr(&self) -> Result<RegionBorrow, Error> {
-        unimplemented!("Group gcr")
+    /// Attempt to consume the Greatest Common Region of this group with respect to a base region, if any
+    pub fn gcr(&self, base_region: RegionBorrow) -> Result<RegionBorrow, Error> {
+        unimplemented!("Group gcr, base = {:?}", base_region)
+    }
+    /// Get the pointer to the underlying data of this group
+    #[inline]
+    pub fn as_ptr(&self) -> ErasedPtr {
+        self.0.as_untagged_ptr()
+    }
+    /// Get the address of the underlying data of this group
+    #[inline]
+    pub fn addr(&self) -> GroupAddr {
+        unsafe { std::mem::transmute_copy(self) }
     }
 }
 
@@ -74,19 +84,6 @@ impl HasAddr for Group {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
         self.addr().0
-    }
-}
-
-impl Group {
-    /// Get the pointer to the underlying data of this group
-    #[inline]
-    pub fn as_ptr(&self) -> ErasedPtr {
-        self.0.as_untagged_ptr()
-    }
-    /// Get the address of the underlying data of this group
-    #[inline]
-    pub fn addr(&self) -> GroupAddr {
-        unsafe { std::mem::transmute_copy(self) }
     }
 }
 
