@@ -12,6 +12,17 @@ lazy_static! {
 #[derive(Debug, Clone, Eq)]
 pub struct Group(Union2<Arc<NormalValue>, Thin<GSArc>>);
 
+impl Group {
+    /// Attempt to compute the Least Common Region of this group, if any
+    pub fn lcr(&self) -> Result<RegionBorrow, Error> {
+        unimplemented!("Group lcr")
+    }
+    /// Attempt to consume the Greatest Common Region of this group, if any
+    pub fn gcr(&self) -> Result<RegionBorrow, Error> {
+        unimplemented!("Group gcr")
+    }
+}
+
 /// The address of a non-empty group of values
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
