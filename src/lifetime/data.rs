@@ -2,6 +2,7 @@
 Data describing a `rain` lifetime
 */
 use super::*;
+use crate::value::Error;
 
 lazy_static! {
     /// The global cache of constructed nontrivial lifetimes
@@ -24,13 +25,23 @@ pub struct LifetimeData {
 impl LifetimeData {
     /// Construct a new trivial lifetime from a region
     #[inline]
-    pub fn trivial(region: Region) -> LifetimeData {
+    pub fn from_region(region: Region) -> LifetimeData {
         LifetimeData {
             region,
             lender: None,
             transient: None,
             lt_params: LifetimeParams::default(),
         }
+    }
+    /// Construct a new transient lifetime from an optional group and a base region
+    #[inline]
+    pub fn new_transient(region: Region, transient: Option<Group>) -> Result<LifetimeData, Error> {
+        unimplemented!("New transient construction")
+    }
+    /// Construct a new transient lifetime from an optional group
+    #[inline]
+    pub fn from_transient(transient: Option<Group>) -> Result<LifetimeData, Error> {
+        Self::new_transient(Region::NULL, transient)
     }
     /// Check if lifetime data is trivial, i.e. consists only of region data
     #[inline]
@@ -86,7 +97,7 @@ impl LifetimeData {
 impl From<Region> for LifetimeData {
     #[inline]
     fn from(region: Region) -> LifetimeData {
-        LifetimeData::trivial(region)
+        LifetimeData::from_region(region)
     }
 }
 
