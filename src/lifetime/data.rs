@@ -66,6 +66,16 @@ impl LifetimeData {
     pub fn transient(&self) -> Option<&Group> {
         self.transient.as_ref()
     }
+    /// Get the non-transient component of this lifetime, if any
+    #[inline]
+    pub fn concrete(&self) -> LifetimeData {
+        LifetimeData {
+            region: self.region.clone(),
+            lender: self.lender.clone(),
+            transient: None,
+            lt_params: self.lt_params.clone(),
+        }
+    }
     /// Get the lifetime parameters of this lifetime
     #[inline]
     pub fn params(&self) -> &LifetimeParams {
