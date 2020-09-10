@@ -4,7 +4,7 @@ The `rain` lifetime system
 
 use crate::region::{data::RegionData, Region, RegionBorrow, Regional};
 use crate::util::{AddrLookupMut, HasAddr};
-use crate::value::{NormalValue, ValAddr, ValId, VALUE_CACHE};
+use crate::value::{Error, NormalValue, ValAddr, ValId, VALUE_CACHE};
 use dashcache::{DashCache, GlobalCache};
 use elysees::UnionAlign;
 use elysees::{Arc, ArcBorrow};

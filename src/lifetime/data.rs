@@ -2,7 +2,6 @@
 Data describing a `rain` lifetime
 */
 use super::*;
-use crate::value::Error;
 
 lazy_static! {
     /// The global cache of constructed nontrivial lifetimes
@@ -36,6 +35,17 @@ impl LifetimeData {
             transient,
             lt_params,
         }
+    }
+    /// Try to construct a new lifetime
+    pub fn try_new(
+        base_region: RegionBorrow,
+        lender: Option<Group>,
+        transient: Option<Group>,
+        lt_params: LifetimeParams,
+    ) -> Result<LifetimeData, Error> {
+        //TODO: get lcr for lender, transient, and params, if any
+        let region = base_region.clone_region();
+        Ok(Self::new_unchecked(region, lender, transient, lt_params))
     }
     /// Construct a new trivial lifetime from a region
     #[inline]
