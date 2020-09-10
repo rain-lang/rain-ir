@@ -23,6 +23,20 @@ pub struct LifetimeData {
 }
 
 impl LifetimeData {
+    /// Construct a new, unchecked lifetime
+    pub fn new_unchecked(
+        region: Region,
+        lender: Option<Group>,
+        transient: Option<Group>,
+        lt_params: LifetimeParams,
+    ) -> LifetimeData {
+        LifetimeData {
+            region,
+            lender,
+            transient,
+            lt_params,
+        }
+    }
     /// Construct a new trivial lifetime from a region
     #[inline]
     pub fn from_region(region: Region) -> LifetimeData {
@@ -32,16 +46,6 @@ impl LifetimeData {
             transient: None,
             lt_params: LifetimeParams::default(),
         }
-    }
-    /// Construct a new transient lifetime from an optional group and a base region
-    #[inline]
-    pub fn new_transient(region: Region, transient: Option<Group>) -> Result<LifetimeData, Error> {
-        unimplemented!("New transient construction")
-    }
-    /// Construct a new transient lifetime from an optional group
-    #[inline]
-    pub fn from_transient(transient: Option<Group>) -> Result<LifetimeData, Error> {
-        Self::new_transient(Region::NULL, transient)
     }
     /// Check if lifetime data is trivial, i.e. consists only of region data
     #[inline]
