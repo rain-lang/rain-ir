@@ -20,11 +20,17 @@ pub trait HasAddr {
     }
 }
 
-// Null address (null pointer)
-impl HasAddr for () {
+impl<T> HasAddr for *const T {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        0
+        *self as usize
+    }
+}
+
+impl<T> HasAddr for *mut T {
+    #[inline(always)]
+    fn raw_addr(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -341,7 +347,8 @@ mod test {
 
     #[test]
     fn basic_hasaddr_properties() {
-        assert_eq!(().raw_addr(), 0x0);
+        let null: *const () = std::ptr::null();
+        assert_eq!(null.raw_addr(), 0x0);
         assert_ne!(BOOL_TY.raw_addr(), 0x0);
         let mut map = HashMap::new();
         map.insert(true.into_val(), 73);
