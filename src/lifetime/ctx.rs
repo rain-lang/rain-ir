@@ -20,8 +20,8 @@ pub struct LifetimeCtx {
     graph: LifetimeGraph,
     /// The implicit region of this context
     region: Region,
-    /// The value dependencies of this context, with ownership flags
-    deps: Vec<(ValId, bool)>,
+    /// The strong dependencies of this context with ownershop flags
+    deps: Vec<Union2<Arc<NormalValue>, Arc<NormalValue>>>,
 }
 
 impl LifetimeCtx {
