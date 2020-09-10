@@ -105,6 +105,14 @@ impl Lifetime {
     pub fn transient(&self) -> Option<&Group> {
         self.lt_data().map(LifetimeData::transient).flatten()
     }
+    /// Get the concrete component of this lifetime, if any
+    #[inline]
+    pub fn concrete(&self) -> Lifetime {
+        match self.lt_data() {
+            Some(data) if !data.is_concrete() => data.concrete().into(),
+            _ => self.clone(),
+        }
+    }
     /// Get the lifetime parameters of this lifetime
     #[inline]
     pub fn params(&self) -> Option<&LifetimeParams> {
