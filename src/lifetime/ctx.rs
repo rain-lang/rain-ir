@@ -115,7 +115,7 @@ impl LifetimeGraph {
 
 /// The ID of a node in a `rain` lifetime context graph
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct NodeId(pub usize);
+pub struct NodeId(pub NonZeroUsize);
 
 impl NodeId {
     /// Get the discriminant corresponding to a `ValAddr`
@@ -132,7 +132,7 @@ impl NodeId {
     /// Get the discriminant of this ID
     #[inline(always)]
     pub fn disc(self) -> usize {
-        self.0 & Self::DISC_MASK
+        self.0.get() & Self::DISC_MASK
     }
 }
 
@@ -153,7 +153,7 @@ impl From<GroupAddr> for NodeId {
 impl HasAddr for NodeId {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        self.0 & !Self::DISC_MASK
+        self.0.get() & !Self::DISC_MASK
     }
 }
 

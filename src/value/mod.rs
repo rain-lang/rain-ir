@@ -25,6 +25,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::num::NonZeroUsize;
 use std::ops::Deref;
 
 pub mod arr;
@@ -294,18 +295,25 @@ pub trait ValueData: Value {}
 /// The address of a value
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
-pub struct ValAddr(pub usize);
+pub struct ValAddr(pub NonZeroUsize);
 
-impl From<ValAddr> for usize {
+impl From<ValAddr> for NonZeroUsize {
     #[inline(always)]
-    fn from(val: ValAddr) -> usize {
+    fn from(val: ValAddr) -> NonZeroUsize {
         val.0
     }
 }
 
-impl From<usize> for ValAddr {
+impl From<ValAddr> for usize {
     #[inline(always)]
-    fn from(addr: usize) -> ValAddr {
+    fn from(val: ValAddr) -> usize {
+        val.0.get()
+    }
+}
+
+impl From<NonZeroUsize> for ValAddr {
+    #[inline(always)]
+    fn from(addr: NonZeroUsize) -> ValAddr {
         ValAddr(addr)
     }
 }
@@ -313,42 +321,42 @@ impl From<usize> for ValAddr {
 impl<P> From<*const NormalValue<P>> for ValAddr {
     #[inline(always)]
     fn from(addr: *const NormalValue<P>) -> ValAddr {
-        ValAddr(addr as usize)
+        ValAddr(NonZeroUsize::new(addr as usize).unwrap())
     }
 }
 
 impl From<*const ValueEnum> for ValAddr {
     #[inline(always)]
     fn from(addr: *const ValueEnum) -> ValAddr {
-        ValAddr(addr as usize)
+        ValAddr(NonZeroUsize::new(addr as usize).unwrap())
     }
 }
 
 impl<P> From<&'_ NormalValue<P>> for ValAddr {
     #[inline(always)]
     fn from(addr: &NormalValue<P>) -> ValAddr {
-        ValAddr(addr as *const _ as usize)
+        ValAddr(NonZeroUsize::new(addr as *const _ as usize).unwrap())
     }
 }
 
 impl From<&'_ ValueEnum> for ValAddr {
     #[inline(always)]
     fn from(addr: &ValueEnum) -> ValAddr {
-        ValAddr(addr as *const _ as usize)
+        ValAddr(NonZeroUsize::new(addr as *const _ as usize).unwrap())
     }
 }
 
 impl HasAddr for ValAddr {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        self.0
+        self.0.get()
     }
 }
 
 impl<P> HasAddr for ValId<P> {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        self.as_addr().0
+        self.as_addr().0.get()
     }
 }
 

@@ -169,7 +169,7 @@ impl<P> ValId<P> {
     /// Get the address behind this `ValId`
     #[inline]
     pub fn as_addr(&self) -> ValAddr {
-        ValAddr(self.as_norm() as *const NormalValue as usize)
+        ValAddr(NonZeroUsize::new(self.as_norm() as *const NormalValue as usize).unwrap())
     }
     /// Borrow this `ValId<P>` as a `ValRef`
     pub fn borrow_val(&self) -> ValRef {
@@ -271,7 +271,7 @@ impl<'a, P> ValRef<'a, P> {
     /// Get the address behind this `ValRef`
     #[inline]
     pub fn as_addr(self) -> ValAddr {
-        ValAddr(self.as_norm() as *const NormalValue as usize)
+        ValAddr(NonZeroUsize::new(self.as_norm() as *const NormalValue as usize).unwrap())
     }
     /// Coerce this reference
     #[inline]
