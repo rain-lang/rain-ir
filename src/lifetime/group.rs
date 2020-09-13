@@ -28,7 +28,7 @@ impl Group {
 /// The address of a non-empty group of values
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
-pub struct GroupAddr(pub usize);
+pub struct GroupAddr(pub NonZeroUsize);
 
 impl From<ValAddr> for GroupAddr {
     #[inline(always)]
@@ -68,14 +68,14 @@ impl PartialOrd<GroupAddr> for ValAddr {
 impl HasAddr for GroupAddr {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        self.0
+        self.0.get()
     }
 }
 
 impl HasAddr for Group {
     #[inline(always)]
     fn raw_addr(&self) -> usize {
-        self.addr().0
+        self.addr().0.get()
     }
 }
 

@@ -17,6 +17,7 @@ use slice_dst::SliceWithHeader;
 use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::num::NonZeroUsize;
 use std::ops::Deref;
 
 mod group;
